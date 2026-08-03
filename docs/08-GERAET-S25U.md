@@ -186,6 +186,13 @@ leicht übersehen werden:
   Der direkte Weg über `ActivityCompat.requestPermissions` funktioniert immer.
 - `hasPermissions()` ist **suspendierend**. Mit `runBlocking` im MethodChannel-Handler hängt der
   UI-Thread an einer Prozessgrenze — ein ANR beim App-Start.
+- **Und es gehört ganz vom Hauptthread herunter.** `getOrCreate` baut eine Binder-Verbindung auf.
+  Solange Health Connect über `<queries>` gar nicht sichtbar war, kam das nie zum Tragen; sobald
+  es sichtbar ist, blockiert der Aufruf den Android-Hauptthread. Blockiert der, kann Flutter keine
+  Frames mehr zeigen — die App steht dann auf dem letzten gezeichneten Bild, einem Ladekreisel,
+  der nie aufhört. Von außen ist das von einem Absturz nicht zu unterscheiden. Der Coroutine-Scope
+  läuft deshalb auf `Dispatchers.IO`, die Antwort geht über `runOnUiThread` zurück, und jeder
+  Aufruf auf der Dart-Seite hat eine Zeitgrenze.
 
 ### 5.4 Notification Channels
 Pro `severity` ein eigener Channel — sonst kann der Nutzer nur alles oder nichts stummschalten.

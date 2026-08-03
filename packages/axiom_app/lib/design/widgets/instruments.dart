@@ -5,6 +5,8 @@
 library;
 
 import 'package:axiom_core/axiom_core.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -322,6 +324,82 @@ final class SectionLabel extends StatelessWidget {
             trailing!,
           ],
         ],
+      ),
+    );
+  }
+}
+
+
+/// Ein Ladezustand, der nicht ewig schweigt.
+///
+/// **Warum das kein Detail ist.** Ein Kreisel ohne Ende ist von einer
+/// abgestürzten App nicht zu unterscheiden — man wartet, dann tippt man
+/// herum, dann löscht man sie. Genau das ist einmal passiert: Eine
+/// Systemschnittstelle antwortete nicht, der Kreisel drehte weiter, und von
+/// außen sah es aus, als sei die App kaputt.
+///
+/// Nach [patience] sagt er deshalb, dass es länger dauert als vorgesehen,
+/// und wohin man dann schaut. Ein stiller Ausfall ist schlimmer als ein
+/// lauter (R4).
+class PatientLoader extends StatefulWidget {
+  final Duration patience;
+  final String hint;
+
+  const PatientLoader({
+    super.key,
+    required this.hint,
+    this.patience = const Duration(seconds: 8),
+  });
+
+  @override
+  State<PatientLoader> createState() => _PatientLoaderState();
+}
+
+class _PatientLoaderState extends State<PatientLoader> {
+  bool _slow = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.patience, () {
+      if (mounted) setState(() => _slow = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 90,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: p.rule,
+                color: p.signal,
+              ),
+            ),
+            if (_slow) ...[
+              const SizedBox(height: Space.xl),
+              Text(
+                widget.hint,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -171,6 +171,31 @@ void main() {
       }
     });
 
+    test('kein Systemaufruf wartet unbegrenzt', () {
+      // Ein Aufruf ueber den MethodChannel landet auf dem
+      // Android-Hauptthread. Blockiert der, bleibt auf der Dart-Seite ein
+      // Future offen, das nie fertig wird — und die App steht auf einem
+      // Ladekreisel, ohne dass irgendwo ein Fehler steht. Genau so ist sie
+      // einmal nicht mehr gestartet.
+      final source = code(
+          File('lib/platform/android_bridge.dart').readAsStringSync());
+      final invocations = RegExp(r'invoke(Method|MapMethod|ListMethod)<')
+          .allMatches(source)
+          .length;
+      final timeouts = '.timeout('.allMatches(source).length;
+      expect(timeouts, greaterThanOrEqualTo(invocations),
+          reason: '$invocations Aufrufe, aber nur $timeouts mit Zeitgrenze');
+    });
+
+    test('Health Connect laeuft nicht auf dem Hauptthread', () {
+      // getOrCreate baut eine Binder-Verbindung auf. Auf dem Hauptthread
+      // blockiert das die gesamte Oberflaeche.
+      final source = code(
+          android('kotlin/de/axiom/axiom_app/MainActivity.kt'));
+      expect(source, contains('Dispatchers.IO'));
+      expect(source, isNot(contains('SupervisorJob() + Dispatchers.Main')));
+    });
+
     test('INTERNET ist deklariert und begründet (ADR-0005)', () {
       final manifest = android('AndroidManifest.xml');
       expect(manifest, contains('android.permission.INTERNET'));

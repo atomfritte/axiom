@@ -23,11 +23,13 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Brücke zu Android-Systemfunktionen, die Flutter nicht abdeckt.
@@ -83,7 +85,39 @@ class MainActivity : FlutterActivity() {
      * Health Connect liest asynchron. Der Scope haengt an der Activity,
      * damit ein laufender Lesevorgang beim Schliessen nicht weiterlaeuft.
      */
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    /// Alles Health-Connect-Bezogene laeuft hier — und zwar **nicht** auf
+    /// dem Hauptthread.
+    ///
+    /// `HealthConnectClient.getOrCreate` fragt den Paketmanager und baut eine
+    /// Binder-Verbindung auf. Auf `Dispatchers.Main` blockiert das den
+    /// UI-Thread; blockiert der, rendert Flutter nicht mehr und die App
+    /// steht auf dem letzten gezeichneten Bild — einem Ladekreisel, der nie
+    /// aufhoert. Genau dieser Ausfall ist von aussen nicht von einem Absturz
+    /// zu unterscheiden.
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            CoroutineExceptionHandler { _, _ ->
+                // Eine Diagnoseabfrage darf die App nicht mitnehmen. Ohne
+                // Handler landet die Ausnahme beim Standard-Handler von
+                // Android, und der beendet den Prozess.
+            },
+    )
+
+    /// Antwortet dem MethodChannel auf dem Hauptthread.
+    ///
+    /// `MethodChannel.Result` darf nur von dort aufgerufen werden. Und es
+    /// muss **immer** aufgerufen werden: Eine Antwort, die ausbleibt, ist auf
+    /// der Dart-Seite ein Future, das nie fertig wird.
+    private fun reply(result: MethodChannel.Result, value: Any?) {
+        runOnUiThread {
+            try {
+                result.success(value)
+            } catch (e: Throwable) {
+                // Schon beantwortet oder Engine weg — beides kein Grund,
+                // hier zu sterben.
+            }
+        }
+    }
 
     /** Laufende Spracheingabe. Es kann immer nur eine geben. */
     private var pendingSpeech: MethodChannel.Result? = null
@@ -225,9 +259,13 @@ class MainActivity : FlutterActivity() {
                     // zum Health-Connect-Dienst und darf den UI-Thread nicht
                     // blockieren.
                     "healthStatus" -> scope.launch {
-                        val status = HealthBridge.status(this@MainActivity)
+                        val status = try {
+                            HealthBridge.status(this@MainActivity)
+                        } catch (e: Throwable) {
+                            mapOf("available" to false, "granted" to false)
+                        }
                         healthGrantedCached = status["granted"] == true
-                        result.success(status)
+                        reply(result, status)
                     }
 
                     "healthRequestPermissions" ->
@@ -246,7 +284,7 @@ class MainActivity : FlutterActivity() {
                             } catch (e: Throwable) {
                                 emptyList()
                             }
-                            result.success(records)
+                            reply(result, records)
                         }
                     }
 
@@ -269,9 +307,15 @@ class MainActivity : FlutterActivity() {
                         // Erst den Health-Stand nachziehen, dann den Rest:
                         // Ein Systemcheck, der veraltete Werte zeigt, ist
                         // schlimmer als keiner.
-                        healthGrantedCached =
+                        healthGrantedCached = try {
                             HealthBridge.hasPermissions(this@MainActivity)
-                        result.success(diagnostics())
+                        } catch (e: Throwable) {
+                            false
+                        }
+                        val values = withContext(Dispatchers.Main) {
+                            diagnostics()
+                        }
+                        reply(result, values)
                     }
 
                     // ── Spracheingabe ───────────────────────────────────

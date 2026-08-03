@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'design/theme.dart';
 import 'design/tokens.dart';
 import 'design/widgets/axiom_mark.dart';
+import 'design/widgets/instruments.dart';
 import 'platform/intent_handler.dart';
 import 'screens/now_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -174,7 +175,6 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.axiom;
     return Scaffold(
       body: Center(
         child: Column(
@@ -182,13 +182,8 @@ class _Splash extends StatelessWidget {
           children: [
             const AxiomWordmark(markSize: 38),
             const SizedBox(height: Space.xl),
-            SizedBox(
-              width: 80,
-              child: LinearProgressIndicator(
-                minHeight: 1,
-                backgroundColor: p.rule,
-                color: p.signal,
-              ),
+            PatientLoader(
+              hint: context.t('Die Datenbank braucht ungewöhnlich lange. Hilft ein Neustart der App nicht, ist etwas mit der Datei nicht in Ordnung.'),
             ),
           ],
         ),

@@ -43,7 +43,9 @@ class NowScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: snapshot.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => PatientLoader(
+            hint: context.t('Das dauert länger als vorgesehen. Bleibt es dabei, sagt System → Systemcheck, ob eine Systemschnittstelle nicht antwortet.'),
+          ),
           error: (e, _) => _ErrorPane(error: e),
           data: (snap) => RefreshIndicator(
             onRefresh: () async => refreshAxiom(ref),

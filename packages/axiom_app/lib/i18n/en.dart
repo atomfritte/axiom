@@ -983,6 +983,14 @@ const Map<String, String> kEnglish = {
       'Off — and without the notification permission above it cannot start '
           'either.',
 
+  'Das dauert länger als vorgesehen. Bleibt es dabei, sagt System → Systemcheck, ob eine Systemschnittstelle nicht antwortet.':
+      'This is taking longer than intended. If it stays that way, System → '
+          'System check will say whether a system interface is not '
+          'answering.',
+  'Die Datenbank braucht ungewöhnlich lange. Hilft ein Neustart der App nicht, ist etwas mit der Datei nicht in Ordnung.':
+      'The database is taking unusually long. If restarting the app does not '
+          'help, something is wrong with the file.',
+
   // ── Expertenmodus (ADR-0005) ─────────────────────────────────────────
   'Expertenmodus': 'Expert mode',
   'Regeln und Listen am großen Bildschirm — aus, bis du ihn startest':

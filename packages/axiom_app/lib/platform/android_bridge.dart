@@ -7,6 +7,7 @@
 /// vollständig bedienbar: Erfassen, Check-ins, Regelinspektor.
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -36,6 +37,20 @@ final class PlatformOutcome {
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
 
+  /// Wie lange auf eine Antwort der Systemseite gewartet wird.
+  ///
+  /// **Warum es die überhaupt gibt.** Ein Aufruf über den MethodChannel
+  /// landet auf dem Android-Hauptthread. Blockiert der — etwa weil eine
+  /// Systemschnittstelle auf eine Binder-Verbindung wartet, die nicht kommt
+  /// — dann bleibt auf der Dart-Seite ein Future offen, das nie fertig wird.
+  /// Genau so ist die App einmal auf einem Ladekreisel stehengeblieben, ohne
+  /// dass irgendwo ein Fehler stand. Lieber eine Funktion, die nach fünf
+  /// Sekunden „geht nicht" sagt, als eine App, die wartet.
+  static const Duration _timeout = Duration(seconds: 5);
+
+  /// Health Connect liest über eine Prozessgrenze und darf länger brauchen.
+  static const Duration _healthTimeout = Duration(seconds: 20);
+
   /// Ob die Systembruecke auf diesem Geraet ueberhaupt etwas tun kann.
   ///
   /// `kIsWeb` kommt aus Flutter, nicht aus einer eigenen Konstante. Die
@@ -61,10 +76,11 @@ abstract final class AndroidBridge {
   static Future<Map<String, bool>> permissionStatus() async {
     if (!isSupported) return const {};
     try {
-      final result =
-          await _channel.invokeMapMethod<String, bool>('permissionStatus');
+      final result = await _channel
+          .invokeMapMethod<String, bool>('permissionStatus')
+          .timeout(_timeout);
       return result ?? const {};
-    } on PlatformException {
+    } on Object {
       return const {};
     }
   }
@@ -91,8 +107,7 @@ abstract final class AndroidBridge {
     });
   }
 
-  static Future<bool> cancelAlarm(int id) =>
-      _invoke('cancelAlarm', {'id': id});
+  static Future<bool> cancelAlarm(int id) => _invoke('cancelAlarm', {'id': id});
 
   /// Plant die drei täglichen Check-ins.
   /// Zeitgetriggerte Prompts haben bei diesem Profil die höchste
@@ -122,9 +137,11 @@ abstract final class AndroidBridge {
   static Future<Duration?> lastAlarmDrift() async {
     if (!isSupported) return null;
     try {
-      final ms = await _channel.invokeMethod<int>('lastAlarmDriftMillis');
+      final ms = await _channel
+          .invokeMethod<int>('lastAlarmDriftMillis')
+          .timeout(_timeout);
       return ms == null ? null : Duration(milliseconds: ms);
-    } on PlatformException {
+    } on Object {
       return null;
     }
   }
@@ -158,14 +175,12 @@ abstract final class AndroidBridge {
   static Future<bool> startPresence({
     required String headline,
     required String detail,
-  }) =>
-      _invoke('presenceStart', {'headline': headline, 'detail': detail});
+  }) => _invoke('presenceStart', {'headline': headline, 'detail': detail});
 
   static Future<bool> updatePresence({
     required String headline,
     required String detail,
-  }) =>
-      _invoke('presenceUpdate', {'headline': headline, 'detail': detail});
+  }) => _invoke('presenceUpdate', {'headline': headline, 'detail': detail});
 
   static Future<bool> stopPresence() => _invoke('presenceStop');
 
@@ -185,14 +200,13 @@ abstract final class AndroidBridge {
     required String detail,
     required DateTime startedAt,
     required Duration planned,
-  }) =>
-      _invoke('liveSlotStart', {
-        'kind': kind,
-        'title': title,
-        'detail': detail,
-        'startedAtMillis': startedAt.millisecondsSinceEpoch,
-        'plannedMinutes': planned.inMinutes,
-      });
+  }) => _invoke('liveSlotStart', {
+    'kind': kind,
+    'title': title,
+    'detail': detail,
+    'startedAtMillis': startedAt.millisecondsSinceEpoch,
+    'plannedMinutes': planned.inMinutes,
+  });
 
   static Future<bool> stopLiveSlot() => _invoke('liveSlotStop');
 
@@ -210,12 +224,11 @@ abstract final class AndroidBridge {
   static Future<Map<String, bool>> healthStatus() async {
     if (!isSupported) return const {};
     try {
-      final result =
-          await _channel.invokeMapMethod<String, bool>('healthStatus');
+      final result = await _channel
+          .invokeMapMethod<String, bool>('healthStatus')
+          .timeout(_healthTimeout);
       return result ?? const {};
-    } on PlatformException {
-      return const {};
-    } on MissingPluginException {
+    } on Object {
       return const {};
     }
   }
@@ -237,16 +250,15 @@ abstract final class AndroidBridge {
   static Future<List<Map<String, Object?>>> healthRead(DateTime since) async {
     if (!isSupported) return const [];
     try {
-      final result = await _channel.invokeListMethod<Map<Object?, Object?>>(
-        'healthRead',
-        {'sinceMillis': since.millisecondsSinceEpoch},
-      );
+      final result = await _channel
+          .invokeListMethod<Map<Object?, Object?>>('healthRead', {
+            'sinceMillis': since.millisecondsSinceEpoch,
+          })
+          .timeout(_healthTimeout);
       return (result ?? const [])
           .map((row) => row.map((k, v) => MapEntry(k.toString(), v)))
           .toList();
-    } on PlatformException {
-      return const [];
-    } on MissingPluginException {
+    } on Object {
       return const [];
     }
   }
@@ -267,10 +279,11 @@ abstract final class AndroidBridge {
   static Future<int> widgetCount() async {
     if (!isSupported) return 0;
     try {
-      return await _channel.invokeMethod<int>('widgetCount') ?? 0;
-    } on PlatformException {
-      return 0;
-    } on MissingPluginException {
+      return await _channel
+              .invokeMethod<int>('widgetCount')
+              .timeout(_timeout) ??
+          0;
+    } on Object {
       return 0;
     }
   }
@@ -294,13 +307,14 @@ abstract final class AndroidBridge {
   static Future<Map<String, Object?>> diagnostics() async {
     if (!isSupported) return const {};
     try {
-      final result =
-          await _channel.invokeMapMethod<String, Object?>('diagnostics');
+      final result = await _channel
+          .invokeMapMethod<String, Object?>('diagnostics')
+          .timeout(_healthTimeout);
       return result ?? const {};
-    } on PlatformException catch (e) {
-      return {'error': e.message};
-    } on MissingPluginException {
-      return const {'error': 'Kein Kanal'};
+    } on TimeoutException {
+      return const {'error': 'Das System hat nicht geantwortet.'};
+    } on Object catch (e) {
+      return {'error': '$e'};
     }
   }
 
@@ -315,8 +329,12 @@ abstract final class AndroidBridge {
   static Future<String?> listen({String? locale}) async {
     if (!isSupported) return null;
     try {
+      // Grosszuegig: Hier spricht ein Mensch. Aber nicht unbegrenzt — sonst
+      // bleibt das Mikrofon im Erfassungsfeld dauerhaft auf „hoert zu",
+      // wenn die Erkennung haengt.
       return await _channel
-          .invokeMethod<String>('listen', {'locale': ?locale});
+          .invokeMethod<String>('listen', {'locale': ?locale})
+          .timeout(const Duration(minutes: 3));
     } on PlatformException {
       return null;
     } on MissingPluginException {
@@ -364,10 +382,11 @@ abstract final class AndroidBridge {
   static Future<List<String>> pullPendingMemos() async {
     if (!isSupported) return const [];
     try {
-      final result =
-          await _channel.invokeListMethod<String>('pullPendingMemos');
+      final result = await _channel
+          .invokeListMethod<String>('pullPendingMemos')
+          .timeout(_timeout);
       return result ?? const [];
-    } on PlatformException {
+    } on Object {
       return const [];
     }
   }
@@ -375,35 +394,47 @@ abstract final class AndroidBridge {
   // ── Intern ────────────────────────────────────────────────────────────
 
   /// Wie [_invoke], aber mit dem Grund des Scheiterns.
-  static Future<PlatformOutcome> _outcome(String method,
-      [Map<String, Object?>? args]) async {
+  static Future<PlatformOutcome> _outcome(
+    String method, [
+    Map<String, Object?>? args,
+  ]) async {
     if (!isSupported) return PlatformOutcome.unsupported;
     try {
-      final result =
-          await _channel.invokeMapMethod<String, Object?>(method, args);
+      final result = await _channel
+          .invokeMapMethod<String, Object?>(method, args)
+          .timeout(_timeout);
       if (result == null) return const PlatformOutcome(false);
-      return PlatformOutcome(
-        result['ok'] == true,
-        result['reason'] as String?,
-      );
+      return PlatformOutcome(result['ok'] == true, result['reason'] as String?);
     } on PlatformException catch (e) {
       return PlatformOutcome(false, e.message);
-    } on MissingPluginException {
+    } on TimeoutException {
+      return const PlatformOutcome(
+        false,
+        'Das System hat nicht geantwortet. Die Funktion bleibt aus, die App '
+        'läuft weiter.',
+      );
+    } on Object {
       return const PlatformOutcome(
         false,
         'Die Systembrücke antwortet nicht. Das ist ein Fehler in AXIOM, '
-            'nicht am Gerät.',
+        'nicht am Gerät.',
       );
     }
   }
 
-  static Future<bool> _invoke(String method, [Map<String, Object?>? args]) async {
+  static Future<bool> _invoke(
+    String method, [
+    Map<String, Object?>? args,
+  ]) async {
     if (!isSupported) return false;
     try {
-      return await _channel.invokeMethod<bool>(method, args) ?? false;
-    } on PlatformException {
-      return false;
-    } on MissingPluginException {
+      return await _channel
+              .invokeMethod<bool>(method, args)
+              .timeout(_timeout) ??
+          false;
+    } on Object {
+      // Ausnahme, Zeitüberschreitung oder fehlender Kanal — für den Aufrufer
+      // ist das dasselbe: Es hat nicht geklappt, und die App läuft weiter.
       return false;
     }
   }
