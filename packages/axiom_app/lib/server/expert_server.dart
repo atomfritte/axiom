@@ -23,9 +23,13 @@
 ///   * nach fünf Fehlversuchen stoppt er sich selbst
 ///   * nach 30 Minuten Leerlauf ebenso
 ///
-/// Kein TLS: Ein selbst signiertes Zertifikat erzeugt eine Browser-Warnung,
-/// die man wegklickt, und die Gewöhnung daran ist gefährlicher als der
-/// Klartext im eigenen Netz. Die Oberfläche sagt das offen.
+/// **TLS mit selbst signiertem Zertifikat.** Ohne läge alles im Klartext im
+/// Netz, und passives Mitlesen ist trivial. Die Browser-Warnung kommt genau
+/// einmal: Das Zertifikat bleibt über Neustarts dasselbe, und sein
+/// Fingerabdruck steht in der App — wer ihn mit dem vergleicht, den der
+/// Browser zeigt, hat die Verbindung wirklich geprüft statt eine Warnung
+/// weggeklickt. Fällt TLS aus, startet der Server **nicht**; ein stiller
+/// Rückfall auf Klartext wäre das Schlechteste von beidem.
 library;
 
 import 'dart:async';
@@ -38,12 +42,16 @@ import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../state/runtime.dart';
+import 'expert_certificate.dart';
 
 /// Was der Server gerade tut — für die Anzeige in der App.
 final class ExpertStatus {
   final bool running;
   final String? address;
   final String? pin;
+
+  /// SHA-256 des Zertifikats. Der Wert, den auch der Browser anzeigt.
+  final String? fingerprint;
 
   /// Wann er sich von selbst abschaltet, wenn nichts passiert.
   final DateTime? idleStopAt;
@@ -52,6 +60,7 @@ final class ExpertStatus {
     this.running = false,
     this.address,
     this.pin,
+    this.fingerprint,
     this.idleStopAt,
   });
 
@@ -88,6 +97,7 @@ final class ExpertServer {
   Timer? _idleTimer;
   DateTime? _idleStopAt;
   String? _address;
+  ExpertCertificate? _certificate;
 
   bool get isRunning => _server != null;
 
@@ -96,6 +106,7 @@ final class ExpertServer {
           running: true,
           address: _address,
           pin: _pin,
+          fingerprint: _certificate?.readableFingerprint,
           idleStopAt: _idleStopAt,
         )
       : ExpertStatus.off;
@@ -108,11 +119,24 @@ final class ExpertServer {
     _sessions.clear();
     _failedAttempts = 0;
 
-    _server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+    // Das Zertifikat haengt an der Adresse: Ohne passenden Subject
+    // Alternative Name lehnen aktuelle Browser rundheraus ab, statt eine
+    // Ausnahme anzubieten.
+    final host = await _localIp() ?? '127.0.0.1';
+    _certificate =
+        await ExpertCertificates.forAddress(await resolveRuntime(), host);
+
+    // bindSecure, nicht bind. Schlaegt es fehl, startet der Server nicht —
+    // ein stiller Rueckfall auf Klartext waere das Schlechteste von beidem.
+    _server = await HttpServer.bindSecure(
+      InternetAddress.anyIPv4,
+      port,
+      _certificate!.context,
+    );
     // Den tatsaechlich vergebenen Port nehmen, nicht den gewuenschten: Bei
     // Port 0 waehlt ihn das System, und die angezeigte Adresse zeigte sonst
     // auf einen Port, an dem nichts lauscht.
-    _address = 'http://${await _localIp() ?? 'localhost'}:${_server!.port}';
+    _address = 'https://$host:${_server!.port}';
     _touch();
 
     unawaited(_serve());
@@ -128,6 +152,7 @@ final class ExpertServer {
     final server = _server;
     _server = null;
     _address = null;
+    _certificate = null;
     await server?.close(force: true);
     onChanged();
   }
@@ -265,7 +290,9 @@ final class ExpertServer {
       _touch();
       request.response.headers.add(
         HttpHeaders.setCookieHeader,
-        'axiom_session=$token; HttpOnly; SameSite=Strict; Path=/',
+        // `Secure`, weil die Verbindung TLS spricht: Das Cookie darf eine
+        // Klartextverbindung nie erreichen, auch nicht versehentlich.
+        'axiom_session=$token; HttpOnly; Secure; SameSite=Strict; Path=/',
       );
       return _json(request, 200, {'ok': true});
     }

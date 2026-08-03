@@ -42,10 +42,28 @@ einem Neustart. Er hält sich an fünf Regeln:
 | Leerlauf | nach 30 Minuten ohne Anfrage stoppt er sich selbst |
 | Sichtbarkeit | dauerhafte Benachrichtigung mit Adresse und Stopp-Knopf, solange er läuft |
 
-**4. Kein TLS.** Ein selbst signiertes Zertifikat erzeugt im Browser eine Warnung, die man
-wegklickt — und die Gewöhnung daran ist gefährlicher als der Klartext im eigenen WLAN. Die
-Konsequenz steht ausdrücklich in der App: **Wer im Netz mitliest, sieht mit.** Der Expertenmodus
-gehört ins eigene Netz, nicht ins Hotel-WLAN.
+**4. TLS mit selbst signiertem Zertifikat.**
+
+Die erste Fassung dieses ADR verzichtete auf TLS mit dem Argument, man klicke die Browser-Warnung
+ohnehin weg. Das war zu bequem gedacht: Ohne TLS liegen PIN, Sitzungscookie und sämtliche
+Gesundheitsdaten im Klartext im Netz. **Passives Mitlesen ist trivial und hinterlässt keine
+Spur**; ein aktives Übernehmen der Verbindung ist ein deutlich anderer Aufwand. Der Unterschied
+ist real, und er zählt mehr als die Unbequemlichkeit einer Warnung.
+
+Das Warn-Argument stimmt nur, solange die Warnung nichts Überprüfbares zeigt. Deshalb:
+
+- **Der Fingerabdruck steht in der App.** Der Browser nennt denselben Wert unter „Zertifikat
+  anzeigen". Stimmen beide überein, ist die Verbindung geprüft — das ist Authentifizierung, kein
+  Wegklicken.
+- **Das Zertifikat bleibt dasselbe.** Schlüssel und Zertifikat liegen in der Einstellungstabelle
+  und überleben Neustarts. Ein neues Zertifikat bei jedem Start erzeugte bei jedem Start eine
+  neue Warnung — genau die Gewöhnung, die das ursprüngliche Argument fürchtete.
+- **Kein stiller Rückfall.** Schlägt TLS fehl, startet der Server nicht. Klartext als
+  Ausweichweg wäre das Schlechteste von beidem.
+
+Erzeugt wird es auf dem Gerät (RSA-2048, in einem eigenen Isolate, damit der Knopf nicht hängt),
+mit der LAN-Adresse als Subject Alternative Name — ohne SAN lehnen aktuelle Browser rundheraus
+ab, statt eine Ausnahme anzubieten.
 
 ## Begründung
 

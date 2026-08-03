@@ -100,8 +100,8 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Point(
-                  title: context.t('Unverschlüsselt'),
-                  body: context.t('Wer im selben Netz mitliest, sieht mit. Das eigene WLAN ist dafür in Ordnung, ein Hotel- oder Café-Netz nicht. Ein selbst signiertes Zertifikat wäre keine Lösung — man klickt die Warnung weg und gewöhnt sich daran.'),
+                  title: context.t('Der Browser wird einmal warnen'),
+                  body: context.t('Das Zertifikat ist selbst signiert — keine fremde Stelle bürgt dafür. Statt die Warnung wegzuklicken: den Fingerabdruck oben mit dem vergleichen, den der Browser unter „Zertifikat anzeigen" nennt. Stimmen beide überein, sprichst du mit diesem Telefon und mit nichts dazwischen. Danach merkt sich der Browser die Ausnahme.'),
                 ),
                 Divider(color: p.rule, height: Space.xl),
                 _Point(
@@ -200,6 +200,20 @@ class _Running extends StatelessWidget {
             style: monoStyle(context,
                 size: 30, weight: FontWeight.w600, color: p.signal, spacing: 4),
           ),
+          const SizedBox(height: Space.lg),
+          Text(context.t('Fingerabdruck des Zertifikats'),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: Space.xs),
+          SelectableText(
+            status.fingerprint ?? '',
+            style: monoStyle(context, size: 12.5, color: p.calm),
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            context.t('Muss mit dem übereinstimmen, den der Browser zeigt. Tut er das, ist die Verbindung geprüft — nicht bloß weggeklickt.'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+
           const SizedBox(height: Space.lg),
           Row(
             children: [

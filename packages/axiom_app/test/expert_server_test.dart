@@ -9,11 +9,29 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:axiom_data/axiom_data.dart';
+import 'package:crypto/crypto.dart';
 
+import 'package:axiom_app/server/expert_certificate.dart';
 import 'package:axiom_app/server/expert_server.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'harness.dart';
+
+/// Fingerabdruck wie ihn die App anzeigt — in Vierergruppen.
+String _fingerprint(X509Certificate cert) {
+  final hex = sha256
+      .convert(cert.der)
+      .bytes
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join()
+      .toUpperCase();
+  final buffer = StringBuffer();
+  for (var i = 0; i < hex.length; i += 4) {
+    if (i > 0) buffer.write(i % 16 == 0 ? '\n' : ' ');
+    buffer.write(hex.substring(i, i + 4));
+  }
+  return buffer.toString();
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,8 +67,13 @@ void main() {
     Object? body,
     String? cookie,
   }) async {
-    final client = HttpClient();
-    final request = await client.open(method, '127.0.0.1', port, path);
+    // Selbst signiert: Der Test akzeptiert genau dieses eine Zertifikat —
+    // deshalb wird der Fingerabdruck geprueft, nicht blind alles erlaubt.
+    final client = HttpClient()
+      ..badCertificateCallback = (cert, host, port) =>
+          _fingerprint(cert) == server.status.fingerprint;
+    final request = await client.openUrl(
+        method, Uri.parse('https://127.0.0.1:$port$path'));
     if (cookie != null) request.headers.add('cookie', cookie);
     if (body != null) {
       request.headers.contentType = ContentType.json;
@@ -187,6 +210,57 @@ void main() {
     });
   });
 
+  group('Die Verbindung ist verschlüsselt', () {
+    test('Klartext wird nicht bedient', () async {
+      // Ein HTTP-Aufruf auf den TLS-Port darf nicht irgendwie doch
+      // funktionieren — ein stiller Rueckfall waere das Schlechteste von
+      // beidem.
+      final client = HttpClient();
+      // Erst `close()` spricht wirklich mit dem Port — `openUrl` baut nur
+      // die Anfrage.
+      await expectLater(
+        client
+            .openUrl('GET', Uri.parse('http://127.0.0.1:$port/api/state'))
+            .then((r) => r.close()),
+        throwsA(anything),
+      );
+    });
+
+    test('der Fingerabdruck der App ist der des Zertifikats', () async {
+      // Der ganze Sinn der Anzeige: Wer die beiden vergleicht, hat die
+      // Verbindung geprueft statt eine Warnung weggeklickt.
+      late String seen;
+      final client = HttpClient()
+        ..badCertificateCallback = (cert, _, _) {
+          seen = _fingerprint(cert);
+          return true;
+        };
+      final request = await client.openUrl(
+          'GET', Uri.parse('https://127.0.0.1:$port/api/state'));
+      await request.close();
+      expect(seen, server.status.fingerprint);
+    });
+
+    test('dasselbe Zertifikat über Neustarts hinweg', () async {
+      // Sonst kaeme bei jedem Start eine neue Warnung — und genau das
+      // erzeugt die Gewoehnung, die gefaehrlich ist.
+      final before = server.status.fingerprint;
+      await server.stop();
+      await server.start(port: 0);
+      expect(server.status.fingerprint, before);
+    });
+
+    test('bei einer neuen Adresse ein neues Zertifikat', () async {
+      // Ohne passenden Subject Alternative Name lehnt der Browser rundheraus
+      // ab, statt eine Ausnahme anzubieten.
+      final before = server.status.fingerprint;
+      ExpertCertificates.forget(h.runtime);
+      await server.stop();
+      await server.start(port: 0);
+      expect(server.status.fingerprint, isNot(before));
+    });
+  });
+
   group('Der Server geht von selbst wieder aus', () {
     test('Stopp beendet die Sitzung, nicht nur den Port', () async {
       final cookie = await login(server.status.pin!);
@@ -201,9 +275,10 @@ void main() {
 
       // Auch das alte Cookie nicht.
       final newPort = int.parse(server.status.address!.split(':').last);
-      final client = HttpClient();
-      final request =
-          await client.open('GET', '127.0.0.1', newPort, '/api/state');
+      final client = HttpClient()
+        ..badCertificateCallback = (_, _, _) => true;
+      final request = await client.openUrl(
+          'GET', Uri.parse('https://127.0.0.1:$newPort/api/state'));
       request.headers.add('cookie', cookie);
       expect((await request.close()).statusCode, 401);
     });

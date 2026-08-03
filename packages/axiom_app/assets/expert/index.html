@@ -77,7 +77,8 @@
   <p class="hint" style="text-align:left">
     Die sechsstellige PIN steht in der App unter <em>System → Expertenmodus</em>.
     Sie ist bei jedem Start neu. Nach fünf Fehlversuchen schaltet sich der
-    Server ab.
+    Server ab. Der Fingerabdruck des Zertifikats steht ebenfalls dort —
+    er sollte mit dem übereinstimmen, den dieser Browser anzeigt.
   </p>
   <input id="pin" inputmode="numeric" maxlength="6" placeholder="······" autofocus>
   <div style="margin-top:14px"><button class="act" id="unlock">Öffnen</button></div>
@@ -141,8 +142,9 @@
   </main>
 
   <footer>
-    Diese Verbindung ist unverschlüsselt. Wer im selben Netz mitliest, sieht mit —
-    der Expertenmodus gehört ins eigene Netz, nicht ins Hotel-WLAN.
+    Verschlüsselt mit einem selbst signierten Zertifikat. Die Warnung beim ersten
+    Zugriff ist erwartet — entscheidend ist, dass der Fingerabdruck, den der Browser
+    unter „Zertifikat anzeigen" nennt, mit dem in der App übereinstimmt.
     Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.
   </footer>
 </div>

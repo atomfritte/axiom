@@ -116,8 +116,8 @@ class ExpertService : Service() {
             .setContentTitle("Expertenmodus läuft")
             .setContentText(address)
             .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$address\n\nUnverschlüsselt: Wer im selben Netz mitliest, " +
-                    "sieht mit. Ohne Anfrage schaltet sich der Server nach " +
+                "$address\n\nVerschlüsselt mit einem selbst signierten " +
+                    "Zertifikat. Ohne Anfrage schaltet sich der Server nach " +
                     "30 Minuten ab."
             ))
             .setContentIntent(stop)

@@ -1002,12 +1002,6 @@ const Map<String, String> kEnglish = {
   'Schaltet sich ohne Anfrage nach 30 Minuten ab.':
       'Shuts down after 30 minutes without a request.',
   'Was das kostet': 'What it costs',
-  'Unverschlüsselt': 'Unencrypted',
-  'Wer im selben Netz mitliest, sieht mit. Das eigene WLAN ist dafür in Ordnung, ein Hotel- oder Café-Netz nicht. Ein selbst signiertes Zertifikat wäre keine Lösung — man klickt die Warnung weg und gewöhnt sich daran.':
-      'Anyone listening on the same network sees along. Your own Wi-Fi is '
-          'fine for this, a hotel or café network is not. A self-signed '
-          'certificate would not fix it — you click the warning away and get '
-          'used to doing so.',
   'AXIOM hat jetzt die Netzwerkberechtigung':
       'AXIOM now holds the network permission',
   'Bis hierher war auf Systemebene ausgeschlossen, dass Daten das Gerät verlassen. Das gilt nicht mehr. Was bleibt: AXIOM lauscht, ruft aber nichts von sich aus auf — kein Netzwerk-Client im Code, und ein Test hält das fest.':
@@ -1016,6 +1010,17 @@ const Map<String, String> kEnglish = {
           'never calls out — no network client in the code, and a test pins '
           'that down.',
   'Was ihn wieder ausmacht': 'What turns it off again',
+  'Der Browser wird einmal warnen': 'The browser will warn you once',
+  'Das Zertifikat ist selbst signiert — keine fremde Stelle bürgt dafür. Statt die Warnung wegzuklicken: den Fingerabdruck oben mit dem vergleichen, den der Browser unter „Zertifikat anzeigen" nennt. Stimmen beide überein, sprichst du mit diesem Telefon und mit nichts dazwischen. Danach merkt sich der Browser die Ausnahme.':
+      'The certificate is self-signed — no outside authority vouches for it. '
+          'Instead of clicking the warning away: compare the fingerprint '
+          'above with the one the browser shows under “View certificate”. If '
+          'they match, you are talking to this phone and to nothing in '
+          'between. The browser remembers the exception afterwards.',
+  'Fingerabdruck des Zertifikats': 'Certificate fingerprint',
+  'Muss mit dem übereinstimmen, den der Browser zeigt. Tut er das, ist die Verbindung geprüft — nicht bloß weggeklickt.':
+      'Must match the one the browser shows. If it does, the connection has '
+          'been verified — not merely clicked away.',
   'Fünf falsche PINs, dreißig Minuten ohne Anfrage, der Knopf hier, oder der Knopf auf der Benachrichtigung. Beim Beenden der App ist er ohnehin weg.':
       'Five wrong PINs, thirty minutes without a request, the button here, or '
           'the one on the notification. Closing the app ends it anyway.',
