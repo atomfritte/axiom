@@ -27,7 +27,11 @@
     -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Foreground-Service während aktiver Fokus-/Reiz-Slots (M4/M5). -->
+    <!--
+      Foreground-Service für die dauerhafte Anzeige und aktive Slots.
+      Der Dienst zeigt Zustand an und nimmt Eingaben entgegen — dafür ist
+      SPECIAL_USE der vorgesehene Typ.
+    -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
@@ -71,6 +75,39 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+
+            <!-- Sprache: "Notiz in AXIOM" über Assistant und Bixby. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="axiom" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Stift-Schnittstelle des Systems (Android 14+).
+
+          Damit erscheint AXIOM beim Doppeltipp mit dem S-Pen, in der
+          Schnelleinstellung "Notiz" und auf dem Sperrbildschirm. Samsung
+          Notes hat keine öffentliche Schnittstelle — das hier ist der
+          einzige Weg, der ohne Reverse Engineering funktioniert und ein
+          Update überlebt.
+
+          Zusätzlich lässt sich diese Activity in Samsungs "Air Actions"
+          auf den Stiftknopf legen.
+        -->
+        <activity
+            android:name=".CreateNoteActivity"
+            android:exported="true"
+            android:label="Notiz erfassen"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_NOTE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Erfassen und Check-in direkt vom Launcher (langes Tippen). -->
@@ -83,9 +120,14 @@
           sichtbar. Was nicht sichtbar ist, existiert für dieses Profil
           nicht [D9].
         -->
+        <!--
+          exported MUSS true sein: Der Launcher laeuft in einem anderen
+          Prozess und muss den Update-Broadcast senden koennen. Mit false
+          laesst sich das Widget nicht hinzufuegen.
+        -->
         <receiver
             android:name=".AxiomWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -93,6 +135,28 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/axiom_widget_info" />
         </receiver>
+
+        <!--
+          Dauerhafte Anzeige im Benachrichtigungsbereich.
+
+          Erscheint auch auf dem Sperrbildschirm — Lockscreen-Widgets gibt
+          es auf Android seit 5.0 nicht mehr, die dauerhafte Benachrichtigung
+          ist der verbliebene Weg zu ständiger Sichtbarkeit [D9].
+        -->
+        <service
+            android:name=".PresenceService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Zeigt dauerhaft die nächste Handlung und nimmt
+                    Notizen direkt in der Benachrichtigung entgegen." />
+        </service>
+
+        <!-- Nimmt Text entgegen, der in der Benachrichtigung getippt wurde. -->
+        <receiver
+            android:name=".QuickCaptureReceiver"
+            android:exported="false" />
 
         <!-- Empfängt exakte Alarme und zeigt die Intervention an. -->
         <receiver

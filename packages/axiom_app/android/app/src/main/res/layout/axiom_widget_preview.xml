@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vorschau in der Widget-Auswahl. Zeigt Beispielinhalt statt eines leeren
+  Kastens — sonst weiss niemand, was er sich da auf den Bildschirm legt.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_bg">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="JETZT"
+        android:textSize="10sp"
+        android:letterSpacing="0.12"
+        android:fontFamily="monospace"
+        android:textColor="@color/axiom_ink_faint" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:maxLines="2"
+        android:text="Rückruf Werkstatt"
+        android:textSize="19sp"
+        android:textColor="@color/axiom_ink" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Start 2/10"
+        android:textSize="12sp"
+        android:textColor="@color/axiom_ink_dim" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        android:progress="61"
+        android:progressDrawable="@drawable/widget_bar" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="KAPAZITÄT 61"
+        android:textSize="10sp"
+        android:letterSpacing="0.08"
+        android:fontFamily="monospace"
+        android:textColor="@color/axiom_signal" />
+</LinearLayout>

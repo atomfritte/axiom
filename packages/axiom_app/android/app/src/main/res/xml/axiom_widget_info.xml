@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Homescreen-Widget.
+
+  Zeigt die naechste Handlung und die Kapazitaet, ohne dass die App geoeffnet
+  werden muss. Objektpermanenz: Was nicht sichtbar ist, existiert fuer dieses
+  Profil nicht [D9].
+
+  minResize/maxResize sind gesetzt, damit der Launcher weiss, wie klein das
+  Widget werden darf, ohne dass der Text abgeschnitten wird.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
     android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="360dp"
+    android:maxResizeHeight="220dp"
     android:targetCellWidth="3"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/axiom_widget"
+    android:previewLayout="@layout/axiom_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description" />

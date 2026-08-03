@@ -9,22 +9,32 @@ Das Gerät ist ein echter Architekturvorteil. Mehrere Defizite aus der Analyse s
 
 Priorisiert nach Reibung. Reibung entscheidet über Nutzung, nicht Funktionsumfang.
 
-| Kanal | Ablauf | Reibung | Verfügbar |
+| Kanal | Ablauf | Reibung | Stand |
 |---|---|---|---|
-| **S-Pen Screen-Off-Memo** | Stift ziehen → schreiben → fertig | **minimal** — kein Entsperren | ★ Primärkanal |
-| Quick Settings Tile | herunterwischen → tippen → diktieren/tippen | sehr niedrig | überall |
-| Home-Widget | tippen → tippen | niedrig | Homescreen |
-| Share-Intent | aus jeder App teilen → AXIOM | niedrig | app-abhängig |
-| Bixby / Sprache | "Hey Bixby, AXIOM notiere …" | niedrig, aber unzuverlässig | situativ |
-| Edge Panel | von der Kante wischen | mittel | überall |
+| **Dauerhafte Benachrichtigung** | aufziehen → tippen → schreiben, ohne Entsperren | **minimal** | ✅ Primärkanal |
+| Quick Settings Tile | herunterwischen → tippen → schreiben | sehr niedrig | ✅ |
+| Home-Widget | tippen → tippen | niedrig | ✅ |
+| App-Shortcut | langes Tippen aufs Symbol | niedrig | ✅ |
+| Share-Intent | aus jeder App teilen → AXIOM | niedrig | ✅ |
+| S-Pen über `ACTION_CREATE_NOTE` | Stift doppelt tippen → AXIOM | niedrig | ✅ registriert |
+| Sprache (Assistant / Bixby) | „Notiz in AXIOM" | niedrig, unzuverlässig | ✅ angemeldet |
 
-**Der S-Pen ist der strategische Hebel.** Kein anderes Android-Gerät bietet Erfassung ohne
-Entsperren, ohne App-Start, ohne Auswahl. Genau das Fenster von wenigen Sekunden, in dem der
-Gedanke noch existiert (D9), ist hier abgedeckt.
+### Warum die Benachrichtigung der Primärkanal ist
 
-**Umsetzung:** Screen-Off-Memos landen in Samsung Notes. AXIOM importiert sie periodisch
-(Ordner-Watch bzw. Notes-Export) und leert die Quelle. Nicht elegant, aber der reibungsärmste
-verfügbare Weg — und Reibung schlägt Eleganz.
+Ursprünglich war das S-Pen-Screen-Off-Memo als stärkster Kanal vorgesehen. Das hat sich nicht
+halten lassen: **Samsung Notes hat keine öffentliche Schnittstelle.** Screen-off-Memos landen
+dort, und jeder Weg heran wäre Reverse Engineering — der das nächste Systemupdate nicht
+überlebt.
+
+Der verbliebene Weg ist besser, als er zunächst klingt. Eine dauerhafte Benachrichtigung mit
+`RemoteInput` erlaubt Tippen **direkt in der Benachrichtigung** — ohne Entsperren, ohne
+App-Start, ohne Kontextwechsel. Zwei Sekunden statt zehn. Die App muss dafür nicht einmal
+laufen: Der Text landet in `MemoInbox` und wird beim nächsten Start eingesammelt.
+
+Für den Stift gibt es seit Android 14 den offiziellen Weg: `ACTION_CREATE_NOTE`. Damit erscheint
+AXIOM beim Doppeltipp mit dem S-Pen, in der Schnelleinstellung „Notiz" und auf dem
+Sperrbildschirm. Zusätzlich lässt sich die Activity in Samsungs *Air Actions* auf den Stiftknopf
+legen.
 
 **Nicht verhandelbar:** Beim Erfassen wird **nie** nach Kategorie, Projekt, Priorität oder Datum
 gefragt. Rein damit, Triage später im Review. Jede Rückfrage im Erfassungsmoment kostet den
@@ -36,16 +46,26 @@ Gedanken.
 
 | Kanal | Nutzung | Modul |
 |---|---|---|
-| **Home-Widget** | "Jetzt: X" + nächster Zeitanker, permanent sichtbar | M2, M3 |
-| **Always-On-Display** | nächster Anker + Restzeit, ohne Bildschirm zu wecken | M3 |
+| **Home-Widget** | „Jetzt: X" + nächster Zeitanker, permanent sichtbar | M2, M3 |
+| **Dauerhafte Benachrichtigung** | dieselbe Aussage, auch auf dem Sperrbildschirm | M2, M3 |
 | **Exakte Alarme** | zeitgetriggerte Interventionen — der wirksamste Typ (D4) | M3, M7, M8 |
 | **Notification (silent)** | `nudge`-Stufe, wegwischbar | alle |
 | **Notification (alerting)** | `intervene`-Stufe, verlangt Antwort | M4, M6 |
 | **Foreground Service** | während aktiver Fokus-/Reiz-Slots | M4, M5 |
 | **Full-Screen Intent** | nur `enforce` (Cooldown-Ablauf, L3-Eskalation) | M6, M9 |
 
-Widget und AOD lösen **Objektpermanenz** (D9): Was nicht sichtbar ist, existiert für dieses Profil
-nicht. Der nächste Anker muss ohne Interaktion sichtbar sein.
+Widget und Benachrichtigung lösen **Objektpermanenz** (D9): Was nicht sichtbar ist, existiert für
+dieses Profil nicht. Der nächste Anker muss ohne Interaktion sichtbar sein.
+
+**Lockscreen-Widgets gibt es auf Android nicht.** Sie wurden mit Android 5.0 entfernt. Für
+ständige Sichtbarkeit auch im gesperrten Zustand ist die dauerhafte Benachrichtigung mit
+`VISIBILITY_PUBLIC` der verbliebene Weg — sie zeigt Inhalt statt Platzhalter und nimmt Eingaben
+entgegen.
+
+**Fallstrick beim Widget:** Der `AppWidgetProvider` muss `android:exported="true"` haben. Der
+Launcher läuft in einem anderen Prozess und muss den Update-Broadcast senden können; mit `false`
+lässt sich das Widget schlicht nicht hinzufügen. Prüfbar am gebauten Paket:
+`aapt2 dump badging app.apk | grep app-widget` muss `provides-component:'app-widget'` zeigen.
 
 ---
 

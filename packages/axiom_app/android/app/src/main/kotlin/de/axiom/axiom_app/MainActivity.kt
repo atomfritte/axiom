@@ -70,6 +70,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         createChannels(this)
+        PresenceService.createChannel(this)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -123,6 +124,33 @@ class MainActivity : FlutterActivity() {
 
                     "pullPendingMemos" -> result.success(MemoInbox.drain(this))
 
+                    // Dauerhafte Anzeige im Benachrichtigungsbereich.
+                    "presenceStart" -> {
+                        PresenceService.start(
+                            this,
+                            call.argument<String>("headline").orEmpty(),
+                            call.argument<String>("detail").orEmpty(),
+                        )
+                        result.success(true)
+                    }
+
+                    "presenceUpdate" -> {
+                        PresenceService.update(
+                            this,
+                            call.argument<String>("headline").orEmpty(),
+                            call.argument<String>("detail").orEmpty(),
+                        )
+                        result.success(true)
+                    }
+
+                    "presenceStop" -> {
+                        PresenceService.stop(this)
+                        result.success(true)
+                    }
+
+                    "presenceEnabled" ->
+                        result.success(PresenceService.isEnabled(this))
+
                     "pendingSharedText" -> result.success(consumeSharedText())
 
                     "launchAction" -> result.success(consumeLaunchAction())
@@ -139,15 +167,29 @@ class MainActivity : FlutterActivity() {
      */
     private fun consumeLaunchAction(): String? {
         val action = intent?.action ?: return null
-        if (action != "de.axiom.CAPTURE" && action != "de.axiom.CHECKIN") return null
+        if (action !in setOf(
+                "de.axiom.CAPTURE",
+                "de.axiom.CHECKIN",
+                "de.axiom.FOCUS",
+            )
+        ) return null
         intent.action = Intent.ACTION_MAIN
         return action
     }
 
-    /** Text, den eine andere App nach AXIOM geteilt hat [D9]. */
+    /**
+     * Text, den eine andere App geteilt oder der Assistent diktiert hat,
+     * oder eine Vorbelegung aus der Stift-Schnittstelle [D9].
+     */
     private fun consumeSharedText(): String? {
-        if (intent?.action != Intent.ACTION_SEND) return null
+        val action = intent?.action ?: return null
+        val relevant = action == Intent.ACTION_SEND ||
+            action == "de.axiom.CAPTURE" ||
+            action == Intent.ACTION_VIEW
+        if (!relevant) return null
+
         val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent.data?.getQueryParameter("text")
         intent.removeExtra(Intent.EXTRA_TEXT)
         return text
     }

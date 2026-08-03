@@ -89,7 +89,7 @@ dart run tools/bin/sync_rules.dart
 
 | | |
 |---|---|
-| Tests | 416 grün (215 Core · 88 Daten · 113 App) |
+| Tests | 427 grün (215 Core · 88 Daten · 124 App) |
 | Analyzer | keine Meldungen in allen Paketen |
 | Regelwerk | 17 Regeln gültig, 16 aktiv — davon 8 **ungeeicht** |
 | Release-APK | gebaut, **ohne INTERNET-Berechtigung** — im APK verifiziert |
@@ -109,6 +109,30 @@ realen Konsequenzen bis zum Erhaltungsmodus (M9).
 **Stufe 4** — Signal-Log mit getrenntem Erfassen und Nachbetrachten (M10),
 Wirkfenster-Protokoll (M13, opt-in), verschlüsselter Datenabgleich per Datei
 statt Server.
+
+### Wege in die App hinein
+
+Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht
+festgehalten ist, ist weg (D9) — deshalb gibt es nicht einen Weg, sondern
+sieben. In der App stehen sie unter *System → Erfassen*, mit Einrichtung.
+
+| Weg | Reibung | Wie |
+|---|---|---|
+| **Dauerhafte Benachrichtigung** | minimal | Tippen direkt in der Benachrichtigung, ohne Entsperren (`RemoteInput`) |
+| Schnelleinstellung | sehr niedrig | Quick-Settings-Kachel |
+| Homescreen-Widget | niedrig | nächste Handlung + Kapazität, Tipp führt ins Eingabefeld |
+| App-Shortcut | niedrig | langes Tippen aufs Symbol |
+| Teilen aus anderen Apps | niedrig | `ACTION_SEND` |
+| S-Pen | niedrig | `ACTION_CREATE_NOTE` (Android 14+), zusätzlich auf Air Actions legbar |
+| Sprache | niedrig | `actions.intent.CREATE_NOTE` für Assistant, Bixby-Routine |
+
+Zwei Grenzen des Systems, ausdrücklich benannt:
+
+- **Lockscreen-Widgets gibt es auf Android nicht** — mit 5.0 entfernt. Der
+  verbliebene Weg zu ständiger Sichtbarkeit im gesperrten Zustand ist die
+  dauerhafte Benachrichtigung (`VISIBILITY_PUBLIC`).
+- **Samsung Notes hat keine öffentliche Schnittstelle.** Screen-off-Memos
+  bleiben dort. Der offizielle Stift-Weg ist `ACTION_CREATE_NOTE`.
 
 ### Eichung
 

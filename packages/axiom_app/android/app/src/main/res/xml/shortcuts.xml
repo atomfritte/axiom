@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Langes Tippen auf das App-Symbol: direkt erfassen oder einchecken. -->
-<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+<!--
+  Langes Tippen auf das App-Symbol, und zugleich die Anmeldung beim
+  Assistenten: `capability` macht die Aktion per Sprache aufrufbar
+  ("Notiz in AXIOM"). Samsung Bixby greift dieselben Shortcuts ab.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MissingApplicationIcon">
+
+    <capability android:name="actions.intent.CREATE_NOTE">
+        <intent
+            android:action="de.axiom.CAPTURE"
+            android:targetPackage="de.axiom.axiom_app"
+            android:targetClass="de.axiom.axiom_app.MainActivity">
+            <parameter
+                android:name="noteDigitalDocument.text"
+                android:key="text" />
+        </intent>
+    </capability>
+
     <shortcut
         android:shortcutId="capture"
         android:enabled="true"
@@ -11,7 +29,9 @@
             android:action="de.axiom.CAPTURE"
             android:targetPackage="de.axiom.axiom_app"
             android:targetClass="de.axiom.axiom_app.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
     </shortcut>
+
     <shortcut
         android:shortcutId="checkin"
         android:enabled="true"
@@ -20,6 +40,18 @@
         android:shortcutLongLabel="@string/shortcut_checkin_long">
         <intent
             android:action="de.axiom.CHECKIN"
+            android:targetPackage="de.axiom.axiom_app"
+            android:targetClass="de.axiom.axiom_app.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="focus"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_focus_short"
+        android:shortcutLongLabel="@string/shortcut_focus_long">
+        <intent
+            android:action="de.axiom.FOCUS"
             android:targetPackage="de.axiom.axiom_app"
             android:targetClass="de.axiom.axiom_app.MainActivity" />
     </shortcut>

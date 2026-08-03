@@ -439,6 +439,23 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
           'Standort und App-Nutzung werden nicht abgefragt — die brauchen '
           'erst spätere Module, und dann fragst du selbst danach.',
         ),
+        const SizedBox(height: Space.xl),
+        Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('DANACH', style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: Space.sm),
+              Text(
+                'Unter System → Erfassen findest du alle Wege in die App: '
+                'Widget, dauerhafte Benachrichtigung mit Direkteingabe, '
+                'Schnelleinstellung, S-Pen und Sprache. Such dir aus, was '
+                'bei dir wirklich funktioniert.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

@@ -1,0 +1,36 @@
+package de.axiom.axiom_app
+
+import android.app.Activity
+import android.content.Intent
+import android.os.Bundle
+
+/**
+ * Antwort auf `ACTION_CREATE_NOTE` — die offizielle Stift-Schnittstelle
+ * seit Android 14.
+ *
+ * Damit erscheint AXIOM dort, wo das System nach einer Notiz-App fragt:
+ * beim Doppeltipp mit dem Stift, über die Schnelleinstellung „Notiz",
+ * und auf dem Sperrbildschirm.
+ *
+ * **Warum nicht direkt Samsung Notes anzapfen:** Screen-off-Memos landen in
+ * Samsung Notes, und dafür gibt es keine öffentliche Schnittstelle. Der
+ * Systemweg ist der einzige, der ohne Reverse Engineering funktioniert und
+ * ein Update überlebt. Zusätzlich lässt sich diese Activity in Samsungs
+ * „Air Actions" auf den Stiftknopf legen.
+ */
+class CreateNoteActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Vorbelegter Text, falls das System einen mitschickt.
+        val prefill = intent?.getStringExtra(Intent.EXTRA_TEXT)
+
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .setAction("de.axiom.CAPTURE")
+                .putExtra(Intent.EXTRA_TEXT, prefill)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        )
+        finish()
+    }
+}

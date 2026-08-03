@@ -22,6 +22,9 @@ abstract final class SystemSync {
       detail: detail,
       capacity: snapshot.state.capacity,
     );
+    // Dieselbe Aussage in die dauerhafte Anzeige, falls eingeschaltet.
+    // Widget und Benachrichtigung duerfen nie Verschiedenes behaupten.
+    await AndroidBridge.updatePresence(headline: headline, detail: detail);
 
     // Erhaltungsmodus an die Geräteautomation melden, damit Samsung-Routinen
     // greifen können (Benachrichtigungen dämpfen, Bildschirmzeit begrenzen).

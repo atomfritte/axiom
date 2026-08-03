@@ -21,6 +21,7 @@ import '../design/widgets/baseline_card.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import 'channels_screen.dart';
 import 'signal_screen.dart';
 import 'vault_screen.dart';
 
@@ -122,6 +123,13 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
               const SectionLabel('Weiteres'),
               _LinkRow(
                 icon: Icons.bolt_outlined,
+                label: 'Erfassen',
+                detail: 'Wege in die App: Widget, Benachrichtigung, Stift',
+                target: const ChannelsScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
+                icon: Icons.history_toggle_off,
                 label: 'Vorfälle',
                 detail: 'Emotionale Spitzen festhalten und einordnen',
                 target: const SignalScreen(),

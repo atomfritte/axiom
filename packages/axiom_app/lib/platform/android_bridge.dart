@@ -116,6 +116,30 @@ abstract final class AndroidBridge {
     });
   }
 
+  // ── Dauerhafte Anzeige ────────────────────────────────────────────────
+
+  /// Schaltet die Präsenz im Benachrichtigungsbereich ein.
+  ///
+  /// Sie erscheint auch auf dem Sperrbildschirm und nimmt getippten Text
+  /// direkt entgegen — ohne Entsperren, ohne App-Start. Lockscreen-Widgets
+  /// gibt es auf Android seit 5.0 nicht mehr; das hier ist der verbliebene
+  /// Weg zu ständiger Sichtbarkeit [D9].
+  static Future<bool> startPresence({
+    required String headline,
+    required String detail,
+  }) =>
+      _invoke('presenceStart', {'headline': headline, 'detail': detail});
+
+  static Future<bool> updatePresence({
+    required String headline,
+    required String detail,
+  }) =>
+      _invoke('presenceUpdate', {'headline': headline, 'detail': detail});
+
+  static Future<bool> stopPresence() => _invoke('presenceStop');
+
+  static Future<bool> presenceEnabled() => _invoke('presenceEnabled');
+
   // ── Automation ────────────────────────────────────────────────────────
 
   /// Sendet einen Broadcast, den Samsung „Modi und Routinen" aufgreifen kann.

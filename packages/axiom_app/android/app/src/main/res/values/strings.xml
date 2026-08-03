@@ -5,4 +5,6 @@
     <string name="shortcut_capture_long">Gedanken festhalten</string>
     <string name="shortcut_checkin_short">Check-in</string>
     <string name="shortcut_checkin_long">Zustand messen</string>
+    <string name="shortcut_focus_short">Fokus</string>
+    <string name="shortcut_focus_long">Fokusblock starten</string>
 </resources>
