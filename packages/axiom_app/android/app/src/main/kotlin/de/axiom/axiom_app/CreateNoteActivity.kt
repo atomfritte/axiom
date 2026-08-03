@@ -22,13 +22,15 @@ class CreateNoteActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Vorbelegter Text, falls das System einen mitschickt.
+        // Vorbelegter Text, falls das System einen mitschickt. Assistenten
+        // legen ihn unter "text" ab, Teilen-Aufrufe unter EXTRA_TEXT.
         val prefill = intent?.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent?.getStringExtra("text")
 
         startActivity(
             Intent(this, MainActivity::class.java)
                 .setAction("de.axiom.CAPTURE")
-                .putExtra(Intent.EXTRA_TEXT, prefill)
+                .apply { if (!prefill.isNullOrBlank()) putExtra(Intent.EXTRA_TEXT, prefill) }
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         )
         finish()

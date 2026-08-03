@@ -188,10 +188,19 @@ class MainActivity : FlutterActivity() {
             action == Intent.ACTION_VIEW
         if (!relevant) return null
 
+        // Drei Quellen, drei Schluessel:
+        //   EXTRA_TEXT  -- Teilen aus anderen Apps
+        //   "text"      -- der Assistent; so ist der Parameter in
+        //                  shortcuts.xml gebunden (noteDigitalDocument.text)
+        //   ?text=      -- axiom://-Link, etwa aus einer Bixby-Routine
+        // Faellt einer davon aus, geht das Diktat verloren und der Kanal
+        // taeuscht Funktion vor.
         val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent.getStringExtra("text")
             ?: intent.data?.getQueryParameter("text")
         intent.removeExtra(Intent.EXTRA_TEXT)
-        return text
+        intent.removeExtra("text")
+        return text?.takeIf { it.isNotBlank() }
     }
 
     private fun permissionStatus(): Map<String, Boolean> {
