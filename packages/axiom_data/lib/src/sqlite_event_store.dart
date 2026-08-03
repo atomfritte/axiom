@@ -24,7 +24,7 @@ import 'package:sqlite3/sqlite3.dart';
 /// v5: `post_mortems`, `med_entries` — Stufe 4. Vorfaelle selbst liegen
 ///     als Events, die Nachbetrachtung braucht eine eigene Tabelle, weil
 ///     sie spaeter entsteht und ergaenzt wird.
-const int kSchemaVersion = 5;
+const int kSchemaVersion = 6;
 
 final class SqliteEventStore implements EventStore {
   final Database _db;
@@ -248,6 +248,28 @@ final class SqliteEventStore implements EventStore {
           dur_min   INTEGER NOT NULL DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_med_taken ON med_entries(taken_at);
+
+        -- Im Geraet bearbeitete Regeln.
+        --
+        -- Overlay-Semantik wie rules/personal: gleiche ID ueberschreibt die
+        -- mitgelieferte Regel vollstaendig, neue ID kommt additiv dazu. Die
+        -- Assets bleiben unberuehrt — auf dem Telefon sind sie ohnehin nur
+        -- lesbar, und ein Regelwerk, das sich selbst ueberschreibt, waere
+        -- nicht mehr mit dem Stand in Git vergleichbar.
+        --
+        -- `yaml` ist die Wahrheit, nicht eine Spalte je Feld: So laesst sich
+        -- eine bearbeitete Regel unveraendert nach rules/ zurueckkopieren.
+        CREATE TABLE IF NOT EXISTS rule_overrides (
+          id           TEXT PRIMARY KEY,
+          yaml         TEXT    NOT NULL,
+          updated_at   INTEGER NOT NULL,
+          -- Bis wann die Regel stumm mitlaeuft. Jede neue oder inhaltlich
+          -- geaenderte Regel bekommt sieben Tage (CLAUDE.md).
+          shadow_until INTEGER,
+          -- Ob es eine mitgelieferte Regel ueberschreibt. Bestimmt, ob
+          -- "zuruecksetzen" etwas wiederherstellt oder loescht.
+          overrides    INTEGER NOT NULL DEFAULT 0
+        );
       ''');
     }
 

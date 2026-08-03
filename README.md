@@ -155,6 +155,24 @@ lock screen and in Samsung's Now bar (Android 16, `ProgressStyle` + `requestProm
 Health Connect for sleep windows and daily steps, imported idempotently; Direct Share as a fixed
 target in the share sheet.
 
+### The rule editor
+
+Rules can be written on the device (*System → Rulebook*). Not a text box: the editor knows the
+engine's vocabulary, so it only offers what the engine can resolve — and it evaluates every
+condition against the **current** state while you type. Each line shows what the value is right
+now and whether that part holds.
+
+Two guardrails are enforced in code, not suggested:
+
+- Every saved rule runs as `log_only` for **seven days**, whatever severity was chosen. A rule
+  that goes live the day it is written gets judged on the day you were convinced it was right.
+- `rationale` and `cooldown` are required. Without reasoning an output is not auditable (G2);
+  without a cooldown you get a flood of notifications — the most common way apps like this die.
+
+Edits live as an overlay in the database, never in `rules/core/`. `ruleToYaml` returns a rule in
+exactly the form `rules/` uses, so anything written on the phone can be copied back into version
+control. A round-trip test keeps that honest.
+
 ### Why there is no cloud
 
 `INTERNET` is not declared in the manifest. Not "we don't send anything" — the permission is

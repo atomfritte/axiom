@@ -76,6 +76,15 @@ sealed class Condition {
   /// Validator (unbekannte Variablen, Widerspruchspruefung).
   Set<String> get referencedVariables;
 
+  /// Umkehrung von [Condition.fromMap].
+  ///
+  /// Noetig, damit eine im Editor geaenderte Regel wieder als YAML
+  /// herauskommt — in genau der Form, die der Parser wieder einliest.
+  /// `fromMap(toMap())` muss dieselbe Bedingung ergeben; ein Test haelt das
+  /// fest. Ohne diese Garantie waere jede Bearbeitung ein Einbahnweg aus dem
+  /// versionierten Regelwerk heraus.
+  Map<String, Object?> toMap();
+
   /// Parst einen Knoten der Regel-DSL.
   ///
   /// Erlaubte Formen:
@@ -213,6 +222,10 @@ final class AllOf extends Condition {
   @override
   Set<String> get referencedVariables =>
       children.expand((c) => c.referencedVariables).toSet();
+
+  @override
+  Map<String, Object?> toMap() =>
+      {'all': children.map((c) => c.toMap()).toList()};
 }
 
 final class AnyOf extends Condition {
@@ -225,6 +238,10 @@ final class AnyOf extends Condition {
   @override
   Set<String> get referencedVariables =>
       children.expand((c) => c.referencedVariables).toSet();
+
+  @override
+  Map<String, Object?> toMap() =>
+      {'any': children.map((c) => c.toMap()).toList()};
 }
 
 final class NotCond extends Condition {
@@ -236,6 +253,9 @@ final class NotCond extends Condition {
 
   @override
   Set<String> get referencedVariables => child.referencedVariables;
+
+  @override
+  Map<String, Object?> toMap() => {'not': child.toMap()};
 }
 
 final class NumericCompare extends Condition {
@@ -255,6 +275,11 @@ final class NumericCompare extends Condition {
 
   @override
   Set<String> get referencedVariables => {variable};
+
+  @override
+  Map<String, Object?> toMap() => {
+        variable: {op.token: value},
+      };
 
   @override
   String toString() => '$variable ${op.token} $value';
@@ -280,6 +305,11 @@ final class SymbolicCompare extends Condition {
   Set<String> get referencedVariables => {variable};
 
   @override
+  Map<String, Object?> toMap() => {
+        variable: {op.token: value},
+      };
+
+  @override
   String toString() => '$variable ${op.token} $value';
 }
 
@@ -301,6 +331,11 @@ final class TimeBetween extends Condition {
 
   @override
   Set<String> get referencedVariables => const {'time_between'};
+
+  @override
+  Map<String, Object?> toMap() => {
+        'time_between': [_fmt(fromMinutes), _fmt(toMinutes)],
+      };
 
   @override
   String toString() =>
@@ -346,6 +381,11 @@ final class MinutesSince extends Condition {
   Set<String> get referencedVariables => {'event:$eventType'};
 
   @override
+  Map<String, Object?> toMap() => {
+        'minutes_since': {'event': eventType, op.token: minutes},
+      };
+
+  @override
   String toString() => 'minutes_since($eventType) ${op.token} $minutes';
 }
 
@@ -360,6 +400,11 @@ final class CountToday extends Condition {
 
   @override
   Set<String> get referencedVariables => {'event:$eventType'};
+
+  @override
+  Map<String, Object?> toMap() => {
+        'count_today': {'event': eventType, op.token: count},
+      };
 
   @override
   String toString() => 'count_today($eventType) ${op.token} $count';

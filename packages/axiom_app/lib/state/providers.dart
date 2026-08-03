@@ -47,6 +47,13 @@ final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
     }
   }
 
+  // Im Geraet bearbeitete Regeln kommen zuletzt: gleiche ID ersetzt die
+  // mitgelieferte Fassung, neue ID kommt dazu — dieselbe Overlay-Semantik
+  // wie rules/personal. Regeln in der Schattenzeit werden dabei auf
+  // log_only gesetzt; sie laufen mit, sprechen aber nicht.
+  final overlay = store.overrideDocument(clock.nowLocal());
+  if (overlay.isNotEmpty) sources['im Gerät bearbeitet'] = overlay;
+
   final parsed = YamlRuleSource(sources).parse();
   final limits = sources.containsKey('limits.yaml')
       ? parseGlobalLimits(sources['limits.yaml']!)

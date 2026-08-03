@@ -16,7 +16,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:axiom_core/axiom_core.dart';
+
 import 'package:axiom_app/design/tokens.dart';
+import 'package:axiom_app/state/rule_draft.dart';
 import 'package:axiom_app/i18n/en.dart';
 import 'package:axiom_app/i18n/i18n.dart';
 
@@ -90,6 +93,18 @@ void main() {
         ...AppLanguage.values.map((l) => l.label),
         ...TextSize.values.map((t) => t.label),
         ...AxiomScheme.values.map((s) => s.label),
+        // Der Wortschatz des Regelwerks laeuft im Editor ebenfalls ueber
+        // Variablen durch die Uebersetzung — Variablennamen, Ereignisse,
+        // Aktionen, Operatoren.
+        ...LeafKind.values.map((k) => k.label),
+        ...RuleVocabulary.numerics.map((v) => v.label),
+        ...RuleVocabulary.numerics.map((v) => v.meaning),
+        ...RuleVocabulary.symbolics.map((v) => v.label),
+        ...RuleVocabulary.symbolics.expand((v) => v.values.values),
+        ...RuleVocabulary.events.map((e) => e.label),
+        ...RuleVocabulary.actions.map((a) => a.label),
+        ...RuleVocabulary.actions.map((a) => a.meaning),
+        ...RuleVocabulary.operatorLabels.values,
       ];
       final missing = labels
           .where((l) => l != 'Deutsch' && l != 'English')

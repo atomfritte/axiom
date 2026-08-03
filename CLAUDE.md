@@ -80,6 +80,17 @@ Beim Anlegen oder Ändern einer Regel gilt:
 - `rules/personal/` ist git-ignoriert. Enthält private Trigger. **Nie committen, nie zitieren,
   nie in Beispiele übernehmen.**
 
+**Regeleditor in der App.** Regeln lassen sich am Gerät ändern (*System → Regelwerk*). Die
+Änderung landet als Overlay in der Datenbank, nicht in `rules/core/` — die Assets bleiben
+unberührt, und `ruleToYaml` gibt jede Regel in genau der Form zurück, die nach `rules/`
+zurückkopiert werden kann. Zwei Dinge sind dabei nicht verhandelbar und im Code erzwungen:
+
+1. Jede gespeicherte Regel läuft **sieben Tage als `log_only`**, egal was gewählt wurde.
+2. `rationale` und `cooldown` sind Pflichtfelder — der Editor speichert sonst nicht.
+
+Wer eine Regel dauerhaft will, kopiert sie am Rechner nach `rules/core/` und committet sie.
+Erst dann ist sie versioniert.
+
 ---
 
 ## Code-Konventionen
@@ -219,6 +230,7 @@ ausdrücklich revidiert wurde:
 | Cloud-Pflicht, Account-Zwang, Telemetrie | Datenhoheit (R6) |
 | Schuldbasierte Erinnerungen und Formulierungen | erzeugt Vermeidung statt Handlung |
 | Endlose Konfigurierbarkeit, Einstellungs-Wildwuchs | D3 |
+| Regeleditor ohne Schattenzeit oder ohne Pflicht-`rationale` | wäre reines Meta-Work-Vehikel (D3, R1) |
 | Microservices, Multi-User, Rollen/Rechte, Web-Frontend | kein Anwendungsfall |
 | UI-Redesign, bevor S1–S3 laufen | klassische Ausweichbaustelle |
 

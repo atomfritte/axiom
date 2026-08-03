@@ -26,6 +26,7 @@ import '../state/providers.dart';
 import '../state/runtime.dart';
 import 'channels_screen.dart';
 import 'check_screen.dart';
+import 'rule_editor_screen.dart';
 import 'signal_screen.dart';
 import 'vault_screen.dart';
 
@@ -682,12 +683,21 @@ class _RuleTile extends StatelessWidget {
   final RuleStats? stats;
   final bool calibrated;
 
+  /// Im Geraet bearbeitet — dann ist „zuruecksetzen" moeglich.
+  ///
+  /// Nicht `override` genannt: Das ist in Dart eine Annotation, und ein Feld
+  /// dieses Namens macht jede folgende `@override`-Zeile ungueltig.
+  final RuleOverride? edit;
+
   const _RuleTile({
     required this.rule,
     required this.calibrated,
     this.skipReason,
     this.stats,
+    this.edit,
   });
+
+  bool get edited => edit != null;
 
   /// Laeuft diese Regel auf geschaetzten Schwellen?
   bool get _isUngauged =>
@@ -791,6 +801,24 @@ class _RuleTile extends StatelessWidget {
               _Field(
                 label: context.t('Begründung'),
                 value: context.ruleRationale(rule).trim(),
+              ),
+              // Der Weg vom Lesen zum Ändern ist ein Tipp lang. Wer eine
+              // Regel gerade versteht, ist der beste Zeitpunkt, sie zu
+              // korrigieren — später erinnert man den Gedanken nicht mehr.
+              Padding(
+                padding: const EdgeInsets.only(top: Space.sm, bottom: Space.md),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: Text(context.t('Bearbeiten')),
+                    onPressed: () => showRuleEditor(
+                      context,
+                      existing: rule,
+                      overridesShipped: !edited,
+                    ),
+                  ),
+                ),
               ),
               _Field(
                 label: context.t('Bedingung'),
@@ -1011,6 +1039,7 @@ class RulesScreen extends ConsumerWidget {
         data: (rt) {
           final skipped = snapshot.value?.skipped ?? const <SkippedRule>[];
           final skipReasons = {for (final s in skipped) s.rule.id: s.reason};
+          final edits = {for (final o in rt.store.ruleOverrides()) o.id: o};
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -1020,12 +1049,41 @@ class RulesScreen extends ConsumerWidget {
               Space.huge,
             ),
             children: [
+              // Der Einstieg steht oben, nicht unten: Wer eine Regel anlegen
+              // will, soll nicht erst an siebzehn vorbei.
+              Panel(
+                onTap: () => showRuleEditor(context),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: Space.lg, vertical: Space.md),
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 19, color: p.signal),
+                    const SizedBox(width: Space.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(context.t('Neue Regel'),
+                              style: Theme.of(context).textTheme.bodyLarge),
+                          Text(
+                            context.t('Geführt, mit Vorschau gegen den Zustand von jetzt'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Space.lg),
               for (final rule in rt.rules)
                 _RuleTile(
                   rule: rule,
                   calibrated: rt.weightsCalibrated,
                   skipReason: skipReasons[rule.id],
                   stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
+                  edit: edits[rule.id],
                 ),
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Grenzen')),

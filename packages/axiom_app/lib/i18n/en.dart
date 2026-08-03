@@ -983,6 +983,181 @@ const Map<String, String> kEnglish = {
       'Off — and without the notification permission above it cannot start '
           'either.',
 
+  // ── Regeleditor ──────────────────────────────────────────────────────
+  'Neue Regel': 'New rule',
+  'Bearbeiten': 'Edit',
+  'Geführt, mit Vorschau gegen den Zustand von jetzt':
+      'Guided, previewed against the state right now',
+  'Wie sie heißt': 'What it is called',
+  'Kurz und in deiner Sprache': 'Short, in your own words',
+  'Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.':
+      'This sentence ends up in the message. No blame, no question — a '
+          'statement.',
+  'Wann sie zutrifft': 'When it applies',
+  'Was dann passiert': 'What happens then',
+  'Text der Meldung (optional)': 'Text of the message (optional)',
+  'Warum es sie gibt': 'Why it exists',
+  'Was diese Regel verhindern oder auslösen soll':
+      'What this rule should prevent or set off',
+  'Pflichtfeld. Jede Ausgabe von AXIOM nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.':
+      'Required. Every output names its rule and this reasoning — without it '
+          'the recommendation would be an assertion.',
+  'Worauf sie einzahlt': 'What it serves',
+  'Wie laut': 'How loud',
+  'Regel aktiv': 'Rule active',
+  'Ausgeschaltet bleibt sie erhalten, wird aber nicht ausgewertet.':
+      'Switched off it is kept but not evaluated.',
+  'Mindestabstand': 'Minimum interval',
+  'Höchstens pro Tag': 'At most per day',
+  'Rang bei Gleichstand': 'Rank on a tie',
+  'kein Limit': 'no limit',
+  'min': 'min',
+  'mal': 'times',
+  'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.':
+      'Without an interval you get a flood of notifications — the most common '
+          'reason apps like this get deleted again.',
+  'Eine harte Obergrenze zusätzlich zum Abstand.':
+      'A hard ceiling on top of the interval.',
+  'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.':
+      'If two rules fire at once, the higher rank wins. On a tie the number '
+          'decides — never chance.',
+  'ALLE': 'ALL',
+  'EINE VON': 'ONE OF',
+  'NICHT': 'NOT',
+  'IST': 'IS',
+  'IST NICHT': 'IS NOT',
+  'Gruppe': 'Group',
+  'Gruppe entfernen': 'Remove group',
+  'Bedingung entfernen': 'Remove condition',
+  'von': 'from',
+  'bis': 'to',
+  'nie': 'never',
+  'jetzt: {0}': 'now: {0}',
+  'Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.':
+      'Crossing midnight is allowed — 22:00 to 05:00 means the night.',
+  'Ein Ereignis, das nie eintrat, gilt als unendlich lange her. Für „läuft seit" braucht es zusätzlich eine Bedingung darauf, dass überhaupt etwas läuft.':
+      'An event that never happened counts as infinitely long ago. For '
+          '“running since” you also need a condition that something is '
+          'running at all.',
+  'Trifft mit dem Zustand von jetzt zu.':
+      'Applies to the state right now.',
+  'Trifft mit dem Zustand von jetzt nicht zu.':
+      'Does not apply to the state right now.',
+  'Noch unvollständig — unten steht, was fehlt.':
+      'Still incomplete — what is missing is listed below.',
+  'Fehlt noch': 'Still missing',
+  'Der Titel fehlt. Er steht später in der Meldung.':
+      'The title is missing. It ends up in the message.',
+  'Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.':
+      'The reasoning is too short. It appears in the rule inspector and has '
+          'to still explain in six months why this rule exists.',
+  'Ohne Abstand meldet sich die Regel beliebig oft.':
+      'Without an interval the rule can speak up arbitrarily often.',
+  'SIEBEN TAGE STUMM': 'SEVEN DAYS SILENT',
+  'Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.':
+      'From saving on, the rule runs along and gets logged but says nothing. '
+          'The rule inspector shows how often it would have fired — then you '
+          'decide whether it really should.',
+  'Gespeichert. Die Regel läuft sieben Tage stumm mit — im Systeminspektor siehst du, wie oft sie gefeuert hätte.':
+      'Saved. The rule runs silently for seven days — the rule inspector '
+          'shows how often it would have fired.',
+  'Auf Auslieferungsstand zurücksetzen': 'Reset to the shipped version',
+  'Regel entfernen': 'Remove rule',
+  'Zurückgesetzt auf die mitgelieferte Fassung.':
+      'Reset to the shipped version.',
+  'Regel entfernt. Die Nummer wird nicht wiederverwendet.':
+      'Rule removed. The number will not be reused.',
+  'ALS YAML': 'AS YAML',
+  'Als YAML zeigen': 'Show as YAML',
+  'Genau so kann die Regel nach rules/ zurück — der Editor ist keine Einbahnstraße.':
+      'Exactly like this the rule can go back into rules/ — the editor is not '
+          'a one-way street.',
+  'Kopieren': 'Copy',
+  'Bearbeitet': 'Edited',
+
+  // Wortschatz des Regelwerks. Läuft über Variablen durch die Übersetzung
+  // und ist deshalb im Quelltext nicht als Literal zu finden.
+  'Zahl': 'Number',
+  'Auswahl': 'Choice',
+  'Uhrzeit': 'Time of day',
+  'Seit einem Ereignis': 'Since an event',
+  'Anzahl heute': 'Count today',
+  'kleiner als': 'less than',
+  'höchstens': 'at most',
+  'mindestens': 'at least',
+  'größer als': 'greater than',
+  'genau': 'exactly',
+  'nicht': 'not',
+  'Laststufe': 'Load level',
+  'Was gerade läuft': 'What is running',
+  'Wochentag': 'Weekday',
+  'erhöht': 'raised',
+  'kritisch': 'critical',
+  'nichts': 'nothing',
+  'Reiz-Slot': 'Stimulation slot',
+  'Erfassung': 'Capture',
+  'Aufgabe erledigt': 'Task completed',
+  'Aufgabe begonnen': 'Task started',
+  'Fokus gestartet': 'Focus started',
+  'Fokus beendet': 'Focus ended',
+  'Impuls abgefangen': 'Impulse intercepted',
+  'Körpersignal quittiert': 'Body signal acknowledged',
+  'Schlaf eingetragen': 'Sleep logged',
+  'Review abschlossen': 'Review finished',
+  'Einnahme': 'Intake',
+  'Review abgeschlossen': 'Review finished',
+
+  // Bedeutung der Größen — steht im Editor unter jeder Auswahl.
+  'Wie viel exekutive Reserve heute da ist. Hoch heißt: es geht viel.':
+      'How much executive reserve there is today. High means a lot is '
+          'possible.',
+  'Puffer für emotionale Belastung. Niedrig heißt: Impulse kommen leichter durch.':
+      'Headroom for emotional load. Low means impulses get through more '
+          'easily.',
+  'Kumulierter Aufwand, den Alltag zu strukturieren. Der Wert, der einen Absturz ankündigt, bevor er sichtbar wird.':
+      'Accumulated effort of structuring everyday life. The value that '
+          'announces a collapse before it becomes visible.',
+
+  // Aktionen einer Regel.
+  'Hinweis zeigen': 'Show a hint',
+  'Ein Satz, mehr nicht. Die häufigste und harmloseste Aktion.':
+      'One sentence, nothing more. The most common and most harmless action.',
+  'Check-in anstoßen': 'Prompt a check-in',
+  'Fragt die vier Regler ab.': 'Asks for the four sliders.',
+  'Aufgabe vorschlagen': 'Suggest a task',
+  'Schlägt die passendste startbare Aufgabe vor.':
+      'Suggests the most fitting startable task.',
+  'Zum Zerlegen auffordern': 'Ask to split it',
+  'Wenn etwas Wichtiges außer Reichweite liegt: zerlegen statt anmahnen.':
+      'When something important is out of reach: split it instead of nagging.',
+  'Reiz-Slot vorschlagen': 'Suggest a stimulation slot',
+  'Deckt den Bedarf geplant, bevor er sich den schnellsten Kanal sucht.':
+      'Covers the need on purpose, before it finds the fastest channel.',
+  'Wartezeit setzen': 'Set a waiting period',
+  'Kein Verbot — nur Latenz zwischen Impuls und Handlung.':
+      'No ban — only latency between impulse and action.',
+  'Fokus schützen': 'Protect focus',
+  'Unterdrückt Benachrichtigungen, solange der Block läuft.':
+      'Suppresses notifications while the block runs.',
+  'Deutlich unterbrechen': 'Interrupt clearly',
+  'Nur mit belegbarem Grund. Eine falsch getimte Unterbrechung zerstört den wertvollsten Zustand, den dieses Profil hat.':
+      'Only with a demonstrable reason. A badly timed interruption destroys '
+          'the most valuable state this profile has.',
+  'Zeitanker setzen': 'Set a time anchor',
+  'Legt einen Ankerschritt an.': 'Creates an anchor step.',
+  'Laststufe setzen': 'Set the load level',
+  'Hebt oder senkt die Stufe, aus der die Konsequenzen folgen.':
+      'Raises or lowers the level the consequences follow from.',
+  'Konfiguration sperren': 'Lock configuration',
+  'Nur Pflicht und Erholung. Ein Erfolg des Systems, kein Scheitern.':
+      'Obligations and recovery only. A success of the system, not a failure.',
+  'Der Meta-Guard gegen sich selbst (M12).':
+      'The meta-guard against itself (M12).',
+  'Nur mitschreiben (SHADOW)': 'Only record (SHADOW)',
+  'Läuft stumm mit und wird protokolliert. Der Zustand, in dem jede neue Regel beginnt.':
+      'Runs along silently and gets logged. The state every new rule starts '
+          'in.',
+
   // ── Anzeige-Einstellungen ────────────────────────────────────────────
   'Textgröße': 'Text size',
   'Helligkeit': 'Brightness',

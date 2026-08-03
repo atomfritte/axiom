@@ -181,6 +181,21 @@ final class AxiomRuntime {
         'slot': slot,
       });
   // ── 2.–5. Derive, Evaluate, Resolve, Emit ─────────────────────────────
+  /// Der Auswertungskontext von jetzt — fuer die Vorschau im Regeleditor.
+  ///
+  /// Damit laesst sich eine Bedingung gegen den *aktuellen* Zustand pruefen,
+  /// bevor sie gespeichert wird. Das ist der Unterschied zwischen einem
+  /// Editor und einem Texteingabefeld: Man sieht sofort, ob die Regel jetzt
+  /// zutraefe — und bei welchem Teil sie scheitert.
+  Future<StateEvalContext> currentContext() async {
+    final signals = await _aggregator.aggregate();
+    final derived = _deriver.derive(signals, clock.nowUtc());
+    return StateEvalContext(
+      state: derived.vector,
+      clock: clock,
+      runtime: await _buildRuntimeContext(),
+    );
+  }
   /// [language] wirkt nur auf Texte, nie auf Urteile: Welche Regel feuert,
   /// haengt nicht von der Anzeigesprache ab (ADR-0003).
   Future<AxiomSnapshot> evaluate({

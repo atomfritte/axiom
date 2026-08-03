@@ -306,8 +306,15 @@ final class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Space.md),
       child: Row(
         children: [
-          Text(text.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall),
+          // Flexible mit Ellipse: Ohne das erzeugt ein langer Zusatz rechts
+          // negativen Restplatz fuer den Trennstrich — und ein Expanded mit
+          // negativem Raum ist ein Ueberlauf, kein Umbruch.
+          Flexible(
+            child: Text(text.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall),
+          ),
           const SizedBox(width: Space.md),
           Expanded(child: Container(height: 1, color: p.rule)),
           if (trailing != null) ...[
