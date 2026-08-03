@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/health_sync.dart';
 import '../platform/system_sync.dart';
 import 'runtime.dart';
 
@@ -52,7 +53,7 @@ final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
       ? parseWeights(sources['weights.yaml']!)
       : const Weights();
 
-  return AxiomRuntime(
+  final runtime = AxiomRuntime(
     store: store,
     clock: clock,
     rules: parsed.rules,
@@ -62,6 +63,24 @@ final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
     weightsCalibrated: !(sources['weights.yaml'] ?? '')
         .contains('status: uncalibrated'),
   );
+
+  // Schlaf und Bewegung nachziehen, ohne den Start aufzuhalten. Ohne
+  // Freigabe passiert nichts; mit Freigabe sind es wenige Datensaetze.
+  // Erst wenn wirklich etwas Neues dazukam, wird neu ausgewertet — sonst
+  // liefe bei jedem Start eine ueberfluessige Runde.
+  unawaited(HealthSync.import(runtime).then((result) {
+    if (result.imported > 0) ref.read(refreshTickProvider.notifier).bump();
+  }));
+
+  return runtime;
+});
+
+/// Verfuegbarkeit von Health Connect. Wird bei jeder Anzeige neu geholt:
+/// Freigaben koennen jederzeit einzeln entzogen werden (R8).
+final healthAvailabilityProvider =
+    FutureProvider<HealthAvailability>((ref) async {
+  ref.watch(refreshTickProvider);
+  return HealthSync.availability();
 });
 
 /// Erhoehen loest eine Neuauswertung aus.

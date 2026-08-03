@@ -180,6 +180,38 @@ class _BreadcrumbCard extends ConsumerWidget {
   }
 }
 
+/// Wo die laufende Sitzung außerhalb der App zu sehen ist.
+///
+/// Steht bewusst hier und nicht in den Einstellungen: Der Hinweis nützt nur
+/// in dem Moment, in dem eine Sitzung läuft — und dann ersetzt er das
+/// Nachsehen in der App, um das es eigentlich geht [D6].
+class _LiveSlotHint extends StatelessWidget {
+  const _LiveSlotHint();
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AndroidBridge.isSupported) return const SizedBox.shrink();
+    return FutureBuilder<bool>(
+      future: AndroidBridge.liveSlotPromotable(),
+      builder: (context, snapshot) {
+        final promoted = snapshot.data ?? false;
+        return Padding(
+          padding: const EdgeInsets.only(top: Space.md),
+          child: Text(
+            promoted
+                ? 'Die Restzeit steht in der Statusleiste, auf dem '
+                    'Sperrbildschirm und in der Now Bar. Du musst hier nicht '
+                    'nachsehen.'
+                : 'Die Restzeit steht als laufende Benachrichtigung im '
+                    'Benachrichtigungsbereich.',
+            style: monoStyle(context, size: 11, color: context.axiom.inkFaint),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _MinutePicker extends StatelessWidget {
   final int value;
   final int? max;
@@ -319,6 +351,8 @@ class _RunningPane extends ConsumerWidget {
             ],
           ),
         ),
+
+        const _LiveSlotHint(),
 
         if (verdict != null) ...[
           const SizedBox(height: Space.lg),

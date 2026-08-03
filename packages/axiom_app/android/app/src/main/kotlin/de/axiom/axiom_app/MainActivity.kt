@@ -14,6 +14,11 @@ import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Brücke zu Android-Systemfunktionen, die Flutter nicht abdeckt.
@@ -61,16 +66,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Health Connect liest asynchron. Der Scope haengt an der Activity,
+     * damit ein laufender Lesevorgang beim Schliessen nicht weiterlaeuft.
+     */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     /** Neuer Intent bei bereits laufender App (singleTop). */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
     }
 
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         createChannels(this)
         PresenceService.createChannel(this)
+        LiveSlotService.createChannel(this)
+        // Muss bei jedem Start erneut angemeldet werden: Das System raeumt
+        // langlebige Shortcuts auf, wenn die App laenger nicht lief.
+        ShareTargets.publish(this)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -151,6 +171,55 @@ class MainActivity : FlutterActivity() {
                     "presenceEnabled" ->
                         result.success(PresenceService.isEnabled(this))
 
+                    // ── Laufender Slot als Live Update ──────────────────
+                    "liveSlotStart" -> {
+                        LiveSlotService.start(
+                            context = this,
+                            kind = call.argument<String>("kind") ?: "focus",
+                            title = call.argument<String>("title").orEmpty(),
+                            detail = call.argument<String>("detail").orEmpty(),
+                            startedAtMillis = call.argument<Long>("startedAtMillis")
+                                ?: System.currentTimeMillis(),
+                            plannedMinutes = call.argument<Int>("plannedMinutes") ?: 50,
+                        )
+                        result.success(true)
+                    }
+
+                    "liveSlotStop" -> {
+                        LiveSlotService.stop(this)
+                        result.success(true)
+                    }
+
+                    "liveSlotRunning" ->
+                        result.success(LiveSlotService.isRunning(this))
+
+                    // Ob das Geraet Live Updates befoerdert. Die Oberflaeche
+                    // verspricht sonst eine Pille, die nie erscheint.
+                    "liveSlotPromotable" ->
+                        result.success(LiveSlotService.isPromotable())
+
+                    // ── Health Connect ──────────────────────────────────
+                    "healthStatus" -> result.success(HealthBridge.status(this))
+
+                    "healthRequestPermissions" ->
+                        result.success(HealthBridge.requestPermissions(this))
+
+                    "healthRead" -> {
+                        val since = call.argument<Long>("sinceMillis") ?: 0L
+                        scope.launch {
+                            val records = try {
+                                HealthBridge.read(this@MainActivity, since)
+                            } catch (e: Throwable) {
+                                emptyList()
+                            }
+                            result.success(records)
+                        }
+                    }
+
+                    "healthOpenSettings" -> {
+                        result.success(openHealthSettings())
+                    }
+
                     "pendingSharedText" -> result.success(consumeSharedText())
 
                     "launchAction" -> result.success(consumeLaunchAction())
@@ -171,6 +240,7 @@ class MainActivity : FlutterActivity() {
                 "de.axiom.CAPTURE",
                 "de.axiom.CHECKIN",
                 "de.axiom.FOCUS",
+                "de.axiom.SENSATION",
             )
         ) return null
         intent.action = Intent.ACTION_MAIN
@@ -236,6 +306,20 @@ class MainActivity : FlutterActivity() {
                 .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         )
         return false
+    }
+
+    /**
+     * Systemeinstellungen von Health Connect. Der Nutzer entzieht dort
+     * einzelne Freigaben — deshalb muss der Weg dahin sichtbar sein und
+     * nicht nur der Weg hinein.
+     */
+    private fun openHealthSettings(): Boolean = try {
+        startActivity(
+            Intent(androidx.health.connect.client.HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+        )
+        true
+    } catch (e: Throwable) {
+        false
     }
 
     private fun requestIgnoreBatteryOptimizations(): Boolean {

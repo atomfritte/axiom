@@ -19,6 +19,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/baseline_card.dart';
 import '../design/widgets/instruments.dart';
+import '../platform/health_sync.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
 import 'channels_screen.dart';
@@ -120,6 +121,10 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
                 ),
               ),
               const SizedBox(height: Space.xl),
+              const SectionLabel('Datenquellen'),
+              const _HealthCard(),
+
+              const SizedBox(height: Space.xl),
               const SectionLabel('Weiteres'),
               _LinkRow(
                 icon: Icons.bolt_outlined,
@@ -209,6 +214,136 @@ class _BudgetCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Health Connect: Schlaf und Bewegung aus dem System statt aus Erinnerung.
+///
+/// Der Zustand wird ausgeschrieben, nicht nur als Schalter gezeigt. Wenn
+/// keine Schlafdaten ankommen, muss ohne Suchen erkennbar sein, woran es
+/// liegt — sonst rechnet die Kapazität still mit Lücken (R8).
+class _HealthCard extends ConsumerStatefulWidget {
+  const _HealthCard();
+
+  @override
+  ConsumerState<_HealthCard> createState() => _HealthCardState();
+}
+
+class _HealthCardState extends ConsumerState<_HealthCard> {
+  bool _busy = false;
+  String? _lastResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    final availability = ref.watch(healthAvailabilityProvider).value;
+
+    final (label, body, action) = switch (availability) {
+      null => ('Wird geprüft', 'Einen Moment.', null),
+      HealthAvailability.unavailable => (
+          'Nicht verfügbar',
+          'Auf diesem Gerät gibt es kein Health Connect. Schlaf und '
+              'Bewegung kommen weiterhin aus deiner Eingabe.',
+          null,
+        ),
+      HealthAvailability.needsUpdate => (
+          'Aktualisierung nötig',
+          'Die Systemkomponente ist älter als das, was AXIOM liest. Sie '
+              'lässt sich in den Systemeinstellungen aktualisieren.',
+          'Einstellungen öffnen',
+        ),
+      HealthAvailability.notGranted => (
+          'Nicht freigegeben',
+          'AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide '
+              'gehen in die Kapazität ein — heute nur, soweit du sie selbst '
+              'einträgst.',
+          'Freigeben',
+        ),
+      HealthAvailability.ready => (
+          'Verbunden',
+          'Schlaffenster und Tagesschritte werden beim Start nachgezogen. '
+              'Nur lesend, nur diese beiden, jederzeit widerrufbar.',
+          'Jetzt abgleichen',
+        ),
+    };
+
+    return Panel(
+      accent: availability == HealthAvailability.ready
+          ? p.calm.withValues(alpha: 0.45)
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.monitor_heart_outlined,
+                  size: 19,
+                  color: availability == HealthAvailability.ready
+                      ? p.calm
+                      : p.inkDim),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: Text('Health Connect · $label',
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Text(body, style: Theme.of(context).textTheme.bodySmall),
+          if (_lastResult != null) ...[
+            const SizedBox(height: Space.md),
+            Text(_lastResult!,
+                style: monoStyle(context, size: 11, color: p.signal)),
+          ],
+          if (action != null) ...[
+            const SizedBox(height: Space.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(
+                onPressed: _busy ? null : () => _act(availability!),
+                child: Text(_busy ? 'Läuft' : action),
+              ),
+            ),
+          ],
+          const SizedBox(height: Space.md),
+          Text(
+            'Health Connect ist eine Schnittstelle des Geräts. Nichts davon '
+            'verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.',
+            style: monoStyle(context, size: 10.5, color: p.inkFaint),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _act(HealthAvailability availability) async {
+    switch (availability) {
+      case HealthAvailability.needsUpdate:
+        await HealthSync.openSettings();
+      case HealthAvailability.notGranted:
+        await HealthSync.connect();
+      case HealthAvailability.ready:
+        await _import();
+      case HealthAvailability.unavailable:
+        break;
+    }
+    if (mounted) ref.invalidate(healthAvailabilityProvider);
+  }
+
+  Future<void> _import() async {
+    setState(() => _busy = true);
+    final runtime = await ref.read(runtimeProvider.future);
+    final result = await HealthSync.import(runtime);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      // Sachlich zaehlen, nicht loben. Auch "nichts Neues" ist ein Ergebnis.
+      _lastResult = result.imported == 0
+          ? 'Nichts Neues · ${result.skipped} bereits vorhanden'
+          : '${result.sleepNights} Nächte · ${result.stepDays} Tage Schritte '
+              'übernommen';
+    });
+    if (result.imported > 0) refreshAxiom(ref);
   }
 }
 

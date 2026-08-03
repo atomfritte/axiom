@@ -140,6 +140,79 @@ abstract final class AndroidBridge {
 
   static Future<bool> presenceEnabled() => _invoke('presenceEnabled');
 
+  // ── Laufender Slot (Live Update) ──────────────────────────────────────
+
+  /// Zeigt den laufenden Slot in der Statusleisten-Pille, auf dem
+  /// Sperrbildschirm und in Samsungs Now Bar.
+  ///
+  /// Der teuerste Fehlermodus im Fokus ist der fehlende Ausstieg [D6]: Die
+  /// Sitzung läuft weiter, das Zeitgefühl fehlt [D4]. Eine Anzeige, die man
+  /// erst öffnen muss, kommt dafür zu spät.
+  static Future<bool> startLiveSlot({
+    required String kind,
+    required String title,
+    required String detail,
+    required DateTime startedAt,
+    required Duration planned,
+  }) =>
+      _invoke('liveSlotStart', {
+        'kind': kind,
+        'title': title,
+        'detail': detail,
+        'startedAtMillis': startedAt.millisecondsSinceEpoch,
+        'plannedMinutes': planned.inMinutes,
+      });
+
+  static Future<bool> stopLiveSlot() => _invoke('liveSlotStop');
+
+  static Future<bool> liveSlotRunning() => _invoke('liveSlotRunning');
+
+  /// Ob das Gerät Live Updates befördert (Android 16+). Darunter bleibt es
+  /// eine gewöhnliche laufende Benachrichtigung — die Oberfläche soll keine
+  /// Pille versprechen, die nie erscheint.
+  static Future<bool> liveSlotPromotable() => _invoke('liveSlotPromotable');
+
+  // ── Health Connect ────────────────────────────────────────────────────
+
+  /// Verfügbarkeit und Freigabe. Wird vor jeder Nutzung neu geprüft:
+  /// Berechtigungen können jederzeit einzeln entzogen werden (R8).
+  static Future<Map<String, bool>> healthStatus() async {
+    if (!isSupported) return const {};
+    try {
+      final result =
+          await _channel.invokeMapMethod<String, bool>('healthStatus');
+      return result ?? const {};
+    } on PlatformException {
+      return const {};
+    } on MissingPluginException {
+      return const {};
+    }
+  }
+
+  static Future<bool> healthRequestPermissions() =>
+      _invoke('healthRequestPermissions');
+
+  static Future<bool> healthOpenSettings() => _invoke('healthOpenSettings');
+
+  /// Rohe Aufzeichnungen ab [since]. Die Umrechnung in Events macht
+  /// [HealthSync] — hier passiert nichts Fachliches.
+  static Future<List<Map<String, Object?>>> healthRead(DateTime since) async {
+    if (!isSupported) return const [];
+    try {
+      final result = await _channel.invokeListMethod<Map<Object?, Object?>>(
+        'healthRead',
+        {'sinceMillis': since.millisecondsSinceEpoch},
+      );
+      return (result ?? const [])
+          .map((row) => row.map((k, v) => MapEntry(k.toString(), v)))
+          .toList();
+    } on PlatformException {
+      return const [];
+    } on MissingPluginException {
+      return const [];
+    }
+  }
+
   // ── Automation ────────────────────────────────────────────────────────
 
   /// Sendet einen Broadcast, den Samsung „Modi und Routinen" aufgreifen kann.

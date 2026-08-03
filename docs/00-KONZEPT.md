@@ -8,7 +8,8 @@
 ## 1. Was AXIOM ist
 
 **Ein deterministisches, lokal laufendes Regelwerk zur Selbstregulation.**
-Ein Exocortex für ein hochkompensiertes ADHS-Profil.
+Ein Exocortex für ein hochkompensiertes ADHS-Zielprofil (siehe
+[01-ZIELPROFIL](01-PROFIL-DEFIZITE.md) — eine Konstruktionsannahme, keine Personenbeschreibung).
 
 AXIOM ist **kein** Habit-Tracker, **keine** To-do-App, **kein** Coach und **kein** Therapie-Ersatz.
 

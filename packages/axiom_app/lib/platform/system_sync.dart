@@ -26,11 +26,37 @@ abstract final class SystemSync {
     // Widget und Benachrichtigung duerfen nie Verschiedenes behaupten.
     await AndroidBridge.updatePresence(headline: headline, detail: detail);
 
+    await _syncLiveSlot(snapshot);
+
     // Erhaltungsmodus an die Geräteautomation melden, damit Samsung-Routinen
     // greifen können (Benachrichtigungen dämpfen, Bildschirmzeit begrenzen).
     if (snapshot.state.loadLevel == LoadLevel.l3) {
       await AndroidBridge.enterMaintenanceMode();
     }
+  }
+
+  /// Hält das Live Update mit der laufenden Sitzung im Gleichklang.
+  ///
+  /// Bewusst hier und nicht am Start- und Stopp-Knopf: Der Abgleich läuft
+  /// nach jedem Auswertungszyklus, also auch nach einem Neustart der App
+  /// oder nachdem das System den Dienst beendet hat. Eine Anzeige, die nach
+  /// dem ersten Speicherdruck fehlt, wäre schlimmer als keine — man verlässt
+  /// sich dann auf eine Restzeit, die niemand mehr zählt.
+  static Future<void> _syncLiveSlot(AxiomSnapshot snapshot) async {
+    final focus = snapshot.focus;
+    if (focus == null) {
+      if (await AndroidBridge.liveSlotRunning()) {
+        await AndroidBridge.stopLiveSlot();
+      }
+      return;
+    }
+    await AndroidBridge.startLiveSlot(
+      kind: 'focus',
+      title: focus.anchorTitle ?? 'Fokus',
+      detail: focus.hasAnchor ? 'Fokus' : 'ohne Anker',
+      startedAt: focus.startedAt,
+      planned: focus.planned,
+    );
   }
 
   static (String, String) _describe(AxiomSnapshot snapshot) {

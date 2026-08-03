@@ -83,7 +83,31 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="axiom" />
             </intent-filter>
+
+            <!--
+              Health Connect verlangt, dass die App erklären kann, wofür sie
+              Gesundheitsdaten liest — sonst erteilt das System die Freigabe
+              nicht. Bis Android 13 über diese Aktion.
+            -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+
+        <!--
+          Derselbe Zweck ab Android 14. Die Berechtigung stellt sicher, dass
+          nur das System diesen Einstieg auslösen kann.
+        -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <!--
           Stift-Schnittstelle des Systems (Android 14+).
@@ -151,6 +175,22 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Zeigt dauerhaft die nächste Handlung und nimmt
                     Notizen direkt in der Benachrichtigung entgegen." />
+        </service>
+
+        <!--
+          Laufender Slot als Live Update: Statusleisten-Pille, Sperrbildschirm
+          und Samsungs Now Bar (Android 16+). Der fehlende Ausstieg ist der
+          teuerste Fehlermodus im Fokus [D6] — die Restzeit muss sichtbar
+          sein, ohne dass man nachsieht.
+        -->
+        <service
+            android:name=".LiveSlotService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Zeigt die Restzeit eines laufenden Fokus- oder
+                    Reiz-Slots, solange er läuft." />
         </service>
 
         <!-- Nimmt Text entgegen, der in der Benachrichtigung getippt wurde. -->

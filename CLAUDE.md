@@ -1,11 +1,12 @@
 # AXIOM — Arbeitsanweisung
 
 Deterministisches, lokal laufendes Regelwerk zur Selbstregulation. Ein Exocortex für ein
-hochkompensiertes ADHS-Profil (kombinierter Typus, starker Systemizing-Drive, High Sensation
+hochkompensiertes ADHS-Zielprofil (kombinierter Typus, starker Systemizing-Drive, High Sensation
 Seeking). **Ein Nutzer, ein Gerät, privat.** Kein Produkt, kein Store, keine Nutzerbasis.
 
 Kontext vor jeder inhaltlichen Arbeit: [`docs/00-KONZEPT.md`](docs/00-KONZEPT.md) und
-[`docs/01-PROFIL-DEFIZITE.md`](docs/01-PROFIL-DEFIZITE.md).
+[`docs/01-PROFIL-DEFIZITE.md`](docs/01-PROFIL-DEFIZITE.md). Letzteres beschreibt ein
+**Zielprofil**, keine Person — siehe die Vorbemerkung dort.
 
 ---
 
@@ -208,7 +209,7 @@ ausdrücklich revidiert wurde:
 
 ## Umgang mit Feature-Wünschen
 
-Der Systemizing-Drive des Nutzers wird laufend neue Systemideen erzeugen — das ist Teil des
+Der Systemizing-Drive des Zielprofils erzeugt laufend neue Systemideen — das ist Teil des
 Profils (D3), nicht ein Mangel an Disziplin. Erwartete Haltung:
 
 1. **Zuordnen:** Auf welches `D1`–`D12` zahlt das ein? Kein Bezug → nachfragen, nicht bauen.

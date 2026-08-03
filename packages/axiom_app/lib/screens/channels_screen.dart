@@ -125,8 +125,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
           const _ChannelCard(
             icon: Icons.share_outlined,
             title: 'Aus anderen Apps teilen',
-            body: 'Text markieren, teilen, AXIOM wählen. Landet direkt im '
-                'Eingang.',
+            body: 'Text markieren, teilen, AXIOM wählen. AXIOM steht in der '
+                'oberen Reihe des Teilen-Blatts, nicht in der App-Liste '
+                'darunter — immer an derselben Stelle.',
             ready: true,
           ),
           const _ChannelCard(

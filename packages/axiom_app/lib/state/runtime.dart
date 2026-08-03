@@ -132,6 +132,30 @@ final class AxiomRuntime {
     await store.append(event);
     return event;
   }
+  /// Ereignis mit eigenem Zeitpunkt — fuer Importe aus fremden Quellen.
+  ///
+  /// Ein importiertes Schlaffenster ist gestern passiert, nicht jetzt. Wuerde
+  /// es mit der aktuellen Uhrzeit abgelegt, waeren alle Zeitfenster-Auswertungen
+  /// falsch: Schlafschuld der letzten sieben Tage, Baseline-Naechte, Verlauf.
+  /// Die ULID wird aus demselben Zeitpunkt gebildet, damit die Sortierung
+  /// stimmt.
+  Future<Event> recordAt(
+    DateTime at,
+    EventType type, {
+    Map<String, Object?> payload = const {},
+    EventSource source = EventSource.health,
+  }) async {
+    final utc = at.toUtc();
+    final event = Event(
+      id: newUlid(utc),
+      at: utc,
+      type: type,
+      source: source,
+      payload: payload,
+    );
+    await store.append(event);
+    return event;
+  }
   /// Erfassung. Bewusst ohne Kategorie, ohne Rueckfrage, ohne Pflichtfeld —
   /// jede Rueckfrage im Erfassungsmoment kostet den Gedanken. [D9]
   Future<void> capture(String text, {String via = 'app'}) =>
