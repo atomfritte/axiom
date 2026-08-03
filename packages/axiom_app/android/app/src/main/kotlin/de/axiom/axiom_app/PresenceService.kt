@@ -114,11 +114,20 @@ class PresenceService : Service() {
          * Der gespeicherte Schalter sagt nur, was gewollt war. Ob es auch
          * passiert ist, weiss allein das System.
          */
-        fun isActive(context: Context): Boolean = try {
-            context.getSystemService(NotificationManager::class.java)
-                .activeNotifications.any { it.id == NOTIFICATION_ID }
-        } catch (e: Throwable) {
-            false
+        fun isActive(context: Context): Boolean {
+            val visible = try {
+                context.getSystemService(NotificationManager::class.java)
+                    .activeNotifications.any { it.id == NOTIFICATION_ID }
+            } catch (e: Throwable) {
+                false
+            }
+            // Beides zaehlt. `startForeground` ohne Ausnahme heisst: Der
+            // Dienst laeuft. Der Schacht ist die zweite Bestaetigung, aber
+            // nicht die einzige — ein aufgeschobenes Anzeigen darf hier nicht
+            // als Fehlschlag durchgehen.
+            return visible ||
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getBoolean("service_running", false)
         }
 
         fun update(context: Context, headline: String, detail: String) {
@@ -154,6 +163,41 @@ class PresenceService : Service() {
             }
         }
 
+        private fun note(context: Context, running: Boolean, error: String?) {
+            val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("service_running", running)
+            if (error == null) edit.remove("last_error") else edit.putString("last_error", error)
+            edit.apply()
+        }
+
+        /**
+         * Jeder Schritt einzeln — statt eines „geht nicht".
+         *
+         * Der Schalter kann aus fuenf Gruenden aus bleiben, und vier davon
+         * kann nur das System beantworten. Sie hier alle zu zeigen ist
+         * billiger als jedes Mal zu raten.
+         */
+        fun diagnosis(context: Context): Map<String, Any?> {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val manager = context.getSystemService(NotificationManager::class.java)
+            val channel = try {
+                manager.getNotificationChannel(CHANNEL)
+            } catch (e: Throwable) {
+                null
+            }
+            return mapOf(
+                "wanted" to prefs.getBoolean("enabled", false),
+                "serviceRunning" to prefs.getBoolean("service_running", false),
+                "notificationVisible" to isActive(context),
+                "notificationsEnabled" to
+                    NotificationManagerCompat.from(context).areNotificationsEnabled(),
+                "channelExists" to (channel != null),
+                "channelImportance" to (channel?.importance ?: -1),
+                "lastError" to prefs.getString("last_error", null),
+            )
+        }
+
         fun isEnabled(context: Context): Boolean =
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getBoolean("enabled", false)
@@ -175,6 +219,13 @@ class PresenceService : Service() {
         }
     }
 
+    override fun onDestroy() {
+        // Wer den Dienst wegraeumt — Akkuoptimierung, Speicherdruck, der
+        // Nutzer selbst — hinterlaesst sonst keine Spur.
+        note(this, running = false, error = null)
+        super.onDestroy()
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -186,7 +237,21 @@ class PresenceService : Service() {
             }
             else -> {
                 createChannel(this)
-                startForeground(NOTIFICATION_ID, buildNotification())
+                // Scheitert das hier, sah man frueher nur einen Schalter, der
+                // zurueckspringt. Die Ausnahme ist die einzige Stelle, an der
+                // das System den Grund nennt — sie wird aufgehoben.
+                try {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                    note(this, running = true, error = null)
+                } catch (e: Throwable) {
+                    note(
+                        this,
+                        running = false,
+                        error = "${e.javaClass.simpleName}: ${e.message ?: "ohne Meldung"}",
+                    )
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
             }
         }
         // Nach einem Prozessende neu starten: Eine Praesenz, die nach dem
@@ -245,6 +310,14 @@ class PresenceService : Service() {
             .setSilent(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
+            // Ohne das haelt Android ab 12 die Benachrichtigung eines
+            // Vordergrunddienstes mit niedriger Wichtigkeit bis zu zehn
+            // Sekunden zurueck. Fuer eine Praesenz, die sofort da sein soll,
+            // ist das ein Fehler — und fuer jede Pruefung „haengt sie?"
+            // innerhalb dieser zehn Sekunden ein falsches Nein.
+            .setForegroundServiceBehavior(
+                NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
+            )
             // Auf dem Sperrbildschirm vollstaendig sichtbar: Der Zeitanker
             // nuetzt nur, wenn man ihn ohne Entsperren lesen kann [D4].
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

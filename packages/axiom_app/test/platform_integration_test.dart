@@ -221,6 +221,20 @@ void main() {
       expect(service, contains('IMPORTANCE_NONE'),
           reason: 'Ein einzeln abgeschalteter Kanal ist der häufigste Grund, '
               'aus dem alles „an" aussieht und trotzdem nichts erscheint');
+      expect(service, contains('last_error'),
+          reason: 'Wirft startForeground, ist die Ausnahme die einzige '
+              'Stelle, an der das System den Grund nennt');
+    });
+
+    test('die Präsenz erscheint sofort, nicht nach zehn Sekunden', () {
+      // Android hält die Benachrichtigung eines Vordergrunddienstes mit
+      // niedriger Wichtigkeit sonst bis zu zehn Sekunden zurück. Für eine
+      // Präsenz ist das ein Fehler — und für jede Prüfung „hängt sie?"
+      // innerhalb dieser zehn Sekunden ein falsches Nein.
+      expect(
+        android('kotlin/de/axiom/axiom_app/PresenceService.kt'),
+        contains('FOREGROUND_SERVICE_IMMEDIATE'),
+      );
     });
 
     test('die Notiz-Rolle führt in keine Sackgasse', () {

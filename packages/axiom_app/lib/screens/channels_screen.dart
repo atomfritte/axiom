@@ -30,6 +30,11 @@ class ChannelsScreen extends ConsumerStatefulWidget {
 class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   bool _presence = false;
 
+  /// Steht nur da, wenn der Schalter nicht hält, was er soll. Dann aber
+  /// dauerhaft: Eine Snackbar ist nach vier Sekunden weg, und die Frage
+  /// „warum geht das nicht" bleibt.
+  Map<String, Object?>? _presenceTrouble;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +94,10 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                   context.t('Der schnellste Weg, den das Gerät hergibt: zwei Sekunden statt zehn.'),
                   style: monoStyle(context, size: 11, color: p.signal),
                 ),
+                if (_presenceTrouble != null) ...[
+                  Divider(color: p.rule, height: Space.xl),
+                  _PresenceTrouble(report: _presenceTrouble!),
+                ],
               ],
             ),
           ),
@@ -203,7 +212,10 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       await AndroidBridge.stopPresence();
       await HapticFeedback.selectionClick();
       if (!mounted) return;
-      setState(() => _presence = false);
+      setState(() {
+        _presence = false;
+        _presenceTrouble = null;
+      });
       return;
     }
 
@@ -216,24 +228,23 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     await HapticFeedback.selectionClick();
     if (!mounted) return;
 
-    if (!outcome.ok) {
-      setState(() => _presence = false);
-      _say(outcome.reason ??
-          context.t('Das System hat die Anfrage nicht angenommen.'));
-      return;
-    }
-
     // Nicht den gespeicherten Schalter lesen, sondern die Benachrichtigung
     // selbst: Der Schalter sagt nur, was gewollt war. `startForegroundService`
     // kehrt zurueck, bevor der Dienst laeuft — deshalb ein kurzes Fenster
     // statt einer sofortigen Antwort, die immer „nein" hiesse.
-    final active = await _awaitPresence();
+    final active = outcome.ok && await _awaitPresence();
     if (!mounted) return;
-    setState(() => _presence = active);
 
-    if (!active) {
-      _say(context.t('Der Dienst wurde gestartet, aber es hängt keine Benachrichtigung. Meistens ist der Kanal „Dauerhafte Anzeige" in den Benachrichtigungseinstellungen abgeschaltet, oder die Akkuoptimierung beendet den Dienst sofort wieder.'));
-    }
+    // Bleibt sie aus, wird jeder Schritt einzeln abgefragt und stehen
+    // gelassen. „Geht nicht" ist keine Fehlermeldung.
+    final report = active ? null : await AndroidBridge.presenceDiagnosis();
+    if (!mounted) return;
+    setState(() {
+      _presence = active;
+      _presenceTrouble = report == null
+          ? null
+          : {...report, if (outcome.reason != null) 'reason': outcome.reason};
+    });
   }
 
   /// Wartet bis zu zwei Sekunden darauf, dass die Benachrichtigung erscheint.
@@ -247,6 +258,89 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
 
   void _say(String message) => ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(message)));
+}
+
+/// Warum die Anzeige nicht kommt — Schritt für Schritt, so wie Android es
+/// meldet.
+///
+/// Es gibt fünf Stellen, an denen das scheitern kann, und vier davon liegen
+/// außerhalb der App. Ohne diese Aufschlüsselung bleibt nur „geht nicht",
+/// und damit lässt sich nichts anfangen — weder hier noch für den, der es
+/// reparieren soll.
+class _PresenceTrouble extends StatelessWidget {
+  final Map<String, Object?> report;
+  const _PresenceTrouble({required this.report});
+
+  bool _yes(String key) => report[key] == true;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    final importance = report['channelImportance'] as int? ?? -1;
+    final error = report['lastError'] as String?;
+    final reason = report['reason'] as String?;
+
+    // Reihenfolge ist die des tatsächlichen Ablaufs: Der erste Haken, der
+    // fehlt, ist der Grund. Alles danach ist Folge.
+    final steps = <(String, bool)>[
+      (context.t('Benachrichtigungen freigegeben'), _yes('notificationsEnabled')),
+      (context.t('Kanal „Dauerhafte Anzeige" eingeschaltet'),
+          importance > 0),
+      (context.t('Dienst gestartet'), _yes('serviceRunning')),
+      (context.t('Benachrichtigung hängt'), _yes('notificationVisible')),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.t('Was das System dazu sagt'),
+            style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: Space.sm),
+        for (final (label, ok) in steps)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.xs),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(ok ? Icons.check : Icons.close,
+                    size: 15, color: ok ? p.calm : p.caution),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(label,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ),
+              ],
+            ),
+          ),
+        if (reason != null) ...[
+          const SizedBox(height: Space.sm),
+          Text(reason, style: Theme.of(context).textTheme.bodySmall),
+        ],
+        if (error != null) ...[
+          const SizedBox(height: Space.sm),
+          // Wortlaut der Ausnahme, unverändert. Übersetzt wäre er nicht mehr
+          // suchbar.
+          SelectableText(error,
+              style: monoStyle(context, size: 11, color: p.caution)),
+        ],
+        const SizedBox(height: Space.md),
+        Wrap(
+          spacing: Space.sm,
+          runSpacing: Space.sm,
+          children: [
+            OutlinedButton(
+              onPressed: () => AndroidBridge.openPresenceChannel(),
+              child: Text(context.t('Kanal öffnen')),
+            ),
+            OutlinedButton(
+              onPressed: () => AndroidBridge.requestIgnoreBatteryOptimizations(),
+              child: Text(context.t('Akkuoptimierung')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class _ChannelCard extends StatelessWidget {

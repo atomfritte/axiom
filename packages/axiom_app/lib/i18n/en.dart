@@ -1275,4 +1275,18 @@ const Map<String, String> kEnglish = {
       'The Galaxy S25 Ultra S Pen has no Bluetooth Low Energy. That removes air actions, pairing and charging — for every app, not just AXIOM. What remains is the Air command menu: pull out the pen, tap AXIOM. Entered as a shortcut, that is two moves.',
   'Der Dienst wurde gestartet, aber es hängt keine Benachrichtigung. Meistens ist der Kanal „Dauerhafte Anzeige" in den Benachrichtigungseinstellungen abgeschaltet, oder die Akkuoptimierung beendet den Dienst sofort wieder.':
       'The service started, but no notification is showing. Usually the „Persistent display" channel is switched off in the notification settings, or battery optimisation stops the service right away.',
+  'Was das System dazu sagt':
+      'What the system says about it',
+  'Benachrichtigungen freigegeben':
+      'Notifications allowed',
+  'Kanal „Dauerhafte Anzeige" eingeschaltet':
+      'Channel „Persistent display" switched on',
+  'Dienst gestartet':
+      'Service started',
+  'Benachrichtigung hängt':
+      'Notification is showing',
+  'Kanal öffnen':
+      'Open the channel',
+  'Akkuoptimierung':
+      'Battery optimisation',
 };

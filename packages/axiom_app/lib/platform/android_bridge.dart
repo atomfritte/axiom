@@ -193,6 +193,26 @@ abstract final class AndroidBridge {
   /// Schalter springt zurück" und einem Satz, der sagt, warum.
   static Future<bool> presenceActive() => _invoke('presenceActive');
 
+  /// Öffnet die Einstellungen genau dieses Kanals, nicht die App-Übersicht.
+  static Future<bool> openPresenceChannel() => _invoke('openPresenceChannel');
+
+  /// Jeder Schritt einzeln, so wie das System ihn meldet.
+  ///
+  /// Es gibt fünf Gründe, aus denen die Anzeige aus bleibt, und vier davon
+  /// kann nur Android beantworten. Sie alle zu zeigen ist billiger, als sie
+  /// aus der Ferne zu raten.
+  static Future<Map<String, Object?>> presenceDiagnosis() async {
+    if (!isSupported) return const {};
+    try {
+      final result = await _channel
+          .invokeMapMethod<String, Object?>('presenceDiagnosis')
+          .timeout(_timeout);
+      return result ?? const {};
+    } on Object {
+      return const {};
+    }
+  }
+
   // ── Laufender Slot (Live Update) ──────────────────────────────────────
 
   /// Zeigt den laufenden Slot in der Statusleisten-Pille, auf dem

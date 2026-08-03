@@ -213,6 +213,36 @@ class MainActivity : FlutterActivity() {
                     // Das hier sagt, was tatsaechlich haengt.
                     "presenceActive" -> result.success(PresenceService.isActive(this))
 
+                    "presenceDiagnosis" ->
+                        result.success(PresenceService.diagnosis(this))
+
+                    // Direkt auf den Kanal, nicht auf die App-Uebersicht:
+                    // Der abgeschaltete Kanal liegt dort zwei Ebenen tief.
+                    "openPresenceChannel" -> result.success(
+                        try {
+                            PresenceService.createChannel(this)
+                            startActivity(
+                                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                    .putExtra(
+                                        Settings.EXTRA_CHANNEL_ID,
+                                        PresenceService.CHANNEL,
+                                    )
+                            )
+                            true
+                        } catch (e: Throwable) {
+                            try {
+                                startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                )
+                                true
+                            } catch (e2: Throwable) {
+                                false
+                            }
+                        }
+                    )
+
                     "presenceUpdate" -> {
                         PresenceService.update(
                             this,
