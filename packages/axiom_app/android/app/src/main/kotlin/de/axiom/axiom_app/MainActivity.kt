@@ -201,14 +201,17 @@ class MainActivity : FlutterActivity() {
                     "pullPendingMemos" -> result.success(MemoInbox.drain(this))
 
                     // Dauerhafte Anzeige im Benachrichtigungsbereich.
-                    "presenceStart" -> {
+                    "presenceStart" -> result.success(
                         PresenceService.start(
                             this,
                             call.argument<String>("headline").orEmpty(),
                             call.argument<String>("detail").orEmpty(),
                         )
-                        result.success(true)
-                    }
+                    )
+
+                    // Der gespeicherte Schalter sagt, was gewollt war.
+                    // Das hier sagt, was tatsaechlich haengt.
+                    "presenceActive" -> result.success(PresenceService.isActive(this))
 
                     "presenceUpdate" -> {
                         PresenceService.update(
@@ -508,21 +511,16 @@ class MainActivity : FlutterActivity() {
             val roles = getSystemService(RoleManager::class.java)
             if (roles.isRoleHeld(RoleManager.ROLE_NOTES)) return success()
             if (!roles.isRoleAvailable(RoleManager.ROLE_NOTES)) {
-                // Samsung liefert die Rolle nicht auf jedem Geraet aus.
-                // Dann bleibt der Weg ueber die Standard-Apps.
-                return if (openDefaultApps()) {
-                    failure(
-                        "Dieses Gerät bietet die Rolle nicht direkt an. Die " +
-                            "Standard-Apps sind offen — dort unter „Notizen\" " +
-                            "AXIOM wählen."
-                    )
-                } else {
-                    failure(
-                        "Dieses Gerät kennt die Rolle „Notiz-App\" nicht. " +
-                            "Der Stift-Doppeltipp lässt sich dann nicht auf " +
-                            "AXIOM legen."
-                    )
-                }
+                // Die Standard-Apps zu oeffnen waere hier eine Sackgasse:
+                // Ohne die Rolle gibt es dort keinen Eintrag „Notizen", und
+                // man sucht in einem Menue nach etwas, das es nicht gibt.
+                return failure(
+                    "Dieses Gerät bietet die Rolle „Notiz-App\" nicht an — " +
+                        "Samsung schaltet sie in One UI nicht frei. Der Weg " +
+                        "zum Stift führt hier über das Air-Command-Menü: " +
+                        "Einstellungen → Erweiterte Funktionen → S Pen → " +
+                        "Air Command → Verknüpfungen → AXIOM."
+                )
             }
             startActivityForResult(
                 roles.createRequestRoleIntent(RoleManager.ROLE_NOTES),
@@ -613,7 +611,8 @@ class MainActivity : FlutterActivity() {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
                 ),
             "notesRoleHeld" to notesRoleHeld(),
-            "presenceRunning" to PresenceService.isEnabled(this),
+            "presenceRunning" to PresenceService.isActive(this),
+            "presenceWanted" to PresenceService.isEnabled(this),
             "liveSlotPromotable" to LiveSlotService.isPromotable(),
             "speechAvailable" to SpeechRecognizer.isRecognitionAvailable(this),
         )

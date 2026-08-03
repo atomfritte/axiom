@@ -31,10 +31,21 @@ Der verbliebene Weg ist besser, als er zunächst klingt. Eine dauerhafte Benachr
 App-Start, ohne Kontextwechsel. Zwei Sekunden statt zehn. Die App muss dafür nicht einmal
 laufen: Der Text landet in `MemoInbox` und wird beim nächsten Start eingesammelt.
 
-Für den Stift gibt es seit Android 14 den offiziellen Weg: `ACTION_CREATE_NOTE`. Damit erscheint
-AXIOM beim Doppeltipp mit dem S-Pen, in der Schnelleinstellung „Notiz" und auf dem
-Sperrbildschirm. Zusätzlich lässt sich die Activity in Samsungs *Air Actions* auf den Stiftknopf
-legen.
+Für den Stift gibt es seit Android 14 den offiziellen Weg: `ACTION_CREATE_NOTE`. Er hängt aber
+an der Systemrolle `ROLE_NOTES` — **und die schaltet One UI nicht frei.** `isRoleAvailable`
+meldet `false`, in den Standard-Apps gibt es folglich keinen Eintrag „Notizen". In AOSP liegt
+die Rolle hinter dem Entwickleroption-Schalter *Force enable Notes role*; ohne den bleibt der
+Weg auf diesem Gerät zu. AXIOM behält den Intent-Filter — er kostet nichts und greift, sobald
+Samsung die Rolle ausliefert —, kündigt ihn aber nicht mehr als gangbaren Weg an.
+
+**Air Actions gibt es auf diesem Gerät nicht.** Der S Pen des S25 Ultra hat kein Bluetooth Low
+Energy; Samsung nennt Kopplung, Laden und Fernbedienungsfunktionen ausdrücklich als entfallen.
+Anleitungen, die auf den Stiftknopf verweisen, gehen ins Leere — und eine Anleitung, die man
+befolgt und die nichts findet, kostet mehr als gar keine.
+
+Was bleibt und funktioniert: das **Air-Command-Menü**. Es nimmt beliebige Apps als Verknüpfung
+auf — Einstellungen → Erweiterte Funktionen → S Pen → Air Command → Verknüpfungen. Stift
+herausziehen, AXIOM antippen: zwei Handgriffe, ohne Rolle und ohne Bluetooth.
 
 **Nicht verhandelbar:** Beim Erfassen wird **nie** nach Kategorie, Projekt, Priorität oder Datum
 gefragt. Rein damit, Triage später im Review. Jede Rückfrage im Erfassungsmoment kostet den

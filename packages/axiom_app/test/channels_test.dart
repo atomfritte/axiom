@@ -55,15 +55,18 @@ void main() {
       expect(find.text('Widget hinzufügen'), findsOneWidget);
     });
 
-    testWidgets('der Stift braucht die Notiz-Rolle, und die ist setzbar',
-        (tester) async {
+    testWidgets('der Stift wird über Air Command angeboten, nicht über '
+        'Air Actions', (tester) async {
+      // Der S Pen des S25 Ultra hat kein Bluetooth. Eine Anleitung zu
+      // Air Actions schickt in eine Einstellung, die es auf dem Gerät nicht
+      // gibt — schlimmer als keine Anleitung, weil man sie sucht.
       await pumpPhone(tester, h.wrap(const ChannelsScreen()));
       await tester.dragUntilVisible(
-        find.text('AXIOM als Notiz-App setzen'),
+        find.text('Notiz-Rolle anfragen'),
         find.byType(ListView),
         const Offset(0, -180),
       );
-      expect(find.text('AXIOM als Notiz-App setzen'), findsOneWidget);
+      expect(find.textContaining('Air Command'), findsWidgets);
       // Der Grund muss dabeistehen: Ohne ihn wirkt es wie ein Fehler.
       expect(find.textContaining('Rolle'), findsWidgets);
     });
@@ -76,7 +79,7 @@ void main() {
         const Offset(0, -250),
       );
       expect(find.text('S-Pen'), findsOneWidget);
-      expect(find.textContaining('Air Actions'), findsOneWidget);
+      expect(find.textContaining('Air Command'), findsWidgets);
 
       await tester.dragUntilVisible(
         find.text('Sprache'),

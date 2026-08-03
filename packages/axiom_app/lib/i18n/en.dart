@@ -762,10 +762,6 @@ const Map<String, String> kEnglish = {
           'count towards it.',
   'Zustand': 'State',
   'Zustand,\nRegel,\neine Handlung.': 'State,\nrule,\none action.',
-  'Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.':
-      'Also in Samsung: Settings → Advanced features → S Pen → Air actions → '
-          'Pen button → AXIOM. Screen-off memos still land in Samsung Notes — '
-          'there is no open interface for those.',
   'Zwei Zeiten, eine Einschätzung.': 'Two times, one reading.',
   'Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht festgehalten ist, ist weg. Deshalb gibt es mehrere Wege — such dir den, der bei dir wirklich funktioniert.':
       'Between the thought and the note there are a few seconds. What is not '
@@ -892,18 +888,10 @@ const Map<String, String> kEnglish = {
           'screen → Widgets → AXIOM.',
   'S-Pen und Notiz-Taste': 'S Pen and note button',
   'AXIOM ist die Notiz-App des Systems.': 'AXIOM is the system’s note app.',
-  'AXIOM dafür setzen': 'Make AXIOM the one',
-  'AXIOM als Notiz-App setzen': 'Set AXIOM as the note app',
-  'Diese Rolle gibt es erst ab Android 14.':
-      'That role only exists from Android 14 on.',
   'Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht.':
       'The pen double-tap does not look for the intent filter, it looks for '
           'the “note app” role. While that sits elsewhere, AXIOM does not '
           'appear there.',
-  'Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht — eine einmalige Einstellung, kein Fehler.':
-      'The pen double-tap does not look for the intent filter, it looks for '
-          'the “note app” role. While that sits elsewhere, AXIOM does not '
-          'appear there — a one-time setting, not a fault.',
   'Läuft im Benachrichtigungsbereich.': 'Running in the notification shade.',
   'Aus. Einschalten unter Erfassen — sie braucht die Benachrichtigungsfreigabe von oben.':
       'Off. Switch it on under Capture — it needs the notification permission '
@@ -971,9 +959,6 @@ const Map<String, String> kEnglish = {
       'The system did not accept the request.',
   'Die dauerhafte Anzeige gibt es nur auf Android.':
       'The ongoing display only exists on Android.',
-  'Die Anzeige ließ sich nicht starten. Meistens fehlt die Benachrichtigungsfreigabe — der Systemcheck sagt, ob das hier der Grund ist.':
-      'The display could not start. Usually the notification permission is '
-          'missing — the system check says whether that is the reason here.',
   'Erst die Benachrichtigungen freigeben — ohne sie hätte die Anzeige nichts, worin sie erscheinen kann.':
       'Grant notifications first — without them the display has nothing to '
           'appear in.',
@@ -1276,4 +1261,18 @@ const Map<String, String> kEnglish = {
   'Oktober': 'October',
   'November': 'November',
   'Dezember': 'December',
+  'Der Weg, der auf aktuellen Galaxy-Geräten funktioniert: Stift herausziehen, im Air-Command-Menü auf AXIOM tippen. Einrichten unter Einstellungen → Erweiterte Funktionen → S Pen → Air Command → Verknüpfungen → AXIOM.':
+      'The route that works on current Galaxy devices: pull out the pen, tap AXIOM in the Air command menu. Set it up under Settings → Advanced features → S Pen → Air command → Shortcuts → AXIOM.',
+  'Air Actions — der Stiftknopf als Fernbedienung — gibt es auf dem Galaxy S25 Ultra nicht mehr: Dessen Stift hat kein Bluetooth. Die Rolle „Notiz-App" für den Doppeltipp schaltet Samsung in One UI ebenfalls nicht frei. Screen-off-Memos landen weiterhin in Samsung Notes, dafür gibt es keine offene Schnittstelle.':
+      'Air actions — the pen button as a remote — are gone on the Galaxy S25 Ultra: that pen has no Bluetooth. Samsung does not expose the „note app" role for the double tap in One UI either. Screen-off memos still land in Samsung Notes; there is no open interface for them.',
+  'Notiz-Rolle anfragen':
+      'Request the note role',
+  'Dieses Gerät bietet die Rolle nicht an. Der Weg zum Stift führt über Air Command → Verknüpfungen.':
+      'This device does not offer the role. The route to the pen runs through Air command → Shortcuts.',
+  'Stiftknopf als Fernbedienung':
+      'Pen button as a remote',
+  'Der S Pen des Galaxy S25 Ultra hat kein Bluetooth Low Energy. Damit entfallen Air Actions, Kopplung und Laden — nicht nur für AXIOM, sondern für alle Apps. Was bleibt, ist das Air-Command-Menü: Stift herausziehen, AXIOM antippen. Als Verknüpfung eingetragen sind das zwei Handgriffe.':
+      'The Galaxy S25 Ultra S Pen has no Bluetooth Low Energy. That removes air actions, pairing and charging — for every app, not just AXIOM. What remains is the Air command menu: pull out the pen, tap AXIOM. Entered as a shortcut, that is two moves.',
+  'Der Dienst wurde gestartet, aber es hängt keine Benachrichtigung. Meistens ist der Kanal „Dauerhafte Anzeige" in den Benachrichtigungseinstellungen abgeschaltet, oder die Akkuoptimierung beendet den Dienst sofort wieder.':
+      'The service started, but no notification is showing. Usually the „Persistent display" channel is switched off in the notification settings, or battery optimisation stops the service right away.',
 };

@@ -159,7 +159,7 @@ sieben. In der App stehen sie unter *System → Erfassen*, mit Einrichtung.
 | Homescreen-Widget | niedrig | nächste Handlung + Kapazität, Tipp führt ins Eingabefeld |
 | App-Shortcut | niedrig | langes Tippen aufs Symbol |
 | Teilen aus anderen Apps | niedrig | `ACTION_SEND` |
-| S-Pen | niedrig | `ACTION_CREATE_NOTE` (Android 14+), zusätzlich auf Air Actions legbar |
+| S-Pen | niedrig | Air-Command-Verknüpfung; `ACTION_CREATE_NOTE` liegt bereit, One UI gibt die Rolle nicht frei |
 | Sprache | niedrig | `actions.intent.CREATE_NOTE` für Assistant, Bixby-Routine |
 
 Zwei Grenzen des Systems, ausdrücklich benannt:

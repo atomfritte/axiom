@@ -204,6 +204,39 @@ void main() {
       expect(manifest, contains('ADR-0005'));
     });
 
+    test('die dauerhafte Anzeige meldet, was hängt — nicht, was gewollt war',
+        () {
+      // Der gespeicherte Schalter wird gesetzt, bevor der Dienst startet.
+      // Wer ihn abfragt, bekommt „an" auch dann, wenn nichts erscheint —
+      // und wer dann trotzdem „aus" sieht, hat keinen Satz dazu. Genau so
+      // sprang der Schalter kommentarlos zurück.
+      final screen = code(File('lib/screens/channels_screen.dart')
+          .readAsStringSync());
+      expect(screen, contains('presenceActive'));
+      expect(screen, isNot(contains('presenceEnabled')));
+
+      final service =
+          android('kotlin/de/axiom/axiom_app/PresenceService.kt');
+      expect(service, contains('activeNotifications'));
+      expect(service, contains('IMPORTANCE_NONE'),
+          reason: 'Ein einzeln abgeschalteter Kanal ist der häufigste Grund, '
+              'aus dem alles „an" aussieht und trotzdem nichts erscheint');
+    });
+
+    test('die Notiz-Rolle führt in keine Sackgasse', () {
+      // Ohne die Rolle gibt es in den Standard-Apps keinen Eintrag
+      // „Notizen". Sie trotzdem zu öffnen heißt, in einem Menü nach etwas
+      // zu suchen, das es dort nicht gibt.
+      final source = android('kotlin/de/axiom/axiom_app/MainActivity.kt');
+      final block = source.substring(source.indexOf('fun requestNotesRole'));
+      final guard = block.indexOf('isRoleAvailable');
+      final next = block.indexOf('fun ', 4);
+      expect(
+        block.substring(guard, next == -1 ? block.length : next),
+        isNot(contains('openDefaultApps')),
+      );
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

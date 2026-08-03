@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 
 /**
@@ -45,7 +46,39 @@ class PresenceService : Service() {
 
         private const val PREFS = "axiom_presence"
 
-        fun start(context: Context, headline: String, detail: String) {
+        /**
+         * Startet die Anzeige und sagt, wenn es nicht geklappt hat.
+         *
+         * Frueher gab das nichts zurueck. Der Schalter sprang dann kommentarlos
+         * zurueck, und von aussen war nicht zu unterscheiden, ob die
+         * Berechtigung fehlt, das System den Dienst ablehnt oder AXIOM kaputt
+         * ist.
+         */
+        fun start(context: Context, headline: String, detail: String): Map<String, Any?> {
+            // Der Kanal einzeln abgeschaltet ist der haeufigste Fall, in dem
+            // alles „an" aussieht und trotzdem nichts erscheint.
+            createChannel(context)
+            val channel = context.getSystemService(NotificationManager::class.java)
+                .getNotificationChannel(CHANNEL)
+            if (channel != null &&
+                channel.importance == NotificationManager.IMPORTANCE_NONE
+            ) {
+                return mapOf(
+                    "ok" to false,
+                    "reason" to "Der Benachrichtigungskanal „Dauerhafte " +
+                        "Anzeige\" ist abgeschaltet. Einstellungen → " +
+                        "Benachrichtigungen → AXIOM → Dauerhafte Anzeige.",
+                )
+            }
+
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                return mapOf(
+                    "ok" to false,
+                    "reason" to "Benachrichtigungen sind für AXIOM abgeschaltet. " +
+                        "Ohne sie hat die Anzeige nichts, worin sie erscheinen kann.",
+                )
+            }
+
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putString("headline", headline)
                 .putString("detail", detail)
@@ -54,11 +87,38 @@ class PresenceService : Service() {
 
             val intent = Intent(context, PresenceService::class.java)
                 .setAction(ACTION_START)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            return try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                mapOf("ok" to true)
+            } catch (e: Throwable) {
+                // Zuruecknehmen, sonst behauptet die Einstellung etwas, das
+                // nicht laeuft.
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean("enabled", false)
+                    .apply()
+                mapOf(
+                    "ok" to false,
+                    "reason" to "Das System hat den Dienst abgelehnt: " +
+                        e.javaClass.simpleName,
+                )
             }
+        }
+
+        /**
+         * Haengt die Benachrichtigung wirklich im Schacht?
+         *
+         * Der gespeicherte Schalter sagt nur, was gewollt war. Ob es auch
+         * passiert ist, weiss allein das System.
+         */
+        fun isActive(context: Context): Boolean = try {
+            context.getSystemService(NotificationManager::class.java)
+                .activeNotifications.any { it.id == NOTIFICATION_ID }
+        } catch (e: Throwable) {
+            false
         }
 
         fun update(context: Context, headline: String, detail: String) {

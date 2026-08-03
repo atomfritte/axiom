@@ -34,7 +34,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final on = await AndroidBridge.presenceEnabled();
+      final on = await AndroidBridge.presenceActive();
       if (mounted) setState(() => _presence = on);
     });
   }
@@ -142,10 +142,10 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
           _ChannelCard(
             icon: Icons.edit_outlined,
             title: context.t('S-Pen'),
-            body: context.t('Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht — eine einmalige Einstellung, kein Fehler.'),
+            body: context.t('Der Weg, der auf aktuellen Galaxy-Geräten funktioniert: Stift herausziehen, im Air-Command-Menü auf AXIOM tippen. Einrichten unter Einstellungen → Erweiterte Funktionen → S Pen → Air Command → Verknüpfungen → AXIOM.'),
             ready: false,
-            hint: context.t('Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.'),
-            action: context.t('AXIOM als Notiz-App setzen'),
+            hint: context.t('Air Actions — der Stiftknopf als Fernbedienung — gibt es auf dem Galaxy S25 Ultra nicht mehr: Dessen Stift hat kein Bluetooth. Die Rolle „Notiz-App" für den Doppeltipp schaltet Samsung in One UI ebenfalls nicht frei. Screen-off-Memos landen weiterhin in Samsung Notes, dafür gibt es keine offene Schnittstelle.'),
+            action: context.t('Notiz-Rolle anfragen'),
             onAction: () async {
               final outcome = await AndroidBridge.requestNotesRole();
               if (!context.mounted || outcome.ok) return;
@@ -199,29 +199,50 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       }
     }
 
-    final ok = value
-        ? await AndroidBridge.startPresence(
-            headline: snapshot?.decisionRule?.title ??
-                snapshot?.startable.firstOrNull?.title ??
-                'AXIOM',
-            detail: detail,
-          )
-        : await AndroidBridge.stopPresence();
+    if (!value) {
+      await AndroidBridge.stopPresence();
+      await HapticFeedback.selectionClick();
+      if (!mounted) return;
+      setState(() => _presence = false);
+      return;
+    }
 
+    final outcome = await AndroidBridge.startPresence(
+      headline: snapshot?.decisionRule?.title ??
+          snapshot?.startable.firstOrNull?.title ??
+          'AXIOM',
+      detail: detail,
+    );
     await HapticFeedback.selectionClick();
     if (!mounted) return;
 
-    // Den Systemzustand lesen statt annehmen: Wenn der Dienst nicht startet,
-    // darf der Schalter nicht behaupten, er liefe.
-    final actual = await AndroidBridge.presenceEnabled();
-    if (!mounted) return;
-    setState(() => _presence = actual);
-
-    if (value && !actual) {
-      _say(context.t('Die Anzeige ließ sich nicht starten. Meistens fehlt die Benachrichtigungsfreigabe — der Systemcheck sagt, ob das hier der Grund ist.'));
-    } else if (!ok) {
-      _say(context.t('Das System hat die Anfrage nicht angenommen.'));
+    if (!outcome.ok) {
+      setState(() => _presence = false);
+      _say(outcome.reason ??
+          context.t('Das System hat die Anfrage nicht angenommen.'));
+      return;
     }
+
+    // Nicht den gespeicherten Schalter lesen, sondern die Benachrichtigung
+    // selbst: Der Schalter sagt nur, was gewollt war. `startForegroundService`
+    // kehrt zurueck, bevor der Dienst laeuft — deshalb ein kurzes Fenster
+    // statt einer sofortigen Antwort, die immer „nein" hiesse.
+    final active = await _awaitPresence();
+    if (!mounted) return;
+    setState(() => _presence = active);
+
+    if (!active) {
+      _say(context.t('Der Dienst wurde gestartet, aber es hängt keine Benachrichtigung. Meistens ist der Kanal „Dauerhafte Anzeige" in den Benachrichtigungseinstellungen abgeschaltet, oder die Akkuoptimierung beendet den Dienst sofort wieder.'));
+    }
+  }
+
+  /// Wartet bis zu zwei Sekunden darauf, dass die Benachrichtigung erscheint.
+  Future<bool> _awaitPresence() async {
+    for (var attempt = 0; attempt < 5; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (await AndroidBridge.presenceActive()) return true;
+    }
+    return false;
   }
 
   void _say(String message) => ScaffoldMessenger.of(context)

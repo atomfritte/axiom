@@ -250,7 +250,7 @@ with setup instructions.
 | Home screen widget | low | next action + capacity, tap goes to the input field |
 | App shortcut | low | long press on the icon |
 | Share from other apps | low | `ACTION_SEND`, plus Direct Share |
-| S Pen | low | `ACTION_CREATE_NOTE` (Android 14+), can also be bound to Air Actions |
+| S Pen | low | Air command shortcut; `ACTION_CREATE_NOTE` is wired up, but One UI does not expose the role |
 | Voice | low | `actions.intent.CREATE_NOTE` for Assistant, Bixby routine |
 
 Two platform limits, named explicitly rather than worked around:

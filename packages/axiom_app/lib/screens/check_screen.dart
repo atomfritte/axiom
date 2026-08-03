@@ -205,8 +205,8 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       ? context.t('AXIOM ist die Notiz-App des Systems.')
                       : _flag('notesRoleAvailable')
                           ? context.t('Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht.')
-                          : context.t('Diese Rolle gibt es erst ab Android 14.'),
-                  action: context.t('AXIOM dafür setzen'),
+                          : context.t('Dieses Gerät bietet die Rolle nicht an. Der Weg zum Stift führt über Air Command → Verknüpfungen.'),
+                  action: context.t('Notiz-Rolle anfragen'),
                   onAction: () async {
                     final outcome = await AndroidBridge.requestNotesRole();
                     if (!context.mounted) return;
@@ -287,6 +287,11 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       _Limitation(
                         title: context.t('Screen-off-Memo mit dem Stift'),
                         body: context.t('Landet in Samsung Notes. Dafür gibt es keine öffentliche Schnittstelle, jeder Weg dorthin wäre Reverse Engineering und würde das nächste Systemupdate nicht überleben.'),
+                      ),
+                      Divider(color: p.rule, height: Space.xl),
+                      _Limitation(
+                        title: context.t('Stiftknopf als Fernbedienung'),
+                        body: context.t('Der S Pen des Galaxy S25 Ultra hat kein Bluetooth Low Energy. Damit entfallen Air Actions, Kopplung und Laden — nicht nur für AXIOM, sondern für alle Apps. Was bleibt, ist das Air-Command-Menü: Stift herausziehen, AXIOM antippen. Als Verknüpfung eingetragen sind das zwei Handgriffe.'),
                       ),
                     ],
                   ),

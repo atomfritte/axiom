@@ -172,10 +172,10 @@ abstract final class AndroidBridge {
   /// direkt entgegen — ohne Entsperren, ohne App-Start. Lockscreen-Widgets
   /// gibt es auf Android seit 5.0 nicht mehr; das hier ist der verbliebene
   /// Weg zu ständiger Sichtbarkeit [D9].
-  static Future<bool> startPresence({
+  static Future<PlatformOutcome> startPresence({
     required String headline,
     required String detail,
-  }) => _invoke('presenceStart', {'headline': headline, 'detail': detail});
+  }) => _outcome('presenceStart', {'headline': headline, 'detail': detail});
 
   static Future<bool> updatePresence({
     required String headline,
@@ -184,7 +184,14 @@ abstract final class AndroidBridge {
 
   static Future<bool> stopPresence() => _invoke('presenceStop');
 
+  /// Was gewollt ist — der gespeicherte Schalter.
   static Future<bool> presenceEnabled() => _invoke('presenceEnabled');
+
+  /// Was tatsächlich hängt — die Benachrichtigung selbst.
+  ///
+  /// Die beiden auseinanderzuhalten ist der Unterschied zwischen „der
+  /// Schalter springt zurück" und einem Satz, der sagt, warum.
+  static Future<bool> presenceActive() => _invoke('presenceActive');
 
   // ── Laufender Slot (Live Update) ──────────────────────────────────────
 

@@ -16,7 +16,9 @@ import android.os.Bundle
  * Samsung Notes, und dafür gibt es keine öffentliche Schnittstelle. Der
  * Systemweg ist der einzige, der ohne Reverse Engineering funktioniert und
  * ein Update überlebt. Zusätzlich lässt sich diese Activity in Samsungs
- * „Air Actions" auf den Stiftknopf legen.
+ * Air-Command-Menue als Verknuepfung eintragen. Air Actions — der
+ * Stiftknopf als Fernbedienung — gibt es auf dem S25 Ultra nicht: Dessen
+ * Stift hat kein Bluetooth Low Energy.
  */
 class CreateNoteActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
