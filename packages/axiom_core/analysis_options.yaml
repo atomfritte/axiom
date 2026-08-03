@@ -1,0 +1,19 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Der Core darf nie stillschweigend etwas verschlucken.
+    unused_import: error
+    unnecessary_null_comparison: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - prefer_final_locals
+    - prefer_const_constructors
+    - unawaited_futures

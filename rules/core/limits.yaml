@@ -1,0 +1,21 @@
+# Systemweite Obergrenzen.
+#
+# Ohne globales Limit summieren sich einzeln vernünftige Regeln zu einer
+# Benachrichtigungsflut. Das ist der häufigste Grund, warum ADHS-Apps nach
+# drei Wochen stummgeschaltet werden — und eine stummgeschaltete App ist eine
+# gelöschte App mit Extraschritten. (Risiko R2)
+
+global_limits:
+  # Harte Tagesobergrenze über ALLE Regeln hinweg.
+  max_interventions_per_day: 12
+
+  # Verhindert Bursts, auch wenn das Tagesbudget noch nicht erschöpft ist.
+  max_notifications_per_hour: 2
+
+  # Nur severity=enforce darf durchbrechen — und enforce gibt es nur für
+  # Regeln, die der Nutzer im ruhigen Zustand selbst autorisiert hat.
+  quiet_hours: ["23:00", "06:30"]
+
+  # Regeln unterhalb dieser Konfidenz feuern nicht.
+  # Lieber schweigen als raten. (Risiko R8)
+  min_confidence: 0.4

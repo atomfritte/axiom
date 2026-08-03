@@ -1,0 +1,146 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      KEINE INTERNET-BERECHTIGUNG.
+
+      Bewusst weggelassen (ADR-0002). Damit ist auf Betriebssystemebene
+      ausgeschlossen, dass Gesundheitsdaten das Gerät verlassen — unabhängig
+      von jedem Bug, jeder transitiven Abhängigkeit und jedem Versehen.
+      Das ist erheblich stärker als jede Zusicherung im Code.
+
+      Wird erst mit dem optionalen Sync (Stufe 4) hinzugefügt, und dann mit
+      eigenem ADR.
+    -->
+
+    <!-- Minutengenaue Zeitanker. Wirksamster Interventionstyp [D4]. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
+      Samsung beendet Hintergrundprozesse aggressiv. Ohne Ausnahme feuern
+      Alarme unzuverlässig — und unzuverlässige Zeittrigger entwerten das
+      gesamte Konzept (Risiko R4).
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Foreground-Service während aktiver Fokus-/Reiz-Slots (M4/M5). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Backward-Chaining für Zeitanker (M3). Nur lesend. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
+    <!-- Health Connect: granular, jede einzeln widerrufbar. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
+    <application
+        android:label="AXIOM"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Aus jeder App heraus nach AXIOM teilen = erfassen [D9]. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- Erfassen und Check-in direkt vom Launcher (langes Tippen). -->
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
+
+        <!--
+          Homescreen-Widget: nächste Handlung und Kapazität permanent
+          sichtbar. Was nicht sichtbar ist, existiert für dieses Profil
+          nicht [D9].
+        -->
+        <receiver
+            android:name=".AxiomWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/axiom_widget_info" />
+        </receiver>
+
+        <!-- Empfängt exakte Alarme und zeigt die Intervention an. -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false"
+            android:enabled="true" />
+
+        <!-- Stellt Alarme nach Neustart und Update wieder her. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          Schnelleinstellung: Erfassen mit einem Tipp aus jedem Kontext,
+          ohne die App zu suchen.
+        -->
+        <service
+            android:name=".CaptureTileService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="AXIOM erfassen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
+
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+</manifest>

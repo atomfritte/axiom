@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spiegelt lib/design/tokens.dart. Bei Änderung beide anpassen. -->
+<resources>
+    <color name="axiom_base">#0E1113</color>
+    <color name="axiom_panel">#171B1E</color>
+    <color name="axiom_rule">#2A3237</color>
+    <color name="axiom_ink">#E6E4DE</color>
+    <color name="axiom_ink_dim">#8A9299</color>
+    <color name="axiom_ink_faint">#5A646B</color>
+    <color name="axiom_signal">#E8A33D</color>
+</resources>

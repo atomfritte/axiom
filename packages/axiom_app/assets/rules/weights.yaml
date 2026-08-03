@@ -1,0 +1,44 @@
+# Formelgewichte des StateDeriver.
+#
+# ⚠️ DIESE WERTE SIND PLAUSIBEL GERATEN, NICHT VALIDIERT.
+#
+# Sie werden nach der 14-tägigen Baseline-Phase (S1) gegen echte Daten
+# kalibriert — siehe docs/06-METRIKEN.md §4. Bis dahin laufen ALLE Regeln
+# im SHADOW-Modus (log_only) und erzeugen keine Ausgabe.
+#
+# Grund: Sagt die App bei capacity=30 "mach jetzt die schwere Aufgabe", ist
+# das Vertrauen weg — und ein Systemizer gibt einem System, das nachweislich
+# falsch rechnet, zu Recht keine zweite Chance. (Risiko R3)
+#
+# Formeln: docs/03-DATENMODELL.md §3.1
+
+capacity:
+  sleep_debt: 0.30      # stärkster Einzelmodulator          [D8]
+  load_index: 0.25      # chronische Last frisst Tageskapazität [D1]
+  focus_debt: 0.20      # verbrauchte Fokuszeit heute          [D6]
+  regulation: 0.15      # emotionale Belastung kostet Exekutivfunktion [D10]
+  circadian:  0.10      # persönliches Leistungsfenster — AUS BASELINE
+
+sensation_need:
+  baseline_drive: 45    # Trait-Anteil. Hoch bei High Sensation Seeking [D5]
+  low_stimulus:   0.40  # Anstieg pro Stunde Niedrigreiz
+  slot_relief:    0.60  # Absenkung durch gedeckte Slots (24 h)
+
+load_index:             # gleitender 7-Tage-Mittelwert
+  sleep_debt:        0.30
+  recovery_quality:  0.25   # "Erholung wirkt nicht mehr" — Kernsignal von D1
+  compensation:      0.20   # selbst berichteter Maskierungsaufwand
+  irritability:      0.15
+  social_withdrawal: 0.10   # Rückzug als Frühindikator
+
+load_levels:
+  l1: 55    # erhöhte Last      -> Warnung im Wochenreview
+  l2: 70    # kritisch           -> neue Verpflichtungen brauchen Bestätigung
+  l3: 85    # Erhaltungsmodus    -> 72 h nur Pflicht + Erholung
+
+# Kalibrierungsprotokoll
+calibration:
+  status: uncalibrated
+  baseline_start: null      # Datum eintragen, wenn S1 startet
+  baseline_days_required: 14
+  last_calibrated: null

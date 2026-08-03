@@ -1,0 +1,93 @@
+# Stufe 1 — Baseline.
+#
+# In dieser Phase gibt AXIOM KEINE Empfehlung. Es misst.
+# Die einzigen aktiven Regeln sind Check-in-Aufforderungen und der Meta-Guard.
+#
+# Alle inhaltlichen Regeln (sensation, body, load, focus) stehen auf
+# `log_only` = SHADOW: Sie laufen stumm mit, damit nach 14 Tagen bewertet
+# werden kann, wie oft sie gefeuert HÄTTEN und ob das jeweils richtig
+# gewesen wäre. Erst danach gehen sie live.
+#
+# Siehe docs/05-ROADMAP.md und docs/04-REGELWERK.md §6.
+
+- id: R-001
+  title: "Check-in Morgen"
+  deficit: D1
+  rationale: >
+    Ohne regelmäßige Zustandsdaten ist der StateVector blind und jede
+    spätere Regel rät. Der Morgen-Check-in verankert den Tagesstart und
+    nutzt die Zuverlässigkeit zeitgetriggerter Prompts bei diesem Profil.
+  when:
+    all:
+      - time_between: ["08:45", "09:30"]
+      - count_today: { event: checkin, lt: 1 }
+  then:
+    action: prompt_checkin
+    params: { slot: morning, max_seconds: 15 }
+  priority: 70
+  severity: nudge
+  cooldown: { minutes: 60, max_per_day: 1 }
+  enabled: true
+
+- id: R-002
+  title: "Check-in Mittag"
+  deficit: D1
+  rationale: >
+    Ein einzelner Messpunkt pro Tag verdeckt den Tagesverlauf. Der
+    Mittags-Check-in liefert die Daten für das circadiane Profil, das
+    später capacity moduliert.
+  when:
+    all:
+      - time_between: ["13:45", "14:30"]
+      - count_today: { event: checkin, lt: 2 }
+  then:
+    action: prompt_checkin
+    params: { slot: midday, max_seconds: 15 }
+  priority: 65
+  severity: nudge
+  cooldown: { minutes: 60, max_per_day: 1 }
+  enabled: true
+
+- id: R-003
+  title: "Check-in Abend + Kompensationsaufwand"
+  deficit: D1
+  rationale: >
+    Der wichtigste Messpunkt. Kompensationsaufwand und Erholungsqualität
+    sind die beiden Kernsignale des Load Monitors — und die einzigen, die
+    ein hochkompensiertes System vor dem Bruch warnen können.
+  when:
+    all:
+      - time_between: ["20:45", "21:45"]
+      - count_today: { event: checkin, lt: 3 }
+  then:
+    action: prompt_checkin
+    params: { slot: evening, max_seconds: 30, include: [compensation, recovery] }
+  priority: 75
+  severity: nudge
+  cooldown: { minutes: 60, max_per_day: 1 }
+  enabled: true
+
+# ── M12 Meta-Guard ──────────────────────────────────────────────────────
+# Der Wächter existiert, BEVOR es etwas zu bewachen gibt.
+# Später eingebaut wird er nie eingebaut. (Risiko R1)
+
+- id: R-010
+  title: "Meta-Work-Budget erschöpft"
+  deficit: D3
+  rationale: >
+    Der Systemizing-Drive findet in einem selbstgebauten Regelsystem sein
+    perfektes Ziel. Das System zu optimieren ist immer stimulierender als
+    die Aufgabe, für die es gebaut wurde. Ohne harte Grenze wird AXIOM
+    selbst zum Symptom. Erfassung zählt nicht mit — nur Konfiguration,
+    Auswertung und Herumschauen.
+  when:
+    minutes_since: { event: meta_usage, lt: 1 }
+  then:
+    action: lock_config
+    params:
+      budget_minutes_per_day: 12
+      unlock_at: next_review_slot
+  priority: 95
+  severity: enforce
+  cooldown: { minutes: 1440, max_per_day: 1 }
+  enabled: true

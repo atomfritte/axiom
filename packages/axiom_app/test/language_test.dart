@@ -1,0 +1,209 @@
+/// Prüft die Sprache der Oberfläche.
+///
+/// Zwei Dinge entscheiden bei dieser Zielgruppe über Adhärenz, und beide
+/// sind reine Textfragen:
+///
+///   1. Keine Schuldsprache. Ein Vorwurf trifft bei Rejection Sensitivity
+///      (D10) genau die Stelle, die das System entlasten soll — und erzeugt
+///      Vermeidung statt Handlung.
+///   2. Korrekte Umlaute. Ersatzschreibung wie "Kapazitaet" liest sich
+///      unfertig, und ein System, das unfertig wirkt, bekommt keine ehrlichen
+///      Daten.
+///
+/// Geprüft wird der Quelltext, nicht ein einzelner Screen — so entgeht auch
+/// kein Text, der nur in seltenen Zuständen erscheint.
+library;
+
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+/// Alle Dart-Dateien, die Nutzertexte enthalten können.
+///
+/// Auch `axiom_core`: Die Term-Bezeichnungen der Formeln erscheinen in der
+/// aufklappbaren Herleitung ("Schlafschuld −18"). Ein Rechtschreibfehler
+/// dort ist genauso sichtbar wie einer im Screen.
+List<File> appSources() => [
+      ...Directory('lib').listSync(recursive: true),
+      if (Directory('../axiom_core/lib').existsSync())
+        ...Directory('../axiom_core/lib').listSync(recursive: true),
+      if (Directory('../axiom_data/lib').existsSync())
+        ...Directory('../axiom_data/lib').listSync(recursive: true),
+    ]
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+
+/// Einfach und doppelt gequotete Literale, mindestens vier Zeichen lang.
+final _stringLiterals = [
+  RegExp("'([^'\\\\\n]{4,})'"),
+  RegExp('"([^"\\\\\n]{4,})"'),
+];
+
+/// Zeichenketten-Literale einer Datei, ohne Kommentare.
+///
+/// Kommentare sind Entwicklerprosa und dürfen ASCII-Umschrift enthalten;
+/// alles, was der Nutzer liest oder vorgelesen bekommt, nicht.
+List<(int, String)> userFacingStrings(File file) {
+  final result = <(int, String)>[];
+  final lines = file.readAsLinesSync();
+  var inBlockComment = false;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (inBlockComment) {
+      final end = line.indexOf('*/');
+      if (end == -1) continue;
+      line = line.substring(end + 2);
+      inBlockComment = false;
+    }
+    final blockStart = line.indexOf('/*');
+    if (blockStart != -1) {
+      line = line.substring(0, blockStart);
+      inBlockComment = !line.contains('*/');
+    }
+    final trimmed = line.trimLeft();
+    if (trimmed.startsWith('//')) continue;
+
+    // Import-Pfade, Asset-Pfade und Kanalnamen sind keine Nutzertexte.
+    if (trimmed.startsWith('import ') ||
+        trimmed.startsWith('export ') ||
+        trimmed.startsWith('part ')) {
+      continue;
+    }
+
+    for (final pattern in _stringLiterals) {
+      for (final match in pattern.allMatches(line)) {
+        final text = match.group(1) ?? '';
+        if (text.contains('/') || text.contains('_') || text.contains('.')) {
+          continue; // Pfade, Schlüssel, Kanalnamen
+        }
+        result.add((i + 1, text));
+      }
+    }
+  }
+  return result;
+}
+
+void main() {
+  group('Keine Schuldsprache (D10, R7)', () {
+    // Formulierungen, die aus einem Messwert ein Urteil machen.
+    const forbidden = [
+      'überfällig seit',
+      'schon wieder',
+      'Streak',
+      'du solltest',
+      'Du solltest',
+      'versagt',
+      'faul',
+      'endlich mal',
+      'Immerhin',
+      'nur noch',
+    ];
+
+    /// Verneinte Nennungen sind erwünscht — das Onboarding sagt ausdrücklich
+    /// zu, was AXIOM *nicht* tut ("Keine Streaks, die brechen können").
+    bool isNegated(String text, String word) {
+      final before = text.substring(0, text.indexOf(word)).toLowerCase();
+      return RegExp(r'\b(kein|keine|keinen|nie|niemals|ohne)\b\s*$')
+              .hasMatch(before) ||
+          RegExp(r'\b(kein|keine|keinen|nie|niemals|ohne)\b').hasMatch(before);
+    }
+
+    test('kommt in keinem Oberflächentext vor', () {
+      final hits = <String>[];
+      for (final file in appSources()) {
+        for (final (line, text) in userFacingStrings(file)) {
+          for (final word in forbidden) {
+            if (text.contains(word) && !isNegated(text, word)) {
+              hits.add('${file.path}:$line  "$text"  → "$word"');
+            }
+          }
+        }
+      }
+      expect(hits, isEmpty, reason: 'Schuldsprache gefunden:\n${hits.join("\n")}');
+    });
+
+    test('erkennt Schuldsprache, wenn sie auftaucht', () {
+      // Der Wächter muss selbst überwacht werden: ein Test, der nie
+      // anschlägt, ist von einem kaputten Test nicht unterscheidbar.
+      const bad = 'Du solltest das endlich mal erledigen';
+      expect(forbidden.any((w) => bad.contains(w) && !isNegated(bad, w)),
+          isTrue);
+    });
+  });
+
+  group('Umlaute', () {
+    /// Wörter, in denen "ae/oe/ue" echte Umschrift ist — nicht Wörter wie
+    /// "neue", "Steuer" oder "aktuelle", in denen die Folge legitim ist.
+    final substitutions = RegExp(
+      r'\b\w*('
+      r'aet|aessig|aehl|aeng|aell|aeuf|aehr|aend|aerk|aecht|aemt|'
+      r'oeg|oenn|oech|oehe|oepf|oes|oerp|oell|'
+      r'uehr|uehl|uenf|uecke|uerz|uebe|uess|uerd|uenst'
+      r')\w*\b',
+    );
+
+    test('Nutzertexte verwenden echte Umlaute, keine Ersatzschreibung', () {
+      final hits = <String>[];
+      for (final file in appSources()) {
+        for (final (line, text) in userFacingStrings(file)) {
+          for (final match in substitutions.allMatches(text)) {
+            hits.add('${file.path}:$line  "${match.group(0)}"  in: "$text"');
+          }
+        }
+      }
+      expect(hits, isEmpty,
+          reason: 'Ersatzschreibung statt Umlaut:\n${hits.join("\n")}');
+    });
+
+    test('auch im ausgelieferten Regelwerk', () {
+      final dir = Directory('assets/rules');
+      if (!dir.existsSync()) return;
+      final hits = <String>[];
+      for (final file in dir.listSync().whereType<File>()) {
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          for (final match in substitutions.allMatches(lines[i])) {
+            hits.add('${file.path}:${i + 1}  "${match.group(0)}"');
+          }
+        }
+      }
+      expect(hits, isEmpty,
+          reason: 'Ersatzschreibung im Regelwerk:\n${hits.join("\n")}');
+    });
+  });
+
+  group('Datenschutz', () {
+    test('kein Netzwerkzugriff im App-Code', () {
+      final hits = <String>[];
+      for (final file in appSources()) {
+        final content = file.readAsStringSync();
+        for (final forbidden in [
+          "import 'dart:html'",
+          'package:http/',
+          'HttpClient(',
+          'Socket.connect',
+        ]) {
+          if (content.contains(forbidden)) {
+            hits.add('${file.path}: $forbidden');
+          }
+        }
+      }
+      expect(hits, isEmpty, reason: 'Netzwerkzugriff gefunden:\n${hits.join("\n")}');
+    });
+
+    test('INTERNET ist im Release-Manifest nicht deklariert (ADR-0002)', () {
+      final manifest = File('android/app/src/main/AndroidManifest.xml');
+      if (!manifest.existsSync()) return;
+      expect(
+        manifest.readAsStringSync().contains('android.permission.INTERNET'),
+        isFalse,
+        reason: 'Das Hauptmanifest darf keine INTERNET-Berechtigung '
+            'deklarieren. Nur die Debug- und Profile-Varianten dürfen das, '
+            'weil Flutter sie für Hot Reload braucht.',
+      );
+    });
+  });
+}

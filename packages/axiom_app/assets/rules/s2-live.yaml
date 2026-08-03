@@ -1,0 +1,145 @@
+# Stufe 2 — Regeln, die ohne Kalibrierung auskommen.
+#
+# Diese Regeln hängen NICHT an geratenen Schwellenwerten des Zustandsvektors.
+# Sie feuern auf Uhrzeiten und gezählte Ereignisse — beides ist exakt, nicht
+# geschätzt. Deshalb dürfen sie live gehen, obwohl die Baseline noch aussteht.
+#
+# Die schwellenabhängigen Regeln (R-050 ff.) bleiben in shadow-s2s3.yaml
+# stumm, bis weights.yaml an echten Daten kalibriert ist. Eine Empfehlung auf
+# geratener Grundlage kostet Vertrauen, das man nicht zurückbekommt (R3).
+
+# ── M7 Body Loop ────────────────────────────────────────────────────────
+# Reine Zeittrigger. Bei diesem Profil der zuverlässigste Interventionstyp,
+# weil Pünktlichkeit auch gegenüber der App gilt [D4].
+
+- id: R-100
+  title: "Vormittags: trinken und aufstehen"
+  deficit: D7
+  rationale: >
+    Durst und Bewegungsbedarf werden systematisch zu spät bemerkt, im
+    Hyperfokus gar nicht. Der körperliche Zustand ist zugleich der größte
+    einzelne Modulator der Exekutivfunktion — ein dehydrierter Vormittag
+    hat objektiv weniger Kapazität. Kostet nichts, wirkt sofort.
+  when:
+    all:
+      - time_between: ["10:30", "11:15"]
+      - count_today: { event: body_prompt, lt: 2 }
+  then:
+    action: notify
+    params: { kind: water_move, escalation: soft }
+  priority: 40
+  severity: nudge
+  cooldown: { minutes: 120, max_per_day: 1 }
+  enabled: true
+
+- id: R-101
+  title: "Nachmittags: Pause für Augen und Beine"
+  deficit: D7
+  rationale: >
+    Das Nachmittagstief trifft mit ohnehin sinkender Kapazität zusammen.
+    Kurz aufstehen und den Blick vom Bildschirm nehmen ist die billigste
+    verfügbare Gegenmaßnahme.
+  when:
+    all:
+      - time_between: ["15:00", "15:45"]
+      - count_today: { event: body_prompt, lt: 4 }
+  then:
+    action: notify
+    params: { kind: eyes_move, escalation: soft }
+  priority: 40
+  severity: nudge
+  cooldown: { minutes: 120, max_per_day: 1 }
+  enabled: true
+
+# ── M8 Sleep Gate ───────────────────────────────────────────────────────
+
+- id: R-110
+  title: "Abendgrenze"
+  deficit: D8
+  rationale: >
+    Die Nacht ist reizarm genug für Hyperfokus und bietet zugleich die
+    stärkste Neuheit — niemand stört, alles ist möglich. Daraus entsteht
+    eine sich selbst verstärkende Kaskade: Schlafdefizit senkt die
+    Exekutivfunktion, das erhöht Kompensationsaufwand und Reizbedarf, was
+    den Abendkonsum steigert. Der Ausstiegsanker bricht den Kreis an
+    seiner schwächsten Stelle. Bewusst leise: Wer um halb elf angeschrien
+    wird, schaltet die App stumm.
+  when:
+    all:
+      - time_between: ["22:30", "23:15"]
+      - not: { active_slot: { eq: focus } }
+  then:
+    action: notify
+    params: { ritual: winddown, broadcast: "axiom.WINDDOWN" }
+  priority: 60
+  severity: nudge
+  cooldown: { minutes: 720, max_per_day: 1 }
+  enabled: true
+
+- id: R-111
+  title: "Schlaf eintragen"
+  deficit: D8
+  rationale: >
+    Ohne Schlafdaten fehlt der Kapazitätsformel ihr stärkster Eingangswert,
+    und der Zustandsvektor rät. Zwei Uhrzeiten und eine Einschätzung
+    genügen — mehr wird nicht gefragt.
+  when:
+    all:
+      - time_between: ["07:30", "10:00"]
+      - count_today: { event: sleep_window, lt: 1 }
+  then:
+    action: notify
+    params: { kind: sleep_log }
+  priority: 55
+  severity: nudge
+  cooldown: { minutes: 180, max_per_day: 1 }
+  enabled: true
+
+# ── M11 Review Cadence ──────────────────────────────────────────────────
+
+- id: R-120
+  title: "Tagesabschluss"
+  deficit: D12
+  rationale: >
+    Zwei Minuten, zwei Fragen. Ohne täglichen Abschluss verschwinden Ziele
+    lautlos — jenseits von etwa zwei Wochen sind sie motivational praktisch
+    unsichtbar. Der Zeitdeckel ist Teil der Regel: Ein Review ohne Grenze
+    wird selbst zur Ausweichbeschäftigung.
+  when:
+    all:
+      - time_between: ["21:00", "22:15"]
+      - count_today: { event: review_completed, lt: 1 }
+  then:
+    action: notify
+    params: { scope: day, max_minutes: 2 }
+  priority: 65
+  severity: nudge
+  cooldown: { minutes: 240, max_per_day: 1 }
+  enabled: true
+
+# ── M3 Time Anchor ──────────────────────────────────────────────────────
+# Die eigentlichen Ankererinnerungen laufen über exakte Alarme, nicht über
+# die Regel-Engine — sie brauchen Minutengenauigkeit. Diese Regel deckt nur
+# den Fall ab, dass gar keine Anker gepflegt werden.
+
+- id: R-130
+  title: "Termine eintragen"
+  deficit: D4
+  rationale: >
+    Pünktlichkeit ist bei diesem Profil erfolgreich kompensiert — und genau
+    das ist teuer: Puffer, ständiges Nachrechnen, Dauerspannung vor jedem
+    Termin. Eingetragene Anker verlagern diese Rechnung vom Kopf ins System.
+    Solange keine gepflegt werden, läuft die Kompensation weiter wie bisher.
+  when:
+    all:
+      - time_between: ["08:00", "09:30"]
+      - weekday: { ne: sat }
+      - count_today: { event: capture, gte: 1 }
+      - minutes_since: { event: decision_feedback, gte: 1440 }
+  then:
+    action: log_only          # SHADOW: erst beobachten, ob das nervt
+    params: { hint: anchors }
+  priority: 30
+  severity: info
+  cooldown: { minutes: 1440, max_per_day: 1, backoff: exponential }
+  enabled: true

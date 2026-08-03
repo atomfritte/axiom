@@ -1,0 +1,179 @@
+/// App-Shell: Theme, Navigation, Onboarding-Weiche.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'design/theme.dart';
+import 'design/tokens.dart';
+import 'platform/intent_handler.dart';
+import 'screens/now_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/state_screen.dart';
+import 'screens/system_screen.dart';
+import 'state/providers.dart';
+
+class AxiomApp extends ConsumerWidget {
+  const AxiomApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    return MaterialApp(
+      title: 'AXIOM',
+      debugShowCheckedModeBanner: false,
+      theme: buildAxiomTheme(brightness: Brightness.light),
+      darkTheme: buildAxiomTheme(brightness: Brightness.dark),
+      themeMode: switch (mode) {
+        1 => ThemeMode.dark,
+        2 => ThemeMode.light,
+        _ => ThemeMode.system,
+      },
+      home: const AxiomGate(),
+    );
+  }
+}
+
+/// Entscheidet zwischen Onboarding und Hauptansicht.
+class AxiomGate extends ConsumerStatefulWidget {
+  const AxiomGate({super.key});
+
+  @override
+  ConsumerState<AxiomGate> createState() => _GateState();
+}
+
+class _GateState extends ConsumerState<AxiomGate> {
+  bool? _onboarded;
+
+  @override
+  Widget build(BuildContext context) {
+    final runtime = ref.watch(runtimeProvider);
+
+    return runtime.when(
+      loading: () => const _Splash(),
+      error: (e, _) => _StartupError(error: e),
+      data: (rt) {
+        final done = _onboarded ?? rt.onboardingDone;
+        if (!done) {
+          return OnboardingScreen(
+            onDone: () => setState(() => _onboarded = true),
+          );
+        }
+        return const IntentHandler(child: HomeShell());
+      },
+    );
+  }
+}
+
+/// Flache Navigation. Drei Ziele, nicht mehr — jeder weitere Reiter ist
+/// eine Entscheidung, die der Nutzer treffen muss, bevor er irgendwo ist.
+class HomeShell extends ConsumerStatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> {
+  int _index = 0;
+
+  static const _screens = <Widget>[
+    NowScreen(),
+    StateScreen(),
+    SystemScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _index, children: _screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) {
+          HapticFeedback.selectionClick();
+          setState(() => _index = i);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.adjust_outlined),
+            selectedIcon: Icon(Icons.adjust),
+            label: 'Jetzt',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.show_chart_outlined),
+            selectedIcon: Icon(Icons.show_chart),
+            label: 'Zustand',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
+            label: 'System',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('AXIOM',
+                style: TextStyle(
+                  fontFamily: Fonts.mono,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 8,
+                  color: p.signal,
+                )),
+            const SizedBox(height: Space.xl),
+            SizedBox(
+              width: 80,
+              child: LinearProgressIndicator(
+                minHeight: 1,
+                backgroundColor: p.rule,
+                color: p.signal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupError extends StatelessWidget {
+  final Object error;
+  const _StartupError({required this.error});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('START FEHLGESCHLAGEN',
+                    style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: Space.md),
+                Text('AXIOM konnte nicht starten.',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: Space.lg),
+                Text('$error', style: monoStyle(context, size: 12)),
+              ],
+            ),
+          ),
+        ),
+      );
+}

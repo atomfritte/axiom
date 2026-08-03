@@ -1,0 +1,175 @@
+# SHADOW-Regeln für die Stufen S2/S3.
+#
+# Alle stehen auf `log_only`. Sie feuern stumm mit und werden protokolliert,
+# erzeugen aber KEINE Ausgabe. Nach der Baseline-Phase wird im Wochenreview
+# bewertet:
+#   - Wie oft hätte die Regel gefeuert?  (zu oft = Bedingung zu weit)
+#   - Wäre der Rat in der Situation richtig gewesen?
+#   - Kollidiert sie mit bestehenden Regeln?
+#
+# Erst dann wird `action` auf die echte Aktion umgestellt.
+# Siehe docs/04-REGELWERK.md §6 (Regel-Lebenszyklus).
+
+# ── M5 Sensation Budget ─────────────────────────────────────────────────
+
+- id: R-050
+  title: "Reizbedarf proaktiv decken"
+  deficit: D5
+  rationale: >
+    Ungedeckter Reizbedarf sucht sich den schnellsten Kanal — und der ist
+    meist der teuerste (Impulskauf, Substanz, Risikoverhalten im Verkehr).
+    Ein geplanter Hochreiz-Slot deckt denselben physiologischen Bedarf zu
+    kalkulierbaren Kosten. Reizhunger wird kanalisiert, nicht unterdrückt (G3).
+  when:
+    all:
+      - sensation_need: { gte: 70 }
+      - capacity: { gte: 30 }          # bei leerem Tank kein Sport-Vorschlag
+      - not: { active_slot: { eq: sensation } }
+      - time_between: ["07:00", "21:00"]
+  then:
+    action: suggest_slot
+    params:
+      pool: [sport, kaelte, musik_laut, wettkampf]
+      duration_min: 30
+  priority: 60
+  severity: nudge
+  cooldown: { minutes: 240, max_per_day: 2, backoff: exponential }
+  enabled: true
+
+- id: R-051
+  title: "Impulsdurchbruch wahrscheinlich — Risikokanäle sichern"
+  deficit: D5
+  rationale: >
+    Bei sehr hohem Reizbedarf und gleichzeitig niedriger Regulationsreserve
+    steigt die Wahrscheinlichkeit eines Impulsdurchbruchs deutlich. Der
+    Interceptor wird vorsorglich scharf gestellt — kein Verbot, nur Latenz.
+  when:
+    all:
+      - sensation_need: { gte: 85 }
+      - regulation: { lt: 50 }
+  then:
+    action: start_cooldown
+    params: { arm_channels: [purchase, order, message] }
+  priority: 85
+  severity: intervene
+  cooldown: { minutes: 180, max_per_day: 2, backoff: exponential }
+  enabled: true
+
+- id: R-052
+  title: "Nachtbestellung abfangen"
+  deficit: D5
+  rationale: >
+    Nachts sind Regulationsreserve und Impulskontrolle am niedrigsten,
+    während Verfügbarkeit und Novelty am höchsten sind. Eine Bestellung
+    um 01:00 wird um 09:00 fast nie noch gewollt. Der Cooldown bis zum
+    Morgen kostet nichts und fängt den Großteil ab.
+  when:
+    all:
+      - time_between: ["22:00", "05:00"]
+      - regulation: { lt: 50 }
+  then:
+    action: start_cooldown
+    params: { cooldown_until: "09:00", checklist: personal_purchase }
+  priority: 90
+  severity: intervene
+  cooldown: { minutes: 240, max_per_day: 2 }
+  enabled: true
+
+# ── M7 Body Loop ────────────────────────────────────────────────────────
+
+- id: R-070
+  title: "Hyperfokus ohne Körperkontakt"
+  deficit: D7
+  rationale: >
+    Im Hyperfokus werden Durst, Hunger und Bewegungsbedarf systematisch
+    übersehen. Der körperliche Zustand ist gleichzeitig der größte
+    einzelne Modulator der Exekutivfunktion — ein dehydrierter Nachmittag
+    hat objektiv weniger Kapazität.
+  when:
+    all:
+      # Ohne diese Zeile feuert die Regel auch dann, wenn gar kein Fokus
+      # läuft: `minutes_since` gilt bei nie eingetretenem Ereignis als
+      # "unendlich lange her" — richtig für "seit X nichts getrunken",
+      # falsch für "läuft seit X".
+      - active_slot: { eq: focus }
+      - minutes_since: { event: focus_start, gte: 90 }
+      - minutes_since: { event: body_prompt, gte: 90 }
+      - time_between: ["07:00", "22:00"]
+  then:
+    action: notify
+    params: { kind: water_move, escalation: soft }
+  priority: 55
+  severity: nudge
+  cooldown: { minutes: 120, max_per_day: 3 }
+  enabled: true
+
+# ── M8 Sleep Gate ───────────────────────────────────────────────────────
+
+- id: R-080
+  title: "Wind-Down-Grenze"
+  deficit: D8
+  rationale: >
+    Die Nacht ist reizarm genug für Hyperfokus und bietet zugleich die
+    stärkste Novelty. Daraus entsteht eine sich selbst verstärkende
+    Kaskade: Schlafdefizit senkt die Exekutivfunktion, das erhöht den
+    Kompensationsaufwand und den Reizbedarf, was den Abendkonsum steigert.
+    Der Ausstiegsanker bricht den Kreis an seiner schwächsten Stelle.
+  when:
+    all:
+      - time_between: ["22:30", "23:30"]
+      - not: { active_slot: { eq: focus } }
+  then:
+    action: notify
+    params: { ritual: winddown, broadcast: "axiom.WINDDOWN" }
+  priority: 70
+  severity: nudge
+  cooldown: { minutes: 720, max_per_day: 1 }
+  enabled: true
+
+# ── M9 Load Monitor ─────────────────────────────────────────────────────
+
+- id: R-090
+  title: "Erhaltungsmodus (L3)"
+  deficit: D1
+  rationale: >
+    Ein hochkompensiertes System bemerkt seinen eigenen Absturz zuletzt,
+    weil es nach außen bis kurz vor dem Bruch fehlerfrei läuft. L3 ist
+    der externe Notaus, den der Nutzer im ruhigen Zustand selbst autorisiert
+    hat. Bewusst unbequem: 72 Stunden nur Pflicht und Erholung.
+    L3 ist ein Erfolg des Systems, kein Scheitern des Nutzers.
+  when:
+    any:
+      - load_level: { eq: L3 }
+      - all:
+          - sleep_debt: { gte: 70 }
+          - capacity: { lt: 25 }
+  then:
+    action: restrict_mode
+    params: { duration_hours: 72, hide_optional: true }
+  priority: 100
+  severity: enforce
+  cooldown: { minutes: 1440, max_per_day: 1 }
+  enabled: true
+
+# ── M2 Task Kernel ──────────────────────────────────────────────────────
+
+- id: R-020
+  title: "Wichtig, aber nicht startbar — zerlegen statt anmahnen"
+  deficit: D2
+  rationale: >
+    Der übliche Fehlermodus: Eine wichtige Aufgabe steht seit Wochen oben
+    auf der Liste und erzeugt bei jedem Blick Schuld, ohne je gestartet zu
+    werden. Schuld senkt die Regulationsreserve und macht den Start noch
+    unwahrscheinlicher. Statt anzumahnen wird zerlegt, bis ein Teilschritt
+    unter die aktuelle Kapazität fällt.
+  when:
+    all:
+      - capacity: { lt: 50 }
+      - not: { active_slot: { eq: focus } }
+  then:
+    action: force_atomize
+    params: { target_ae: 3 }
+  priority: 80
+  severity: nudge
+  cooldown: { minutes: 360, max_per_day: 2, backoff: exponential }
+  enabled: true

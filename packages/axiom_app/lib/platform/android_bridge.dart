@@ -1,0 +1,164 @@
+/// Brücke zu Android-Systemfunktionen.
+///
+/// Flutter deckt diese nicht ab — sie laufen über einen Platform Channel
+/// gegen nativen Kotlin-Code (android/app/src/main/kotlin/.../MainActivity.kt).
+///
+/// Auf Linux-Desktop sind alle Aufrufe stille No-ops. Die App bleibt dort
+/// vollständig bedienbar: Erfassen, Check-ins, Regelinspektor.
+library;
+
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+
+abstract final class AndroidBridge {
+  static const _channel = MethodChannel('de.axiom/system');
+
+  static bool get isSupported => !kIsWeb && Platform.isAndroid;
+
+  // ── Berechtigungen ────────────────────────────────────────────────────
+
+  /// Ab Android 14 erforderlich für minutengenaue Erinnerungen.
+  /// Ohne sie ist der wirksamste Interventionstyp dieses Profils wertlos [D4].
+  static Future<bool> requestExactAlarm() => _invoke('requestExactAlarm');
+
+  static Future<bool> requestNotifications() => _invoke('requestNotifications');
+
+  /// Samsung schläfert Apps aggressiv ein. Ohne Ausnahme feuern Alarme
+  /// unzuverlässig — Risiko R4.
+  static Future<bool> requestIgnoreBatteryOptimizations() =>
+      _invoke('requestIgnoreBatteryOptimizations');
+
+  static Future<Map<String, bool>> permissionStatus() async {
+    if (!isSupported) return const {};
+    try {
+      final result =
+          await _channel.invokeMapMethod<String, bool>('permissionStatus');
+      return result ?? const {};
+    } on PlatformException {
+      return const {};
+    }
+  }
+
+  // ── Exakte Alarme ─────────────────────────────────────────────────────
+
+  /// Plant eine minutengenaue Erinnerung.
+  /// Nutzt `setExactAndAllowWhileIdle`, nicht WorkManager — WorkManager
+  /// bündelt Aufwachvorgänge und ist für Zeitanker unbrauchbar.
+  static Future<bool> scheduleExact({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    String channel = 'axiom_nudge',
+  }) async {
+    if (!isSupported) return false;
+    return _invoke('scheduleExact', {
+      'id': id,
+      'atMillis': at.millisecondsSinceEpoch,
+      'title': title,
+      'body': body,
+      'channel': channel,
+    });
+  }
+
+  static Future<bool> cancelAlarm(int id) =>
+      _invoke('cancelAlarm', {'id': id});
+
+  /// Plant die drei täglichen Check-ins.
+  /// Zeitgetriggerte Prompts haben bei diesem Profil die höchste
+  /// Befolgungsrate — Pünktlichkeit gilt auch gegenüber der App [D4].
+  static Future<void> scheduleDailyCheckins() async {
+    if (!isSupported) return;
+    const slots = [(1, 9, 0), (2, 14, 0), (3, 21, 0)];
+    final now = DateTime.now();
+    for (final (id, hour, minute) in slots) {
+      var at = DateTime(now.year, now.month, now.day, hour, minute);
+      if (at.isBefore(now)) at = at.add(const Duration(days: 1));
+      await scheduleExact(
+        id: id,
+        at: at,
+        title: 'Check-in',
+        body: 'Vier Regler, ungefähr reicht.',
+        channel: 'axiom_nudge',
+      );
+    }
+  }
+
+  /// Selbsttest: Feuern die eigenen Alarme pünktlich?
+  /// Ein stiller Ausfall wäre schlimmer als ein lauter — deshalb wird die
+  /// tatsächliche Feuerzeit protokolliert und Drift sichtbar gemeldet (R4).
+  static Future<Duration?> lastAlarmDrift() async {
+    if (!isSupported) return null;
+    try {
+      final ms = await _channel.invokeMethod<int>('lastAlarmDriftMillis');
+      return ms == null ? null : Duration(milliseconds: ms);
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  // ── Widget & Quick Tile ───────────────────────────────────────────────
+
+  /// Aktualisiert Homescreen-Widget und Always-On-Anzeige.
+  /// Objektpermanenz: Was nicht sichtbar ist, existiert für dieses Profil
+  /// nicht [D9].
+  static Future<void> updateWidget({
+    required String headline,
+    required String detail,
+    required int capacity,
+  }) async {
+    if (!isSupported) return;
+    await _invoke('updateWidget', {
+      'headline': headline,
+      'detail': detail,
+      'capacity': capacity,
+    });
+  }
+
+  // ── Automation ────────────────────────────────────────────────────────
+
+  /// Sendet einen Broadcast, den Samsung „Modi und Routinen" aufgreifen kann.
+  /// Bewusst über Routinen statt über direkte APIs: Der Nutzer sieht und
+  /// ändert die Automation selbst, ohne die App anzufassen (G2).
+  static Future<void> broadcast(String action) =>
+      _invoke('broadcast', {'action': action});
+
+  static Future<void> focusStart() => broadcast('axiom.FOCUS_START');
+  static Future<void> focusEnd() => broadcast('axiom.FOCUS_END');
+  static Future<void> windDown() => broadcast('axiom.WINDDOWN');
+  static Future<void> enterMaintenanceMode() => broadcast('axiom.L3_ENTER');
+
+  // ── S-Pen / Samsung Notes ─────────────────────────────────────────────
+
+  /// Holt Screen-off-Memos ab, die seit dem letzten Aufruf entstanden sind.
+  ///
+  /// Der reibungsärmste Erfassungskanal, den das Gerät bietet: Stift ziehen,
+  /// schreiben, fertig — ohne Entsperren. Genau das Zeitfenster von wenigen
+  /// Sekunden, in dem der Gedanke noch existiert [D9].
+  static Future<List<String>> pullPendingMemos() async {
+    if (!isSupported) return const [];
+    try {
+      final result =
+          await _channel.invokeListMethod<String>('pullPendingMemos');
+      return result ?? const [];
+    } on PlatformException {
+      return const [];
+    }
+  }
+
+  // ── Intern ────────────────────────────────────────────────────────────
+
+  static Future<bool> _invoke(String method, [Map<String, Object?>? args]) async {
+    if (!isSupported) return false;
+    try {
+      return await _channel.invokeMethod<bool>(method, args) ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+}
+
+const bool kIsWeb = bool.fromEnvironment('dart.library.js_util');

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Die nächste Handlung und deine heutige Kapazität, ohne die App zu öffnen.</string>
+    <string name="shortcut_capture_short">Erfassen</string>
+    <string name="shortcut_capture_long">Gedanken festhalten</string>
+    <string name="shortcut_checkin_short">Check-in</string>
+    <string name="shortcut_checkin_long">Zustand messen</string>
+</resources>

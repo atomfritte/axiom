@@ -1,0 +1,45 @@
+# ── Persönliche Daten — NIEMALS committen ───────────────────────────────
+rules/personal/**
+!rules/personal/.gitkeep
+!rules/personal/README.md
+*.axiom
+data/
+exports/
+baseline/
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Testartefakte ───────────────────────────────────────────────────────
+# Diff-Bilder aus fehlgeschlagenen Golden-Tests. Werden bei jedem Fehlschlag
+# neu erzeugt; die Referenzbilder unter test/screenshots/ bleiben versioniert.
+**/test/failures/
+
+# ── Dart / Flutter ──────────────────────────────────────────────────────
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.g.dart
+*.freezed.dart
+doc/api/
+
+# ── Android ─────────────────────────────────────────────────────────────
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+*.jks
+*.keystore
+
+# ── Linux ───────────────────────────────────────────────────────────────
+**/linux/flutter/ephemeral/
+
+# ── Werkzeuge / OS ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log
+*.swp
