@@ -155,6 +155,22 @@ void main() {
       );
     });
 
+    test('das Widget-Layout benutzt nur Klassen, die RemoteViews erlaubt', () {
+      // RemoteViews inflatet nur Klassen mit @RemoteView. `android.view.View`
+      // und `android.widget.Space` gehoeren nicht dazu — der Launcher bricht
+      // ab und zeigt "Widget kann nicht angezeigt werden". Von aussen sieht
+      // das nach einem kaputten Widget aus; es ist eine einzige Zeile.
+      // XML-Kommentare entfernen: Sie erklaeren genau die Begriffe, die im
+      // Markup nicht mehr vorkommen duerfen.
+      final comments = RegExp(r'<!--.*?-->', dotAll: true);
+      for (final file in ['axiom_widget', 'axiom_widget_preview']) {
+        final layout =
+            android('res/layout/$file.xml').replaceAll(comments, '');
+        expect(layout, isNot(contains('<View')), reason: '$file: <View>');
+        expect(layout, isNot(contains('<Space')), reason: '$file: <Space>');
+      }
+    });
+
     test('INTERNET bleibt auch mit Health Connect draußen (ADR-0002)', () {
       expect(
         android('AndroidManifest.xml'),

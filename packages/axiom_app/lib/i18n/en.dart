@@ -960,6 +960,29 @@ const Map<String, String> kEnglish = {
       'There are no system permissions to check on the desktop. Capture, '
           'check-ins and the rule inspector still run in full.',
 
+  'Verbindung zum System': 'Connection to the system',
+  'Die Brücke antwortet. Alles Weitere hier sind echte Werte des Geräts.':
+      'The bridge answers. Everything below is a real value from the device.',
+  'Die Brücke antwortet nicht. Dann ist keine Systemfunktion nutzbar und jede Zeile unten steht auf leeren Werten — das ist ein Fehler in AXIOM, nicht am Gerät.':
+      'The bridge does not answer. No system function works then, and every '
+          'line below sits on empty values — that is a fault in AXIOM, not in '
+          'the device.',
+  'Das System hat die Anfrage nicht angenommen.':
+      'The system did not accept the request.',
+  'Die dauerhafte Anzeige gibt es nur auf Android.':
+      'The ongoing display only exists on Android.',
+  'Die Anzeige ließ sich nicht starten. Meistens fehlt die Benachrichtigungsfreigabe — der Systemcheck sagt, ob das hier der Grund ist.':
+      'The display could not start. Usually the notification permission is '
+          'missing — the system check says whether that is the reason here.',
+  'Erst die Benachrichtigungen freigeben — ohne sie hätte die Anzeige nichts, worin sie erscheinen kann.':
+      'Grant notifications first — without them the display has nothing to '
+          'appear in.',
+  'Aus. Einschalten unter Erfassen → Im Benachrichtigungsbereich bleiben.':
+      'Off. Switch it on under Capture → Stay in the notification shade.',
+  'Aus — und ohne die Benachrichtigungsfreigabe von oben kann sie auch nicht starten.':
+      'Off — and without the notification permission above it cannot start '
+          'either.',
+
   // ── Anzeige-Einstellungen ────────────────────────────────────────────
   'Textgröße': 'Text size',
   'Helligkeit': 'Brightness',

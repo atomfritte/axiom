@@ -232,6 +232,11 @@ class MainActivity : FlutterActivity() {
                     "healthRequestPermissions" ->
                         result.success(HealthBridge.requestPermissions(this))
 
+                    // Was die Bruecke selbst ueber sich sagen kann. Steht als
+                    // erste Zeile im Systemcheck: Antwortet der Kanal nicht,
+                    // ist jede weitere Zeile bedeutungslos.
+                    "ping" -> result.success(true)
+
                     "healthRead" -> {
                         val since = call.argument<Long>("sinceMillis") ?: 0L
                         scope.launch {
@@ -255,6 +260,8 @@ class MainActivity : FlutterActivity() {
 
                     // ── Notiz-Rolle (S-Pen) ─────────────────────────────
                     "requestNotesRole" -> result.success(requestNotesRole())
+
+                    "openDefaultApps" -> result.success(openDefaultApps())
 
                     // ── Diagnose ────────────────────────────────────────
                     "diagnostics" -> scope.launch {
@@ -397,17 +404,25 @@ class MainActivity : FlutterActivity() {
      * aktualisiert sie nach einem Update nicht zuverlässig. Diese Anfrage
      * geht am Cache vorbei.
      */
-    private fun requestPinWidget(): Boolean {
+    private fun requestPinWidget(): Map<String, Any?> {
         val manager = getSystemService(AppWidgetManager::class.java)
-        if (!manager.isRequestPinAppWidgetSupported) return false
+        if (!manager.isRequestPinAppWidgetSupported) {
+            return failure(
+                "Dieser Startbildschirm nimmt keine Anfrage entgegen. Dann " +
+                    "über die Widget-Auswahl: lange auf den Homescreen " +
+                    "tippen → Widgets → AXIOM."
+            )
+        }
         return try {
-            manager.requestPinAppWidget(
+            val requested = manager.requestPinAppWidget(
                 ComponentName(this, AxiomWidgetProvider::class.java),
                 null,
                 null,
             )
+            if (requested) success()
+            else failure("Der Startbildschirm hat die Anfrage abgelehnt.")
         } catch (e: Throwable) {
-            false
+            failure("Anfrage fehlgeschlagen: ${e.javaClass.simpleName}")
         }
     }
 
@@ -427,21 +442,59 @@ class MainActivity : FlutterActivity() {
      * nicht den Filter. Das war der Grund, warum die Stift-Aktion trotz
      * korrekt registriertem `ACTION_CREATE_NOTE` nicht auftauchte.
      */
-    private fun requestNotesRole(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+    private fun requestNotesRole(): Map<String, Any?> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return failure("Die Rolle „Notiz-App\" gibt es erst ab Android 14.")
+        }
         return try {
             val roles = getSystemService(RoleManager::class.java)
-            if (!roles.isRoleAvailable(RoleManager.ROLE_NOTES)) return false
-            if (roles.isRoleHeld(RoleManager.ROLE_NOTES)) return true
+            if (roles.isRoleHeld(RoleManager.ROLE_NOTES)) return success()
+            if (!roles.isRoleAvailable(RoleManager.ROLE_NOTES)) {
+                // Samsung liefert die Rolle nicht auf jedem Geraet aus.
+                // Dann bleibt der Weg ueber die Standard-Apps.
+                return if (openDefaultApps()) {
+                    failure(
+                        "Dieses Gerät bietet die Rolle nicht direkt an. Die " +
+                            "Standard-Apps sind offen — dort unter „Notizen\" " +
+                            "AXIOM wählen."
+                    )
+                } else {
+                    failure(
+                        "Dieses Gerät kennt die Rolle „Notiz-App\" nicht. " +
+                            "Der Stift-Doppeltipp lässt sich dann nicht auf " +
+                            "AXIOM legen."
+                    )
+                }
+            }
             startActivityForResult(
                 roles.createRequestRoleIntent(RoleManager.ROLE_NOTES),
                 REQ_NOTES_ROLE,
             )
-            false
+            success()
         } catch (e: Throwable) {
-            false
+            failure("Der Systemdialog ließ sich nicht öffnen: ${e.javaClass.simpleName}")
         }
     }
+
+    /** Systemeinstellung „Standard-Apps" — der Weg, wenn die Rolle fehlt. */
+    private fun openDefaultApps(): Boolean = try {
+        startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+        true
+    } catch (e: Throwable) {
+        false
+    }
+
+    private fun success(): Map<String, Any?> = mapOf("ok" to true)
+
+    /**
+     * Fehlschlag mit Grund.
+     *
+     * Jeder verschluckte Fehler wird auf dem Geraet zu „passiert nichts" —
+     * und „passiert nichts" ist von aussen nicht diagnostizierbar. Lieber
+     * ein unschoener Satz als ein stummer Knopf.
+     */
+    private fun failure(reason: String): Map<String, Any?> =
+        mapOf("ok" to false, "reason" to reason)
 
     private fun notesRoleHeld(): Boolean = try {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&

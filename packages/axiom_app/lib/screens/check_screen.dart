@@ -33,6 +33,7 @@ class CheckScreen extends ConsumerStatefulWidget {
 class _CheckScreenState extends ConsumerState<CheckScreen>
     with WidgetsBindingObserver {
   Map<String, Object?> _values = const {};
+  bool _channelAlive = false;
   bool _loading = true;
 
   @override
@@ -59,13 +60,21 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
   }
 
   Future<void> _reload() async {
+    // Erst fragen, ob der Kanal ueberhaupt antwortet. Ohne ihn sind alle
+    // folgenden Werte leer — und leere Werte sehen aus wie fehlende
+    // Freigaben. Genau diese Verwechslung hat zuletzt Tage gekostet.
+    final alive = await AndroidBridge.ping();
     final values = await AndroidBridge.diagnostics();
     if (!mounted) return;
     setState(() {
+      _channelAlive = alive;
       _values = values;
       _loading = false;
     });
   }
+
+  void _say(String message) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(message)));
 
   bool _flag(String key) => _values[key] == true;
 
@@ -113,6 +122,13 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                 const SizedBox(height: Space.xl),
 
                 SectionLabel(context.t('Gerät')),
+                _Check(
+                  ok: _channelAlive,
+                  label: context.t('Verbindung zum System'),
+                  detail: _channelAlive
+                      ? context.t('Die Brücke antwortet. Alles Weitere hier sind echte Werte des Geräts.')
+                      : context.t('Die Brücke antwortet nicht. Dann ist keine Systemfunktion nutzbar und jede Zeile unten steht auf leeren Werten — das ist ein Fehler in AXIOM, nicht am Gerät.'),
+                ),
                 _Line(
                   label: context.t('System'),
                   value: 'Android ${_values['release']} '
@@ -173,12 +189,11 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       : context.t('Noch keins platziert. Samsungs Startbildschirm merkt sich die Widget-Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig — dieser Knopf geht daran vorbei.'),
                   action: context.t('Jetzt hinzufügen'),
                   onAction: () async {
-                    final ok = await AndroidBridge.requestPinWidget();
+                    final outcome = await AndroidBridge.requestPinWidget();
                     if (!context.mounted) return;
-                    if (!ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(context.t('Der Startbildschirm nimmt keine Anfrage entgegen. Dann über die Widget-Auswahl: lange auf den Homescreen tippen → Widgets → AXIOM.')),
-                      ));
+                    if (!outcome.ok) {
+                      _say(outcome.reason ??
+                          context.t('Das System hat die Anfrage nicht angenommen.'));
                     }
                     await _reload();
                   },
@@ -191,20 +206,29 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       : _flag('notesRoleAvailable')
                           ? context.t('Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht.')
                           : context.t('Diese Rolle gibt es erst ab Android 14.'),
-                  action: _flag('notesRoleAvailable')
-                      ? context.t('AXIOM dafür setzen')
-                      : null,
+                  action: context.t('AXIOM dafür setzen'),
                   onAction: () async {
-                    await AndroidBridge.requestNotesRole();
+                    final outcome = await AndroidBridge.requestNotesRole();
+                    if (!context.mounted) return;
+                    if (!outcome.ok) {
+                      _say(outcome.reason ??
+                          context.t('Das System hat die Anfrage nicht angenommen.'));
+                    }
                     await _reload();
                   },
                 ),
                 _Check(
                   ok: _flag('presenceRunning'),
                   label: context.t('Dauerhafte Anzeige'),
+                  // Den Grund nur nennen, wenn er zutrifft. Die frueherere
+                  // Fassung behauptete pauschal, die Freigabe fehle — auch
+                  // wenn sie erteilt war. Ein falscher Grund ist schlimmer
+                  // als keiner.
                   detail: _flag('presenceRunning')
                       ? context.t('Läuft im Benachrichtigungsbereich.')
-                      : context.t('Aus. Einschalten unter Erfassen — sie braucht die Benachrichtigungsfreigabe von oben.'),
+                      : _flag('postNotificationsGranted')
+                          ? context.t('Aus. Einschalten unter Erfassen → Im Benachrichtigungsbereich bleiben.')
+                          : context.t('Aus — und ohne die Benachrichtigungsfreigabe von oben kann sie auch nicht starten.'),
                 ),
                 _Check(
                   ok: _flag('speechAvailable'),
@@ -226,16 +250,19 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                     2 => context.t('Die Systemkomponente ist zu alt und muss aktualisiert werden.'),
                     _ => context.t('Das System meldet Health Connect als nicht vorhanden (Status {0}).', [health]),
                   },
-                  action: health == 3 && !_flag('healthGranted')
-                      ? context.t('Freigeben')
-                      : health == 3
-                          ? context.t('Einstellungen öffnen')
-                          : null,
+                  action: _flag('healthGranted')
+                      ? context.t('Einstellungen öffnen')
+                      : context.t('Freigeben'),
                   onAction: () async {
                     if (_flag('healthGranted')) {
                       await HealthSync.openSettings();
-                    } else {
-                      await HealthSync.connect();
+                      return;
+                    }
+                    final outcome = await HealthSync.connect();
+                    if (!context.mounted) return;
+                    if (!outcome.ok) {
+                      _say(outcome.reason ??
+                          context.t('Das System hat die Anfrage nicht angenommen.'));
                     }
                     await _reload();
                   },

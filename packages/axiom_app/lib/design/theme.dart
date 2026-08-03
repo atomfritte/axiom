@@ -184,6 +184,37 @@ ThemeData buildAxiomTheme({
       ),
     ),
 
+    // Schalter waren bisher ungestylt.
+    //
+    // Material 3 nimmt dann `outline` fuer den Knopf und
+    // `surfaceContainerHighest` fuer die Bahn — in dieser Palette sind das
+    // die Hairline-Farbe und ein dunkles Panel. Ergebnis: ein
+    // anthrazitfarbener Knopf auf anthrazitfarbenem Grund, der aussieht wie
+    // ein deaktiviertes Bedienelement und den man deshalb gar nicht erst
+    // antippt. Ein Schalter muss aus zwei Metern erkennbar an oder aus sein.
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) return p.inkFaint;
+        return states.contains(WidgetState.selected)
+            ? scheme.onPrimary
+            : p.inkDim;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) return p.panel;
+        return states.contains(WidgetState.selected) ? p.signal : p.base;
+      }),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected) ? p.signal : p.inkFaint),
+      trackOutlineWidth: const WidgetStatePropertyAll(1.5),
+    ),
+
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected) ? p.signal : Colors.transparent),
+      checkColor: WidgetStatePropertyAll(scheme.onPrimary),
+      side: BorderSide(color: p.inkFaint, width: 1.5),
+    ),
+
     sliderTheme: SliderThemeData(
       activeTrackColor: p.signal,
       inactiveTrackColor: p.rule,

@@ -14,6 +14,25 @@ import 'package:flutter/services.dart';
 
 import '../i18n/i18n.dart';
 
+/// Ergebnis eines Systemaufrufs — mit Grund, wenn er scheitert.
+///
+/// **Warum das ein eigener Typ ist.** Ein `bool` zurueckzugeben heisst, dass
+/// jeder Fehlschlag auf dem Geraet als „passiert nichts" ankommt. Genau das
+/// war der teuerste Fehler in diesem Projekt: fuenf gemeldete Probleme, vier
+/// verschiedene Ursachen, und keine davon von aussen unterscheidbar. Ein
+/// unschoener Satz ist besser als ein stummer Knopf.
+final class PlatformOutcome {
+  final bool ok;
+  final String? reason;
+
+  const PlatformOutcome(this.ok, [this.reason]);
+
+  static const unsupported = PlatformOutcome(
+    false,
+    'Diese Funktion gibt es nur auf Android.',
+  );
+}
+
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
 
@@ -201,8 +220,15 @@ abstract final class AndroidBridge {
     }
   }
 
-  static Future<bool> healthRequestPermissions() =>
-      _invoke('healthRequestPermissions');
+  static Future<PlatformOutcome> healthRequestPermissions() =>
+      _outcome('healthRequestPermissions');
+
+  /// Antwortet der Kanal ueberhaupt?
+  ///
+  /// Erste Zeile im Systemcheck. Schlaegt das fehl, ist jede weitere Zeile
+  /// dort bedeutungslos — und man sucht sonst tagelang an der falschen
+  /// Stelle.
+  static Future<bool> ping() => _invoke('ping');
 
   static Future<bool> healthOpenSettings() => _invoke('healthOpenSettings');
 
@@ -234,7 +260,8 @@ abstract final class AndroidBridge {
   /// aktualisiert sie nach einem Update nicht immer. Wer dort nichts findet
   /// oder ein „konnte nicht hinzugefuegt werden" bekommt, kommt hierueber
   /// trotzdem ans Ziel.
-  static Future<bool> requestPinWidget() => _invoke('requestPinWidget');
+  static Future<PlatformOutcome> requestPinWidget() =>
+      _outcome('requestPinWidget');
 
   /// Wie viele Widget-Instanzen tatsaechlich auf dem Startbildschirm liegen.
   static Future<int> widgetCount() async {
@@ -255,7 +282,8 @@ abstract final class AndroidBridge {
   /// Ohne diese Rolle taucht AXIOM beim Stift-Doppeltipp nicht auf. Der
   /// Intent-Filter allein reicht nicht — das System fragt die Rolle ab,
   /// nicht den Filter.
-  static Future<bool> requestNotesRole() => _invoke('requestNotesRole');
+  static Future<PlatformOutcome> requestNotesRole() =>
+      _outcome('requestNotesRole');
 
   // ── Diagnose ──────────────────────────────────────────────────────────
 
@@ -330,6 +358,29 @@ abstract final class AndroidBridge {
   }
 
   // ── Intern ────────────────────────────────────────────────────────────
+
+  /// Wie [_invoke], aber mit dem Grund des Scheiterns.
+  static Future<PlatformOutcome> _outcome(String method,
+      [Map<String, Object?>? args]) async {
+    if (!isSupported) return PlatformOutcome.unsupported;
+    try {
+      final result =
+          await _channel.invokeMapMethod<String, Object?>(method, args);
+      if (result == null) return const PlatformOutcome(false);
+      return PlatformOutcome(
+        result['ok'] == true,
+        result['reason'] as String?,
+      );
+    } on PlatformException catch (e) {
+      return PlatformOutcome(false, e.message);
+    } on MissingPluginException {
+      return const PlatformOutcome(
+        false,
+        'Die Systembrücke antwortet nicht. Das ist ein Fehler in AXIOM, '
+            'nicht am Gerät.',
+      );
+    }
+  }
 
   static Future<bool> _invoke(String method, [Map<String, Object?>? args]) async {
     if (!isSupported) return false;

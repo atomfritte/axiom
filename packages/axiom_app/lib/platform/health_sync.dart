@@ -73,7 +73,11 @@ abstract final class HealthSync {
   }
 
   /// Öffnet den Systemdialog. Die Freigabe erteilt das System, nicht AXIOM.
-  static Future<void> connect() => AndroidBridge.healthRequestPermissions();
+  ///
+  /// Gibt den Grund zurück, wenn sich nichts öffnet — sonst ist ein Knopf,
+  /// der nichts tut, von einem kaputten nicht zu unterscheiden.
+  static Future<PlatformOutcome> connect() =>
+      AndroidBridge.healthRequestPermissions();
 
   static Future<void> openSettings() => AndroidBridge.healthOpenSettings();
 

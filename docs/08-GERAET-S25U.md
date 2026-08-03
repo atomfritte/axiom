@@ -70,6 +70,17 @@ Dauer in Ruhe-Grün, Überziehung in Signal-Amber. Der Farbwechsel ist die ganze
 Aussage; es gibt keinen Alarm und keine Wertung (G3). Darunter bleibt es eine
 gewöhnliche laufende Benachrichtigung mit Countdown.
 
+**Zwei Fallstricke beim Widget — beide sahen von außen gleich aus.**
+
+1. Der `AppWidgetProvider` braucht `android:exported="true"`. Sonst lässt sich das Widget
+   nicht hinzufügen.
+2. `RemoteViews` inflatet **nur Klassen mit `@RemoteView`**. `android.view.View` und
+   `android.widget.Space` gehören nicht dazu. Ein einziges `<View>` als Abstandhalter genügt,
+   und der Launcher zeigt „Widget kann nicht angezeigt werden" — das Widget lässt sich dann
+   hinzufügen, bleibt aber leer. Erlaubt sind unter anderem `LinearLayout`, `FrameLayout`,
+   `RelativeLayout`, `TextView`, `ImageView`, `ProgressBar`, `Chronometer`.
+   `axiom_app/test/platform_integration_test.dart` prüft das am Layout.
+
 **Fallstrick beim Widget:** Der `AppWidgetProvider` muss `android:exported="true"` haben. Der
 Launcher läuft in einem anderen Prozess und muss den Update-Broadcast senden können; mit `false`
 lässt sich das Widget schlicht nicht hinzufügen. Prüfbar am gebauten Paket:
@@ -135,6 +146,22 @@ Feuerzeit. Drift > 2 min wird sichtbar gemeldet. Ein stiller Ausfall ist schlimm
 Ab Android 14 explizite Nutzerfreigabe erforderlich. Ohne sie keine minutengenauen Anker.
 Im Onboarding abfragen, Status dauerhaft prüfen.
 
+### 5.2a Der Stift fragt nach einer Rolle, nicht nach einem Intent-Filter
+
+`ACTION_CREATE_NOTE` korrekt zu registrieren reicht **nicht**. Der Doppeltipp mit dem S-Pen und
+die Schnelleinstellung „Notiz" fragen die Rolle `RoleManager.ROLE_NOTES` ab (Android 14+). Solange
+die bei Samsung Notes liegt, erscheint AXIOM dort nicht — ohne jede Fehlermeldung.
+
+Anzufordern über `createRequestRoleIntent(ROLE_NOTES)`. Liefert das Gerät die Rolle nicht aus
+(kommt vor), bleibt der Weg über *Einstellungen → Standard-Apps*.
+
+### 5.2b App Actions brauchen Google Play
+
+„Hey Google, Notiz in AXIOM" funktioniert bei einer selbst installierten App **nicht**. Die
+`capability`-Anmeldung in `shortcuts.xml` wird nur für Apps geprüft, die über Play verteilt
+werden. Das ist keine Fehlkonfiguration und lässt sich lokal nicht beheben — es steht deshalb
+in der App unter „Bekannte Grenzen" statt als Versprechen im Erfassungsscreen.
+
 ### 5.3 Health Connect
 Granulare Einzelberechtigungen pro Datentyp. Berechtigungen können ohne Vorwarnung entzogen
 werden — Verfügbarkeit vor jeder Nutzung prüfen, sonst rechnet der StateDeriver mit Lücken
@@ -151,6 +178,14 @@ leicht übersehen werden:
   importierte Ereignis eine Quell-ID, und importierte Ereignisse bekommen ihren echten
   Zeitpunkt (`recordAt`), nicht den Importzeitpunkt.
 - Die Bibliothek verlangt `minSdk 26`.
+- **Paketsichtbarkeit:** Ohne `<queries>`-Einträge für `com.google.android.apps.healthdata`
+  *und* die Systemmodule ab Android 14 meldet `getSdkStatus` „nicht vorhanden", obwohl der
+  Dienst läuft — und der Freigabedialog öffnet sich nie.
+- **Ab Android 14 sind es gewöhnliche Laufzeitberechtigungen.** Der androidx-Vertrag öffnet dort
+  eine Activity, die es nicht auf jedem Gerät gibt; dann passiert beim Antippen genau nichts.
+  Der direkte Weg über `ActivityCompat.requestPermissions` funktioniert immer.
+- `hasPermissions()` ist **suspendierend**. Mit `runBlocking` im MethodChannel-Handler hängt der
+  UI-Thread an einer Prozessgrenze — ein ANR beim App-Start.
 
 ### 5.4 Notification Channels
 Pro `severity` ein eigener Channel — sonst kann der Nutzer nur alles oder nichts stummschalten.

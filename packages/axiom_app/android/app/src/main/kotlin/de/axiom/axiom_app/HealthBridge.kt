@@ -2,6 +2,8 @@ package de.axiom.axiom_app
 
 import android.app.Activity
 import android.content.Context
+import android.os.Build
+import androidx.core.app.ActivityCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByPeriod
@@ -94,15 +96,54 @@ object HealthBridge {
      * — und sie ist jederzeit einzeln widerrufbar. Deshalb wird der Zustand
      * vor jeder Nutzung erneut geprüft und nicht zwischengespeichert (R8).
      */
-    fun requestPermissions(activity: Activity): Boolean = try {
-        val contract = PermissionController.createRequestPermissionResultContract()
-        activity.startActivityForResult(
-            contract.createIntent(activity, PERMISSIONS),
-            REQUEST_CODE,
-        )
-        true
-    } catch (e: Throwable) {
-        false
+    fun requestPermissions(activity: Activity): Map<String, Any?> {
+        val sdk = try {
+            HealthConnectClient.getSdkStatus(activity)
+        } catch (e: Throwable) {
+            HealthConnectClient.SDK_UNAVAILABLE
+        }
+        if (sdk != HealthConnectClient.SDK_AVAILABLE) {
+            return mapOf(
+                "ok" to false,
+                "reason" to "Health Connect meldet sich als nicht nutzbar " +
+                    "(Status $sdk). Ohne den Dienst gibt es nichts " +
+                    "freizugeben.",
+            )
+        }
+        // Ab Android 14 sind das gewoehnliche Laufzeitberechtigungen. Der
+        // androidx-Vertrag oeffnet dort eine Activity, die es auf manchen
+        // Geraeten nicht gibt — dann passiert genau nichts. Der direkte Weg
+        // ueber das Berechtigungssystem funktioniert immer.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return try {
+                ActivityCompat.requestPermissions(
+                    activity, PERMISSIONS.toTypedArray(), REQUEST_CODE,
+                )
+                mapOf("ok" to true)
+            } catch (e: Throwable) {
+                mapOf(
+                    "ok" to false,
+                    "reason" to "Die Berechtigungsabfrage ließ sich nicht " +
+                        "öffnen: ${e.javaClass.simpleName}",
+                )
+            }
+        }
+        return try {
+            val contract = PermissionController.createRequestPermissionResultContract()
+            activity.startActivityForResult(
+                contract.createIntent(activity, PERMISSIONS),
+                REQUEST_CODE,
+            )
+            mapOf("ok" to true)
+        } catch (e: Throwable) {
+            mapOf(
+                "ok" to false,
+                "reason" to "Health Connect ist installiert, öffnet aber " +
+                    "keinen Freigabedialog (${e.javaClass.simpleName}). In " +
+                    "den Systemeinstellungen unter Health Connect lässt sich " +
+                    "AXIOM dort von Hand freigeben.",
+            )
+        }
     }
 
     /**

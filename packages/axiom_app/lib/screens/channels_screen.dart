@@ -69,11 +69,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       child: Text(context.t('Im Benachrichtigungsbereich bleiben'),
                           style: Theme.of(context).textTheme.titleMedium),
                     ),
+                    // Nie deaktiviert. Ein ausgegrauter Schalter sagt
+                    // nicht, warum er ausgegraut ist — und lässt einem
+                    // keinen Weg, es herauszufinden. Lieber schalten und
+                    // sagen, was schiefging.
                     Switch(
                       value: _presence,
-                      onChanged: AndroidBridge.isSupported
-                          ? (value) => _togglePresence(value, snapshot)
-                          : null,
+                      onChanged: (value) => _togglePresence(value, snapshot),
                     ),
                   ],
                 ),
@@ -114,13 +116,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
             hint: context.t('Falls es in der Widget-Auswahl fehlt: Samsungs Startbildschirm merkt sich die Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig. Der Knopf hier fragt das System direkt.'),
             action: context.t('Widget hinzufügen'),
             onAction: () async {
-              final ok = await AndroidBridge.requestPinWidget();
+              final outcome = await AndroidBridge.requestPinWidget();
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(ok
-                    ? context.t('Anfrage gestellt — bestätige sie auf dem Startbildschirm.')
-                    : context.t('Der Startbildschirm nimmt keine Anfrage entgegen. Dann über: lange auf den Homescreen tippen → Widgets → AXIOM.')),
-              ));
+              _say(outcome.ok
+                  ? context.t('Anfrage gestellt — bestätige sie auf dem Startbildschirm.')
+                  : outcome.reason ??
+                      context.t('Das System hat die Anfrage nicht angenommen.'));
             },
           ),
           _ChannelCard(
@@ -145,7 +146,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
             ready: false,
             hint: context.t('Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.'),
             action: context.t('AXIOM als Notiz-App setzen'),
-            onAction: () => AndroidBridge.requestNotesRole(),
+            onAction: () async {
+              final outcome = await AndroidBridge.requestNotesRole();
+              if (!context.mounted || outcome.ok) return;
+              _say(outcome.reason ??
+                  context.t('Das System hat die Anfrage nicht angenommen.'));
+            },
           ),
           _ChannelCard(
             icon: Icons.mic_none_outlined,
@@ -173,20 +179,53 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   }
 
   Future<void> _togglePresence(bool value, dynamic snapshot) async {
-    if (value) {
-      final headline = snapshot?.decisionRule?.title ??
-          snapshot?.startable.firstOrNull?.title ??
-          'AXIOM';
-      await AndroidBridge.startPresence(
-        headline: headline,
-        detail: context.t('Tippen zum Erfassen'),
-      );
-    } else {
-      await AndroidBridge.stopPresence();
+    // Vor dem ersten await lesen: Danach ist der Kontext moeglicherweise weg.
+    final detail = context.t('Tippen zum Erfassen');
+
+    if (!AndroidBridge.isSupported) {
+      _say(context.t('Die dauerhafte Anzeige gibt es nur auf Android.'));
+      return;
     }
+    // Ohne Benachrichtigungsfreigabe startet der Dienst zwar, zeigt aber
+    // nichts an — der haeufigste Weg zu "eingeschaltet und trotzdem nichts
+    // zu sehen". Deshalb vorher fragen statt hinterher zu erklaeren.
+    if (value) {
+      final permissions = await AndroidBridge.permissionStatus();
+      if (permissions['notifications'] == false) {
+        await AndroidBridge.requestNotifications();
+        if (!mounted) return;
+        _say(context.t('Erst die Benachrichtigungen freigeben — ohne sie hätte die Anzeige nichts, worin sie erscheinen kann.'));
+        return;
+      }
+    }
+
+    final ok = value
+        ? await AndroidBridge.startPresence(
+            headline: snapshot?.decisionRule?.title ??
+                snapshot?.startable.firstOrNull?.title ??
+                'AXIOM',
+            detail: detail,
+          )
+        : await AndroidBridge.stopPresence();
+
     await HapticFeedback.selectionClick();
-    if (mounted) setState(() => _presence = value);
+    if (!mounted) return;
+
+    // Den Systemzustand lesen statt annehmen: Wenn der Dienst nicht startet,
+    // darf der Schalter nicht behaupten, er liefe.
+    final actual = await AndroidBridge.presenceEnabled();
+    if (!mounted) return;
+    setState(() => _presence = actual);
+
+    if (value && !actual) {
+      _say(context.t('Die Anzeige ließ sich nicht starten. Meistens fehlt die Benachrichtigungsfreigabe — der Systemcheck sagt, ob das hier der Grund ist.'));
+    } else if (!ok) {
+      _say(context.t('Das System hat die Anfrage nicht angenommen.'));
+    }
   }
+
+  void _say(String message) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(message)));
 }
 
 class _ChannelCard extends StatelessWidget {

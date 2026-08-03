@@ -113,10 +113,19 @@ void main() {
 
     test('kommt in keinem Oberflächentext vor', () {
       final hits = <String>[];
-      for (final file in appSources()) {
+      // Wie bei den Umlauten: Die englische Fassung wird von i18n_test
+      // geprueft, mit englischen Woertern. Hier trifft „faul" sonst
+      // „fault", und der Test verbietet ein voellig harmloses Wort.
+      for (final file in appSources().where(
+          (f) => !f.path.endsWith('i18n/en.dart'))) {
         for (final (line, text) in userFacingStrings(file)) {
           for (final word in forbidden) {
-            if (text.contains(word) && !isNegated(text, word)) {
+            // Wortgrenzen: „faul" darf nicht in „Faulheit"-fremden
+            // Zusammensetzungen anschlagen.
+            final hit = RegExp('\\b${RegExp.escape(word)}\\b',
+                    caseSensitive: false)
+                .hasMatch(text);
+            if (hit && !isNegated(text, word)) {
               hits.add('${file.path}:$line  "$text"  → "$word"');
             }
           }

@@ -251,10 +251,19 @@
             <data android:mimeType="text/plain" />
         </intent>
 
-        <!-- Health Connect: eigene App bis Android 13, Systemmodul ab 14. -->
+        <!--
+          Health Connect: eigene App bis Android 13, Systemmodul ab 14. Ohne
+          beide Namen meldet getSdkStatus "nicht vorhanden", obwohl der
+          Dienst laeuft — und der Freigabedialog oeffnet sich nie.
+        -->
         <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.google.android.healthconnect.controller" />
+        <package android:name="com.android.healthconnect.controller" />
         <intent>
-            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            <action android:name="androidx.health.ACTION_HEALTH_CONNECT_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="androidx.health.ACTION_REQUEST_PERMISSIONS" />
         </intent>
 
         <!-- Spracherkennung fuer die Diktierfunktion beim Erfassen. -->

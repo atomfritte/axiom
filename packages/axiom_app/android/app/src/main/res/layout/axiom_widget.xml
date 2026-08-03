@@ -42,7 +42,16 @@
         android:textSize="12sp"
         android:textColor="@color/axiom_ink_dim" />
 
-    <View
+    <!--
+      Abstandhalter als FrameLayout, nicht als <View>.
+
+      RemoteViews laesst nur Klassen zu, die mit @RemoteView annotiert sind —
+      android.view.View gehoert nicht dazu. Der Launcher bricht die
+      Inflation ab und zeigt "Widget kann nicht angezeigt werden". Von
+      aussen sieht das aus wie ein kaputtes Widget; tatsaechlich ist es eine
+      einzige nicht erlaubte Zeile.
+    -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
