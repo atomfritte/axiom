@@ -18,6 +18,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
+import '../state/runtime.dart';
 import '../i18n/i18n.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
@@ -187,7 +188,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     );
   }
 
-  Future<void> _togglePresence(bool value, dynamic snapshot) async {
+  Future<void> _togglePresence(bool value, AxiomSnapshot? snapshot) async {
     // Vor dem ersten await lesen: Danach ist der Kontext moeglicherweise weg.
     final detail = context.t('Tippen zum Erfassen');
 

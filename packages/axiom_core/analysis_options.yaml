@@ -9,6 +9,10 @@ analyzer:
     # Der Core darf nie stillschweigend etwas verschlucken.
     unused_import: error
     unnecessary_null_comparison: error
+    # Ein dynamischer Aufruf umgeht die Typpruefung vollstaendig — daran ist
+    # die dauerhafte Anzeige gescheitert. Als Warnung war die Regel schon da
+    # und wurde ueberlesen.
+    avoid_dynamic_calls: error
 
 linter:
   rules:

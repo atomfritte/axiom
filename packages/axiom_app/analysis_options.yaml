@@ -26,3 +26,15 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# Ein dynamischer Aufruf umgeht die Typpruefung vollstaendig. Genau daran
+# ist die dauerhafte Anzeige gescheitert: `dynamic snapshot` machte aus
+# `startable.firstOrNull` — einem Extension-Getter, der statisch aufgeloest
+# werden muss — einen Laufzeitfehler, den niemand sah. Der Analyzer war
+# still, die Tests waren gruen, und der Schalter sprang zurueck.
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  errors:
+    avoid_dynamic_calls: error

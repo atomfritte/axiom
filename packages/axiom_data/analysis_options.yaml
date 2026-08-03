@@ -5,3 +5,9 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  errors:
+    avoid_dynamic_calls: error
+
+linter:
+  rules:
+    - avoid_dynamic_calls
