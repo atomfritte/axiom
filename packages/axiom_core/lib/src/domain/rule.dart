@@ -112,6 +112,15 @@ final class Rule {
   /// Regeln ohne Defizitbezug sind verdaechtig.
   final String? deficit;
 
+  /// Uebersetzungen, Sprachcode -> Text.
+  ///
+  /// Deutsch ist die Quelle und steht in [title] und [rationale]. Fehlt eine
+  /// Uebersetzung, erscheint der deutsche Text — sichtbar unfertig statt
+  /// still falsch. Der Validator meldet die Luecke, laedt die Regel aber:
+  /// Eine stumm uebersprungene Regel waere schlimmer (CLAUDE.md, Fail-Fast).
+  final Map<String, String> titleTranslations;
+  final Map<String, String> rationaleTranslations;
+
   final Condition when;
   final Action then;
 
@@ -133,6 +142,8 @@ final class Rule {
     required this.cooldown,
     this.deficit,
     this.enabled = true,
+    this.titleTranslations = const {},
+    this.rationaleTranslations = const {},
   }) {
     if (rationale.trim().isEmpty) {
       throw ConditionError(
@@ -143,6 +154,23 @@ final class Rule {
       throw ConditionError('Regel $id: priority muss 0..100 sein');
     }
   }
+
+  /// Titel in der gewuenschten Sprache, sonst auf Deutsch.
+  String titleFor(String languageCode) =>
+      titleTranslations[languageCode]?.trim().isNotEmpty == true
+          ? titleTranslations[languageCode]!
+          : title;
+
+  /// Begruendung in der gewuenschten Sprache, sonst auf Deutsch.
+  String rationaleFor(String languageCode) =>
+      rationaleTranslations[languageCode]?.trim().isNotEmpty == true
+          ? rationaleTranslations[languageCode]!
+          : rationale;
+
+  /// Sprachen, fuer die eine vollstaendige Uebersetzung vorliegt.
+  Set<String> get translatedLanguages => titleTranslations.keys
+      .where((code) => rationaleTranslations.containsKey(code))
+      .toSet();
 
   /// SHADOW-Regeln beobachten nur — sie erzeugen nie eine Nutzerausgabe.
   bool get isShadow => then.type == ActionType.logOnly;

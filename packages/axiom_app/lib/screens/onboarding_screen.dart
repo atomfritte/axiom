@@ -22,6 +22,7 @@ import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
 import 'checkin_sheet.dart';
+import '../i18n/i18n.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onDone;
@@ -113,7 +114,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: TextButton(
                       onPressed: _finish,
                       child: Text(
-                        'Überspringen',
+                        context.t('Überspringen'),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -129,7 +130,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             horizontal: Space.md),
                       ),
                       child: Text(
-                        _page == _pageCount - 1 ? 'Los geht’s' : 'Weiter',
+                        _page == _pageCount - 1 ? context.t('Los geht’s') : 'Weiter',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -184,27 +185,23 @@ class _PageWhat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Page(
-        eyebrow: 'Was das hier ist',
-        title: 'Ein Regelwerk,\nkeine To-do-App.',
+        eyebrow: context.t('Was das hier ist'),
+        title: context.t('Ein Regelwerk,\nkeine To-do-App.'),
         leading: const AxiomWordmark(markSize: 30),
         children: [
-          const _Para(
-            'AXIOM misst deinen Zustand, wendet Regeln darauf an, die du '
-            'selbst setzt, und nennt dir eine nächste Handlung. Mit '
-            'Begründung und der Regel, die sie erzeugt hat.',
+          _Para(
+            context.t('AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.'),
           ),
           const SizedBox(height: Space.lg),
-          const _Para(
-            'Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du '
-            'tun willst — sondern in welchem Zustand du bist. Was heute '
-            'außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.',
+          _Para(
+            context.t('Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.'),
           ),
           const SizedBox(height: Space.xl),
-          const _NotList([
-            'Keine Streaks, die brechen können',
-            'Keine Erinnerung, die dir Vorwürfe macht',
-            'Keine Cloud, kein Konto, keine Auswertung durch andere',
-            'Keine KI, die für dich entscheidet',
+          _NotList([
+            context.t('Keine Streaks, die brechen können'),
+            context.t('Keine Erinnerung, die dir Vorwürfe macht'),
+            context.t('Keine Cloud, kein Konto, keine Auswertung durch andere'),
+            context.t('Keine KI, die für dich entscheidet'),
           ]),
         ],
       );
@@ -217,40 +214,35 @@ class _PageHow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return _Page(
-      eyebrow: 'Wie es arbeitet',
-      title: 'Zustand,\nRegel,\neine Handlung.',
+      eyebrow: context.t('Wie es arbeitet'),
+      title: context.t('Zustand,\nRegel,\neine Handlung.'),
       children: [
         Panel(
           child: Column(
             children: [
               _Step(
                 n: '1',
-                title: 'Messen',
-                body: 'Drei kurze Check-ins am Tag, dazu Schlaf und Bewegung '
-                    'vom Gerät. Zusammen ergibt das sechs Messwerte.',
+                title: context.t('Messen'),
+                body: context.t('Drei kurze Check-ins am Tag, dazu Schlaf und Bewegung vom Gerät. Zusammen ergibt das sechs Messwerte.'),
               ),
               Divider(color: p.rule, height: Space.xl),
               _Step(
                 n: '2',
-                title: 'Regeln anwenden',
-                body: 'Regeln sind Wenn-Dann-Sätze in Klartext. Du kannst '
-                    'jede lesen, ändern und abschalten.',
+                title: context.t('Regeln anwenden'),
+                body: context.t('Regeln sind Wenn-Dann-Sätze in Klartext. Du kannst jede lesen, ändern und abschalten.'),
               ),
               Divider(color: p.rule, height: Space.xl),
               _Step(
                 n: '3',
-                title: 'Eine Handlung',
-                body: 'Nie eine Liste zum Auswählen. Genau eine Sache, plus '
-                    'die Regel-Nummer, die dahintersteckt.',
+                title: context.t('Eine Handlung'),
+                body: context.t('Nie eine Liste zum Auswählen. Genau eine Sache, plus die Regel-Nummer, die dahintersteckt.'),
               ),
             ],
           ),
         ),
         const SizedBox(height: Space.lg),
-        const _Para(
-          'Gleicher Zustand, gleiche Regeln — immer dasselbe Ergebnis. '
-          'Nichts davon ist geraten, und du kannst jederzeit nachsehen, '
-          'wie ein Wert zustande kam.',
+        _Para(
+          context.t('Gleicher Zustand, gleiche Regeln — immer dasselbe Ergebnis. Nichts davon ist geraten, und du kannst jederzeit nachsehen, wie ein Wert zustande kam.'),
         ),
       ],
     );
@@ -267,7 +259,7 @@ class _PageLine extends StatelessWidget {
       for (final (i, ae) in [2, 3, 4, 6, 8, 9].indexed)
         Task(
           id: 'demo$i',
-          title: 'Beispiel',
+          title: context.t('Beispiel'),
           activationEnergy: ae,
           salience: 5,
           stakes: 5,
@@ -276,25 +268,21 @@ class _PageLine extends StatelessWidget {
     ];
 
     return _Page(
-      eyebrow: 'Das zentrale Bild',
-      title: 'Die\nKapazitätslinie.',
+      eyebrow: context.t('Das zentrale Bild'),
+      title: context.t('Die\nKapazitätslinie.'),
       children: [
         Panel(child: CapacityLine(capacity: 55, tasks: demo)),
         const SizedBox(height: Space.lg),
-        const _Para(
-          'Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? '
-          'Der Strich zeigt, wie viel Anlauf du heute hast.',
+        _Para(
+          context.t('Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? Der Strich zeigt, wie viel Anlauf du heute hast.'),
         ),
         const SizedBox(height: Space.md),
-        const _Para(
-          'Was links davon liegt, ist in Reichweite. Was rechts davon liegt, '
-          'ist heute zu schwer — und wird dir deshalb nicht vorgehalten. '
-          'Das ist eine Messung, kein Urteil über dich.',
+        _Para(
+          context.t('Was links davon liegt, ist in Reichweite. Was rechts davon liegt, ist heute zu schwer — und wird dir deshalb nicht vorgehalten. Das ist eine Messung, kein Urteil über dich.'),
         ),
         const SizedBox(height: Space.md),
-        const _Para(
-          'Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, '
-          'es in kleinere Schritte zu zerlegen, bis ein Teil links landet.',
+        _Para(
+          context.t('Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, es in kleinere Schritte zu zerlegen, bis ein Teil links landet.'),
         ),
       ],
     );
@@ -310,15 +298,13 @@ class _PageFirstCheckin extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.axiom;
     return _Page(
-      eyebrow: 'Erster Messpunkt',
-      title: done ? 'Steht.' : 'Einmal\nkurz messen.',
+      eyebrow: context.t('Erster Messpunkt'),
+      title: done ? context.t('Steht.') : context.t('Einmal\nkurz messen.'),
       children: [
         _Para(
           done
-              ? 'Der erste Wert ist drin. Ab jetzt sammelt AXIOM zwei Wochen '
-                  'lang Daten, bevor es anfängt, Empfehlungen zu geben.'
-              : 'Vier Regler, ungefähr reicht. Ohne einen Anfangswert kann '
-                  'AXIOM nichts berechnen — und würde raten.',
+              ? context.t('Der erste Wert ist drin. Ab jetzt sammelt AXIOM zwei Wochen lang Daten, bevor es anfängt, Empfehlungen zu geben.')
+              : context.t('Vier Regler, ungefähr reicht. Ohne einen Anfangswert kann AXIOM nichts berechnen — und würde raten.'),
         ),
         const SizedBox(height: Space.xl),
         if (done)
@@ -329,7 +315,7 @@ class _PageFirstCheckin extends ConsumerWidget {
                 Icon(Icons.check, color: p.calm, size: 20),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text('Check-in gespeichert.',
+                  child: Text(context.t('Check-in gespeichert.'),
                       style: Theme.of(context).textTheme.bodyLarge),
                 ),
               ],
@@ -344,21 +330,18 @@ class _PageFirstCheckin extends ConsumerWidget {
                 onDone();
               }
             },
-            child: const Text('Check-in machen'),
+            child: Text(context.t('Check-in machen')),
           ),
         const SizedBox(height: Space.xl),
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('DIE ERSTEN 14 TAGE',
+              Text(context.t('DIE ERSTEN 14 TAGE'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(
-                'In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. '
-                'Es misst nur. Regeln, die auf geratenen Werten beruhen, '
-                'liegen falsch — und eine App, die einmal offensichtlich '
-                'danebenliegt, macht man nicht wieder auf.',
+                context.t('In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -382,32 +365,28 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
   @override
   Widget build(BuildContext context) {
     if (!AndroidBridge.isSupported) {
-      return const _Page(
+      return _Page(
         eyebrow: 'Fertig',
-        title: 'Bereit.',
+        title: context.t('Bereit.'),
         children: [
           _Para(
-            'Auf dem Desktop läuft AXIOM ohne Systemrechte. '
-            'Erfassen, Check-ins und der Regelinspektor funktionieren '
-            'vollständig.',
+            context.t('Auf dem Desktop läuft AXIOM ohne Systemrechte. Erfassen, Check-ins und der Regelinspektor funktionieren vollständig.'),
           ),
         ],
       );
     }
 
     return _Page(
-      eyebrow: 'Damit es zuverlässig läuft',
-      title: 'Drei\nSystemrechte.',
+      eyebrow: context.t('Damit es zuverlässig läuft'),
+      title: context.t('Drei\nSystemrechte.'),
       children: [
-        const _Para(
-          'AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst '
-          'ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, '
-          'und das ganze Konzept ist wertlos.',
+        _Para(
+          context.t('AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, und das ganze Konzept ist wertlos.'),
         ),
         const SizedBox(height: Space.xl),
         _PermissionRow(
-          title: 'Exakte Erinnerungen',
-          body: 'Damit Erinnerungen auf die Minute kommen.',
+          title: context.t('Exakte Erinnerungen'),
+          body: context.t('Damit Erinnerungen auf die Minute kommen.'),
           granted: _granted.contains('alarm'),
           onTap: () async {
             await AndroidBridge.requestExactAlarm();
@@ -415,9 +394,8 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
           },
         ),
         _PermissionRow(
-          title: 'Mitteilungen',
-          body: 'Vier Kanäle, getrennt einstellbar. Du kannst leise Hinweise '
-              'stummschalten und wichtige durchlassen.',
+          title: context.t('Mitteilungen'),
+          body: context.t('Vier Kanäle, getrennt einstellbar. Du kannst leise Hinweise stummschalten und wichtige durchlassen.'),
           granted: _granted.contains('notif'),
           onTap: () async {
             await AndroidBridge.requestNotifications();
@@ -425,9 +403,8 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
           },
         ),
         _PermissionRow(
-          title: 'Akkuoptimierung aus',
-          body: 'Samsung beendet Hintergrund-Apps aggressiv. Ohne diese '
-              'Ausnahme feuern Erinnerungen unzuverlässig.',
+          title: context.t('Akkuoptimierung aus'),
+          body: context.t('Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.'),
           granted: _granted.contains('battery'),
           onTap: () async {
             await AndroidBridge.requestIgnoreBatteryOptimizations();
@@ -435,22 +412,18 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
           },
         ),
         const SizedBox(height: Space.lg),
-        const _Para(
-          'Standort und App-Nutzung werden nicht abgefragt — die brauchen '
-          'erst spätere Module, und dann fragst du selbst danach.',
+        _Para(
+          context.t('Standort und App-Nutzung werden nicht abgefragt — die brauchen erst spätere Module, und dann fragst du selbst danach.'),
         ),
         const SizedBox(height: Space.xl),
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('DANACH', style: Theme.of(context).textTheme.labelSmall),
+              Text(context.t('DANACH'), style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(
-                'Unter System → Erfassen findest du alle Wege in die App: '
-                'Widget, dauerhafte Benachrichtigung mit Direkteingabe, '
-                'Schnelleinstellung, S-Pen und Sprache. Such dir aus, was '
-                'bei dir wirklich funktioniert.',
+                context.t('Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -585,7 +558,7 @@ class _PermissionRow extends StatelessWidget {
               ),
             ),
             if (!granted)
-              Text('ERLAUBEN',
+              Text(context.t('ERLAUBEN'),
                   style: monoStyle(context,
                       size: 10.5, weight: FontWeight.w600, color: p.signal)),
           ],

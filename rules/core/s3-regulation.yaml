@@ -14,12 +14,19 @@
 
 - id: R-050
   title: "Reizbedarf proaktiv decken"
+  title_en: "Cover stimulation need before it covers itself"
   deficit: D5
   rationale: >
     Ungedeckter Reizbedarf sucht sich den schnellsten Kanal — und der ist
     meist der teuerste (Impulskauf, Substanz, Risikoverhalten im Verkehr).
     Ein geplanter Hochreiz-Slot deckt denselben physiologischen Bedarf zu
     kalkulierbaren Kosten. Reizhunger wird kanalisiert, nicht unterdrückt (G3).
+  rationale_en: >
+    Uncovered stimulation need finds the fastest channel — and that is
+    usually the most expensive one (impulse purchase, substance, risk-taking
+    in traffic). A planned high-stimulation slot covers the same
+    physiological need at a predictable cost. Stimulation hunger is
+    channelled, not suppressed (G3).
   when:
     all:
       - sensation_need: { gte: 70 }
@@ -38,11 +45,16 @@
 
 - id: R-051
   title: "Impulsdurchbruch wahrscheinlich — Risikokanäle sichern"
+  title_en: "Impulse breakthrough likely — secure the risky channels"
   deficit: D5
   rationale: >
     Bei sehr hohem Reizbedarf und gleichzeitig niedriger Regulationsreserve
     steigt die Wahrscheinlichkeit eines Impulsdurchbruchs deutlich. Der
     Interceptor wird vorsorglich scharf gestellt — kein Verbot, nur Latenz.
+  rationale_en: >
+    With very high stimulation need and low regulation reserve at the
+    same time, the probability of an impulse breakthrough rises sharply. The
+    interceptor is armed as a precaution — no ban, only latency.
   when:
     all:
       - sensation_need: { gte: 85 }
@@ -57,12 +69,18 @@
 
 - id: R-052
   title: "Nachtbestellung abfangen"
+  title_en: "Intercept night-time orders"
   deficit: D5
   rationale: >
     Nachts sind Regulationsreserve und Impulskontrolle am niedrigsten,
     während Verfügbarkeit und Novelty am höchsten sind. Eine Bestellung
     um 01:00 wird um 09:00 fast nie noch gewollt. Der Cooldown bis zum
     Morgen kostet nichts und fängt den Großteil ab.
+  rationale_en: >
+    At night, regulation reserve and impulse control are at their lowest
+    while availability and novelty are at their highest. An order placed at
+    01:00 is almost never still wanted at 09:00. A cooldown until morning
+    costs nothing and catches most of it.
   when:
     all:
       - time_between: ["22:00", "05:00"]
@@ -79,12 +97,18 @@
 
 - id: R-070
   title: "Hyperfokus ohne Körperkontakt"
+  title_en: "Hyperfocus without body contact"
   deficit: D7
   rationale: >
     Im Hyperfokus werden Durst, Hunger und Bewegungsbedarf systematisch
     übersehen. Der körperliche Zustand ist gleichzeitig der größte
     einzelne Modulator der Exekutivfunktion — ein dehydrierter Nachmittag
     hat objektiv weniger Kapazität.
+  rationale_en: >
+    In hyperfocus, thirst, hunger and the need to move are systematically
+    overlooked. Physical state is at the same time the single largest
+    modulator of executive function — a dehydrated afternoon has objectively
+    less capacity.
   when:
     all:
       # Ohne diese Zeile feuert die Regel auch dann, wenn gar kein Fokus
@@ -107,6 +131,7 @@
 
 - id: R-080
   title: "Wind-Down-Grenze"
+  title_en: "Wind-down boundary"
   deficit: D8
   rationale: >
     Die Nacht ist reizarm genug für Hyperfokus und bietet zugleich die
@@ -114,6 +139,12 @@
     Kaskade: Schlafdefizit senkt die Exekutivfunktion, das erhöht den
     Kompensationsaufwand und den Reizbedarf, was den Abendkonsum steigert.
     Der Ausstiegsanker bricht den Kreis an seiner schwächsten Stelle.
+  rationale_en: >
+    The night is quiet enough for hyperfocus and at the same time offers
+    the strongest novelty. That produces a self-reinforcing cascade: sleep
+    debt lowers executive function, which raises compensation effort and
+    stimulation need, which raises evening consumption. The exit anchor
+    breaks the loop at its weakest point.
   when:
     all:
       - time_between: ["22:30", "23:30"]
@@ -130,6 +161,7 @@
 
 - id: R-090
   title: "Erhaltungsmodus (L3)"
+  title_en: "Maintenance mode (L3)"
   deficit: D1
   rationale: >
     Ein hochkompensiertes System bemerkt seinen eigenen Absturz zuletzt,
@@ -137,6 +169,12 @@
     der externe Notaus, den der Nutzer im ruhigen Zustand selbst autorisiert
     hat. Bewusst unbequem: 72 Stunden nur Pflicht und Erholung.
     L3 ist ein Erfolg des Systems, kein Scheitern des Nutzers.
+  rationale_en: >
+    A highly compensated system is the last to notice its own collapse,
+    because from outside it runs without error until shortly before the
+    break. L3 is the external stop that you authorised yourself while calm.
+    Deliberately uncomfortable: 72 hours of obligations and recovery only.
+    L3 is a success of the system, not a failure of the person.
   when:
     any:
       - load_level: { eq: L3 }
@@ -155,6 +193,7 @@
 
 - id: R-020
   title: "Wichtig, aber nicht startbar — zerlegen statt anmahnen"
+  title_en: "Important but not startable — split instead of nag"
   deficit: D2
   rationale: >
     Der übliche Fehlermodus: Eine wichtige Aufgabe steht seit Wochen oben
@@ -162,6 +201,12 @@
     werden. Schuld senkt die Regulationsreserve und macht den Start noch
     unwahrscheinlicher. Statt anzumahnen wird zerlegt, bis ein Teilschritt
     unter die aktuelle Kapazität fällt.
+  rationale_en: >
+    The usual failure mode: an important task sits at the top of the list
+    for weeks, producing guilt at every glance without ever being started.
+    Guilt lowers regulation reserve and makes starting even less likely.
+    Instead of nagging it gets split until one step falls below current
+    capacity.
   when:
     all:
       - capacity: { lt: 50 }

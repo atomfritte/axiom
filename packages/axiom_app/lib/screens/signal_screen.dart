@@ -23,6 +23,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class SignalScreen extends ConsumerWidget {
   const SignalScreen({super.key});
@@ -36,7 +37,7 @@ class SignalScreen extends ConsumerWidget {
     final p = context.axiom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vorfälle')),
+      appBar: AppBar(title: Text(context.t('Vorfälle'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge * 2),
@@ -55,7 +56,7 @@ class SignalScreen extends ConsumerWidget {
             const _EmptyState()
           else ...[
             if (patterns.isNotEmpty) ...[
-              const SectionLabel('Häufungen · 30 Tage'),
+              SectionLabel(context.t('Häufungen · 30 Tage')),
               Panel(
                 child: Column(
                   children: [
@@ -70,7 +71,7 @@ class SignalScreen extends ConsumerWidget {
               ),
               const SizedBox(height: Space.xl),
             ],
-            SectionLabel('Verlauf · ${incidents.length}'),
+            SectionLabel(context.t('Verlauf · {0}', [incidents.length])),
             for (final incident in incidents.take(20))
               _IncidentRow(incident: incident),
           ],
@@ -83,10 +84,7 @@ class SignalScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(Radii.panel),
             ),
             child: Text(
-              'Dieses Modul hält fest und zeigt Muster. Es deutet nichts und '
-              'behandelt nichts. Wenn dich etwas davon länger belastet, ist '
-              'das ein Grund, mit einer Fachperson zu sprechen — nicht mit '
-              'einer App.',
+              context.t('Dieses Modul hält fest und zeigt Muster. Es deutet nichts und behandelt nichts. Wenn dich etwas davon länger belastet, ist das ein Grund, mit einer Fachperson zu sprechen — nicht mit einer App.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -97,7 +95,7 @@ class SignalScreen extends ConsumerWidget {
         backgroundColor: p.caution,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.bolt),
-        label: const Text('Vorfall'),
+        label: Text(context.t('Vorfall')),
       ),
     );
   }
@@ -112,22 +110,19 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('NICHTS ERFASST',
+            Text(context.t('NICHTS ERFASST'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
-            Text('Noch keine Vorfälle.',
+            Text(context.t('Noch keine Vorfälle.'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.md),
             Text(
-              'Gemeint sind Momente, in denen etwas unverhältnismäßig hart '
-              'getroffen hat — Kritik, Zurückweisung, ein eigener Fehler. '
-              'Zwei Tipps im Moment, die Einordnung kommt später.',
+              context.t('Gemeint sind Momente, in denen etwas unverhältnismäßig hart getroffen hat — Kritik, Zurückweisung, ein eigener Fehler. Zwei Tipps im Moment, die Einordnung kommt später.'),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: Space.md),
             Text(
-              'Der Nutzen liegt nicht im Aufschreiben, sondern im Muster: '
-              'Was regelmäßig trifft, lässt sich vorbereiten.',
+              context.t('Der Nutzen liegt nicht im Aufschreiben, sondern im Muster: Was regelmäßig trifft, lässt sich vorbereiten.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -156,23 +151,23 @@ class _PendingCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(open > 1 ? 'NACHBETRACHTUNG · $open OFFEN' : 'NACHBETRACHTUNG',
+          Text(open > 1 ? context.t('NACHBETRACHTUNG · {0} OFFEN', [open]) : 'NACHBETRACHTUNG',
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(incident.triggerClass.label,
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: Space.sm),
-          Text('vor $hours Stunden · Stärke ${incident.intensity}/5',
+          Text(context.t('vor {0} Stunden · Stärke {1}/5', [hours, incident.intensity]),
               style: monoStyle(context, size: 12)),
           const SizedBox(height: Space.lg),
           Text(
-            'Jetzt ist genug Abstand da. Zwei Fragen, dann ist es abgelegt.',
+            context.t('Jetzt ist genug Abstand da. Zwei Fragen, dann ist es abgelegt.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Space.xl),
           FilledButton(
             onPressed: () => showPostMortemSheet(context, incident),
-            child: const Text('Kurz durchgehen'),
+            child: Text(context.t('Kurz durchgehen')),
           ),
         ],
       ),
@@ -192,7 +187,7 @@ class _HindsightCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('IM RÜCKBLICK', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('IM RÜCKBLICK'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -209,17 +204,14 @@ class _HindsightCard extends StatelessWidget {
                   color: delta >= 0.5 ? p.calm : p.inkDim,
                 ),
               ),
-              Text('  Stufen', style: monoStyle(context, size: 13)),
+              Text(context.t('  Stufen'), style: monoStyle(context, size: 13)),
             ],
           ),
           const SizedBox(height: Space.md),
           Text(
             delta >= 0.5
-                ? 'So viel niedriger fällt ein Vorfall bei dir im Rückblick '
-                    'aus. Kein Trost — ein Erfahrungswert, den du beim '
-                    'nächsten Mal einkalkulieren kannst.'
-                : 'Die Einschätzung im Moment und im Rückblick liegen bei dir '
-                    'nah beieinander.',
+                ? context.t('So viel niedriger fällt ein Vorfall bei dir im Rückblick aus. Kein Trost — ein Erfahrungswert, den du beim nächsten Mal einkalkulieren kannst.')
+                : context.t('Die Einschätzung im Moment und im Rückblick liegen bei dir nah beieinander.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -386,12 +378,12 @@ class _IncidentSheetState extends ConsumerState<_IncidentSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('VORFALL', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('VORFALL'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
-            Text('Woran hing es?',
+            Text(context.t('Woran hing es?'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.xs),
-            Text('Grob reicht. Einordnen kannst du später.',
+            Text(context.t('Grob reicht. Einordnen kannst du später.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: Space.lg),
 
@@ -436,7 +428,7 @@ class _IncidentSheetState extends ConsumerState<_IncidentSheet> {
               ),
 
             const SizedBox(height: Space.lg),
-            Text('Wie hart?', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.t('Wie hart?'), style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Row(
               children: [
@@ -471,20 +463,20 @@ class _IncidentSheetState extends ConsumerState<_IncidentSheet> {
               controller: _note,
               maxLines: 2,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Ein Stichwort, wenn du magst (optional)',
+              decoration: InputDecoration(
+                hintText: context.t('Ein Stichwort, wenn du magst (optional)'),
               ),
             ),
 
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _trigger == null ? null : _save,
-              child: const Text('Festhalten'),
+              child: Text(context.t('Festhalten')),
             ),
             const SizedBox(height: Space.sm),
             Center(
               child: Text(
-                'Die Einordnung kommt in etwa zwölf Stunden.',
+                context.t('Die Einordnung kommt in etwa zwölf Stunden.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -559,7 +551,7 @@ class _PostMortemSheetState extends ConsumerState<_PostMortemSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('NACHBETRACHTUNG',
+            Text(context.t('NACHBETRACHTUNG'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
             Text(incident.triggerClass.label,
@@ -571,10 +563,10 @@ class _PostMortemSheetState extends ConsumerState<_PostMortemSheet> {
             ],
             const SizedBox(height: Space.xl),
 
-            Text('Wie fällt es heute aus?',
+            Text(context.t('Wie fällt es heute aus?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.xs),
-            Text('Damals: ${incident.intensity}/5',
+            Text(context.t('Damals: {0}/5', [incident.intensity]),
                 style: monoStyle(context, size: 12)),
             const SizedBox(height: Space.sm),
             Row(
@@ -606,10 +598,10 @@ class _PostMortemSheetState extends ConsumerState<_PostMortemSheet> {
             ),
 
             const SizedBox(height: Space.xl),
-            Text('Was war der eigentliche Auslöser?',
+            Text(context.t('Was war der eigentliche Auslöser?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.xs),
-            Text('Oft ein anderer als der gefühlte.',
+            Text(context.t('Oft ein anderer als der gefühlte.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: Space.sm),
             TextField(
@@ -620,10 +612,10 @@ class _PostMortemSheetState extends ConsumerState<_PostMortemSheet> {
             ),
 
             const SizedBox(height: Space.lg),
-            Text('Was ginge beim nächsten Mal anders?',
+            Text(context.t('Was ginge beim nächsten Mal anders?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.xs),
-            Text('Konkret, nicht als Vorsatz. Optional.',
+            Text(context.t('Konkret, nicht als Vorsatz. Optional.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: Space.sm),
             TextField(
@@ -635,13 +627,13 @@ class _PostMortemSheetState extends ConsumerState<_PostMortemSheet> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _save,
-              child: const Text('Abgelegt'),
+              child: Text(context.t('Abgelegt')),
             ),
             const SizedBox(height: Space.sm),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Später'),
+                child: Text(context.t('Später')),
               ),
             ),
           ],

@@ -12,6 +12,8 @@ library;
 
 import 'package:meta/meta.dart';
 
+import 'phrase.dart';
+
 /// Was abgefangen wird. Immer vom Nutzer definiert.
 @immutable
 final class InterceptTrigger {
@@ -145,15 +147,26 @@ final class Interceptor {
   }
 
   /// Text für die laufende Wartezeit. Beschreibt, urteilt nicht.
-  String waitingText(InterceptRun run, DateTime now) {
+  String waitingText(InterceptRun run, DateTime now) =>
+      waitingPhrase(run, now).text;
+
+  /// Derselbe Text, aber mit getrennten Werten — uebersetzbar.
+  Phrase waitingPhrase(InterceptRun run, DateTime now) {
     final left = run.remaining(now);
-    if (left == Duration.zero) return 'Wartezeit vorbei. Deine Entscheidung.';
-    if (left.inHours >= 2) {
-      return 'Freigabe um ${_hhmm(run.releasesAt)}. '
-          'Bis dahin steht die Sache still — sie läuft nicht weg.';
+    if (left == Duration.zero) {
+      return const Phrase('Wartezeit vorbei. Deine Entscheidung.');
     }
-    return 'Noch ${left.inMinutes} min. '
-        'Die meisten Impulse überleben diese Zeit nicht.';
+    if (left.inHours >= 2) {
+      return Phrase(
+        'Freigabe um {0}. Bis dahin steht die Sache still — '
+        'sie läuft nicht weg.',
+        [_hhmm(run.releasesAt)],
+      );
+    }
+    return Phrase(
+      'Noch {0} min. Die meisten Impulse überleben diese Zeit nicht.',
+      [left.inMinutes],
+    );
   }
 
   static String _hhmm(DateTime t) =>

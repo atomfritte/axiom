@@ -21,6 +21,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import '../i18n/i18n.dart';
 
 class ReviewScreen extends ConsumerStatefulWidget {
   final ReviewScope scope;
@@ -77,8 +78,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(reachedCap
-            ? 'Zeit um. Der Rest wartet bis zum nächsten Mal.'
-            : '${widget.scope.label}-Review abgeschlossen.'),
+            ? context.t('Zeit um. Der Rest wartet bis zum nächsten Mal.')
+            : context.t('{0}-Review abgeschlossen.', [widget.scope.label])),
       ),
     );
   }
@@ -90,7 +91,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.scope.label}-Review'),
+        title: Text(context.t('{0}-Review', [widget.scope.label])),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
           child: _TimeCapBar(elapsed: _elapsed, cap: widget.scope.timeCap),
@@ -106,7 +107,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             _TimeCapNotice(scope: widget.scope, elapsed: _elapsed),
             const SizedBox(height: Space.xl),
 
-            const SectionLabel('Kennzahlen'),
+            SectionLabel(context.t('Kennzahlen')),
             for (final metric in data.metrics)
               Padding(
                 padding: const EdgeInsets.only(bottom: Space.md),
@@ -115,7 +116,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
             if (data.verdicts.isNotEmpty) ...[
               const SizedBox(height: Space.xl),
-              SectionLabel('Regelwerk · ${data.verdicts.length} offen'),
+              SectionLabel(context.t('Regelwerk · {0} offen', [data.verdicts.length])),
               for (final verdict in data.verdicts)
                 Padding(
                   padding: const EdgeInsets.only(bottom: Space.sm),
@@ -124,9 +125,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               const SizedBox(height: Space.sm),
               Text(
                 widget.scope.allowsRuleChanges
-                    ? 'Regeländerungen gehören in dieses Zeitfenster — und '
-                        'nur hierher.'
-                    : 'Geändert wird erst im Wochen-Review.',
+                    ? context.t('Regeländerungen gehören in dieses Zeitfenster — und nur hierher.')
+                    : context.t('Geändert wird erst im Wochen-Review.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -137,7 +137,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: () => _finish(),
-              child: const Text('Review abschließen'),
+              child: Text(context.t('Review abschließen')),
             ),
           ],
         ),
@@ -186,7 +186,7 @@ class _TimeCapNotice extends StatelessWidget {
     return Row(
       children: [
         Flexible(
-          child: Text('ZEITDECKEL',
+          child: Text(context.t('ZEITDECKEL'),
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall),
         ),
@@ -194,7 +194,7 @@ class _TimeCapNotice extends StatelessWidget {
         Text(
           left.isNegative
               ? 'abgelaufen'
-              : '$minutes:${seconds.toString().padLeft(2, "0")} übrig',
+              : context.t('{0}:{1} übrig', [minutes, seconds.toString().padLeft(2, "0")]),
           style: monoStyle(context,
               size: 13,
               weight: FontWeight.w600,
@@ -202,7 +202,7 @@ class _TimeCapNotice extends StatelessWidget {
         ),
         const SizedBox(width: Space.md),
         Expanded(
-          child: Text('von ${scope.timeCap.inMinutes} min',
+          child: Text(context.t('von {0} min', [scope.timeCap.inMinutes]),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
               style: monoStyle(context, size: 11, color: p.inkFaint)),
@@ -240,7 +240,7 @@ class _MetricCardState extends State<_MetricCard> {
           Row(
             children: [
               Expanded(
-                child: Text(m.label.toUpperCase(),
+                child: Text(context.t(m.label).toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall),
               ),
               if (m.trend != null)
@@ -267,7 +267,7 @@ class _MetricCardState extends State<_MetricCard> {
             ],
           ),
           const SizedBox(height: Space.sm),
-          Text(m.value,
+          Text(context.p(m.valueSource),
               style: TextStyle(
                 fontFamily: Fonts.mono,
                 fontSize: 19,
@@ -282,16 +282,17 @@ class _MetricCardState extends State<_MetricCard> {
                 border: Border.all(color: accent.withValues(alpha: 0.4)),
                 borderRadius: BorderRadius.circular(Radii.control),
               ),
-              child: Text(m.consequence!,
+              child: Text(context.t(m.consequence!),
                   style: Theme.of(context).textTheme.bodySmall),
             ),
           ],
           if (_expanded) ...[
             const SizedBox(height: Space.md),
-            Text('SO WIRD GERECHNET',
+            Text(context.t('SO WIRD GERECHNET'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
-            Text(m.derivation, style: monoStyle(context, size: 11.5)),
+            Text(context.t(m.derivation),
+                style: monoStyle(context, size: 11.5)),
           ],
         ],
       ),
@@ -308,7 +309,7 @@ class _VerdictCard extends StatelessWidget {
     final p = context.axiom;
     final (label, color) = switch (verdict.verdict) {
       RuleAction.retire => ('STREICHEN', p.caution),
-      RuleAction.widen => ('ZU ENG', p.info),
+      RuleAction.widen => (context.t('ZU ENG'), p.info),
       RuleAction.resolveConflict => ('KONFLIKT', p.signal),
     };
 
@@ -328,7 +329,7 @@ class _VerdictCard extends StatelessWidget {
                     style: monoStyle(context,
                         size: 10, weight: FontWeight.w600, color: color)),
                 const SizedBox(height: 2),
-                Text(verdict.reason,
+                Text(context.t(verdict.reason),
                     style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
@@ -344,25 +345,25 @@ class _Prompts extends StatelessWidget {
   final ReviewScope scope;
   const _Prompts({required this.scope});
 
-  static const _byScope = {
+  static Map<ReviewScope, List<String>> _byScope(BuildContext context) => {
     ReviewScope.day: [
-      'Was ist heute liegengeblieben, das nicht liegenbleiben durfte?',
-      'Morgen: ein Anker, eine Aufgabe.',
+      context.t('Was ist heute liegengeblieben, das nicht liegenbleiben durfte?'),
+      context.t('Morgen: ein Anker, eine Aufgabe.'),
     ],
     ReviewScope.week: [
-      'Was ist auffällig abgewichen?',
-      'Welche Regel hat genervt statt geholfen?',
-      'Nächste Woche: höchstens drei Vorhaben.',
+      context.t('Was ist auffällig abgewichen?'),
+      context.t('Welche Regel hat genervt statt geholfen?'),
+      context.t('Nächste Woche: höchstens drei Vorhaben.'),
     ],
     ReviewScope.month: [
-      'Wovon habe ich mich lautlos verabschiedet?',
-      'Gab es Erhaltungsmodus-Tage? Was ging voraus?',
-      'Welches Modul ist reif — und welches kann weg?',
+      context.t('Wovon habe ich mich lautlos verabschiedet?'),
+      context.t('Gab es Erhaltungsmodus-Tage? Was ging voraus?'),
+      context.t('Welches Modul ist reif — und welches kann weg?'),
     ],
     ReviewScope.quarter: [
-      'Ist die Last gesunken? Belegen, nicht behaupten.',
-      'Rechtfertigt AXIOM seine eigenen Kosten?',
-      'Was kann WEG?',
+      context.t('Ist die Last gesunken? Belegen, nicht behaupten.'),
+      context.t('Rechtfertigt AXIOM seine eigenen Kosten?'),
+      context.t('Was kann WEG?'),
     ],
   };
 
@@ -372,8 +373,8 @@ class _Prompts extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionLabel('Kurz durchgehen'),
-        for (final prompt in _byScope[scope]!)
+        SectionLabel(context.t('Kurz durchgehen')),
+        for (final prompt in _byScope(context)[scope]!)
           Padding(
             padding: const EdgeInsets.only(bottom: Space.md),
             child: Row(
@@ -395,8 +396,7 @@ class _Prompts extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: Space.sm),
             child: Text(
-              'Der letzte Punkt ist Pflicht. Jedes Review ohne Streichoption '
-              'lässt das System nur wachsen.',
+              context.t('Der letzte Punkt ist Pflicht. Jedes Review ohne Streichoption lässt das System nur wachsen.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

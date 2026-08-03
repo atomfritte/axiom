@@ -79,6 +79,22 @@ void main(List<String> args) {
         warnings.add('$where: rationale sehr kurz (${rationale.length} Zeichen)');
       }
 
+      // ── Uebersetzungen ──
+      //
+      // Kein Fehler, sondern eine Warnung: Eine fehlende Uebersetzung zeigt
+      // den deutschen Satz — sichtbar unfertig. Eine deshalb nicht geladene
+      // Regel waere schlimmer, weil man sich auf etwas verlaesst, das
+      // stumm fehlt.
+      for (final field in ['title', 'rationale']) {
+        final hasTranslation = entry.keys
+            .map((k) => k.toString())
+            .any((k) => k.startsWith('${field}_'));
+        if (!hasTranslation) {
+          warnings.add('$where: keine Uebersetzung fuer $field. In der '
+              'englischen Oberflaeche erscheint der deutsche Text.');
+        }
+      }
+
       // ── deficit ──
       final deficit = entry['deficit']?.toString();
       if (deficit == null) {

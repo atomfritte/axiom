@@ -62,6 +62,14 @@ ständige Sichtbarkeit auch im gesperrten Zustand ist die dauerhafte Benachricht
 `VISIBILITY_PUBLIC` der verbliebene Weg — sie zeigt Inhalt statt Platzhalter und nimmt Eingaben
 entgegen.
 
+**Live Update / Now Bar (Android 16).** Eine laufende Benachrichtigung kann um
+Beförderung bitten (`requestPromotedOngoing`) und erscheint dann als Pille
+neben der Uhr, auf dem Sperrbildschirm und in Samsungs Now Bar. AXIOM nutzt das
+für den laufenden Fokus-Slot: `ProgressStyle` mit zwei Abschnitten — geplante
+Dauer in Ruhe-Grün, Überziehung in Signal-Amber. Der Farbwechsel ist die ganze
+Aussage; es gibt keinen Alarm und keine Wertung (G3). Darunter bleibt es eine
+gewöhnliche laufende Benachrichtigung mit Countdown.
+
 **Fallstrick beim Widget:** Der `AppWidgetProvider` muss `android:exported="true"` haben. Der
 Launcher läuft in einem anderen Prozess und muss den Update-Broadcast senden können; mit `false`
 lässt sich das Widget schlicht nicht hinzufügen. Prüfbar am gebauten Paket:
@@ -131,6 +139,18 @@ Im Onboarding abfragen, Status dauerhaft prüfen.
 Granulare Einzelberechtigungen pro Datentyp. Berechtigungen können ohne Vorwarnung entzogen
 werden — Verfügbarkeit vor jeder Nutzung prüfen, sonst rechnet der StateDeriver mit Lücken
 (→ Konfidenzwert, siehe R8).
+
+Umgesetzt: **nur lesend, nur Schlaffenster und Tagesschritte.** Zwei weitere Punkte, die
+leicht übersehen werden:
+
+- Ohne eine Activity, die `ACTION_SHOW_PERMISSIONS_RATIONALE` (bis Android 13) bzw.
+  `VIEW_PERMISSION_USAGE` mit Kategorie `HEALTH_PERMISSIONS` (ab Android 14) beantwortet,
+  **erteilt das System die Freigabe nicht**.
+- Der Import muss idempotent sein. Events sind append-only — ein doppelter Import wäre
+  nicht rückgängig zu machen und würde die Schlafschuld verdoppeln. Deshalb trägt jedes
+  importierte Ereignis eine Quell-ID, und importierte Ereignisse bekommen ihren echten
+  Zeitpunkt (`recordAt`), nicht den Importzeitpunkt.
+- Die Bibliothek verlangt `minSdk 26`.
 
 ### 5.4 Notification Channels
 Pro `severity` ein eigener Channel — sonst kann der Nutzer nur alles oder nichts stummschalten.

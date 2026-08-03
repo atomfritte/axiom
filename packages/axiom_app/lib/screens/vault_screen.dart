@@ -24,6 +24,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class VaultScreen extends ConsumerWidget {
   const VaultScreen({super.key});
@@ -31,16 +32,16 @@ class VaultScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Daten')),
+      appBar: AppBar(title: Text(context.t('Daten'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge),
-        children: const [
+        children: [
           _ExportCard(),
           SizedBox(height: Space.lg),
           _ImportCard(),
           SizedBox(height: Space.xxl),
-          SectionLabel('Wirkfenster'),
+          SectionLabel(context.t('Wirkfenster')),
           _MedSection(),
         ],
       ),
@@ -86,7 +87,7 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
       if (!mounted) return;
       setState(() => _lastPath = file.path);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Exportiert: $name')),
+        SnackBar(content: Text(context.t('Exportiert: {0}', [name]))),
       );
       await HapticFeedback.mediumImpact();
     } on VaultError catch (e) {
@@ -105,11 +106,10 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('EXPORT', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('EXPORT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(
-            'Alle Ereignisse in eine verschlüsselte Datei. Ohne das Kennwort '
-            'ist sie nicht lesbar — auch nicht von dir.',
+            context.t('Alle Ereignisse in eine verschlüsselte Datei. Ohne das Kennwort ist sie nicht lesbar — auch nicht von dir.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Space.lg),
@@ -117,15 +117,15 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
             controller: _passphrase,
             obscureText: true,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Kennwort, mindestens acht Zeichen',
+            decoration: InputDecoration(
+              hintText: context.t('Kennwort, mindestens acht Zeichen'),
             ),
           ),
           const SizedBox(height: Space.lg),
           FilledButton(
             onPressed:
                 _busy || _passphrase.text.length < 8 ? null : _export,
-            child: Text(_busy ? 'Läuft…' : 'Exportieren'),
+            child: Text(_busy ? context.t('Läuft…') : 'Exportieren'),
           ),
           if (_lastPath != null) ...[
             const SizedBox(height: Space.md),
@@ -134,7 +134,7 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
                 await Clipboard.setData(ClipboardData(text: _lastPath!));
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pfad kopiert.')),
+                  SnackBar(content: Text(context.t('Pfad kopiert.'))),
                 );
               },
               child: Container(
@@ -152,9 +152,7 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
           ],
           const SizedBox(height: Space.md),
           Text(
-            'Das Kennwort steht nirgends. Geht es verloren, ist die Datei '
-            'unbrauchbar — das ist der Preis dafür, dass sie sonst niemand '
-            'lesen kann.',
+            context.t('Das Kennwort steht nirgends. Geht es verloren, ist die Datei unbrauchbar — das ist der Preis dafür, dass sie sonst niemand lesen kann.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -194,7 +192,7 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
     });
     try {
       final file = File(_path.text.trim());
-      if (!file.existsSync()) throw VaultError('Datei nicht gefunden.');
+      if (!file.existsSync()) throw VaultError(context.t('Datei nicht gefunden.'));
       final data = Uint8List.fromList(await file.readAsBytes());
 
       final runtime = await ref.read(runtimeProvider.future);
@@ -228,26 +226,24 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('IMPORT', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('IMPORT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(
-            'Spielt fehlende Ereignisse ein. Vorhandene bleiben unberührt — '
-            'der Import ist wiederholbar, und zwei Geräte gleichen sich an, '
-            'ohne dass etwas verlorengeht.',
+            context.t('Spielt fehlende Ereignisse ein. Vorhandene bleiben unberührt — der Import ist wiederholbar, und zwei Geräte gleichen sich an, ohne dass etwas verlorengeht.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Space.lg),
           TextField(
             controller: _path,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(hintText: 'Pfad zur .axiom-Datei'),
+            decoration: InputDecoration(hintText: context.t('Pfad zur .axiom-Datei')),
           ),
           const SizedBox(height: Space.md),
           TextField(
             controller: _passphrase,
             obscureText: true,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(hintText: 'Kennwort'),
+            decoration: InputDecoration(hintText: context.t('Kennwort')),
           ),
           const SizedBox(height: Space.lg),
           Row(
@@ -256,7 +252,7 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
                 child: OutlinedButton(
                   onPressed:
                       _busy || !ready ? null : () => _run(dryRun: true),
-                  child: const Text('Probelauf'),
+                  child: Text(context.t('Probelauf')),
                 ),
               ),
               const SizedBox(width: Space.md),
@@ -264,7 +260,7 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
                 child: FilledButton(
                   onPressed:
                       _busy || !ready ? null : () => _run(dryRun: false),
-                  child: const Text('Einspielen'),
+                  child: Text(context.t('Einspielen')),
                 ),
               ),
             ],
@@ -296,10 +292,7 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
                       style: monoStyle(context, size: 12, color: p.ink)),
                   const SizedBox(height: Space.xs),
                   Text(
-                    'Aus Export vom '
-                    '${_result!.manifest.createdAt.toLocal().day}.'
-                    '${_result!.manifest.createdAt.toLocal().month}. · '
-                    'Schema v${_result!.manifest.schemaVersion}',
+                    context.t('Aus Export vom {0}.{1}. · Schema v{2}', [_result!.manifest.createdAt.toLocal().day, _result!.manifest.createdAt.toLocal().month, _result!.manifest.schemaVersion]),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -335,7 +328,7 @@ class _MedSection extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text('Wirkfenster protokollieren',
+                    child: Text(context.t('Wirkfenster protokollieren'),
                         style: Theme.of(context).textTheme.titleMedium),
                   ),
                   Switch(
@@ -371,11 +364,11 @@ class _MedSection extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () => _logEntry(context, ref),
                   icon: Icon(Icons.add, size: 18, color: p.signal),
-                  label: const Text('Einnahme eintragen'),
+                  label: Text(context.t('Einnahme eintragen')),
                 ),
                 if (entries.isNotEmpty) ...[
                   const SizedBox(height: Space.lg),
-                  Text('LETZTE EINTRÄGE',
+                  Text(context.t('LETZTE EINTRÄGE'),
                       style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: Space.sm),
                   for (final entry in entries.take(5))
@@ -485,28 +478,27 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('EINNAHME', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('EINNAHME'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: 'Bezeichnung, wie du sie führst',
+              decoration: InputDecoration(
+                hintText: context.t('Bezeichnung, wie du sie führst'),
               ),
             ),
             const SizedBox(height: Space.md),
             TextField(
               controller: _dose,
-              decoration: const InputDecoration(hintText: 'Dosis (optional)'),
+              decoration: InputDecoration(hintText: context.t('Dosis (optional)')),
             ),
 
             const SizedBox(height: Space.xl),
-            Text('Wann setzt es bei dir ein?',
+            Text(context.t('Wann setzt es bei dir ein?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.xs),
             Text(
-              'Aus deiner Beobachtung. AXIOM schlägt hier nichts vor — das '
-              'hängt von Präparat, Person und Tag ab.',
+              context.t('Aus deiner Beobachtung. AXIOM schlägt hier nichts vor — das hängt von Präparat, Person und Tag ab.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.sm),
@@ -515,7 +507,7 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
               children: [
                 for (final option in [0, 15, 30, 45, 60, 90])
                   ChoiceChip(
-                    label: Text('$option min'),
+                    label: Text(context.t('{0} min', [option])),
                     selected: _onset == option,
                     onSelected: (_) => setState(() => _onset = option),
                   ),
@@ -523,7 +515,7 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
             ),
 
             const SizedBox(height: Space.lg),
-            Text('Wie lange hält es an?',
+            Text(context.t('Wie lange hält es an?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Wrap(
@@ -541,7 +533,7 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _label.text.trim().isEmpty ? null : _save,
-              child: const Text('Eintragen'),
+              child: Text(context.t('Eintragen')),
             ),
             const SizedBox(height: Space.md),
             Text(kMedDisclaimer,

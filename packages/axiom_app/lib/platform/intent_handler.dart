@@ -17,6 +17,7 @@ import '../screens/checkin_sheet.dart';
 import '../state/providers.dart';
 import 'android_bridge.dart';
 import 'system_sync.dart';
+import '../i18n/i18n.dart';
 
 class IntentHandler extends ConsumerStatefulWidget {
   final Widget child;
@@ -36,9 +37,11 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final language = context.language;
       unawaited(_drainPending());
-      unawaited(SystemSync.installDailyAnchors());
-      unawaited(SleepGate.schedule());
+      unawaited(SystemSync.installDailyAnchors(language: language));
+      unawaited(SleepGate.schedule(language: language));
     });
   }
 

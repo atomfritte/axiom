@@ -11,6 +11,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../i18n/i18n.dart';
+
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
 
@@ -68,7 +70,9 @@ abstract final class AndroidBridge {
   /// Plant die drei täglichen Check-ins.
   /// Zeitgetriggerte Prompts haben bei diesem Profil die höchste
   /// Befolgungsrate — Pünktlichkeit gilt auch gegenüber der App [D4].
-  static Future<void> scheduleDailyCheckins() async {
+  static Future<void> scheduleDailyCheckins({
+    AppLanguage language = AppLanguage.de,
+  }) async {
     if (!isSupported) return;
     const slots = [(1, 9, 0), (2, 14, 0), (3, 21, 0)];
     final now = DateTime.now();
@@ -78,8 +82,8 @@ abstract final class AndroidBridge {
       await scheduleExact(
         id: id,
         at: at,
-        title: 'Check-in',
-        body: 'Vier Regler, ungefähr reicht.',
+        title: translate(language, 'Check-in'),
+        body: translate(language, 'Vier Regler, ungefähr reicht.'),
         channel: 'axiom_nudge',
       );
     }

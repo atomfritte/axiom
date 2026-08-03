@@ -30,6 +30,7 @@ import 'checkin_sheet.dart';
 import 'inbox_screen.dart';
 import 'review_screen.dart';
 import 'system_screen.dart';
+import '../i18n/i18n.dart';
 
 class NowScreen extends ConsumerWidget {
   const NowScreen({super.key});
@@ -88,7 +89,7 @@ class NowScreen extends ConsumerWidget {
                 const SizedBox(height: Space.xxl),
                 _QuickState(snapshot: snap),
                 const SizedBox(height: Space.xl),
-                const SectionLabel('Körper'),
+                SectionLabel(context.t('Körper')),
                 const BodyStrip(),
                 const SizedBox(height: Space.xl),
                 _Tools(snapshot: snap),
@@ -104,7 +105,7 @@ class NowScreen extends ConsumerWidget {
         backgroundColor: context.axiom.signal,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
-        label: const Text('Erfassen'),
+        label: Text(context.t('Erfassen')),
       ),
     );
   }
@@ -116,14 +117,18 @@ class _Header extends ConsumerWidget {
   final AxiomSnapshot snapshot;
   const _Header({required this.snapshot});
 
-  static const _weekdays = [
-    'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag',
-    'Freitag', 'Samstag', 'Sonntag',
-  ];
-  static const _months = [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli',
-    'August', 'September', 'Oktober', 'November', 'Dezember',
-  ];
+  /// Wochentage und Monate als Funktion, nicht als Konstante: Sie haengen
+  /// an der eingestellten Sprache wie jeder andere Text auch.
+  static List<String> _weekdays(BuildContext c) => [
+        c.t('Montag'), c.t('Dienstag'), c.t('Mittwoch'), c.t('Donnerstag'),
+        c.t('Freitag'), c.t('Samstag'), c.t('Sonntag'),
+      ];
+
+  static List<String> _months(BuildContext c) => [
+        c.t('Januar'), c.t('Februar'), c.t('März'), c.t('April'),
+        c.t('Mai'), c.t('Juni'), c.t('Juli'), c.t('August'),
+        c.t('September'), c.t('Oktober'), c.t('November'), c.t('Dezember'),
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -139,13 +144,13 @@ class _Header extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${_weekdays[now.weekday - 1].toUpperCase()} '
-                '${now.day}. ${_months[now.month - 1].toUpperCase()}',
+                '${_weekdays(context)[now.weekday - 1].toUpperCase()} '
+                '${now.day}. ${_months(context)[now.month - 1].toUpperCase()}',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               const SizedBox(height: Space.xs),
               Text(
-                _greeting(now.hour),
+                _greeting(context, now.hour),
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
             ],
@@ -162,7 +167,7 @@ class _Header extends ConsumerWidget {
               border: Border.all(color: p.info.withValues(alpha: 0.5)),
               borderRadius: BorderRadius.circular(Radii.control),
             ),
-            child: Text('BASELINE TAG ${baseline.day}',
+            child: Text(context.t('BASELINE TAG {0}', [baseline.day]),
                 style: monoStyle(context,
                     size: 10, weight: FontWeight.w600, color: p.info)),
           ),
@@ -170,13 +175,13 @@ class _Header extends ConsumerWidget {
     );
   }
 
-  static String _greeting(int hour) => switch (hour) {
-        < 5 => 'Noch wach.',
-        < 11 => 'Morgen.',
-        < 14 => 'Mittag.',
-        < 18 => 'Nachmittag.',
-        < 22 => 'Abend.',
-        _ => 'Spät.',
+  static String _greeting(BuildContext context, int hour) => switch (hour) {
+        < 5 => context.t('Noch wach.'),
+        < 11 => context.t('Morgen.'),
+        < 14 => context.t('Mittag.'),
+        < 18 => context.t('Nachmittag.'),
+        < 22 => context.t('Abend.'),
+        _ => context.t('Spät.'),
       };
 }
 
@@ -234,9 +239,10 @@ class _DecisionCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('JETZT', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('JETZT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
-          Text(rule.title, style: Theme.of(context).textTheme.displayMedium),
+          Text(context.ruleTitle(rule),
+              style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.lg),
           Row(
             children: [
@@ -268,7 +274,7 @@ class _DecisionCard extends ConsumerWidget {
                     await runtime.respondTo(decision, DecisionResponse.followed);
                     refreshAxiom(ref);
                   },
-                  child: Text(isCheckin ? 'Check-in machen' : 'Verstanden'),
+                  child: Text(isCheckin ? context.t('Check-in machen') : 'Verstanden'),
                 ),
               ),
               const SizedBox(width: Space.md),
@@ -279,7 +285,7 @@ class _DecisionCard extends ConsumerWidget {
                     await runtime.respondTo(decision, DecisionResponse.deferred);
                     refreshAxiom(ref);
                   },
-                  child: const Text('Später'),
+                  child: Text(context.t('Später')),
                 ),
               ),
             ],
@@ -293,14 +299,14 @@ class _DecisionCard extends ConsumerWidget {
                 refreshAxiom(ref);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                          'Notiert. Diese Regel meldet sich seltener.'),
+                          context.t('Notiert. Diese Regel meldet sich seltener.')),
                     ),
                   );
                 }
               },
-              child: const Text('Passt nicht'),
+              child: Text(context.t('Passt nicht')),
             ),
           ),
         ],
@@ -326,13 +332,13 @@ class _TaskCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('JETZT', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('JETZT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(task.title, style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.lg),
           Row(
             children: [
-              _Chip(label: 'START ${task.activationEnergy}/10', color: p.signal),
+              _Chip(label: context.t('START {0}/10', [task.activationEnergy]), color: p.signal),
               const SizedBox(width: Space.sm),
               if (rule != null) ...[
                 RuleStamp(ruleId: rule!.id, color: p.info),
@@ -340,7 +346,7 @@ class _TaskCard extends ConsumerWidget {
               ],
               if (task.decayAt != null)
                 _Chip(
-                  label: _until(task.decayAt!, ref.watch(nowProvider)),
+                  label: _until(context, task.decayAt!, ref.watch(nowProvider)),
                   color: p.info,
                 ),
             ],
@@ -357,7 +363,7 @@ class _TaskCard extends ConsumerWidget {
                     await HapticFeedback.mediumImpact();
                     refreshAxiom(ref);
                   },
-                  child: const Text('Anfangen'),
+                  child: Text(context.t('Anfangen')),
                 ),
               ),
               const SizedBox(width: Space.md),
@@ -369,7 +375,7 @@ class _TaskCard extends ConsumerWidget {
                     await HapticFeedback.mediumImpact();
                     refreshAxiom(ref);
                   },
-                  child: const Text('Erledigt'),
+                  child: Text(context.t('Erledigt')),
                 ),
               ),
             ],
@@ -379,11 +385,11 @@ class _TaskCard extends ConsumerWidget {
     );
   }
 
-  static String _until(DateTime when, DateTime now) {
+  static String _until(BuildContext context, DateTime when, DateTime now) {
     final diff = when.difference(now);
-    if (diff.isNegative) return 'ÜBERFÄLLIG';
-    if (diff.inHours < 24) return 'IN ${diff.inHours} H';
-    return 'IN ${diff.inDays} T';
+    if (diff.isNegative) return context.t('ÜBERFÄLLIG');
+    if (diff.inHours < 24) return context.t('IN {0} H', [diff.inHours]);
+    return context.t('IN {0} T', [diff.inDays]);
   }
 }
 
@@ -412,7 +418,7 @@ class _AtomizeCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text('ZU GROSS FÜR HEUTE',
+                child: Text(context.t('ZU GROSS FÜR HEUTE'),
                     style: Theme.of(context).textTheme.labelSmall),
               ),
               if (rule != null) RuleStamp(ruleId: rule!.id, color: p.info),
@@ -430,7 +436,7 @@ class _AtomizeCard extends ConsumerWidget {
               final done = await showAtomizeSheet(context, candidate);
               if (done) refreshAxiom(ref);
             },
-            child: const Text('In einen ersten Schritt zerlegen'),
+            child: Text(context.t('In einen ersten Schritt zerlegen')),
           ),
           const SizedBox(height: Space.sm),
           Center(
@@ -440,7 +446,7 @@ class _AtomizeCard extends ConsumerWidget {
                 await runtime.dropTask(candidate.task);
                 refreshAxiom(ref);
               },
-              child: const Text('Fällt weg'),
+              child: Text(context.t('Fällt weg')),
             ),
           ),
         ],
@@ -465,23 +471,20 @@ class _EmptyState extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(blocked ? 'NICHTS IN REICHWEITE' : 'NICHTS ANLIEGEND',
+          Text(blocked ? context.t('NICHTS IN REICHWEITE') : context.t('NICHTS ANLIEGEND'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(
             blocked
-                ? 'Heute liegt nichts unter der Linie.'
-                : 'Ruhig gerade.',
+                ? context.t('Heute liegt nichts unter der Linie.')
+                : context.t('Ruhig gerade.'),
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: Space.md),
           Text(
             blocked
-                ? 'Alles Offene braucht mehr Anlauf, als heute da ist. '
-                    'Das ist eine Messung, keine Bewertung. Eine Aufgabe in '
-                    'kleinere Schritte zu zerlegen hilft mehr als Anlauf nehmen.'
-                : 'Kein Vorschlag heißt: gerade ist nichts nötig. '
-                    'Was dir einfällt, kannst du unten erfassen.',
+                ? context.t('Alles Offene braucht mehr Anlauf, als heute da ist. Das ist eine Messung, keine Bewertung. Eine Aufgabe in kleinere Schritte zu zerlegen hilft mehr als Anlauf nehmen.')
+                : context.t('Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du unten erfassen.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (blocked) ...[
@@ -491,7 +494,7 @@ class _EmptyState extends ConsumerWidget {
                 MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
               ),
               icon: Icon(Icons.call_split, size: 18, color: p.signal),
-              label: const Text('Aufgabe zerlegen'),
+              label: Text(context.t('Aufgabe zerlegen')),
             ),
           ],
         ],
@@ -538,13 +541,13 @@ class _RegimeBanner extends StatelessWidget {
               ),
               const SizedBox(width: Space.md),
               Expanded(
-                child: Text(regime.headline,
+                child: Text(context.t(regime.headline),
                     style: Theme.of(context).textTheme.titleLarge),
               ),
             ],
           ),
           const SizedBox(height: Space.md),
-          Text(regime.description,
+          Text(context.t(regime.description),
               style: Theme.of(context).textTheme.bodyMedium),
           if (snapshot.suggestsReferral) ...[
             const SizedBox(height: Space.md),
@@ -555,9 +558,7 @@ class _RegimeBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Radii.control),
               ),
               child: Text(
-                'Die Last ist seit über zwei Wochen auf diesem Niveau. '
-                'AXIOM misst nur — für die Einordnung ist ärztliche oder '
-                'psychotherapeutische Abklärung der richtige Weg.',
+                context.t('Die Last ist seit über zwei Wochen auf diesem Niveau. AXIOM misst nur — für die Einordnung ist ärztliche oder psychotherapeutische Abklärung der richtige Weg.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -604,12 +605,14 @@ class _FocusStrip extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(session.anchorTitle ?? 'Fokus läuft',
+                Text(session.anchorTitle ?? context.t('Fokus läuft'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge),
                 Text(
-                  verdict?.reason ?? 'Läuft.',
+                  verdict == null
+                      ? context.t('Läuft.')
+                      : context.p(verdict.reason),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
@@ -618,7 +621,7 @@ class _FocusStrip extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: Space.md),
-          Text('${elapsed.inMinutes} min',
+          Text(context.t('{0} min', [elapsed.inMinutes]),
               style: monoStyle(context,
                   size: 13,
                   weight: FontWeight.w600,
@@ -661,14 +664,14 @@ class _InterceptStrip extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge),
                 Text(
-                  released ? 'Wartezeit vorbei' : 'Wartezeit läuft',
+                  released ? context.t('Wartezeit vorbei') : context.t('Wartezeit läuft'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
           ),
           if (!released)
-            Text('${run.remaining(now).inMinutes} min',
+            Text(context.t('{0} min', [run.remaining(now).inMinutes]),
                 style: monoStyle(context,
                     size: 13, weight: FontWeight.w600, color: p.signal)),
         ],
@@ -695,7 +698,7 @@ class _Tools extends StatelessWidget {
       children: [
         _ToolButton(
           icon: Icons.center_focus_strong_outlined,
-          label: snapshot.isFocusing ? 'Läuft' : 'Fokus',
+          label: snapshot.isFocusing ? context.t('Läuft') : 'Fokus',
           active: snapshot.isFocusing,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const FocusScreen()),
@@ -704,7 +707,7 @@ class _Tools extends StatelessWidget {
         const SizedBox(width: Space.sm),
         _ToolButton(
           icon: Icons.bolt_outlined,
-          label: 'Reiz',
+          label: context.t('Reiz'),
           // Auffällig nur, wenn der Bedarf wirklich hoch ist — ein dauerhaft
           // markierter Knopf wird nicht mehr gesehen.
           active: need >= 70,
@@ -716,7 +719,7 @@ class _Tools extends StatelessWidget {
         const SizedBox(width: Space.sm),
         _ToolButton(
           icon: Icons.pan_tool_outlined,
-          label: 'Bremse',
+          label: context.t('Bremse'),
           active: snapshot.activeIntercept != null,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const InterceptScreen()),
@@ -836,8 +839,8 @@ class _PostMortemTeaser extends ConsumerWidget {
             Expanded(
               child: Text(
                 pending.length == 1
-                    ? 'Ein Vorfall wartet auf Einordnung'
-                    : '${pending.length} Vorfälle warten auf Einordnung',
+                    ? context.t('Ein Vorfall wartet auf Einordnung')
+                    : context.t('{0} Vorfälle warten auf Einordnung', [pending.length]),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -879,9 +882,9 @@ class _BaselineTeaser extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Baseline vollständig',
+                  Text(context.t('Baseline vollständig'),
                       style: Theme.of(context).textTheme.bodyLarge),
-                  Text('Die Gewichte können jetzt geeicht werden.',
+                  Text(context.t('Die Gewichte können jetzt geeicht werden.'),
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -918,7 +921,7 @@ class _ReviewTeaser extends ConsumerWidget {
           const SizedBox(width: Space.md),
           Expanded(
             child: Text(
-              '${due.label}-Review offen · ${due.timeCap.inMinutes} min',
+              context.t('{0}-Review offen · {1} min', [due.label, due.timeCap.inMinutes]),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -948,8 +951,7 @@ class _InboxTeaser extends StatelessWidget {
           const SizedBox(width: Space.md),
           Expanded(
             child: Text(
-              '$count ${count == 1 ? "Notiz wartet" : "Notizen warten"} '
-              'auf Sortieren',
+              context.t('{0} {1} auf Sortieren', [count, count == 1 ? context.t('Notiz wartet') : context.t('Notizen warten')]),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -971,33 +973,33 @@ class _QuickState extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionLabel('Zustand'),
+        SectionLabel(context.t('Zustand')),
         Panel(
           child: Column(
             children: [
               InstrumentBar(
-                label: 'Kapazität',
+                label: context.t('Kapazität'),
                 value: s.capacity,
                 color: p.signal,
-                reading: _capacityReading(s.capacity),
+                reading: _capacityReading(context, s.capacity),
                 breakdown: snapshot.breakdown['capacity'] ?? const [],
                 confidence: s.confidenceOf('capacity'),
               ),
               Divider(color: p.rule, height: Space.xl),
               InstrumentBar(
-                label: 'Kompensationslast',
+                label: context.t('Kompensationslast'),
                 value: s.loadIndex,
                 color: p.forLoadLevel(s.loadLevel.index),
-                reading: _loadReading(s.loadLevel),
+                reading: _loadReading(context, s.loadLevel),
                 breakdown: snapshot.breakdown['load_index'] ?? const [],
                 confidence: s.confidenceOf('load_index'),
               ),
               Divider(color: p.rule, height: Space.xl),
               InstrumentBar(
-                label: 'Reizbedarf',
+                label: context.t('Reizbedarf'),
                 value: s.sensationNeed,
                 color: p.caution,
-                reading: _sensationReading(s.sensationNeed),
+                reading: _sensationReading(context, s.sensationNeed),
                 breakdown: snapshot.breakdown['sensation_need'] ?? const [],
                 confidence: s.confidenceOf('sensation_need'),
               ),
@@ -1008,25 +1010,26 @@ class _QuickState extends StatelessWidget {
     );
   }
 
-  static String _capacityReading(int v) => switch (v) {
-        >= 75 => 'Viel möglich heute.',
-        >= 50 => 'Solide Mitte.',
-        >= 30 => 'Begrenzt — Kleines zuerst.',
-        _ => 'Wenig da. Nur das Nötige.',
+  static String _capacityReading(BuildContext context, int v) => switch (v) {
+        >= 75 => context.t('Viel möglich heute.'),
+        >= 50 => context.t('Solide Mitte.'),
+        >= 30 => context.t('Begrenzt — Kleines zuerst.'),
+        _ => context.t('Wenig da. Nur das Nötige.'),
       };
 
-  static String _loadReading(LoadLevel level) => switch (level) {
-        LoadLevel.l0 => 'Im Normalbereich.',
-        LoadLevel.l1 => 'Erhöht. Im Blick behalten.',
-        LoadLevel.l2 => 'Kritisch. Nichts Neues aufnehmen.',
-        LoadLevel.l3 => 'Erhaltungsmodus. Nur Pflicht und Erholung.',
+  static String _loadReading(BuildContext context, LoadLevel level) =>
+      switch (level) {
+        LoadLevel.l0 => context.t('Im Normalbereich.'),
+        LoadLevel.l1 => context.t('Erhöht. Im Blick behalten.'),
+        LoadLevel.l2 => context.t('Kritisch. Nichts Neues aufnehmen.'),
+        LoadLevel.l3 => context.t('Erhaltungsmodus. Nur Pflicht und Erholung.'),
       };
 
-  static String _sensationReading(int v) => switch (v) {
-        >= 85 => 'Hoch. Jetzt planen, was sonst ungeplant passiert.',
-        >= 70 => 'Deutlich. Ein Reiz-Slot wäre fällig.',
-        >= 40 => 'Normal.',
-        _ => 'Gedeckt.',
+  static String _sensationReading(BuildContext context, int v) => switch (v) {
+        >= 85 => context.t('Hoch. Jetzt planen, was sonst ungeplant passiert.'),
+        >= 70 => context.t('Deutlich. Ein Reiz-Slot wäre fällig.'),
+        >= 40 => context.t('Normal.'),
+        _ => context.t('Gedeckt.'),
       };
 }
 
@@ -1044,7 +1047,7 @@ class _MetaBudget extends StatelessWidget {
 
     return Row(
       children: [
-        Text('ZEIT IN AXIOM HEUTE',
+        Text(context.t('ZEIT IN AXIOM HEUTE'),
             style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(width: Space.md),
         Expanded(
@@ -1062,7 +1065,7 @@ class _MetaBudget extends StatelessWidget {
           ),
         ),
         const SizedBox(width: Space.md),
-        Text('${used.inMinutes}/${kMetaBudget.inMinutes} min',
+        Text(context.t('{0}/{1} min', [used.inMinutes, kMetaBudget.inMinutes]),
             style: monoStyle(context,
                 size: 11, color: over ? p.caution : p.inkFaint)),
       ],
@@ -1100,9 +1103,9 @@ class _ErrorPane extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SYSTEM', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('SYSTEM'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
-            Text('AXIOM konnte nicht starten.',
+            Text(context.t('AXIOM konnte nicht starten.'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.md),
             Text('$error', style: monoStyle(context, size: 12)),
@@ -1122,7 +1125,7 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
             RuleStamp(ruleId: rule.id, color: p.signal),
             const SizedBox(width: Space.md),
             Expanded(
-              child: Text(rule.title,
+              child: Text(context.ruleTitle(rule),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
           ],
@@ -1132,7 +1135,7 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('WARUM ES DIESE REGEL GIBT',
+              Text(context.t('WARUM ES DIESE REGEL GIBT'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(decision.explanation,
@@ -1140,10 +1143,10 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
               const SizedBox(height: Space.lg),
               Row(
                 children: [
-                  Text('Stufe ${rule.severity.name}',
+                  Text(context.t('Stufe {0}', [rule.severity.name]),
                       style: monoStyle(context, size: 11)),
                   const SizedBox(width: Space.md),
-                  Text('Priorität ${rule.priority}',
+                  Text(context.t('Priorität {0}', [rule.priority]),
                       style: monoStyle(context, size: 11)),
                 ],
               ),
@@ -1153,7 +1156,7 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Schließen'),
+            child: Text(context.t('Schließen')),
           ),
         ],
       );

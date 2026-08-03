@@ -18,6 +18,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class InboxScreen extends ConsumerWidget {
   const InboxScreen({super.key});
@@ -29,7 +30,7 @@ class InboxScreen extends ConsumerWidget {
     final open = tasks.where((t) => t.state == TaskState.ready).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Eingang')),
+      appBar: AppBar(title: Text(context.t('Eingang'))),
       body: inbox.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -41,7 +42,7 @@ class InboxScreen extends ConsumerWidget {
               const _EmptyInbox()
             else ...[
               if (notes.isNotEmpty) ...[
-                SectionLabel('Unsortiert · ${notes.length}'),
+                SectionLabel(context.t('Unsortiert · {0}', [notes.length])),
                 for (final note in notes)
                   _NoteCard(
                     note: note,
@@ -58,7 +59,7 @@ class InboxScreen extends ConsumerWidget {
                 const SizedBox(height: Space.xl),
               ],
               if (open.isNotEmpty) ...[
-                SectionLabel('Offen · ${open.length}'),
+                SectionLabel(context.t('Offen · {0}', [open.length])),
                 for (final task in open) _TaskRow(task: task),
               ],
             ],
@@ -88,16 +89,14 @@ class _EmptyInbox extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('EINGANG LEER',
+            Text(context.t('EINGANG LEER'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
-            Text('Nichts zu sortieren.',
+            Text(context.t('Nichts zu sortieren.'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.md),
             Text(
-              'Was dir zwischendurch einfällt, landet hier. '
-              'Erfassen kannst du von überall — über den Knopf unten, '
-              'die Schnelleinstellung oder den S-Pen.',
+              context.t('Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.'),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -133,7 +132,7 @@ class _NoteCard extends StatelessWidget {
             color: p.panel,
             borderRadius: BorderRadius.circular(Radii.panel),
           ),
-          child: Text('Verwerfen',
+          child: Text(context.t('Verwerfen'),
               style: monoStyle(context, size: 12, color: p.inkDim)),
         ),
         child: Panel(
@@ -153,7 +152,7 @@ class _NoteCard extends StatelessWidget {
                     style: monoStyle(context, size: 11, color: p.inkFaint),
                   ),
                   const Spacer(),
-                  Text('SORTIEREN',
+                  Text(context.t('SORTIEREN'),
                       style: monoStyle(context,
                           size: 10.5, weight: FontWeight.w600, color: p.signal)),
                   Icon(Icons.chevron_right, size: 16, color: p.signal),
@@ -213,7 +212,7 @@ class _TaskRow extends ConsumerWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Erledigt',
+              tooltip: context.t('Erledigt'),
               icon: Icon(Icons.check, size: 20, color: p.inkDim),
               onPressed: () async {
                 final runtime = await ref.read(runtimeProvider.future);
@@ -292,7 +291,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SORTIEREN', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('SORTIEREN'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _title,
@@ -302,17 +301,17 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
             ),
             const SizedBox(height: Space.xl),
             _Dial(
-              label: 'Wie schwer fällt der Start?',
-              hint: 'Nicht wie lang es dauert. Nur der Anfang.',
+              label: context.t('Wie schwer fällt der Start?'),
+              hint: context.t('Nicht wie lang es dauert. Nur der Anfang.'),
               value: _ae,
               low: 'sofort',
-              high: 'große Hürde',
+              high: context.t('große Hürde'),
               onChanged: (v) => setState(() => _ae = v),
             ),
             const SizedBox(height: Space.xl),
             _Dial(
-              label: 'Was kostet es, wenn es liegenbleibt?',
-              hint: 'Folgen, nicht Wichtigkeit.',
+              label: context.t('Was kostet es, wenn es liegenbleibt?'),
+              hint: context.t('Folgen, nicht Wichtigkeit.'),
               value: _stakes,
               low: 'nichts',
               high: 'viel',
@@ -321,7 +320,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Übernehmen'),
+              child: Text(context.t('Übernehmen')),
             ),
           ],
         ),

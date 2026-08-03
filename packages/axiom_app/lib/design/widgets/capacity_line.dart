@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import '../tokens.dart';
+import '../../i18n/i18n.dart';
 
 @immutable
 final class CapacityLine extends StatelessWidget {
@@ -47,8 +48,7 @@ final class CapacityLine extends StatelessWidget {
     final beyond = tasks.length - reachable.length;
 
     return Semantics(
-      label: 'Kapazitaetslinie. Kapazitaet $capacity von 100. '
-          '${reachable.length} von ${tasks.length} Aufgaben sind jetzt startbar.',
+      label: context.t('Kapazitaetslinie. Kapazitaet {0} von 100. {1} von {2} Aufgaben sind jetzt startbar.', [capacity, reachable.length, tasks.length]),
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,12 +56,12 @@ final class CapacityLine extends StatelessWidget {
           Row(
             children: [
               Flexible(
-                child: Text('AKTIVIERUNGSENERGIE',
+                child: Text(context.t('AKTIVIERUNGSENERGIE'),
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall),
               ),
               const SizedBox(width: Space.md),
-              Text('KAPAZITÄT $capacity',
+              Text(context.t('KAPAZITÄT {0}', [capacity]),
                   style: monoStyle(context,
                       size: 11,
                       weight: FontWeight.w600,
@@ -87,13 +87,11 @@ final class CapacityLine extends StatelessWidget {
           const SizedBox(height: Space.sm),
           Text(
             switch ((reachable.length, beyond)) {
-              (0, 0) => 'Noch keine Aufgaben erfasst.',
-              (0, _) => 'Heute liegt nichts davon in Reichweite. '
-                  'Zerlegen hilft mehr als Anlauf nehmen.',
-              (final r, 0) => '$r ${r == 1 ? "Aufgabe ist" : "Aufgaben sind"} '
-                  'jetzt startbar.',
+              (0, 0) => context.t('Noch keine Aufgaben erfasst.'),
+              (0, _) => context.t('Heute liegt nichts davon in Reichweite. Zerlegen hilft mehr als Anlauf nehmen.'),
+              (final r, 0) => context.t('{0} {1} jetzt startbar.', [r, r == 1 ? "Aufgabe ist" : "Aufgaben sind"]),
               (final r, final b) =>
-                '$r startbar · $b heute außerhalb der Reichweite',
+                context.t('{0} startbar · {1} heute außerhalb der Reichweite', [r, b]),
             },
             style: Theme.of(context).textTheme.bodySmall,
           ),

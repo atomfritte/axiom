@@ -147,7 +147,11 @@ void main() {
 
     test('Nutzertexte verwenden echte Umlaute, keine Ersatzschreibung', () {
       final hits = <String>[];
-      for (final file in appSources()) {
+      // Nur deutsche Texte. Im Englischen sind "does", "goes" und "guessing"
+      // voellig richtig geschrieben — die englische Fassung prueft
+      // i18n_test, mit den Regeln ihrer eigenen Sprache.
+      for (final file in appSources().where(
+          (f) => !f.path.endsWith('i18n/en.dart'))) {
         for (final (line, text) in userFacingStrings(file)) {
           for (final match in substitutions.allMatches(text)) {
             hits.add('${file.path}:$line  "${match.group(0)}"  in: "$text"');
@@ -164,8 +168,20 @@ void main() {
       final hits = <String>[];
       for (final file in dir.listSync().whereType<File>()) {
         final lines = file.readAsLinesSync();
+        // Uebersetzte Felder (title_en, rationale_en) sind englisch und
+        // gehoeren nicht in diese Pruefung.
+        var inTranslation = false;
         for (var i = 0; i < lines.length; i++) {
-          for (final match in substitutions.allMatches(lines[i])) {
+          final line = lines[i];
+          if (RegExp(r'^\s{0,4}\w+_[a-z]{2}:').hasMatch(line)) {
+            inTranslation = true;
+            continue;
+          }
+          if (inTranslation) {
+            if (line.trim().isEmpty || line.startsWith('    ')) continue;
+            inTranslation = false;
+          }
+          for (final match in substitutions.allMatches(line)) {
             hits.add('${file.path}:${i + 1}  "${match.group(0)}"');
           }
         }

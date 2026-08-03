@@ -13,6 +13,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import 'checkin_sheet.dart';
+import '../i18n/i18n.dart';
 
 class StateScreen extends ConsumerWidget {
   const StateScreen({super.key});
@@ -24,7 +25,7 @@ class StateScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Zustand'),
+        title: Text(context.t('Zustand')),
         actions: [
           TextButton.icon(
             onPressed: () async {
@@ -32,7 +33,7 @@ class StateScreen extends ConsumerWidget {
               refreshAxiom(ref);
             },
             icon: Icon(Icons.add_chart, size: 18, color: p.signal),
-            label: Text('Check-in',
+            label: Text(context.t('Check-in'),
                 style: TextStyle(color: p.signal)),
           ),
           const SizedBox(width: Space.sm),
@@ -49,60 +50,59 @@ class StateScreen extends ConsumerWidget {
             children: [
               _LoadBanner(level: s.loadLevel),
               const SizedBox(height: Space.xl),
-              const SectionLabel('Messwerte'),
+              SectionLabel(context.t('Messwerte')),
               Panel(
                 child: Column(
                   children: [
                     InstrumentBar(
-                      label: 'Kapazität',
+                      label: context.t('Kapazität'),
                       value: s.capacity,
                       color: p.signal,
-                      reading: 'Wie viel exekutive Reserve heute da ist.',
+                      reading: context.t('Wie viel exekutive Reserve heute da ist.'),
                       breakdown: snap.breakdown['capacity'] ?? const [],
                       confidence: s.confidenceOf('capacity'),
                     ),
                     Divider(color: p.rule, height: Space.xl),
                     InstrumentBar(
-                      label: 'Kompensationslast',
+                      label: context.t('Kompensationslast'),
                       value: s.loadIndex,
                       color: p.forLoadLevel(s.loadLevel.index),
                       reading:
-                          'Kumulierter Aufwand, den Alltag zu strukturieren.',
+                          context.t('Kumulierter Aufwand, den Alltag zu strukturieren.'),
                       breakdown: snap.breakdown['load_index'] ?? const [],
                       confidence: s.confidenceOf('load_index'),
                     ),
                     Divider(color: p.rule, height: Space.xl),
                     InstrumentBar(
-                      label: 'Reizbedarf',
+                      label: context.t('Reizbedarf'),
                       value: s.sensationNeed,
                       color: p.caution,
-                      reading: 'Ungedeckter Bedarf sucht sich den '
-                          'schnellsten Kanal.',
+                      reading: context.t('Ungedeckter Bedarf sucht sich den schnellsten Kanal.'),
                       breakdown: snap.breakdown['sensation_need'] ?? const [],
                       confidence: s.confidenceOf('sensation_need'),
                     ),
                     Divider(color: p.rule, height: Space.xl),
                     InstrumentBar(
-                      label: 'Fokuslast heute',
+                      label: context.t('Fokuslast heute'),
                       value: s.focusDebt,
                       color: p.info,
-                      reading: 'Verbrauchte Konzentrationszeit seit heute früh.',
+                      reading: context.t('Verbrauchte Konzentrationszeit seit heute früh.'),
                       confidence: s.confidenceOf('focus_debt'),
                     ),
                     Divider(color: p.rule, height: Space.xl),
                     InstrumentBar(
-                      label: 'Regulationsreserve',
+                      label: context.t('Regulationsreserve'),
                       value: s.regulation,
                       color: p.calm,
-                      reading: 'Puffer für emotionale Belastung.',
+                      reading: context.t('Puffer für emotionale Belastung.'),
                       confidence: s.confidenceOf('regulation'),
                     ),
                     Divider(color: p.rule, height: Space.xl),
                     InstrumentBar(
-                      label: 'Schlafschuld',
+                      label: context.t('Schlafschuld'),
                       value: s.sleepDebt,
                       color: p.caution,
-                      reading: 'Stärkster einzelner Modulator der Kapazität.',
+                      reading: context.t('Stärkster einzelner Modulator der Kapazität.'),
                       confidence: s.confidenceOf('sleep_debt'),
                     ),
                   ],
@@ -148,36 +148,33 @@ class _LoadBanner extends StatelessWidget {
               ),
               const SizedBox(width: Space.md),
               Expanded(
-                child: Text(_headline(level),
+                child: Text(_headline(context, level),
                     style: Theme.of(context).textTheme.titleLarge),
               ),
             ],
           ),
           const SizedBox(height: Space.md),
-          Text(_body(level), style: Theme.of(context).textTheme.bodyMedium),
+          Text(_body(context, level), style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
   }
 
-  static String _headline(LoadLevel l) => switch (l) {
-        LoadLevel.l0 => 'Normalbetrieb',
-        LoadLevel.l1 => 'Last erhöht',
-        LoadLevel.l2 => 'Last kritisch',
-        LoadLevel.l3 => 'Erhaltungsmodus',
+  static String _headline(BuildContext context, LoadLevel l) => switch (l) {
+        LoadLevel.l0 => context.t('Normalbetrieb'),
+        LoadLevel.l1 => context.t('Last erhöht'),
+        LoadLevel.l2 => context.t('Last kritisch'),
+        LoadLevel.l3 => context.t('Erhaltungsmodus'),
       };
 
-  static String _body(LoadLevel l) => switch (l) {
-        LoadLevel.l0 => 'Die Kompensationslast liegt im gewohnten Bereich.',
+  static String _body(BuildContext context, LoadLevel l) => switch (l) {
+        LoadLevel.l0 => context.t('Die Kompensationslast liegt im gewohnten Bereich.'),
         LoadLevel.l1 =>
-          'Die Last steigt seit einigen Tagen. Noch unauffällig nach außen — '
-              'genau deshalb wird sie hier angezeigt.',
+          context.t('Die Last steigt seit einigen Tagen. Noch unauffällig nach außen — genau deshalb wird sie hier angezeigt.'),
         LoadLevel.l2 =>
-          'Jetzt nichts Neues zusätzlich aufnehmen. Bestehendes eher abgeben '
-              'als erweitern.',
+          context.t('Jetzt nichts Neues zusätzlich aufnehmen. Bestehendes eher abgeben als erweitern.'),
         LoadLevel.l3 =>
-          'Für die nächsten Tage nur Pflicht und Erholung. Dass dieser Modus '
-              'greift, ist der Zweck des Systems — nicht dein Versagen.',
+          context.t('Für die nächsten Tage nur Pflicht und Erholung. Dass dieser Modus greift, ist der Zweck des Systems — nicht dein Versagen.'),
       };
 }
 
@@ -196,13 +193,10 @@ class _Disclaimer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('EINORDNUNG', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('EINORDNUNG'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(
-            'Diese Werte sind Messungen aus deinen eigenen Angaben und '
-            'Gerätedaten. Sie sind keine Diagnose und kein Befund. '
-            'AXIOM ersetzt weder ärztliche noch psychotherapeutische '
-            'Behandlung.',
+            context.t('Diese Werte sind Messungen aus deinen eigenen Angaben und Gerätedaten. Sie sind keine Diagnose und kein Befund. AXIOM ersetzt weder ärztliche noch psychotherapeutische Behandlung.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import '../tokens.dart';
+import '../../i18n/i18n.dart';
 
 @immutable
 final class AnchorChainView extends StatelessWidget {
@@ -37,9 +38,7 @@ final class AnchorChainView extends StatelessWidget {
     final next = anchor.nextStep(now);
 
     return Semantics(
-      label: '${anchor.title} um ${_hhmm(anchor.arriveBy)}. '
-          'Vorlauf ${anchor.leadTime.inMinutes} Minuten. '
-          '${next == null ? "Vorbei." : "Als Nächstes: ${next.label} um ${_hhmm(next.at)}."}',
+      label: context.t('{0} um {1}. Vorlauf {2} Minuten. {3}', [anchor.title, _hhmm(anchor.arriveBy), anchor.leadTime.inMinutes, next == null ? context.t('Vorbei.') : context.t('Als Nächstes: {0} um {1}.', [next.label, _hhmm(next.at)])]),
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +58,7 @@ final class AnchorChainView extends StatelessWidget {
           const SizedBox(height: Space.xs),
           Row(
             children: [
-              Text('VORLAUF ${anchor.leadTime.inMinutes} MIN',
+              Text(context.t('VORLAUF {0} MIN', [anchor.leadTime.inMinutes]),
                   style: monoStyle(context,
                       size: 10, spacing: 0.6, color: p.signal)),
               if (anchor.location != null) ...[
@@ -187,7 +186,7 @@ class _StepRow extends StatelessWidget {
                         minutes == 0
                             ? 'jetzt'
                             : minutes < 60
-                                ? 'in $minutes min'
+                                ? context.t('in {0} min', [minutes])
                                 : 'in ${(minutes / 60).toStringAsFixed(1)} h',
                         style: monoStyle(context, size: 11, color: p.signal),
                       ),
@@ -255,7 +254,7 @@ final class NextStepBadge extends StatelessWidget {
           minutes <= 0
               ? 'jetzt'
               : minutes < 60
-                  ? '$minutes min'
+                  ? context.t('{0} min', [minutes])
                   : '${(minutes / 60).toStringAsFixed(1)} h',
           style: monoStyle(context,
               size: 13,

@@ -46,7 +46,7 @@ void main() {
     test('läuft auf dem gesetzten Ziel und in der Zeit — nicht stören', () {
       final verdict = assess();
       expect(verdict.action, FocusAction.protect);
-      expect(verdict.reason, contains('stumm'));
+      expect(verdict.reasonText, contains('stumm'));
     });
 
     test('leichte Überziehung stört noch nicht', () {
@@ -59,14 +59,14 @@ void main() {
     test('deutliche Überziehung: leiser Hinweis', () {
       final verdict = assess(after: const Duration(minutes: 80));
       expect(verdict.action, FocusAction.gentleNudge);
-      expect(verdict.reason, contains('über der geplanten Zeit'));
+      expect(verdict.reasonText, contains('über der geplanten Zeit'));
     });
 
     test('starke Überziehung: sichtbare Unterbrechung', () {
       final verdict = assess(after: const Duration(minutes: 115));
       expect(verdict.action, FocusAction.clearInterrupt);
       // Bewusst erlaubend formuliert — Weitermachen bleibt eine Option.
-      expect(verdict.reason, contains('in Ordnung'));
+      expect(verdict.reasonText, contains('in Ordnung'));
     });
 
     test('die Eskalation überspringt keine Stufe', () {
@@ -83,7 +83,7 @@ void main() {
         after: const Duration(minutes: 50),
       );
       expect(verdict.action, FocusAction.gentleNudge);
-      expect(verdict.reason, contains('ohne gesetztes Ziel'));
+      expect(verdict.reasonText, contains('ohne gesetztes Ziel'));
     });
 
     test('mit Ziel wird zu diesem Zeitpunkt nicht gestört', () {
@@ -120,7 +120,7 @@ void main() {
         anchor: anchorStepIn(const Duration(minutes: 10)),
       );
       expect(verdict.action, FocusAction.hardStop);
-      expect(verdict.reason, contains('Zahnarzt'));
+      expect(verdict.reasonText, contains('Zahnarzt'));
     });
 
     test('ferner Termin stört nicht', () {
@@ -154,13 +154,13 @@ void main() {
     test('L3 beendet auch einen gut laufenden Fokus', () {
       final verdict = assess(state: stateOf(loadIndex: 90));
       expect(verdict.action, FocusAction.hardStop);
-      expect(verdict.reason, contains('Erhaltungsmodus'));
+      expect(verdict.reasonText, contains('Erhaltungsmodus'));
     });
 
     test('formuliert ohne Vorwurf', () {
       final verdict = assess(state: stateOf(loadIndex: 90));
       for (final blame in ['versagt', 'zu viel gemacht', 'endlich']) {
-        expect(verdict.reason.toLowerCase(), isNot(contains(blame)));
+        expect(verdict.reasonText.toLowerCase(), isNot(contains(blame)));
       }
     });
   });
@@ -172,7 +172,7 @@ void main() {
         sinceBody: const Duration(minutes: 120),
       );
       expect(verdict.action, FocusAction.gentleNudge);
-      expect(verdict.reason, contains('getrunken'));
+      expect(verdict.reasonText, contains('getrunken'));
     });
 
     test('kürzlich quittiert — kein Hinweis', () {

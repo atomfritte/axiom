@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Nur fuer die Bausteine des Frameworks (Datumsauswahl, Vorlesen).
+  # Die App-Texte kommen aus lib/i18n, nicht aus generiertem Code.
+  flutter_localizations:
+    sdk: flutter
   axiom_core:
     path: ../axiom_core
   axiom_data:

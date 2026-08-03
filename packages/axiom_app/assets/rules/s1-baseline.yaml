@@ -12,11 +12,16 @@
 
 - id: R-001
   title: "Check-in Morgen"
+  title_en: "Morning check-in"
   deficit: D1
   rationale: >
     Ohne regelmäßige Zustandsdaten ist der StateVector blind und jede
     spätere Regel rät. Der Morgen-Check-in verankert den Tagesstart und
     nutzt die Zuverlässigkeit zeitgetriggerter Prompts bei diesem Profil.
+  rationale_en: >
+    Without regular state data the state vector is blind and every later
+    rule is guessing. The morning check-in anchors the start of the day and
+    uses the reliability of time-triggered prompts in this profile.
   when:
     all:
       - time_between: ["08:45", "09:30"]
@@ -31,11 +36,16 @@
 
 - id: R-002
   title: "Check-in Mittag"
+  title_en: "Midday check-in"
   deficit: D1
   rationale: >
     Ein einzelner Messpunkt pro Tag verdeckt den Tagesverlauf. Der
     Mittags-Check-in liefert die Daten für das circadiane Profil, das
     später capacity moduliert.
+  rationale_en: >
+    A single reading per day hides the shape of the day. The midday
+    check-in supplies the data for the circadian profile that later modulates
+    capacity.
   when:
     all:
       - time_between: ["13:45", "14:30"]
@@ -50,11 +60,16 @@
 
 - id: R-003
   title: "Check-in Abend + Kompensationsaufwand"
+  title_en: "Evening check-in + compensation effort"
   deficit: D1
   rationale: >
     Der wichtigste Messpunkt. Kompensationsaufwand und Erholungsqualität
     sind die beiden Kernsignale des Load Monitors — und die einzigen, die
     ein hochkompensiertes System vor dem Bruch warnen können.
+  rationale_en: >
+    The most important reading. Compensation effort and recovery quality
+    are the two core signals of the load monitor — and the only ones that can
+    warn a highly compensated system before it breaks.
   when:
     all:
       - time_between: ["20:45", "21:45"]
@@ -73,6 +88,7 @@
 
 - id: R-010
   title: "Meta-Work-Budget erschöpft"
+  title_en: "Meta-work budget used up"
   deficit: D3
   rationale: >
     Der Systemizing-Drive findet in einem selbstgebauten Regelsystem sein
@@ -80,6 +96,11 @@
     die Aufgabe, für die es gebaut wurde. Ohne harte Grenze wird AXIOM
     selbst zum Symptom. Erfassung zählt nicht mit — nur Konfiguration,
     Auswertung und Herumschauen.
+  rationale_en: >
+    A self-built rule system is the perfect target for the systemizing
+    drive. Tuning the system is always more stimulating than the task it was
+    built for. Without a hard limit AXIOM becomes the symptom. Capture does
+    not count towards it — only configuration, analysis and browsing.
   when:
     minutes_since: { event: meta_usage, lt: 1 }
   then:

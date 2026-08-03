@@ -23,6 +23,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 /// Die vier Körpersignale, die am häufigsten übersehen werden.
 enum BodySignal {
@@ -71,7 +72,7 @@ class _BodyStripState extends ConsumerState<BodyStrip> {
           Expanded(
             child: Semantics(
               button: true,
-              label: '${signal.label} erledigt',
+              label: context.t('{0} erledigt', [signal.label]),
               child: GestureDetector(
                 onTap: () => _ack(signal),
                 behavior: HitTestBehavior.opaque,
@@ -180,14 +181,13 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SCHLAF', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('SCHLAF'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
-            Text('Wie lang, wie gut?',
+            Text(context.t('Wie lang, wie gut?'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.xs),
             Text(
-              'Der stärkste einzelne Einfluss auf die Kapazität von heute. '
-              'Grob geschätzt reicht.',
+              context.t('Der stärkste einzelne Einfluss auf die Kapazität von heute. Grob geschätzt reicht.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.xl),
@@ -196,7 +196,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
               children: [
                 Expanded(
                   child: _TimeButton(
-                    label: 'INS BETT',
+                    label: context.t('INS BETT'),
                     value: _bedAt,
                     onChanged: (v) => setState(() => _bedAt = v),
                   ),
@@ -204,7 +204,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
                 const SizedBox(width: Space.md),
                 Expanded(
                   child: _TimeButton(
-                    label: 'AUF',
+                    label: context.t('AUF'),
                     value: _wakeAt,
                     onChanged: (v) => setState(() => _wakeAt = v),
                   ),
@@ -214,7 +214,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             const SizedBox(height: Space.md),
             Center(
               child: Text(
-                '${hours.toStringAsFixed(1)} Stunden',
+                context.t('{0} Stunden', [hours.toStringAsFixed(1)]),
                 style: TextStyle(
                   fontFamily: Fonts.mono,
                   fontSize: 22,
@@ -225,7 +225,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             ),
             const SizedBox(height: Space.xl),
 
-            Text('Hat es getragen?',
+            Text(context.t('Hat es getragen?'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Row(
@@ -260,21 +260,21 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('gar nicht', style: monoStyle(context, size: 10.5)),
-                Text('vollständig', style: monoStyle(context, size: 10.5)),
+                Text(context.t('gar nicht'), style: monoStyle(context, size: 10.5)),
+                Text(context.t('vollständig'), style: monoStyle(context, size: 10.5)),
               ],
             ),
 
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Eintragen'),
+              child: Text(context.t('Eintragen')),
             ),
             const SizedBox(height: Space.sm),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Überspringen'),
+                child: Text(context.t('Überspringen')),
               ),
             ),
           ],
@@ -342,7 +342,10 @@ abstract final class SleepGate {
   static const int alarmWindDown = 10;
   static const int alarmSleepLog = 11;
 
+  /// [language] wird durchgereicht statt aus dem Kontext geholt: Diese
+  /// Texte landen in einer Benachrichtigung, und die entsteht ohne Widget.
   static Future<void> schedule({
+    AppLanguage language = AppLanguage.de,
     int windDownHour = 22,
     int windDownMinute = 30,
     int logHour = 8,
@@ -358,8 +361,9 @@ abstract final class SleepGate {
     await AndroidBridge.scheduleExact(
       id: alarmWindDown,
       at: windDown,
-      title: 'Abendgrenze',
-      body: 'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.',
+      title: translate(language, 'Abendgrenze'),
+      body: translate(language,
+          'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.'),
       channel: 'axiom_nudge',
     );
 
@@ -368,8 +372,8 @@ abstract final class SleepGate {
     await AndroidBridge.scheduleExact(
       id: alarmSleepLog,
       at: log,
-      title: 'Schlaf eintragen',
-      body: 'Zwei Zeiten, eine Einschätzung.',
+      title: translate(language, 'Schlaf eintragen'),
+      body: translate(language, 'Zwei Zeiten, eine Einschätzung.'),
       channel: 'axiom_nudge',
     );
   }

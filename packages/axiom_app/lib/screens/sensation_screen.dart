@@ -20,6 +20,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import '../i18n/i18n.dart';
 
 class SensationScreen extends ConsumerWidget {
   const SensationScreen({super.key});
@@ -30,7 +31,7 @@ class SensationScreen extends ConsumerWidget {
     final channels = ref.watch(channelsProvider).value ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reiz')),
+      appBar: AppBar(title: Text(context.t('Reiz'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -48,7 +49,7 @@ class SensationScreen extends ConsumerWidget {
             ],
 
             const SizedBox(height: Space.xl),
-            SectionLabel('Kanäle · ${channels.length}'),
+            SectionLabel(context.t('Kanäle · {0}', [channels.length])),
             for (final channel in channels)
               Padding(
                 padding: const EdgeInsets.only(bottom: Space.sm),
@@ -58,14 +59,12 @@ class SensationScreen extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () => _editChannel(context, ref, null),
               icon: Icon(Icons.add, size: 18, color: context.axiom.signal),
-              label: const Text('Eigenen Kanal anlegen'),
+              label: Text(context.t('Eigenen Kanal anlegen')),
             ),
 
             const SizedBox(height: Space.xl),
             Text(
-              'Was hier fehlt, deckst du sonst woanders. Trag ein, was bei '
-              'dir wirklich wirkt — auch wenn es etwas kostet. Gezählt wird '
-              'es ohnehin.',
+              context.t('Was hier fehlt, deckst du sonst woanders. Trag ein, was bei dir wirklich wirkt — auch wenn es etwas kostet. Gezählt wird es ohnehin.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -102,15 +101,14 @@ class _NeedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InstrumentBar(
-            label: 'Reizbedarf',
+            label: context.t('Reizbedarf'),
             value: need,
             color: p.caution,
             reading: switch (need) {
-              >= 85 => 'Hoch. Was jetzt nicht geplant wird, passiert '
-                  'ungeplant.',
-              >= 70 => 'Deutlich. Ein Slot wäre fällig.',
-              >= 40 => 'Normal.',
-              _ => 'Gedeckt.',
+              >= 85 => context.t('Hoch. Was jetzt nicht geplant wird, passiert ungeplant.'),
+              >= 70 => context.t('Deutlich. Ein Slot wäre fällig.'),
+              >= 40 => context.t('Normal.'),
+              _ => context.t('Gedeckt.'),
             },
             breakdown: snapshot.breakdown['sensation_need'] ?? const [],
             confidence: snapshot.state.confidenceOf('sensation_need'),
@@ -132,7 +130,7 @@ class _BudgetCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('VERDIENT', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('VERDIENT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -145,16 +143,14 @@ class _BudgetCard extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     color: budget.hasCredit ? p.calm : p.inkDim,
                   )),
-              Text(' min offen', style: monoStyle(context, size: 13)),
+              Text(context.t(' min offen'), style: monoStyle(context, size: 13)),
             ],
           ),
           const SizedBox(height: Space.md),
           Text(
             budget.hasCredit
-                ? 'Aus konzentrierter Arbeit heute. Der Tausch ist der '
-                    'einzige, den dieses Belohnungssystem zuverlässig annimmt.'
-                : 'Noch nichts verdient heute. Ein Slot geht trotzdem — '
-                    'er wird nur anders gezählt.',
+                ? context.t('Aus konzentrierter Arbeit heute. Der Tausch ist der einzige, den dieses Belohnungssystem zuverlässig annimmt.')
+                : context.t('Noch nichts verdient heute. Ein Slot geht trotzdem — er wird nur anders gezählt.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -176,18 +172,17 @@ class _SuggestionCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('VORSCHLAG', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('VORSCHLAG'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(channel.label,
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: Space.sm),
-          Text('${channel.typical.inMinutes} min · Intensität '
-              '${channel.intensity}/5',
+          Text(context.t('{0} min · Intensität {1}/5', [channel.typical.inMinutes, channel.intensity]),
               style: monoStyle(context, size: 12)),
           const SizedBox(height: Space.xl),
           FilledButton(
             onPressed: () => _log(context, ref, channel, planned: true),
-            child: const Text('Jetzt einplanen'),
+            child: Text(context.t('Jetzt einplanen')),
           ),
         ],
       ),
@@ -228,15 +223,14 @@ class _ChannelRow extends ConsumerWidget {
                 Text(channel.label,
                     style: Theme.of(context).textTheme.bodyLarge),
                 Text(
-                  '${channel.typical.inMinutes} min'
-                  '${channel.hasCost ? " · kostet etwas" : ""}',
+                  context.t('{0} min{1}', [channel.typical.inMinutes, channel.hasCost ? context.t(' · kostet etwas') : ""]),
                   style: monoStyle(context, size: 10.5),
                 ),
               ],
             ),
           ),
           IconButton(
-            tooltip: 'War schon',
+            tooltip: context.t('War schon'),
             icon: Icon(Icons.history, size: 18, color: p.inkDim),
             onPressed: () => _log(context, ref, channel, planned: false),
           ),
@@ -264,8 +258,8 @@ Future<void> _log(
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(planned
-          ? '${channel.label} eingeplant.'
-          : '${channel.label} notiert.'),
+          ? context.t('{0} eingeplant.', [channel.label])
+          : context.t('{0} notiert.', [channel.label])),
       duration: const Duration(milliseconds: 1400),
     ),
   );
@@ -325,20 +319,20 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('KANAL', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('KANAL'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: 'Was wirkt bei dir wirklich?',
+              decoration: InputDecoration(
+                hintText: context.t('Was wirkt bei dir wirklich?'),
               ),
             ),
             const SizedBox(height: Space.xl),
 
-            Text('Wie stark', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.t('Wie stark'), style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Row(
               children: [
@@ -369,7 +363,7 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
             ),
 
             const SizedBox(height: Space.xl),
-            Text('Wie lange typischerweise',
+            Text(context.t('Wie lange typischerweise'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Wrap(
@@ -377,7 +371,7 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
               children: [
                 for (final option in [5, 15, 30, 45, 60, 90])
                   ChoiceChip(
-                    label: Text('$option min'),
+                    label: Text(context.t('{0} min', [option])),
                     selected: _minutes == option,
                     onSelected: (_) => setState(() => _minutes = option),
                   ),
@@ -389,11 +383,10 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
               contentPadding: EdgeInsets.zero,
               value: _hasCost,
               onChanged: (v) => setState(() => _hasCost = v),
-              title: Text('Kostet etwas',
+              title: Text(context.t('Kostet etwas'),
                   style: Theme.of(context).textTheme.titleMedium),
               subtitle: Text(
-                'Geld, Schlaf, Gesundheit oder Beziehung. Wird nicht '
-                'verboten — nur nicht von selbst vorgeschlagen.',
+                context.t('Geld, Schlaf, Gesundheit oder Beziehung. Wird nicht verboten — nur nicht von selbst vorgeschlagen.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -401,7 +394,7 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
             const SizedBox(height: Space.lg),
             FilledButton(
               onPressed: _label.text.trim().isEmpty ? null : _save,
-              child: const Text('Kanal speichern'),
+              child: Text(context.t('Kanal speichern')),
             ),
           ],
         ),

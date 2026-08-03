@@ -18,6 +18,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class InterceptScreen extends ConsumerWidget {
   const InterceptScreen({super.key});
@@ -29,7 +30,7 @@ class InterceptScreen extends ConsumerWidget {
     final stats = ref.watch(interceptStatsProvider).value ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Bremse')),
+      appBar: AppBar(title: Text(context.t('Bremse'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge),
@@ -42,7 +43,7 @@ class InterceptScreen extends ConsumerWidget {
           if (triggers.isEmpty)
             const _EmptyTriggers()
           else ...[
-            SectionLabel('Trigger · ${triggers.length}'),
+            SectionLabel(context.t('Trigger · {0}', [triggers.length])),
             for (final trigger in triggers)
               Padding(
                 padding: const EdgeInsets.only(bottom: Space.sm),
@@ -60,13 +61,12 @@ class InterceptScreen extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () => _edit(context, null),
             icon: Icon(Icons.add, size: 18, color: context.axiom.signal),
-            label: const Text('Trigger anlegen'),
+            label: Text(context.t('Trigger anlegen')),
           ),
 
           const SizedBox(height: Space.xl),
           Text(
-            'Die Prüffragen schreibst du im ruhigen Zustand. Eine fremde '
-            'Frage klickt man weg, die eigene beantwortet man.',
+            context.t('Die Prüffragen schreibst du im ruhigen Zustand. Eine fremde Frage klickt man weg, die eigene beantwortet man.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -90,16 +90,13 @@ class _EmptyTriggers extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('KEINE TRIGGER', style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('KEINE TRIGGER'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
-          Text('Noch nichts eingerichtet.',
+          Text(context.t('Noch nichts eingerichtet.'),
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: Space.md),
           Text(
-            'Ein Trigger ist eine Handlung, die du im Moment tun willst und '
-            'am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt '
-            'AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen '
-            'Fragen.',
+            context.t('Ein Trigger ist eine Handlung, die du im Moment tun willst und am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen Fragen.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -137,7 +134,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(released ? 'WARTEZEIT VORBEI' : 'WARTEZEIT LÄUFT',
+          Text(released ? context.t('WARTEZEIT VORBEI') : context.t('WARTEZEIT LÄUFT'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(run.triggerLabel,
@@ -146,7 +143,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
 
           if (!released)
             Text(
-              '${run.remaining(now).inMinutes} min',
+              context.t('{0} min', [run.remaining(now).inMinutes]),
               style: TextStyle(
                 fontFamily: Fonts.mono,
                 fontSize: 36,
@@ -162,7 +159,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
 
           if (trigger != null && trigger.checklist.isNotEmpty) ...[
             const SizedBox(height: Space.xl),
-            Text('DEINE FRAGEN',
+            Text(context.t('DEINE FRAGEN'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             for (final (index, question) in trigger.checklist.indexed)
@@ -183,7 +180,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
                 flex: 3,
                 child: FilledButton(
                   onPressed: () => _resolve(InterceptOutcome.aborted),
-                  child: const Text('Lasse ich'),
+                  child: Text(context.t('Lasse ich')),
                 ),
               ),
               const SizedBox(width: Space.md),
@@ -196,7 +193,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: Space.sm),
                   ),
-                  child: const Text('Mache ich',
+                  child: Text(context.t('Mache ich'),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -205,7 +202,7 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
           if (!released) ...[
             const SizedBox(height: Space.sm),
             Text(
-              '„Mache ich" wird frei, wenn die Wartezeit um ist.',
+              context.t('„Mache ich" wird frei, wenn die Wartezeit um ist.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -306,9 +303,8 @@ class _TriggerRow extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   trigger.releaseAt != null
-                      ? 'Freigabe ${trigger.releaseAt}'
-                      : '${trigger.cooldown.inMinutes} min warten'
-                          '${hold == null ? "" : " · ${(hold * 100).round()} % gehalten"}',
+                      ? context.t('Freigabe {0}', [trigger.releaseAt])
+                      : context.t('{0} min warten{1}', [trigger.cooldown.inMinutes, hold == null ? "" : " · ${(hold * 100).round()} % gehalten"]),
                   style: monoStyle(context,
                       size: 10.5,
                       color: stats?.needsReview == true ? p.caution : p.inkFaint),
@@ -317,7 +313,7 @@ class _TriggerRow extends ConsumerWidget {
             ),
           ),
           if (!disabled)
-            Text('AUSLÖSEN',
+            Text(context.t('AUSLÖSEN'),
                 style: monoStyle(context,
                     size: 10, weight: FontWeight.w600, color: p.signal)),
         ],
@@ -388,20 +384,20 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('TRIGGER', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('TRIGGER'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: 'Wobei willst du eine Wartezeit?',
+              decoration: InputDecoration(
+                hintText: context.t('Wobei willst du eine Wartezeit?'),
               ),
             ),
 
             const SizedBox(height: Space.xl),
-            Text('Wie lange warten',
+            Text(context.t('Wie lange warten'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.sm),
             Wrap(
@@ -409,7 +405,7 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
               children: [
                 for (final option in [5, 15, 30, 60, 1440])
                   ChoiceChip(
-                    label: Text(option >= 1440 ? '24 h' : '$option min'),
+                    label: Text(option >= 1440 ? '24 h' : context.t('{0} min', [option])),
                     selected: _releaseAt == null && _minutes == option,
                     onSelected: (_) => setState(() {
                       _minutes = option;
@@ -417,7 +413,7 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
                     }),
                   ),
                 ChoiceChip(
-                  label: const Text('bis 09:00'),
+                  label: Text(context.t('bis 09:00')),
                   selected: _releaseAt == '09:00',
                   onSelected: (_) => setState(() => _releaseAt = '09:00'),
                 ),
@@ -425,17 +421,16 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
             ),
             const SizedBox(height: Space.sm),
             Text(
-              'Für Nachtentscheidungen ist „bis 09:00" das Wirksamste — was '
-              'um eins dringend wirkt, sieht um neun anders aus.',
+              context.t('Für Nachtentscheidungen ist „bis 09:00" das Wirksamste — was um eins dringend wirkt, sieht um neun anders aus.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
 
             const SizedBox(height: Space.xl),
-            Text('Deine Prüffragen',
+            Text(context.t('Deine Prüffragen'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: Space.xs),
             Text(
-              'Ohne mindestens eine Frage kein Trigger. Sie ist der Vertrag.',
+              context.t('Ohne mindestens eine Frage kein Trigger. Sie ist der Vertrag.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.md),
@@ -465,8 +460,8 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
                     controller: _question,
                     textCapitalization: TextCapitalization.sentences,
                     onSubmitted: (_) => _addQuestion(),
-                    decoration: const InputDecoration(
-                      hintText: 'Eigene Frage…',
+                    decoration: InputDecoration(
+                      hintText: context.t('Eigene Frage…'),
                     ),
                   ),
                 ),
@@ -479,7 +474,7 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
             ),
 
             const SizedBox(height: Space.md),
-            Text('ODER EINE VORLAGE',
+            Text(context.t('ODER EINE VORLAGE'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             Wrap(
@@ -499,7 +494,7 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: _canSave ? _save : null,
-              child: const Text('Trigger speichern'),
+              child: Text(context.t('Trigger speichern')),
             ),
             if (widget.existing != null) ...[
               const SizedBox(height: Space.sm),
@@ -511,7 +506,7 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
                     refreshAxiom(ref);
                     if (context.mounted) Navigator.of(context).pop();
                   },
-                  child: const Text('Trigger entfernen'),
+                  child: Text(context.t('Trigger entfernen')),
                 ),
               ),
             ],

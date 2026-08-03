@@ -124,7 +124,27 @@ final class YamlRuleSource implements RuleSource {
         exponentialBackoff: cooldown['backoff']?.toString() == 'exponential',
       ),
       enabled: node['enabled'] is bool ? node['enabled'] as bool : true,
+      titleTranslations: _translations(node, 'title'),
+      rationaleTranslations: _translations(node, 'rationale'),
     );
+  }
+
+  /// Uebersetzungen aus `title_en`, `rationale_en` und so weiter.
+  ///
+  /// Deutsch steht ohne Suffix da und ist die Quelle. Ein Suffix wird als
+  /// Sprachcode gelesen, ohne Liste erlaubter Sprachen — eine weitere Sprache
+  /// soll nichts als eine YAML-Zeile kosten.
+  static Map<String, String> _translations(YamlMap node, String field) {
+    final result = <String, String>{};
+    for (final entry in node.entries) {
+      final key = entry.key.toString();
+      if (!key.startsWith('${field}_')) continue;
+      final code = key.substring(field.length + 1);
+      final value = entry.value?.toString().trim() ?? '';
+      if (code.isEmpty || value.isEmpty) continue;
+      result[code] = value;
+    }
+    return result;
   }
 }
 

@@ -18,6 +18,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
   const ChannelsScreen({super.key});
@@ -44,21 +45,19 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     final snapshot = ref.watch(snapshotProvider).value;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Erfassen')),
+      appBar: AppBar(title: Text(context.t('Erfassen'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge),
         children: [
           Text(
-            'Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser '
-            'Zeit nicht festgehalten ist, ist weg. Deshalb gibt es mehrere '
-            'Wege — such dir den, der bei dir wirklich funktioniert.',
+            context.t('Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht festgehalten ist, ist weg. Deshalb gibt es mehrere Wege — such dir den, der bei dir wirklich funktioniert.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Space.xl),
 
           // ── Dauerhafte Anzeige ───────────────────────────────────────
-          const SectionLabel('Dauerhafte Anzeige'),
+          SectionLabel(context.t('Dauerhafte Anzeige')),
           Panel(
             accent: _presence ? p.calm.withValues(alpha: 0.45) : null,
             child: Column(
@@ -67,7 +66,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Im Benachrichtigungsbereich bleiben',
+                      child: Text(context.t('Im Benachrichtigungsbereich bleiben'),
                           style: Theme.of(context).textTheme.titleMedium),
                     ),
                     Switch(
@@ -80,16 +79,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                 ),
                 const SizedBox(height: Space.sm),
                 Text(
-                  'Zeigt die nächste Handlung dauerhaft — auch auf dem '
-                  'Sperrbildschirm. Mit einem Tipp auf „Erfassen" tippst du '
-                  'direkt in die Benachrichtigung, ohne zu entsperren und '
-                  'ohne die App zu öffnen.',
+                  context.t('Zeigt die nächste Handlung dauerhaft — auch auf dem Sperrbildschirm. Mit einem Tipp auf „Erfassen" tippst du direkt in die Benachrichtigung, ohne zu entsperren und ohne die App zu öffnen.'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: Space.md),
                 Text(
-                  'Der schnellste Weg, den das Gerät hergibt: zwei Sekunden '
-                  'statt zehn.',
+                  context.t('Der schnellste Weg, den das Gerät hergibt: zwei Sekunden statt zehn.'),
                   style: monoStyle(context, size: 11, color: p.signal),
                 ),
               ],
@@ -97,86 +92,67 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
           ),
 
           const SizedBox(height: Space.xl),
-          const SectionLabel('Eingerichtet'),
-          const _ChannelCard(
+          SectionLabel(context.t('Eingerichtet')),
+          _ChannelCard(
             icon: Icons.add_circle_outline,
-            title: 'Knopf in der App',
-            body: 'Unten rechts, immer sichtbar. Feld ist sofort aktiv, '
-                'Tastatur offen.',
+            title: context.t('Knopf in der App'),
+            body: context.t('Unten rechts, immer sichtbar. Feld ist sofort aktiv, Tastatur offen.'),
             ready: true,
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.tune,
-            title: 'Schnelleinstellung',
-            body: 'Herunterwischen, tippen, schreiben. Funktioniert aus '
-                'jeder App heraus.',
+            title: context.t('Schnelleinstellung'),
+            body: context.t('Herunterwischen, tippen, schreiben. Funktioniert aus jeder App heraus.'),
             ready: true,
-            hint: 'Falls nicht sichtbar: Schnelleinstellungen aufziehen → '
-                'Stift-Symbol → „AXIOM erfassen" nach oben ziehen.',
+            hint: context.t('Falls nicht sichtbar: Schnelleinstellungen aufziehen → Stift-Symbol → „AXIOM erfassen" nach oben ziehen.'),
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.widgets_outlined,
-            title: 'Homescreen-Widget',
-            body: 'Zeigt die nächste Handlung und die Kapazität. Tippen auf '
-                '„ERFASSEN" springt direkt ins Eingabefeld.',
+            title: context.t('Homescreen-Widget'),
+            body: context.t('Zeigt die nächste Handlung und die Kapazität. Tippen auf „ERFASSEN" springt direkt ins Eingabefeld.'),
             ready: true,
-            hint: 'Langes Tippen auf den Homescreen → Widgets → AXIOM.',
+            hint: context.t('Langes Tippen auf den Homescreen → Widgets → AXIOM.'),
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.share_outlined,
-            title: 'Aus anderen Apps teilen',
-            body: 'Text markieren, teilen, AXIOM wählen. AXIOM steht in der '
-                'oberen Reihe des Teilen-Blatts, nicht in der App-Liste '
-                'darunter — immer an derselben Stelle.',
+            title: context.t('Aus anderen Apps teilen'),
+            body: context.t('Text markieren, teilen, AXIOM wählen. AXIOM steht in der oberen Reihe des Teilen-Blatts, nicht in der App-Liste darunter — immer an derselben Stelle.'),
             ready: true,
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.touch_app_outlined,
-            title: 'Langes Tippen auf das App-Symbol',
-            body: 'Erfassen, Check-in und Fokus direkt vom Startbildschirm.',
+            title: context.t('Langes Tippen auf das App-Symbol'),
+            body: context.t('Erfassen, Check-in und Fokus direkt vom Startbildschirm.'),
             ready: true,
           ),
 
           const SizedBox(height: Space.xl),
-          const SectionLabel('Einmal einrichten'),
-          const _ChannelCard(
+          SectionLabel(context.t('Einmal einrichten')),
+          _ChannelCard(
             icon: Icons.edit_outlined,
-            title: 'S-Pen',
-            body: 'AXIOM meldet sich beim System als Notiz-App an. Damit '
-                'erscheint es beim Doppeltipp mit dem Stift und in der '
-                'Schnelleinstellung „Notiz".',
+            title: context.t('S-Pen'),
+            body: context.t('AXIOM meldet sich beim System als Notiz-App an. Damit erscheint es beim Doppeltipp mit dem Stift und in der Schnelleinstellung „Notiz".'),
             ready: false,
-            hint: 'Zusätzlich in Samsung: Einstellungen → Erweiterte '
-                'Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. '
-                'Screen-off-Memos landen weiterhin in Samsung Notes — dafür '
-                'gibt es keine offene Schnittstelle.',
+            hint: context.t('Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.'),
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.mic_none_outlined,
-            title: 'Sprache',
-            body: 'AXIOM ist als Notiz-Fähigkeit angemeldet. „Hey Google, '
-                'Notiz in AXIOM" öffnet die Erfassung.',
+            title: context.t('Sprache'),
+            body: context.t('AXIOM ist als Notiz-Fähigkeit angemeldet. „Hey Google, Notiz in AXIOM" öffnet die Erfassung.'),
             ready: false,
-            hint: 'Bixby: Routinen → Meine Routinen → Aktion hinzufügen → '
-                'App öffnen → AXIOM. Dort lässt sich auch ein Sprachbefehl '
-                'hinterlegen.',
+            hint: context.t('Bixby: Routinen → Meine Routinen → Aktion hinzufügen → App öffnen → AXIOM. Dort lässt sich auch ein Sprachbefehl hinterlegen.'),
           ),
-          const _ChannelCard(
+          _ChannelCard(
             icon: Icons.route_outlined,
-            title: 'Samsung Modi und Routinen',
-            body: 'AXIOM sendet Signale, auf die Routinen reagieren können: '
-                'Fokus an und aus, Abendgrenze, Erhaltungsmodus.',
+            title: context.t('Samsung Modi und Routinen'),
+            body: context.t('AXIOM sendet Signale, auf die Routinen reagieren können: Fokus an und aus, Abendgrenze, Erhaltungsmodus.'),
             ready: false,
-            hint: 'Routinen → Wenn → Anderes → Broadcast empfangen → '
-                'axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, '
-                'axiom.L3_ENTER',
+            hint: context.t('Routinen → Wenn → Anderes → Broadcast empfangen → axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER'),
           ),
 
           const SizedBox(height: Space.xl),
           Text(
-            'Kein Weg ist Pflicht. Der beste ist der, den du tatsächlich '
-            'nutzt — welcher das ist, steht nach der Baseline in der '
-            'Auswertung.',
+            context.t('Kein Weg ist Pflicht. Der beste ist der, den du tatsächlich nutzt — welcher das ist, steht nach der Baseline in der Auswertung.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -191,7 +167,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
           'AXIOM';
       await AndroidBridge.startPresence(
         headline: headline,
-        detail: 'Tippen zum Erfassen',
+        detail: context.t('Tippen zum Erfassen'),
       );
     } else {
       await AndroidBridge.stopPresence();

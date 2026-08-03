@@ -13,12 +13,14 @@ library;
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/baseline_card.dart';
 import '../design/widgets/instruments.dart';
+import '../i18n/i18n.dart';
 import '../platform/health_sync.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
@@ -59,7 +61,7 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
     final p = context.axiom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('System')),
+      appBar: AppBar(title: Text(context.t('System'))),
       body: runtime.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -76,7 +78,7 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
             children: [
               _BudgetCard(used: used),
               const SizedBox(height: Space.xl),
-              const SectionLabel('Eichung'),
+              SectionLabel(context.t('Eichung')),
               _BaselineSection(
                 ungauged: rt.rules
                     .where((r) =>
@@ -91,7 +93,7 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
                 _IssuesCard(issues: rt.ruleIssues),
               ],
               const SizedBox(height: Space.xl),
-              SectionLabel('Regelwerk · ${rt.rules.length}'),
+              SectionLabel(context.t('Regelwerk · {0}', [rt.rules.length])),
               for (final rule in rt.rules)
                 _RuleTile(
                   rule: rule,
@@ -100,62 +102,64 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
                   stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
                 ),
               const SizedBox(height: Space.xl),
-              const SectionLabel('Grenzen'),
+              SectionLabel(context.t('Grenzen')),
               Panel(
                 child: Column(
                   children: [
                     _Limit(
-                        label: 'Interventionen pro Tag',
+                        label: context.t('Interventionen pro Tag'),
                         value: '${rt.limits.maxInterventionsPerDay}'),
                     _Limit(
-                        label: 'Meldungen pro Stunde',
+                        label: context.t('Meldungen pro Stunde'),
                         value: '${rt.limits.maxNotificationsPerHour}'),
                     _Limit(
-                        label: 'Ruhezeit',
+                        label: context.t('Ruhezeit'),
                         value: '${_hhmm(rt.limits.quietFromMinutes)}'
                             '–${_hhmm(rt.limits.quietToMinutes)}'),
                     _Limit(
-                        label: 'Mindestkonfidenz',
+                        label: context.t('Mindestkonfidenz'),
                         value: rt.limits.minConfidence.toStringAsFixed(2)),
                   ],
                 ),
               ),
               const SizedBox(height: Space.xl),
-              const SectionLabel('Datenquellen'),
+              SectionLabel(context.t('Anzeige')),
+              const _LanguageRow(),
+
+              const SizedBox(height: Space.xl),
+              SectionLabel(context.t('Datenquellen')),
               const _HealthCard(),
 
               const SizedBox(height: Space.xl),
-              const SectionLabel('Weiteres'),
+              SectionLabel(context.t('Weiteres')),
               _LinkRow(
                 icon: Icons.bolt_outlined,
-                label: 'Erfassen',
-                detail: 'Wege in die App: Widget, Benachrichtigung, Stift',
+                label: context.t('Erfassen'),
+                detail: context.t('Wege in die App: Widget, Benachrichtigung, Stift'),
                 target: const ChannelsScreen(),
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(
                 icon: Icons.history_toggle_off,
-                label: 'Vorfälle',
-                detail: 'Emotionale Spitzen festhalten und einordnen',
+                label: context.t('Vorfälle'),
+                detail: context.t('Emotionale Spitzen festhalten und einordnen'),
                 target: const SignalScreen(),
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(
                 icon: Icons.lock_outline,
-                label: 'Daten',
-                detail: 'Verschlüsselter Export, Import, Wirkfenster',
+                label: context.t('Daten'),
+                detail: context.t('Verschlüsselter Export, Import, Wirkfenster'),
                 target: const VaultScreen(),
               ),
 
               const SizedBox(height: Space.xl),
               Text(
-                'Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. '
-                'Neue Regeln laufen mindestens sieben Tage stumm mit '
-                '(log_only), bevor sie etwas sagen dürfen.',
+                context.t('Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. Neue Regeln laufen mindestens sieben Tage stumm mit (log_only), bevor sie etwas sagen dürfen.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: Space.md),
-              Text('SCHEMA v$kSchemaVersion · ${rt.rules.length} REGELN',
+              Text(context.t('SCHEMA v{0} · {1} REGELN', [kSchemaVersion, rt.rules.length]),
                   style: monoStyle(context, size: 10.5, color: p.inkFaint)),
             ],
           );
@@ -182,7 +186,7 @@ class _BudgetCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('META-WORK-BUDGET',
+          Text(context.t('META-WORK-BUDGET'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Row(
@@ -196,22 +200,93 @@ class _BudgetCard extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     color: over ? p.caution : p.ink,
                   )),
-              Text(' / ${kMetaBudget.inMinutes} min heute',
+              Text(context.t(' / {0} min heute', [kMetaBudget.inMinutes]),
                   style: monoStyle(context, size: 13)),
             ],
           ),
           const SizedBox(height: Space.md),
           Text(
             over
-                ? 'Budget aufgebraucht. Änderungen am Regelwerk sind bis zum '
-                    'nächsten Wochen-Review gesperrt. Das ist Absicht: '
-                    'Das System zu optimieren fühlt sich an wie Arbeit, '
-                    'ist aber keine.'
-                : 'Zeit, die du im System verbringst statt im Leben. '
-                    'Erfassen zählt nicht mit.',
+                ? context.t('Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.')
+                : context.t('Zeit, die du im System verbringst statt im Leben. Erfassen zählt nicht mit.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Anzeigesprache.
+///
+/// Deutsch ist die Quelle, Englisch die Uebersetzung. Regeltexte kommen aus
+/// dem YAML — fehlt dort eine Uebersetzung, steht der deutsche Satz da.
+/// Sichtbar unfertig ist besser als still falsch.
+class _LanguageRow extends ConsumerWidget {
+  const _LanguageRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(languageProvider);
+    return Panel(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg, vertical: Space.md),
+      child: Row(
+        children: [
+          Icon(Icons.translate, size: 18, color: context.axiom.inkDim),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Text(context.t('Sprache der Oberfläche'),
+                style: Theme.of(context).textTheme.bodyLarge),
+          ),
+          for (final language in AppLanguage.values)
+            Padding(
+              padding: const EdgeInsets.only(left: Space.sm),
+              child: _LanguageChip(
+                language: language,
+                selected: language == current,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageChip extends ConsumerWidget {
+  final AppLanguage language;
+  final bool selected;
+
+  const _LanguageChip({required this.language, required this.selected});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    return GestureDetector(
+      onTap: selected
+          ? null
+          : () async {
+              await HapticFeedback.selectionClick();
+              await ref.read(languageProvider.notifier).set(language);
+            },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: Space.md, vertical: Space.xs),
+        decoration: BoxDecoration(
+          color: selected ? p.signal.withValues(alpha: 0.9) : p.base,
+          borderRadius: BorderRadius.circular(Radii.control),
+          border: Border.all(color: selected ? p.signal : p.rule),
+        ),
+        child: Text(
+          language.code.toUpperCase(),
+          style: monoStyle(context,
+              size: 11,
+              weight: FontWeight.w600,
+              color: selected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : p.inkDim),
+        ),
       ),
     );
   }
@@ -239,31 +314,26 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
     final availability = ref.watch(healthAvailabilityProvider).value;
 
     final (label, body, action) = switch (availability) {
-      null => ('Wird geprüft', 'Einen Moment.', null),
+      null => (context.t('Wird geprüft'), context.t('Einen Moment.'), null),
       HealthAvailability.unavailable => (
-          'Nicht verfügbar',
-          'Auf diesem Gerät gibt es kein Health Connect. Schlaf und '
-              'Bewegung kommen weiterhin aus deiner Eingabe.',
+          context.t('Nicht verfügbar'),
+          context.t('Auf diesem Gerät gibt es kein Health Connect. Schlaf und Bewegung kommen weiterhin aus deiner Eingabe.'),
           null,
         ),
       HealthAvailability.needsUpdate => (
-          'Aktualisierung nötig',
-          'Die Systemkomponente ist älter als das, was AXIOM liest. Sie '
-              'lässt sich in den Systemeinstellungen aktualisieren.',
-          'Einstellungen öffnen',
+          context.t('Aktualisierung nötig'),
+          context.t('Die Systemkomponente ist älter als das, was AXIOM liest. Sie lässt sich in den Systemeinstellungen aktualisieren.'),
+          context.t('Einstellungen öffnen'),
         ),
       HealthAvailability.notGranted => (
-          'Nicht freigegeben',
-          'AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide '
-              'gehen in die Kapazität ein — heute nur, soweit du sie selbst '
-              'einträgst.',
+          context.t('Nicht freigegeben'),
+          context.t('AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide gehen in die Kapazität ein — heute nur, soweit du sie selbst einträgst.'),
           'Freigeben',
         ),
       HealthAvailability.ready => (
           'Verbunden',
-          'Schlaffenster und Tagesschritte werden beim Start nachgezogen. '
-              'Nur lesend, nur diese beiden, jederzeit widerrufbar.',
-          'Jetzt abgleichen',
+          context.t('Schlaffenster und Tagesschritte werden beim Start nachgezogen. Nur lesend, nur diese beiden, jederzeit widerrufbar.'),
+          context.t('Jetzt abgleichen'),
         ),
     };
 
@@ -283,7 +353,7 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
                       : p.inkDim),
               const SizedBox(width: Space.md),
               Expanded(
-                child: Text('Health Connect · $label',
+                child: Text(context.t('Health Connect · {0}', [label]),
                     style: Theme.of(context).textTheme.titleMedium),
               ),
             ],
@@ -301,14 +371,13 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
               alignment: Alignment.centerLeft,
               child: OutlinedButton(
                 onPressed: _busy ? null : () => _act(availability!),
-                child: Text(_busy ? 'Läuft' : action),
+                child: Text(_busy ? context.t('Läuft') : action),
               ),
             ),
           ],
           const SizedBox(height: Space.md),
           Text(
-            'Health Connect ist eine Schnittstelle des Geräts. Nichts davon '
-            'verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.',
+            context.t('Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.'),
             style: monoStyle(context, size: 10.5, color: p.inkFaint),
           ),
         ],
@@ -339,9 +408,8 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
       _busy = false;
       // Sachlich zaehlen, nicht loben. Auch "nichts Neues" ist ein Ergebnis.
       _lastResult = result.imported == 0
-          ? 'Nichts Neues · ${result.skipped} bereits vorhanden'
-          : '${result.sleepNights} Nächte · ${result.stepDays} Tage Schritte '
-              'übernommen';
+          ? context.t('Nichts Neues · {0} bereits vorhanden', [result.skipped])
+          : context.t('{0} Nächte · {1} Tage Schritte übernommen', [result.sleepNights, result.stepDays]);
     });
     if (result.imported > 0) refreshAxiom(ref);
   }
@@ -370,9 +438,7 @@ class _BaselineSection extends ConsumerWidget {
               const SizedBox(width: Space.sm),
               Expanded(
                 child: Text(
-                  '$ungauged aktive '
-                  '${ungauged == 1 ? "Regel läuft" : "Regeln laufen"} '
-                  'auf geschätzten Gewichten — unten markiert.',
+                  context.t('{0} aktive {1} auf geschätzten Gewichten — unten markiert.', [ungauged, ungauged == 1 ? context.t('Regel läuft') : context.t('Regeln laufen')]),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -396,13 +462,11 @@ class _IssuesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('NICHT GELADEN · ${issues.length}',
+          Text(context.t('NICHT GELADEN · {0}', [issues.length]),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(
-            'Diese Regeln wurden abgelehnt und sind nicht aktiv. '
-            'Eine stumm übersprungene Regel wäre schlimmer als ein Fehler: '
-            'Man verlässt sich auf etwas, das es nicht gibt.',
+            context.t('Diese Regeln wurden abgelehnt und sind nicht aktiv. Eine stumm übersprungene Regel wäre schlimmer als ein Fehler: Man verlässt sich auf etwas, das es nicht gibt.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.md),
@@ -487,7 +551,7 @@ class _RuleTile extends StatelessWidget {
                         color: shadow ? p.inkFaint : p.info)),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text(rule.title,
+                  child: Text(context.ruleTitle(rule),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: p.ink,
                           )),
@@ -513,7 +577,7 @@ class _RuleTile extends StatelessWidget {
                   if (followRate != null) ...[
                     const SizedBox(width: Space.sm),
                     _Tag(
-                      text: '${(followRate * 100).round()}% befolgt',
+                      text: context.t('{0}% befolgt', [(followRate * 100).round()]),
                       color: followRate < 0.4 ? p.caution : p.calm,
                     ),
                   ],
@@ -523,16 +587,16 @@ class _RuleTile extends StatelessWidget {
             children: [
               if (_isUngauged)
                 _Field(
-                  label: 'Ungeeicht',
-                  value: 'Diese Regel prüft auf Werte, deren Formelgewichte '
-                      'noch geschätzt sind. Sie kann danebenliegen, bis '
-                      'weights.yaml an echten Daten kalibriert ist.',
+                  label: context.t('Ungeeicht'),
+                  value: context.t('Diese Regel prüft auf Werte, deren Formelgewichte noch geschätzt sind. Sie kann danebenliegen, bis weights.yaml an echten Daten kalibriert ist.'),
                 ),
-              _Field(label: 'Begründung', value: rule.rationale.trim()),
-              _Field(label: 'Bedingung', value: _describe(rule.when), mono: true),
-              _Field(label: 'Aktion', value: rule.then.type.token, mono: true),
               _Field(
-                label: 'Grenzen',
+                  label: context.t('Begründung'),
+                  value: context.ruleRationale(rule).trim()),
+              _Field(label: context.t('Bedingung'), value: _describe(rule.when), mono: true),
+              _Field(label: context.t('Aktion'), value: rule.then.type.token, mono: true),
+              _Field(
+                label: context.t('Grenzen'),
                 mono: true,
                 value: 'Priorität ${rule.priority} · '
                     'Abstand ${rule.cooldown.minInterval.inMinutes} min'
@@ -541,7 +605,7 @@ class _RuleTile extends StatelessWidget {
               ),
               if (stats != null)
                 _Field(
-                  label: 'Letzte 7 Tage',
+                  label: context.t('Letzte 7 Tage'),
                   mono: true,
                   value: '${stats!.fires}× gefeuert · '
                       '${stats!.suppressed}× verdrängt · '
@@ -550,9 +614,9 @@ class _RuleTile extends StatelessWidget {
                 ),
               if (skipReason != null)
                 _Field(
-                  label: 'Gerade inaktiv',
+                  label: context.t('Gerade inaktiv'),
                   mono: true,
-                  value: _skipText(skipReason!),
+                  value: _skipText(context, skipReason!),
                 ),
             ],
           ),
@@ -561,14 +625,15 @@ class _RuleTile extends StatelessWidget {
     );
   }
 
-  static String _skipText(SkipReason reason) => switch (reason) {
-        SkipReason.disabled => 'abgeschaltet',
-        SkipReason.conditionFalse => 'Bedingung trifft nicht zu',
-        SkipReason.cooldownActive => 'Cooldown läuft',
-        SkipReason.dailyLimitReached => 'Tageslimit dieser Regel erreicht',
-        SkipReason.globalLimitReached => 'globales Tageslimit erreicht',
-        SkipReason.quietHours => 'Ruhezeit',
-        SkipReason.lowConfidence => 'Datenlage zu dünn — lieber schweigen',
+  static String _skipText(BuildContext context, SkipReason reason) =>
+      switch (reason) {
+        SkipReason.disabled => context.t('abgeschaltet'),
+        SkipReason.conditionFalse => context.t('Bedingung trifft nicht zu'),
+        SkipReason.cooldownActive => context.t('Cooldown läuft'),
+        SkipReason.dailyLimitReached => context.t('Tageslimit dieser Regel erreicht'),
+        SkipReason.globalLimitReached => context.t('globales Tageslimit erreicht'),
+        SkipReason.quietHours => context.t('Ruhezeit'),
+        SkipReason.lowConfidence => context.t('Datenlage zu dünn — lieber schweigen'),
       };
 
   /// Textform des Bedingungsbaums.

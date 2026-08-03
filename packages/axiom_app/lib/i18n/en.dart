@@ -1,0 +1,878 @@
+/// Englische Fassung. Schluessel ist der deutsche Quelltext.
+///
+/// **Der Ton ist Teil der Uebersetzung, nicht Beiwerk.** Dieselben Regeln
+/// gelten wie im Deutschen: keine Schuldsprache, kein Vergleich, keine
+/// Ausrufezeichen-Motivation. Ein Messwert bleibt ein Messwert — „capacity
+/// 34", nicht „only 34 %". Wo das Deutsche bewusst kommentarlos bleibt,
+/// bleibt es das Englische auch.
+///
+/// Platzhalter `{0}`, `{1}`, … duerfen in anderer Reihenfolge stehen als im
+/// Deutschen. Genau dafuer sind sie nummeriert.
+///
+/// Fehlt ein Eintrag, erscheint der deutsche Satz. `i18n_test` verhindert,
+/// dass es dazu kommt: Jeder uebersetzbare Text im Quelltext braucht hier
+/// eine Zeile.
+library;
+
+const Map<String, String> kEnglish = {
+  '  Stufen': '  levels',
+  ' / {0} min': ' / {0} min',
+  ' / {0} min heute': ' / {0} min today',
+  ' min offen': ' min left',
+  ' · kostet etwas': ' · has a cost',
+  ', Daten veraltet': ', data is stale',
+  ', zeigt die Begruendung': ', shows the reasoning',
+  'AKTIVIERUNGSENERGIE': 'ACTIVATION ENERGY',
+  'ANKER ÄNDERN': 'EDIT ANCHOR',
+  'AUF': 'ON',
+  'AUSLÖSEN': 'TRIGGER',
+  'AXIOM': 'AXIOM',
+  'AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, und das ganze Konzept ist wertlos.':
+      'AXIOM works to the minute. Otherwise Android puts apps to sleep — then '
+          'the reminder arrives 40 minutes late or not at all, and the whole '
+          'idea is worthless.',
+  'AXIOM ist als Notiz-Fähigkeit angemeldet. „Hey Google, Notiz in AXIOM" öffnet die Erfassung.':
+      'AXIOM is registered as a note-taking capability. “Hey Google, take a '
+          'note in AXIOM” opens capture.',
+  'AXIOM konnte nicht starten.': 'AXIOM could not start.',
+  'AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide gehen in die Kapazität ein — heute nur, soweit du sie selbst einträgst.':
+      'AXIOM reads two things: sleep windows and daily steps. Both feed '
+          'capacity — today only as far as you enter them yourself.',
+  'AXIOM meldet sich beim System als Notiz-App an. Damit erscheint es beim Doppeltipp mit dem Stift und in der Schnelleinstellung „Notiz".':
+      'AXIOM registers with the system as a note app. It then appears on a '
+          'double tap with the pen and in the “Note” quick setting.',
+  'AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.':
+      'AXIOM measures your state, applies rules you set yourself, and names '
+          'one next action. With the reasoning and the rule that produced it.',
+  'AXIOM sendet Signale, auf die Routinen reagieren können: Fokus an und aus, Abendgrenze, Erhaltungsmodus.':
+      'AXIOM sends signals that routines can react to: focus on and off, '
+          'evening cutoff, maintenance mode.',
+  'Ab 70 nichts Neues zusätzlich aufnehmen. Bestehendes eher abgeben als erweitern.':
+      'Above 70, take on nothing new. Hand existing things off rather than '
+          'adding to them.',
+  'Ab jetzt können die Formelgewichte aus deinen Messungen kommen statt aus Schätzungen. Das ist der Punkt, ab dem die Empfehlungen belastbar werden.':
+      'From here the formula weights can come from your measurements instead '
+          'of estimates. That is the point where the output becomes reliable.',
+  'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.':
+      'Wind down from here. What is open will still be open tomorrow.',
+  'Abbrechen, ohne Notiz': 'Stop without a note',
+  'Abend.': 'Evening.',
+  'Abendgrenze': 'Evening cutoff',
+  'Abgelegt': 'Filed',
+  'Akkuoptimierung aus': 'Battery optimisation off',
+  'Aktion': 'Action',
+  'Aktualisierung nötig': 'Update needed',
+  'Alle Ereignisse in eine verschlüsselte Datei. Ohne das Kennwort ist sie nicht lesbar — auch nicht von dir.':
+      'Every event into one encrypted file. Without the passphrase it cannot '
+          'be read — not by you either.',
+  'Alles Offene braucht mehr Anlauf, als heute da ist. Das ist eine Messung, keine Bewertung. Eine Aufgabe in kleinere Schritte zu zerlegen hilft mehr als Anlauf nehmen.':
+      'Everything open needs more of a run-up than today has. That is a '
+          'measurement, not a verdict. Splitting a task into smaller steps '
+          'helps more than trying harder.',
+  'Als Nächstes: {0} um {1}.': 'Next: {0} at {1}.',
+  'Anfangen': 'Start',
+  'Anzeige': 'Display',
+  'Anker': 'Anchor',
+  'Anker entfernen': 'Remove anchor',
+  'Anker setzen': 'Set anchor',
+  'Anstehend · {0}': 'Upcoming · {0}',
+  'Anziehen, Sachen suchen, Tasche packen.':
+      'Getting dressed, finding things, packing a bag.',
+  'Auf dem Desktop läuft AXIOM ohne Systemrechte. Erfassen, Check-ins und der Regelinspektor funktionieren vollständig.':
+      'On the desktop AXIOM runs without system permissions. Capture, '
+          'check-ins and the rule inspector work in full.',
+  'Auf diesem Gerät gibt es kein Health Connect. Schlaf und Bewegung kommen weiterhin aus deiner Eingabe.':
+      'This device has no Health Connect. Sleep and movement keep coming from '
+          'what you enter.',
+  'Aufgabe zerlegen': 'Split task',
+  'Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? Der Strich zeigt, wie viel Anlauf du heute hast.':
+      'Tasks sit on a scale: how hard is it to start? The line shows how much '
+          'run-up you have today.',
+  'Aus Export vom {0}.{1}. · Schema v{2}':
+      'From export of {0}/{1} · schema v{2}',
+  'Aus anderen Apps teilen': 'Share from other apps',
+  'Aus deiner Beobachtung. AXIOM schlägt hier nichts vor — das hängt von Präparat, Person und Tag ab.':
+      'From your own observation. AXIOM suggests nothing here — it depends on '
+          'the substance, the person and the day.',
+  'Aus dem, was du gerade tust, herauszukommen dauert. Der Schritt, den man im Kopf immer vergisst.':
+      'Getting out of what you are doing takes time. The step everyone leaves '
+          'out when planning in their head.',
+  'Aus konzentrierter Arbeit heute. Der Tausch ist der einzige, den dieses Belohnungssystem zuverlässig annimmt.':
+      'From focused work today. That trade is the only one this reward system '
+          'reliably accepts.',
+  'Aussteigen': 'Step out',
+  'BASELINE': 'BASELINE',
+  'BASELINE LÄUFT': 'BASELINE RUNNING',
+  'BASELINE TAG {0}': 'BASELINE DAY {0}',
+  'BASELINE VOLLSTÄNDIG': 'BASELINE COMPLETE',
+  'Baseline vollständig': 'Baseline complete',
+  'Bedingung': 'Condition',
+  'Bedingung trifft nicht zu': 'condition does not hold',
+  'Befehl kopiert.': 'Command copied.',
+  'Begrenzt — Kleines zuerst.': 'Limited — small things first.',
+  'Begründung': 'Reasoning',
+  'Bei Anlage KAP, Zeile 7': 'On form KAP, line 7',
+  'Beispiel': 'Example',
+  'Bereit.': 'Ready.',
+  'Bezeichnung, wie du sie führst': 'Name it the way you think of it',
+  'Bis dahin laufen die Regeln auf geschätzten Gewichten. Sie können danebenliegen — betroffene Regeln sind unten mit UNGEEICHT markiert.':
+      'Until then the rules run on estimated weights. They can be off — the '
+          'rules affected are marked UNCALIBRATED below.',
+  'Bixby: Routinen → Meine Routinen → Aktion hinzufügen → App öffnen → AXIOM. Dort lässt sich auch ein Sprachbefehl hinterlegen.':
+      'Bixby: Routines → My routines → Add action → Open app → AXIOM. A voice '
+          'command can be stored there too.',
+  'Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, es in kleinere Schritte zu zerlegen, bis ein Teil links landet.':
+      'If something important stays right of the line, AXIOM suggests '
+          'splitting it until one piece lands on the left.',
+  'Bremse': 'Brake',
+  'Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.':
+      'Budget used up. Rule changes are locked until the next weekly review. '
+          'That is deliberate: tuning the system feels like work but is not.',
+  'CHECK-IN': 'CHECK-IN',
+  'Check-in': 'Check-in',
+  'Check-in gespeichert.': 'Check-in saved.',
+  'Check-in machen': 'Do a check-in',
+  'Cooldown läuft': 'cooldown running',
+  'Cooldowns, die abgelaufen sind, ohne dass die Handlung ausgeführt wurde.':
+      'Cooldowns that ran out without the action being carried out.',
+  'DA SEIN UM': 'BE THERE AT',
+  'DANACH': 'AFTERWARDS',
+  'DATEN ALT': 'STALE DATA',
+  'DEINE FRAGEN': 'YOUR QUESTIONS',
+  'DIE ERSTEN 14 TAGE': 'THE FIRST 14 DAYS',
+  'Damals: {0}/5': 'At the time: {0}/5',
+  'Damit Erinnerungen auf die Minute kommen.':
+      'So reminders arrive to the minute.',
+  'Damit es zuverlässig läuft': 'So it runs reliably',
+  'Das Kennwort steht nirgends. Geht es verloren, ist die Datei unbrauchbar — das ist der Preis dafür, dass sie sonst niemand lesen kann.':
+      'The passphrase is stored nowhere. If it is lost, the file is unusable — '
+          'that is the price of nobody else being able to read it.',
+  'Das ist noch zu groß. Ein Schritt, der gerade so passt, passt morgen nicht mehr — dann fängt das Ganze von vorn an. Was wäre der Handgriff davor?':
+      'That is still too big. A step that only just fits today will not fit '
+          'tomorrow — and then it starts over. What is the move before it?',
+  'Das zentrale Bild': 'The central picture',
+  'Datei nicht gefunden.': 'File not found.',
+  'Daten': 'Data',
+  'Datenbank auf den Rechner holen und auswerten. Das Werkzeug schreibt nichts — es schlägt nur vor.':
+      'Pull the database onto the computer and analyse it. The tool writes '
+          'nothing — it only proposes.',
+  'Datenlage zu dünn — lieber schweigen':
+      'too little data — better to stay quiet',
+  'Datenquellen': 'Data sources',
+  'Dauerhafte Anzeige': 'Always visible',
+  'Deine Prüffragen': 'Your own questions',
+  'Der Nutzen liegt nicht im Aufschreiben, sondern im Muster: Was regelmäßig trifft, lässt sich vorbereiten.':
+      'The value is not in writing it down but in the pattern: what hits '
+          'regularly can be prepared for.',
+  'Der Rest, grob — kommt später dran': 'The rest, roughly — for later',
+  'Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.':
+      'What makes this different: it does not ask what you want to do — it '
+          'asks what state you are in. What is out of reach today is not shown '
+          'at all.',
+  'Der erste Wert ist drin. Ab jetzt sammelt AXIOM zwei Wochen lang Daten, bevor es anfängt, Empfehlungen zu geben.':
+      'The first value is in. AXIOM now collects data for two weeks before it '
+          'starts making recommendations.',
+  'Der letzte Punkt ist Pflicht. Jedes Review ohne Streichoption lässt das System nur wachsen.':
+      'The last point is mandatory. Any review without a delete option only '
+          'lets the system grow.',
+  'Der letzte Punkt ist der, den man im Kopf immer vergisst.':
+      'The last point is the one everyone forgets when planning in their head.',
+  'Der schnellste Weg, den das Gerät hergibt: zwei Sekunden statt zehn.':
+      'The fastest route this device offers: two seconds instead of ten.',
+  'Der stärkste einzelne Einfluss auf die Kapazität von heute. Grob geschätzt reicht.':
+      'The single strongest influence on today’s capacity. A rough estimate is '
+          'enough.',
+  'Deutlich. Ein Reiz-Slot wäre fällig.': 'Marked. A stimulation slot is due.',
+  'Deutlich. Ein Slot wäre fällig.': 'Marked. A slot is due.',
+  'Die Einordnung kommt in etwa zwölf Stunden.':
+      'The review comes in about twelve hours.',
+  'Die Einschätzung im Moment und im Rückblick liegen bei dir nah beieinander.':
+      'Your reading in the moment and in hindsight sit close together.',
+  'Die Formelgewichte stammen aus deinen Daten.':
+      'The formula weights come from your data.',
+  'Die Gewichte können jetzt geeicht werden.':
+      'The weights can be calibrated now.',
+  'Die Kompensationslast liegt im gewohnten Bereich.':
+      'Compensation load is in its usual range.',
+  'Die Last ist seit über zwei Wochen auf diesem Niveau. AXIOM misst nur — für die Einordnung ist ärztliche oder psychotherapeutische Abklärung der richtige Weg.':
+      'Load has been at this level for over two weeks. AXIOM only measures — '
+          'medical or psychotherapeutic assessment is the right way to '
+          'interpret it.',
+  'Die Last steigt seit einigen Tagen. Nach außen noch unauffällig — genau deshalb steht es hier.':
+      'Load has been rising for a few days. Still invisible from outside — '
+          'which is exactly why it is shown here.',
+  'Die Last steigt seit einigen Tagen. Noch unauffällig nach außen — genau deshalb wird sie hier angezeigt.':
+      'Load has been rising for a few days. Still invisible from outside — '
+          'which is exactly why it is shown here.',
+  'Die Prüffragen schreibst du im ruhigen Zustand. Eine fremde Frage klickt man weg, die eigene beantwortet man.':
+      'You write these questions while calm. Someone else’s question gets '
+          'dismissed; your own gets answered.',
+  'Die Restzeit steht als laufende Benachrichtigung im Benachrichtigungsbereich.':
+      'The remaining time sits in the notification shade as an ongoing '
+          'notification.',
+  'Die Restzeit steht in der Statusleiste, auf dem Sperrbildschirm und in der Now Bar. Du musst hier nicht nachsehen.':
+      'The remaining time sits in the status bar, on the lock screen and in '
+          'the Now bar. You do not have to look here.',
+  'Die Systemkomponente ist älter als das, was AXIOM liest. Sie lässt sich in den Systemeinstellungen aktualisieren.':
+      'The system component is older than what AXIOM reads. It can be updated '
+          'in system settings.',
+  'Die Vorlaufzeit ist die Zeit, die im Kalender nicht steht: aussteigen, fertigmachen, Puffer. Sie erklärt, warum ein Termin mehr kostet als seine Dauer.':
+      'Lead time is the time the calendar never shows: stepping out, getting '
+          'ready, buffer. It explains why an appointment costs more than its '
+          'duration.',
+  'Die Vorschläge im nächsten Wochen-Review durchgehen. Nicht blind übernehmen — jeder Wert soll erklärbar sein.':
+      'Go through the proposals in the next weekly review. Do not adopt them '
+          'blindly — every value should be explainable.',
+  'Die\nKapazitätslinie.': 'The\ncapacity line.',
+  'Diese Regel prüft auf Werte, deren Formelgewichte noch geschätzt sind. Sie kann danebenliegen, bis weights.yaml an echten Daten kalibriert ist.':
+      'This rule tests values whose formula weights are still estimates. It '
+          'can be off until weights.yaml is calibrated against real data.',
+  'Diese Regeln wurden abgelehnt und sind nicht aktiv. Eine stumm übersprungene Regel wäre schlimmer als ein Fehler: Man verlässt sich auf etwas, das es nicht gibt.':
+      'These rules were rejected and are not active. A silently skipped rule '
+          'would be worse than an error: you would rely on something that does '
+          'not exist.',
+  'Diese Werte sind Messungen aus deinen eigenen Angaben und Gerätedaten. Sie sind keine Diagnose und kein Befund. AXIOM ersetzt weder ärztliche noch psychotherapeutische Behandlung.':
+      'These values are measurements from your own entries and device data. '
+          'They are not a diagnosis or a finding. AXIOM replaces neither '
+          'medical nor psychotherapeutic treatment.',
+  'Dieses Modul hält fest und zeigt Muster. Es deutet nichts und behandelt nichts. Wenn dich etwas davon länger belastet, ist das ein Grund, mit einer Fachperson zu sprechen — nicht mit einer App.':
+      'This module records and shows patterns. It interprets nothing and '
+          'treats nothing. If any of it weighs on you for a while, that is a '
+          'reason to talk to a professional — not to an app.',
+  'Dosis (optional)': 'Dose (optional)',
+  'Drei kurze Check-ins am Tag, dazu Schlaf und Bewegung vom Gerät. Zusammen ergibt das sechs Messwerte.':
+      'Three short check-ins a day, plus sleep and movement from the device. '
+          'Together that makes six readings.',
+  'Drei\nSystemrechte.': 'Three\npermissions.',
+  'EINGANG LEER': 'INBOX EMPTY',
+  'EINNAHME': 'INTAKE',
+  'EINORDNUNG': 'REVIEW',
+  'ERFASSEN': 'CAPTURE',
+  'ERLAUBEN': 'ALLOW',
+  'EXPORT': 'EXPORT',
+  'Eichung': 'Calibration',
+  'Eigene Frage…': 'Your own question…',
+  'Eigenen Kanal anlegen': 'Add your own channel',
+  'Ein Regelwerk,\nkeine To-do-App.': 'A rulebook,\nnot a to-do app.',
+  'Ein Satz reicht. Er spart dir beim nächsten Mal den halben Anlauf.':
+      'One sentence is enough. It saves you half the run-up next time.',
+  'Ein Stichwort, wenn du magst (optional)': 'A keyword if you like (optional)',
+  'Ein Trigger ist eine Handlung, die du im Moment tun willst und am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen Fragen.':
+      'A trigger is an action you want to take right now and often no longer '
+          'want the next day. Instead of blocking it, AXIOM puts a waiting '
+          'period in between — and asks you your own questions.',
+  'Ein Vorfall wartet auf Einordnung': 'One incident is waiting for review',
+  'Eine Handlung': 'One action',
+  'Einen Moment.': 'One moment.',
+  'Eingang': 'Inbox',
+  'Eingerichtet': 'Set up',
+  'Einmal einrichten': 'Set up once',
+  'Einmal\nkurz messen.': 'One quick\nmeasurement.',
+  'Einnahme eintragen': 'Log an intake',
+  'Einspielen': 'Import',
+  'Einstellungen öffnen': 'Open settings',
+  'Eintragen': 'Log',
+  'Emotionale Spitzen festhalten und einordnen':
+      'Record emotional spikes and review them',
+  'Energie': 'Energy',
+  'Erfassen': 'Capture',
+  'Erfassen, Check-in und Fokus direkt vom Startbildschirm.':
+      'Capture, check-in and focus straight from the home screen.',
+  'Erfasst und einsortiert': 'Captured and sorted',
+  'Erfasst.': 'Captured.',
+  'Erfasste Nutzungszeit gegen deine eigene Schätzung.':
+      'Recorded time in the app against your own estimate.',
+  'Erhaltungsmodus': 'Maintenance mode',
+  'Erhaltungsmodus. Für die nächsten Tage nur Pflicht und Erholung — auch wenn es gerade läuft.':
+      'Maintenance mode. For the next few days: obligations and recovery only '
+          '— even when it is going well.',
+  'Erhaltungsmodus. Nur Pflicht und Erholung.':
+      'Maintenance mode. Obligations and recovery only.',
+  'Erholung hat gewirkt': 'Recovery worked',
+  'Erhöht. Im Blick behalten.': 'Raised. Worth watching.',
+  'Erledigt': 'Done',
+  'Erledigte Check-ins geteilt durch geplante.':
+      'Completed check-ins divided by scheduled ones.',
+  'Erster Messpunkt': 'First reading',
+  'Etwas Körperliches, das in zwei Minuten erledigt ist. Nicht der Plan — der erste Handgriff.':
+      'Something physical that takes two minutes. Not the plan — the first '
+          'move.',
+  'Exakte Erinnerungen': 'Exact reminders',
+  'Exportiert: {0}': 'Exported: {0}',
+  'Fahrzeit': 'Travel time',
+  'Falls nicht sichtbar: Schnelleinstellungen aufziehen → Stift-Symbol → „AXIOM erfassen" nach oben ziehen.':
+      'If it is not there: pull down quick settings → pencil icon → drag '
+          '“AXIOM capture” up.',
+  'Fertig': 'Done',
+  'Fertigmachen': 'Get ready',
+  'Festhalten': 'Record',
+  'Fokus': 'Focus',
+  'Fokus beenden': 'End focus',
+  'Fokus läuft': 'Focus running',
+  'Fokus starten': 'Start focus',
+  'Fokuslast heute': 'Focus load today',
+  'Folgen, nicht Wichtigkeit.': 'Consequences, not importance.',
+  'Freigabe um {0}. Bis dahin steht die Sache still — sie läuft nicht weg.':
+      'Released at {0}. Until then it sits still — it is not going anywhere.',
+  'Freigabe {0}': 'Released {0}',
+  'Fällt weg': 'Drops out',
+  'Für Nachtentscheidungen ist „bis 09:00" das Wirksamste — was um eins dringend wirkt, sieht um neun anders aus.':
+      'For night-time decisions “until 09:00” works best — what feels urgent '
+          'at one looks different at nine.',
+  'Für alles, was dazwischenkommt.': 'For whatever comes up.',
+  'Für die nächsten Tage nur Pflicht und Erholung. Dass dieser Modus greift, ist der Zweck des Systems — nicht dein Versagen.':
+      'For the next few days: obligations and recovery only. This mode kicking '
+          'in is what the system is for.',
+  'GEEICHT': 'CALIBRATED',
+  'GESCHÜTZT': 'PROTECTED',
+  'Gab es Erhaltungsmodus-Tage? Was ging voraus?':
+      'Were there maintenance-mode days? What came before them?',
+  'Gedeckt.': 'Covered.',
+  'Geld, Schlaf, Gesundheit oder Beziehung. Wird nicht verboten — nur nicht von selbst vorgeschlagen.':
+      'Money, sleep, health or relationships. Not forbidden — just not '
+          'suggested on its own.',
+  'Gemeint sind Momente, in denen etwas unverhältnismäßig hart getroffen hat — Kritik, Zurückweisung, ein eigener Fehler. Zwei Tipps im Moment, die Einordnung kommt später.':
+      'This means moments where something landed disproportionately hard — '
+          'criticism, rejection, a mistake of your own. Two taps in the '
+          'moment; the review comes later.',
+  'Genug Daten zum Eichen.': 'Enough data to calibrate.',
+  'Geplante Slots geteilt durch alle Slots.':
+      'Planned slots divided by all slots.',
+  'Gerade inaktiv': 'Currently inactive',
+  'Gezählte Ereignisse im Zeitraum.': 'Events counted in the period.',
+  'Geändert wird erst im Wochen-Review.':
+      'Changes happen in the weekly review.',
+  'Gleicher Zustand, gleiche Regeln — immer dasselbe Ergebnis. Nichts davon ist geraten, und du kannst jederzeit nachsehen, wie ein Wert zustande kam.':
+      'Same state, same rules — always the same result. None of it is '
+          'guesswork, and you can check at any time how a value came about.',
+  'Gleitender Mittelwert aus Schlafschuld, Erholungsqualität, Kompensationsaufwand, Reizbarkeit und Rückzug.':
+      'Rolling average of sleep debt, recovery quality, compensation effort, '
+          'irritability and withdrawal.',
+  'Grenzen': 'Limits',
+  'Grob reicht. Einordnen kannst du später.':
+      'Rough is fine. You can sort it later.',
+  'Hat es getragen?': 'Did it hold?',
+  'Hat nie gefeuert. Entweder ist die Bedingung zu eng oder die Regel überflüssig.':
+      'Never fired. Either the condition is too narrow or the rule is '
+          'redundant.',
+  'Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.':
+      'Health Connect is an interface of the device. None of it leaves the '
+          'phone — AXIOM has no network permission.',
+  'Health Connect · {0}': 'Health Connect · {0}',
+  'Herunterwischen, tippen, schreiben. Funktioniert aus jeder App heraus.':
+      'Swipe down, tap, type. Works from inside any app.',
+  'Heute liegt nichts davon in Reichweite. Zerlegen hilft mehr als Anlauf nehmen.':
+      'None of it is in reach today. Splitting helps more than trying harder.',
+  'Heute liegt nichts unter der Linie.': 'Nothing sits below the line today.',
+  'Hoch. Jetzt planen, was sonst ungeplant passiert.':
+      'High. Plan now what otherwise happens unplanned.',
+  'Hoch. Was jetzt nicht geplant wird, passiert ungeplant.':
+      'High. What is not planned now happens unplanned.',
+  'Homescreen-Widget': 'Home screen widget',
+  'Häufungen · 30 Tage': 'Clusters · 30 days',
+  'IM RÜCKBLICK': 'IN HINDSIGHT',
+  'IMPORT': 'IMPORT',
+  'INS BETT': 'TO BED',
+  'Im Benachrichtigungsbereich bleiben': 'Stay in the notification shade',
+  'Im Normalbereich.': 'In the normal range.',
+  'Impulse abgefangen': 'Impulses intercepted',
+  'In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.':
+      'During this time AXIOM deliberately gives no recommendations. It only '
+          'measures. Rules built on guessed values are wrong — and an app that '
+          'is obviously wrong once does not get opened again.',
+  'In einen ersten Schritt zerlegen': 'Split into a first step',
+  'Interventionen pro Tag': 'Interventions per day',
+  'Ist die Last gesunken? Belegen, nicht behaupten.':
+      'Has load come down? Show it, do not claim it.',
+  'JETZT': 'NOW',
+  'JETZT BEENDEN': 'END NOW',
+  'Jetzt': 'Now',
+  'Jetzt abgleichen': 'Sync now',
+  'Jetzt einplanen': 'Schedule it now',
+  'Jetzt ist genug Abstand da. Zwei Fragen, dann ist es abgelegt.':
+      'There is enough distance now. Two questions, then it is filed.',
+  'Jetzt nicht': 'Not now',
+  'Jetzt nichts Neues zusätzlich aufnehmen. Bestehendes eher abgeben als erweitern.':
+      'Take on nothing new right now. Hand existing things off rather than '
+          'adding to them.',
+  'KANAL': 'CHANNEL',
+  'KAPAZITÄT {0}': 'CAPACITY {0}',
+  'KEINE ANKER': 'NO ANCHORS',
+  'KEINE TRIGGER': 'NO TRIGGERS',
+  'Kalt duschen': 'Cold shower',
+  'Kanal speichern': 'Save channel',
+  'Kanäle · {0}': 'Channels · {0}',
+  'Kapazitaetslinie. Kapazitaet {0} von 100. {1} von {2} Aufgaben sind jetzt startbar.':
+      'Capacity line. Capacity {0} out of 100. {1} of {2} tasks can be started '
+          'now.',
+  'Kapazität': 'Capacity',
+  'Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du unten erfassen.':
+      'No suggestion means nothing is needed right now. Whatever comes to '
+          'mind, you can capture it below.',
+  'Kein Weg ist Pflicht. Der beste ist der, den du tatsächlich nutzt — welcher das ist, steht nach der Baseline in der Auswertung.':
+      'No route is mandatory. The best one is the one you actually use — which '
+          'that is shows up in the review after the baseline.',
+  'Keine Cloud, kein Konto, keine Auswertung durch andere':
+      'No cloud, no account, nobody else analysing you',
+  'Keine Erinnerung, die dir Vorwürfe macht':
+      'No reminder that holds anything against you',
+  'Keine KI, die für dich entscheidet': 'No AI deciding for you',
+  'Keine Streaks, die brechen können': 'No streaks that can break',
+  'Kennwort': 'Passphrase',
+  'Kennwort, mindestens acht Zeichen': 'Passphrase, at least eight characters',
+  'Kennzahlen': 'Metrics',
+  'Knopf in der App': 'Button in the app',
+  'Kompensationslast': 'Compensation load',
+  'Konkret, nicht als Vorsatz. Optional.':
+      'Concrete, not a resolution. Optional.',
+  'Kostet etwas': 'Has a cost',
+  'Kraftaufwand für Struktur': 'Effort spent on structure',
+  'Kritisch. Nichts Neues aufnehmen.': 'Critical. Take on nothing new.',
+  'Kumulierter Aufwand, den Alltag zu strukturieren.':
+      'Accumulated effort of structuring everyday life.',
+  'Kurz durchgehen': 'Quick pass',
+  'Körper': 'Body',
+  'LETZTE EINTRÄGE': 'RECENT ENTRIES',
+  'Langes Tippen auf das App-Symbol': 'Long press on the app icon',
+  'Langes Tippen auf den Homescreen → Widgets → AXIOM.':
+      'Long press the home screen → Widgets → AXIOM.',
+  'Lasse ich': 'Letting it go',
+  'Last erhöht': 'Load raised',
+  'Last kritisch': 'Load critical',
+  'Laufendes abschließen': 'Finish what is running',
+  'Letzte 7 Tage': 'Last 7 days',
+  'Los geht’s': 'Get started',
+  'LÄUFT': 'RUNNING',
+  'LÄUFT AUF': 'RUNNING ON',
+  'Läuft': 'Running',
+  'Läuft.': 'Running.',
+  'Läuft. Benachrichtigungen sind stumm.':
+      'Running. Notifications are silenced.',
+  'Läuft…': 'Running…',
+  'META-WORK-BUDGET': 'META-WORK BUDGET',
+  'Mache ich': 'Doing it',
+  'Meldungen pro Stunde': 'Notifications per hour',
+  'Messen': 'Measure',
+  'Messpunkte': 'readings',
+  'Messpunkte erfasst': 'Readings captured',
+  'Messwerte': 'Readings',
+  'Mindestkonfidenz': 'Minimum confidence',
+  'Mit gesetztem Ziel bleibt es still, solange der Block läuft. Benachrichtigungen werden unterdrückt.':
+      'With a target set it stays quiet while the block runs. Notifications '
+          'are suppressed.',
+  'Mittag.': 'Midday.',
+  'Mitteilungen': 'Notifications',
+  'Morgen.': 'Morning.',
+  'Morgen: ein Anker, eine Aufgabe.': 'Tomorrow: one anchor, one task.',
+  'Musik, laut': 'Music, loud',
+  'März': 'March',
+  'NACHBETRACHTUNG': 'HINDSIGHT',
+  'NACHBETRACHTUNG · {0} OFFEN': 'HINDSIGHT · {0} OPEN',
+  'NEUER ANKER': 'NEW ANCHOR',
+  'NICHT GELADEN · {0}': 'NOT LOADED · {0}',
+  'NICHTS ANLIEGEND': 'NOTHING PENDING',
+  'NICHTS ERFASST': 'NOTHING CAPTURED',
+  'NICHTS IN REICHWEITE': 'NOTHING IN REACH',
+  'Nachmittag.': 'Afternoon.',
+  'Nicht freigegeben': 'Not granted',
+  'Nicht verfügbar': 'Not available',
+  'Nicht wie lang es dauert. Nur der Anfang.':
+      'Not how long it takes. Just the beginning.',
+  'Nichts Neues · {0} bereits vorhanden': 'Nothing new · {0} already there',
+  'Nichts einsortiert. Der Eingang läuft voll, und ein voller Eingang wird irgendwann gar nicht mehr geöffnet.':
+      'Nothing sorted. The inbox fills up, and a full inbox eventually stops '
+          'being opened at all.',
+  'Nichts startbar gerade. Ein Fokusblock ohne Ziel lässt sich später nicht bewerten — dann lieber ohne.':
+      'Nothing startable right now. A focus block without a target cannot be '
+          'assessed later — better to run it without one.',
+  'Nichts terminiert.': 'Nothing scheduled.',
+  'Nichts zu sortieren.': 'Nothing to sort.',
+  'Nie eine Liste zum Auswählen. Genau eine Sache, plus die Regel-Nummer, die dahintersteckt.':
+      'Never a list to choose from. Exactly one thing, plus the rule number '
+          'behind it.',
+  'Noch keine Aufgaben erfasst.': 'No tasks captured yet.',
+  'Noch keine Vorfälle.': 'No incidents yet.',
+  'Noch nicht gestartet. Sie beginnt, sobald das Onboarding abgeschlossen ist.':
+      'Not started yet. It begins once onboarding is finished.',
+  'Noch nichts eingerichtet.': 'Nothing set up yet.',
+  'Noch nichts verdient heute. Ein Slot geht trotzdem — er wird nur anders gezählt.':
+      'Nothing earned yet today. A slot still works — it is just counted '
+          'differently.',
+  'Noch wach.': 'Still awake.',
+  'Noch {0} min. Die meisten Impulse überleben diese Zeit nicht.':
+      '{0} min left. Most impulses do not survive that long.',
+  'Normal.': 'Normal.',
+  'Normalbetrieb': 'Normal operation',
+  'Notieren und beenden': 'Note it and end',
+  'Notiert. Diese Regel meldet sich seltener.':
+      'Noted. This rule will speak up less often.',
+  'Notiz wartet': 'note waiting',
+  'Notizen warten': 'notes waiting',
+  'Nächste Woche: höchstens drei Vorhaben.': 'Next week: three plans at most.',
+  'Nächte': 'nights',
+  'ODER EINE DIESER FORMEN': 'OR ONE OF THESE SHAPES',
+  'ODER EINE VORLAGE': 'OR A TEMPLATE',
+  'Offen · {0}': 'Open · {0}',
+  'Oft ein anderer als der gefühlte.':
+      'Often a different one than it felt like.',
+  'Ohne Notiz beenden': 'End without a note',
+  'Ohne gesetztes Ziel': 'No target set',
+  'Ohne gesetztes Ziel fragt AXIOM nach 45 Minuten einmal leise nach, ob das noch das Richtige ist.':
+      'With no target set, AXIOM asks once, quietly, after 45 minutes whether '
+          'this is still the right thing.',
+  'Ohne mindestens eine Frage kein Trigger. Sie ist der Vertrag.':
+      'No trigger without at least one question. The question is the contract.',
+  'Ordner auf den Tisch legen': 'Put the folder on the table',
+  'Passt nicht': 'Does not fit',
+  'Pfad kopiert.': 'Path copied.',
+  'Pfad zur .axiom-Datei': 'Path to the .axiom file',
+  'Priorität {0}': 'Priority {0}',
+  'Probelauf': 'Dry run',
+  'Puffer': 'Buffer',
+  'Puffer für emotionale Belastung.': 'Headroom for emotional load.',
+  'Raus, schnell': 'Outside, fast',
+  'Rechtfertigt AXIOM seine eigenen Kosten?':
+      'Does AXIOM justify its own cost?',
+  'Regel läuft': 'rule running',
+  'Regel {0}{1}': 'Rule {0}{1}',
+  'Regeln anwenden': 'Apply rules',
+  'Regeln laufen': 'rules running',
+  'Regeln sind Wenn-Dann-Sätze in Klartext. Du kannst jede lesen, ändern und abschalten.':
+      'Rules are if-then sentences in plain text. You can read, change and '
+          'switch off every one of them.',
+  'Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. Neue Regeln laufen mindestens sieben Tage stumm mit (log_only), bevor sie etwas sagen dürfen.':
+      'Rules live in YAML under version control. New rules run silently for at '
+          'least seven days (log_only) before they are allowed to say '
+          'anything.',
+  'Regelwerk spiegeln und neu bauen. Danach verschwinden die UNGEEICHT-Markierungen.':
+      'Mirror the rulebook and rebuild. The UNCALIBRATED markers disappear '
+          'afterwards.',
+  'Regelwerk · {0}': 'Rulebook · {0}',
+  'Regelwerk · {0} offen': 'Rulebook · {0} open',
+  'Regeländerungen gehören in dieses Zeitfenster — und nur hierher.':
+      'Rule changes belong in this window — and only here.',
+  'Regulationsreserve': 'Regulation reserve',
+  'Rein damit. Sortieren kannst du später.':
+      'Get it in. You can sort it later.',
+  'Reine Wegzeit ohne Puffer.': 'Travel time only, no buffer.',
+  'Reiz': 'Stimulation',
+  'Reizbedarf': 'Stimulation need',
+  'Reizbedarf geplant gedeckt': 'Stimulation need covered as planned',
+  'Reizhunger': 'Stimulation hunger',
+  'Review abschließen': 'Finish review',
+  'Routinen → Wenn → Anderes → Broadcast empfangen → axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER':
+      'Routines → If → Other → Receive broadcast → axiom.FOCUS_START, '
+          'axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER',
+  'Ruhezeit': 'quiet hours',
+  'Ruhig gerade.': 'Quiet right now.',
+  'S-Pen': 'S Pen',
+  'SCHEMA v{0} · {1} REGELN': 'SCHEMA v{0} · {1} RULES',
+  'SCHLAF': 'SLEEP',
+  'SO WIRD GERECHNET': 'HOW THIS IS CALCULATED',
+  'SORTIEREN': 'SORT',
+  'START FEHLGESCHLAGEN': 'STARTUP FAILED',
+  'START {0}/10': 'START {0}/10',
+  'SYSTEM': 'SYSTEM',
+  'Samsung Modi und Routinen': 'Samsung Modes and Routines',
+  'Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.':
+      'Samsung shuts down background apps aggressively. Without this exception '
+          'reminders fire unreliably.',
+  'Schlaf eintragen': 'Log sleep',
+  'Schlaffenster und Tagesschritte werden beim Start nachgezogen. Nur lesend, nur diese beiden, jederzeit widerrufbar.':
+      'Sleep windows and daily steps are pulled in at startup. Read only, just '
+          'those two, revocable at any time.',
+  'Schlafschuld': 'Sleep debt',
+  'Schließen': 'Close',
+  'Schnelleinstellung': 'Quick setting',
+  'Seit {0} min nichts getrunken oder bewegt. Kurz aufstehen kostet zwei Minuten.':
+      'Nothing to drink and no movement for {0} min. Getting up costs two '
+          'minutes.',
+  'Seit {0} min vertieft, ohne gesetztes Ziel. Ist das noch das, was du wolltest?':
+      'Deep in it for {0} min with no target set. Is this still what you '
+          'wanted?',
+  'So viel niedriger fällt ein Vorfall bei dir im Rückblick aus. Kein Trost — ein Erfahrungswert, den du beim nächsten Mal einkalkulieren kannst.':
+      'That is how much lower an incident reads for you in hindsight. Not '
+          'reassurance — a figure you can factor in next time.',
+  'Solide Mitte.': 'Solid middle.',
+  'Speichern': 'Save',
+  'Speichern & weiter': 'Save and continue',
+  'Spielt fehlende Ereignisse ein. Vorhandene bleiben unberührt — der Import ist wiederholbar, und zwei Geräte gleichen sich an, ohne dass etwas verlorengeht.':
+      'Brings in missing events. Existing ones are untouched — the import is '
+          'repeatable, and two devices converge without losing anything.',
+  'Sport, hart': 'Hard exercise',
+  'Sprache': 'Voice',
+  'Sprache der Oberfläche': 'Interface language',
+  'Spät.': 'Late.',
+  'Später': 'Later',
+  'Standort und App-Nutzung werden nicht abgefragt — die brauchen erst spätere Module, und dann fragst du selbst danach.':
+      'Location and app usage are not requested — later modules need those, '
+          'and by then you will ask for them yourself.',
+  'Steht.': 'Done.',
+  'Stimmung': 'Mood',
+  'Stufe {0}': 'Level {0}',
+  'Stärkster einzelner Modulator der Kapazität.':
+      'Single strongest modulator of capacity.',
+  'System': 'System',
+  'TAG {0}': 'DAY {0}',
+  'TRIGGER': 'TRIGGERS',
+  'Tage': 'days',
+  'Tageslimit dieser Regel erreicht': 'daily limit for this rule reached',
+  'Termin': 'Appointment',
+  'Text markieren, teilen, AXIOM wählen. AXIOM steht in der oberen Reihe des Teilen-Blatts, nicht in der App-Liste darunter — immer an derselben Stelle.':
+      'Select text, share, pick AXIOM. AXIOM sits in the top row of the share '
+          'sheet, not in the app list below it — always in the same place.',
+  'Tippen zum Erfassen': 'Tap to capture',
+  'Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du losmusst, wann du anfangen musst dich fertigzumachen, und wann Schluss ist mit dem, was du gerade tust.':
+      'Enter an appointment and AXIOM works backwards: when you have to leave, '
+          'when you have to start getting ready, and when what you are doing '
+          'has to stop.',
+  'Trigger anlegen': 'Add trigger',
+  'Trigger entfernen': 'Remove trigger',
+  'Trigger speichern': 'Save trigger',
+  'Trigger · {0}': 'Triggers · {0}',
+  'UND DANN? (OPTIONAL)': 'AND THEN? (OPTIONAL)',
+  'Ungedeckter Bedarf sucht sich den schnellsten Kanal.':
+      'Uncovered need finds the fastest channel.',
+  'Ungeeicht': 'Uncalibrated',
+  'Unsortiert · {0}': 'Unsorted · {0}',
+  'Unten rechts, immer sichtbar. Feld ist sofort aktiv, Tastatur offen.':
+      'Bottom right, always visible. The field is active immediately, keyboard '
+          'open.',
+  'Unter 70 %: Der Bedarf deckt sich überwiegend ungeplant — und ungeplant heißt meist über den schnellsten, nicht den besten Kanal.':
+      'Below 70 %: the need is mostly covered unplanned — and unplanned '
+          'usually means through the fastest channel, not the best one.',
+  'Unter 80 %: Der Zustandsvektor wird ungenau, und Regeln feuern auf veralteten Werten. Bevor etwas dazukommt, muss die Erfassung leichter werden.':
+      'Below 80 %: the state vector goes fuzzy and rules fire on stale '
+          'values. Before anything is added, capture has to get easier.',
+  'Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.':
+      'Under System → Capture you will find every route into the app: widget, '
+          'ongoing notification with direct input, quick setting, S Pen and '
+          'voice. Pick whichever actually works for you.',
+  'VERDIENT': 'EARNED',
+  'VORFALL': 'INCIDENT',
+  'VORLAUF {0} MIN': 'LEAD TIME {0} MIN',
+  'VORSCHLAG': 'SUGGESTION',
+  'Verbrauchte Konzentrationszeit seit heute früh.':
+      'Concentration time spent since this morning.',
+  'Verlauf · {0}': 'History · {0}',
+  'Verschlüsselter Export, Import, Wirkfenster':
+      'Encrypted export, import, active window',
+  'Verwerfen': 'Discard',
+  'Viel möglich heute.': 'A lot is possible today.',
+  'Vier Kanäle, getrennt einstellbar. Du kannst leise Hinweise stummschalten und wichtige durchlassen.':
+      'Four channels, set separately. You can silence quiet hints and let the '
+          'important ones through.',
+  'Vier Regler, ungefähr reicht.': 'Four sliders, roughly is fine.',
+  'Vier Regler, ungefähr reicht. Ohne einen Anfangswert kann AXIOM nichts berechnen — und würde raten.':
+      'Four sliders, roughly is fine. Without a starting value AXIOM cannot '
+          'calculate anything — it would be guessing.',
+  'Vier Regler. Ungefähr reicht.': 'Four sliders. Roughly is fine.',
+  'Vorbei.': 'Past.',
+  'Vorfall': 'Incident',
+  'Vorfälle': 'Incidents',
+  'WARTEZEIT LÄUFT': 'WAITING PERIOD RUNNING',
+  'WARTEZEIT VORBEI': 'WAITING PERIOD OVER',
+  'WARUM ES DIESE REGEL GIBT': 'WHY THIS RULE EXISTS',
+  'WAS VORHER PASSIEREN MUSS': 'WHAT HAS TO HAPPEN FIRST',
+  'WAS ZU TUN IST': 'WHAT TO DO',
+  'WIEDEREINSTIEG': 'RE-ENTRY',
+  'Wann setzt es bei dir ein?': 'When does it set in for you?',
+  'War schon': 'Already was',
+  'Wartezeit läuft': 'Waiting period running',
+  'Wartezeit vorbei': 'Waiting period over',
+  'Wartezeit vorbei. Deine Entscheidung.': 'Waiting period over. Your decision.',
+  'Was das hier ist': 'What this is',
+  'Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.':
+      'Whatever occurs to you in between lands here. You can capture from '
+          'anywhere — the button below, the quick setting or the S Pen.',
+  'Was ginge beim nächsten Mal anders?': 'What could go differently next time?',
+  'Was hier fehlt, deckst du sonst woanders. Trag ein, was bei dir wirklich wirkt — auch wenn es etwas kostet. Gezählt wird es ohnehin.':
+      'What is missing here you will cover elsewhere. Enter what actually '
+          'works for you — even if it has a cost. It gets counted either way.',
+  'Was ist auffällig abgewichen?': 'What deviated noticeably?',
+  'Was ist die allererste Handlung?': 'What is the very first action?',
+  'Was ist dir gerade eingefallen?': 'What just came to mind?',
+  'Was ist heute liegengeblieben, das nicht liegenbleiben durfte?':
+      'What was left today that could not be left?',
+  'Was kann WEG?': 'What can GO?',
+  'Was kostet es, wenn es liegenbleibt?': 'What does leaving it cost?',
+  'Was links davon liegt, ist in Reichweite. Was rechts davon liegt, ist heute zu schwer — und wird dir deshalb nicht vorgehalten. Das ist eine Messung, kein Urteil über dich.':
+      'What lies left of it is in reach. What lies right of it is too heavy '
+          'today — and is therefore not put in front of you. That is a '
+          'measurement, not a verdict about you.',
+  'Was war der eigentliche Auslöser?': 'What was the actual trigger?',
+  'Was wirkt bei dir wirklich?': 'What actually works for you?',
+  'Wege in die App: Widget, Benachrichtigung, Stift':
+      'Routes into the app: widget, notification, pen',
+  'Weiteres': 'More',
+  'Welche Regel hat genervt statt geholfen?':
+      'Which rule got in the way instead of helping?',
+  'Welches Modul ist reif — und welches kann weg?':
+      'Which module is ready — and which one can go?',
+  'Wenig da. Nur das Nötige.': 'Little available. Essentials only.',
+  'Wettkampf': 'Competition',
+  'Wie es arbeitet': 'How it works',
+  'Wie fällt es heute aus?': 'How does it read today?',
+  'Wie hart?': 'How hard?',
+  'Wie ist der Stand?': 'Where do things stand?',
+  'Wie lang, wie gut?': 'How long, how good?',
+  'Wie lange': 'How long',
+  'Wie lange hält es an?': 'How long does it last?',
+  'Wie lange typischerweise': 'Typically how long',
+  'Wie lange warten': 'How long to wait',
+  'Wie schwer fällt der Start?': 'How hard is it to start?',
+  'Wie schwer fällt dieser Schritt?': 'How hard is this step?',
+  'Wie stark': 'How strong',
+  'Wie viel exekutive Reserve heute da ist.':
+      'How much executive reserve there is today.',
+  'Wie war der Tag?': 'How was the day?',
+  'Wird geprüft': 'Checking',
+  'Wird regelmäßig von höherrangigen Regeln verdrängt — ein Konflikt, den man sonst nie bemerkt.':
+      'Regularly displaced by higher-ranking rules — a conflict you would '
+          'otherwise never notice.',
+  'Wird überwiegend abgelehnt. Eine Regel, die nervt, entwertet auch die anderen.':
+      'Mostly dismissed. A rule that grates devalues the others too.',
+  'Wirkfenster': 'Active window',
+  'Wirkfenster protokollieren': 'Log the active window',
+  'Wo? (optional)': 'Where? (optional)',
+  'Wobei musst du sein?': 'What do you have to be at?',
+  'Wobei willst du eine Wartezeit?': 'What do you want a waiting period for?',
+  'Woran hing es?': 'What was it hanging on?',
+  'Worauf': 'On what',
+  'Wovon habe ich mich lautlos verabschiedet?': 'What did I quietly let go of?',
+  'ZEIT IN AXIOM HEUTE': 'TIME IN AXIOM TODAY',
+  'ZEITDECKEL': 'TIME CAP',
+  'ZERLEGEN': 'SPLIT',
+  'ZIEL ≤ {0}': 'TARGET ≤ {0}',
+  'ZU ENG': 'TOO NARROW',
+  'ZU GROSS FÜR HEUTE': 'TOO BIG FOR TODAY',
+  'ZULETZT STEHENGEBLIEBEN': 'WHERE YOU LEFT OFF',
+  'Zeigt die nächste Handlung dauerhaft — auch auf dem Sperrbildschirm. Mit einem Tipp auf „Erfassen" tippst du direkt in die Benachrichtigung, ohne zu entsperren und ohne die App zu öffnen.':
+      'Shows the next action permanently — on the lock screen too. Tap '
+          '“Capture” and you type straight into the notification, without '
+          'unlocking and without opening the app.',
+  'Zeigt die nächste Handlung und die Kapazität. Tippen auf „ERFASSEN" springt direkt ins Eingabefeld.':
+      'Shows the next action and capacity. Tapping “CAPTURE” jumps straight '
+          'into the input field.',
+  'Zeit im System gegen Zeit gespart': 'Time in the system against time saved',
+  'Zeit um. Der Rest wartet bis zum nächsten Mal.':
+      'Time is up. The rest waits until next time.',
+  'Zeit, die du im System verbringst statt im Leben. Erfassen zählt nicht mit.':
+      'Time you spend in the system instead of in your life. Capture does not '
+          'count towards it.',
+  'Zustand': 'State',
+  'Zustand,\nRegel,\neine Handlung.': 'State,\nrule,\none action.',
+  'Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.':
+      'Also in Samsung: Settings → Advanced features → S Pen → Air actions → '
+          'Pen button → AXIOM. Screen-off memos still land in Samsung Notes — '
+          'there is no open interface for those.',
+  'Zwei Zeiten, eine Einschätzung.': 'Two times, one reading.',
+  'Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht festgehalten ist, ist weg. Deshalb gibt es mehrere Wege — such dir den, der bei dir wirklich funktioniert.':
+      'Between the thought and the note there are a few seconds. What is not '
+          'held in that time is gone. So there are several routes — pick the '
+          'one that actually works for you.',
+  'bis 09:00': 'until 09:00',
+  'gar nicht': 'not at all',
+  'globales Tageslimit erreicht': 'global daily limit reached',
+  'große Hürde': 'high barrier',
+  'in {0} min': 'in {0} min',
+  'keine Daten': 'no data',
+  'lief nebenbei': 'ran alongside',
+  'ständig nachgehalten': 'tracked constantly',
+  'vollständig': 'complete',
+  'von {0} min': 'of {0} min',
+  'vor {0} Stunden · Stärke {1}/5': '{0} hours ago · intensity {1}/5',
+  '{0}': '{0}',
+  '{0}  ({1}{2})': '{0}  ({1}{2})',
+  '{0} %': '{0} %',
+  '{0} %  ({1} gesamt)': '{0} %  ({1} total)',
+  '{0} Nächte · {1} Tage Schritte übernommen':
+      '{0} nights · {1} days of steps taken in',
+  '{0} Stufe {1} von 5': '{0} level {1} of 5',
+  '{0} Stunden': '{0} hours',
+  '{0} Vorfälle warten auf Einordnung': '{0} incidents waiting for review',
+  '{0} aktive {1} auf geschätzten Gewichten — unten markiert.':
+      '{0} active {1} on estimated weights — marked below.',
+  '{0} eingeplant.': '{0} scheduled.',
+  '{0} erfasst · {1} übernommen · {2} erledigt':
+      '{0} captured · {1} taken on · {2} done',
+  '{0} erledigt': '{0} done',
+  '{0} gespeichert': '{0} saved',
+  '{0} in {1} min — {2}.': '{0} in {1} min — {2}.',
+  '{0} min': '{0} min',
+  '{0} min : {1} min ({2})': '{0} min : {1} min ({2})',
+  '{0} min darüber': '{0} min over',
+  '{0} min im System': '{0} min in the system',
+  '{0} min warten{1}': 'wait {0} min{1}',
+  '{0} min · Intensität {1}/5': '{0} min · intensity {1}/5',
+  '{0} min über der geplanten Zeit.': '{0} min past the planned time.',
+  '{0} min über der geplanten Zeit. Weitermachen ist in Ordnung — bewusst weitermachen auch.':
+      '{0} min past the planned time. Carrying on is fine — carrying on '
+          'deliberately is too.',
+  '{0} min{1}': '{0} min{1}',
+  '{0} notiert.': '{0} noted.',
+  '{0} startbar · {1} heute außerhalb der Reichweite':
+      '{0} startable · {1} out of reach today',
+  '{0} um {1}. Fertigmachen.': '{0} at {1}. Get ready.',
+  '{0} um {1}. Jetzt zu Ende bringen, was läuft.':
+      '{0} at {1}. Finish what is running.',
+  '{0} um {1}. Losgehen.': '{0} at {1}. Time to leave.',
+  '{0} um {1}. Vorlauf {2} Minuten. {3}':
+      '{0} at {1}. Lead time {2} minutes. {3}',
+  '{0} von {1} gehalten': '{0} of {1} held',
+  '{0} {1} auf Sortieren': '{0} {1} waiting to be sorted',
+  '{0} {1} jetzt startbar.': '{0} {1} startable now.',
+  '{0}% befolgt': '{0}% followed',
+  '{0}-Review': '{0} review',
+  '{0}-Review abgeschlossen.': '{0} review finished.',
+  '{0}-Review offen · {1} min': '{0} review open · {1} min',
+  '{0}/{1} min': '{0}/{1} min',
+  '{0}: Blöcke sind auf {1} min begrenzt.':
+      '{0}: blocks are capped at {1} min.',
+  '{0}: {1} von 100{2}{3}': '{0}: {1} out of 100{2}{3}',
+  '{0}:{1} übrig': '{0}:{1} left',
+  'ÜBERFÄLLIG': 'OVERDUE',
+  'Über 1,0: AXIOM kostet mehr Zeit, als es einbringt. Dann wird zurückgebaut, nicht optimiert — Module abschalten, Regeln streichen.':
+      'Above 1.0: AXIOM costs more time than it returns. Then it gets cut '
+          'back, not tuned — switch modules off, delete rules.',
+  'Übernehmen': 'Take it on',
+  'Überspringen': 'Skip',
+  '„Mache ich" wird frei, wenn die Wartezeit um ist.':
+      '“Doing it” unlocks once the waiting period is over.',
+
+  // ── Texte, die nicht aus dem Screen-Quelltext stammen ────────────────
+  // Widget, Benachrichtigungen und Kern-Saetze. Sie erscheinen ausserhalb
+  // der App und muessen dieselbe Sprache sprechen wie sie.
+  'Los nach {0}. {1} um {2}.': 'Head to {0}. {1} at {2}.',
+  'Nichts in Reichweite': 'Nothing in reach',
+  'Nichts anliegend': 'Nothing pending',
+  'Zerlegen hilft': 'Splitting helps',
+  'Regel {0}': 'Rule {0}',
+  'Start {0}/10': 'Start {0}/10',
+  'ohne Anker': 'no anchor',
+  'Ausgelöst durch:': 'Triggered by:',
+  'IN {0} H': 'IN {0} H',
+  'IN {0} T': 'IN {0} D',
+  'abgeschaltet': 'switched off',
+
+  // Wochentage und Monate. Bewusst hier und nicht ueber `intl`: Es sind
+  // neunzehn Woerter, und eine weitere Abhaengigkeit waere teurer.
+  'Montag': 'Monday',
+  'Dienstag': 'Tuesday',
+  'Mittwoch': 'Wednesday',
+  'Donnerstag': 'Thursday',
+  'Freitag': 'Friday',
+  'Samstag': 'Saturday',
+  'Sonntag': 'Sunday',
+  'Januar': 'January',
+  'Februar': 'February',
+  'April': 'April',
+  'Mai': 'May',
+  'Juni': 'June',
+  'Juli': 'July',
+  'August': 'August',
+  'September': 'September',
+  'Oktober': 'October',
+  'November': 'November',
+  'Dezember': 'December',
+};

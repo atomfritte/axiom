@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'instruments.dart';
+import '../../i18n/i18n.dart';
 
 class BaselineCard extends StatelessWidget {
   final BaselineProgress progress;
@@ -37,11 +38,10 @@ class BaselineCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('BASELINE', style: Theme.of(context).textTheme.labelSmall),
+              Text(context.t('BASELINE'), style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(
-                'Noch nicht gestartet. Sie beginnt, sobald das Onboarding '
-                'abgeschlossen ist.',
+                context.t('Noch nicht gestartet. Sie beginnt, sobald das Onboarding abgeschlossen ist.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -57,11 +57,11 @@ class BaselineCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('GEEICHT',
+                    Text(context.t('GEEICHT'),
                         style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: Space.xs),
                     Text(
-                      'Die Formelgewichte stammen aus deinen Daten.',
+                      context.t('Die Formelgewichte stammen aus deinen Daten.'),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -96,10 +96,10 @@ class _CollectingCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('BASELINE LÄUFT',
+                child: Text(context.t('BASELINE LÄUFT'),
                     style: Theme.of(context).textTheme.labelSmall),
               ),
-              Text('TAG ${progress.day}',
+              Text(context.t('TAG {0}', [progress.day]),
                   style: monoStyle(context,
                       size: 11, weight: FontWeight.w600, color: p.info)),
             ],
@@ -125,9 +125,7 @@ class _CollectingCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Radii.control),
               ),
               child: Text(
-                'Bis dahin laufen die Regeln auf geschätzten Gewichten. Sie '
-                'können danebenliegen — betroffene Regeln sind unten mit '
-                'UNGEEICHT markiert.',
+                context.t('Bis dahin laufen die Regeln auf geschätzten Gewichten. Sie können danebenliegen — betroffene Regeln sind unten mit UNGEEICHT markiert.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -207,38 +205,34 @@ class _ReadyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('BASELINE VOLLSTÄNDIG',
+          Text(context.t('BASELINE VOLLSTÄNDIG'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
-          Text('Genug Daten zum Eichen.',
+          Text(context.t('Genug Daten zum Eichen.'),
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: Space.md),
           Text(
-            'Ab jetzt können die Formelgewichte aus deinen Messungen kommen '
-            'statt aus Schätzungen. Das ist der Punkt, ab dem die '
-            'Empfehlungen belastbar werden.',
+            context.t('Ab jetzt können die Formelgewichte aus deinen Messungen kommen statt aus Schätzungen. Das ist der Punkt, ab dem die Empfehlungen belastbar werden.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
 
           if (!compact) ...[
             const SizedBox(height: Space.xl),
-            Text('WAS ZU TUN IST',
+            Text(context.t('WAS ZU TUN IST'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
 
-            const _Step(
+            _Step(
               n: '1',
-              text: 'Datenbank auf den Rechner holen und auswerten. '
-                  'Das Werkzeug schreibt nichts — es schlägt nur vor.',
+              text: context.t('Datenbank auf den Rechner holen und auswerten. Das Werkzeug schreibt nichts — es schlägt nur vor.'),
             ),
             const SizedBox(height: Space.sm),
             _CommandBlock(command: _command),
             const SizedBox(height: Space.lg),
 
-            const _Step(
+            _Step(
               n: '2',
-              text: 'Die Vorschläge im nächsten Wochen-Review durchgehen. '
-                  'Nicht blind übernehmen — jeder Wert soll erklärbar sein.',
+              text: context.t('Die Vorschläge im nächsten Wochen-Review durchgehen. Nicht blind übernehmen — jeder Wert soll erklärbar sein.'),
             ),
             const SizedBox(height: Space.lg),
 
@@ -249,10 +243,9 @@ class _ReadyCard extends StatelessWidget {
             ),
             const SizedBox(height: Space.lg),
 
-            const _Step(
+            _Step(
               n: '4',
-              text: 'Regelwerk spiegeln und neu bauen. Danach verschwinden '
-                  'die UNGEEICHT-Markierungen.',
+              text: context.t('Regelwerk spiegeln und neu bauen. Danach verschwinden die UNGEEICHT-Markierungen.'),
             ),
             const SizedBox(height: Space.sm),
             const _CommandBlock(
@@ -304,8 +297,8 @@ class _CommandBlock extends StatelessWidget {
         await HapticFeedback.selectionClick();
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Befehl kopiert.'),
+          SnackBar(
+            content: Text(context.t('Befehl kopiert.')),
             duration: Duration(milliseconds: 1200),
           ),
         );

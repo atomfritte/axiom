@@ -89,7 +89,7 @@ dart run tools/bin/sync_rules.dart
 
 | | |
 |---|---|
-| Tests | 427 grün (215 Core · 88 Daten · 124 App) |
+| Tests | 446 grün (215 Core · 88 Daten · 143 App) |
 | Analyzer | keine Meldungen in allen Paketen |
 | Regelwerk | 17 Regeln gültig, 16 aktiv — davon 8 **ungeeicht** |
 | Release-APK | gebaut, **ohne INTERNET-Berechtigung** — im APK verifiziert |
@@ -110,6 +110,40 @@ realen Konsequenzen bis zum Erhaltungsmodus (M9).
 Wirkfenster-Protokoll (M13, opt-in), verschlüsselter Datenabgleich per Datei
 statt Server.
 
+**Systemanbindung** — Live Update des laufenden Fokus-Slots in
+Statusleisten-Pille, Sperrbildschirm und Samsungs Now Bar (Android 16,
+`ProgressStyle` + `requestPromotedOngoing`); Health Connect für Schlaffenster
+und Tagesschritte, idempotent importiert; Direct Share als festes Ziel im
+Teilen-Blatt.
+
+### Zwei Sprachen
+
+Deutsch ist die Quelle, Englisch die Übersetzung — umschaltbar unter
+*System → Anzeige*. Besonderheit: Der **deutsche Satz ist der Schlüssel**.
+
+```dart
+Text(context.t('Nichts in Reichweite'))
+```
+
+Damit bleibt die Formulierung dort lesbar, wo sie gewählt wurde. Genau darauf
+kommt es hier an: „Nichts in Reichweite" ist eine bewusste Entscheidung gegen
+„Du hast 14 offene Aufgaben", und diese Entscheidung soll nicht hinter einem
+Bezeichner wie `now.emptyTitle` verschwinden.
+
+Drei Ebenen sind abgedeckt:
+
+| Ebene | Wo | Wie |
+|---|---|---|
+| Oberfläche | `lib/i18n/en.dart` | deutscher Satz → englischer Satz |
+| Kern | `Phrase('{0} min über …', [n])` | Quelltext und Werte getrennt, damit Zahlen nicht zurückgerechnet werden müssen |
+| Regelwerk | `title_en`, `rationale_en` im YAML | Regeln sind Daten, ihre Übersetzung auch |
+
+`i18n_test.dart` hält drei Dinge fest: **jeder** übersetzbare Text hat eine
+englische Fassung, die Platzhalter stimmen auf beiden Seiten überein, und der
+Ton hält — keine Schuldsprache, keine Ausrufezeichen. Eine Übersetzung kann
+aus einem Messwert unbemerkt ein Urteil machen; das ist der eigentliche Grund
+für diesen Test.
+
 ### Wege in die App hinein
 
 Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht
@@ -124,6 +158,7 @@ sieben. In der App stehen sie unter *System → Erfassen*, mit Einrichtung.
 | App-Shortcut | niedrig | langes Tippen aufs Symbol |
 | Teilen aus anderen Apps | niedrig | `ACTION_SEND` |
 | S-Pen | niedrig | `ACTION_CREATE_NOTE` (Android 14+), zusätzlich auf Air Actions legbar |
+| Sprache | niedrig | `actions.intent.CREATE_NOTE`, Bixby-Routine |
 | Sprache | niedrig | `actions.intent.CREATE_NOTE` für Assistant, Bixby-Routine |
 
 Zwei Grenzen des Systems, ausdrücklich benannt:

@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'design/theme.dart';
@@ -13,6 +14,7 @@ import 'screens/now_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/state_screen.dart';
 import 'screens/system_screen.dart';
+import 'i18n/i18n.dart';
 import 'state/providers.dart';
 
 class AxiomApp extends ConsumerWidget {
@@ -21,6 +23,7 @@ class AxiomApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
+    final language = ref.watch(languageProvider);
     return MaterialApp(
       title: 'AXIOM',
       debugShowCheckedModeBanner: false,
@@ -31,6 +34,18 @@ class AxiomApp extends ConsumerWidget {
         2 => ThemeMode.light,
         _ => ThemeMode.system,
       },
+      locale: language.locale,
+      supportedLocales: AppLanguage.values.map((l) => l.locale),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      // Ueber der Navigation, damit jeder Screen dieselbe Sprache sieht.
+      builder: (context, child) => AxiomLanguage(
+        language: language,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const AxiomGate(),
     );
   }
@@ -95,21 +110,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           HapticFeedback.selectionClick();
           setState(() => _index = i);
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.adjust_outlined),
             selectedIcon: Icon(Icons.adjust),
-            label: 'Jetzt',
+            label: context.t('Jetzt'),
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
             selectedIcon: Icon(Icons.show_chart),
-            label: 'Zustand',
+            label: context.t('Zustand'),
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune),
-            label: 'System',
+            label: context.t('System'),
           ),
         ],
       ),
@@ -158,10 +173,10 @@ class _StartupError extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('START FEHLGESCHLAGEN',
+                Text(context.t('START FEHLGESCHLAGEN'),
                     style: Theme.of(context).textTheme.labelSmall),
                 const SizedBox(height: Space.md),
-                Text('AXIOM konnte nicht starten.',
+                Text(context.t('AXIOM konnte nicht starten.'),
                     style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: Space.lg),
                 Text('$error', style: monoStyle(context, size: 12)),

@@ -8,15 +8,23 @@ library;
 import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/foundation.dart';
 
+import '../i18n/i18n.dart';
 import '../state/runtime.dart';
 import 'android_bridge.dart';
 
 abstract final class SystemSync {
   /// Spiegelt den aktuellen Zustand auf Widget und Always-On-Anzeige.
-  static Future<void> publish(AxiomSnapshot snapshot) async {
+  ///
+  /// [language] wird durchgereicht, nicht aus einem Kontext geholt: Diese
+  /// Texte landen im Widget und in Benachrichtigungen, und die entstehen
+  /// ohne Widget-Baum.
+  static Future<void> publish(
+    AxiomSnapshot snapshot, {
+    AppLanguage language = AppLanguage.de,
+  }) async {
     if (!AndroidBridge.isSupported) return;
 
-    final (headline, detail) = _describe(snapshot);
+    final (headline, detail) = _describe(snapshot, language);
     await AndroidBridge.updateWidget(
       headline: headline,
       detail: detail,
@@ -26,7 +34,7 @@ abstract final class SystemSync {
     // Widget und Benachrichtigung duerfen nie Verschiedenes behaupten.
     await AndroidBridge.updatePresence(headline: headline, detail: detail);
 
-    await _syncLiveSlot(snapshot);
+    await _syncLiveSlot(snapshot, language);
 
     // Erhaltungsmodus an die Geräteautomation melden, damit Samsung-Routinen
     // greifen können (Benachrichtigungen dämpfen, Bildschirmzeit begrenzen).
@@ -42,7 +50,8 @@ abstract final class SystemSync {
   /// oder nachdem das System den Dienst beendet hat. Eine Anzeige, die nach
   /// dem ersten Speicherdruck fehlt, wäre schlimmer als keine — man verlässt
   /// sich dann auf eine Restzeit, die niemand mehr zählt.
-  static Future<void> _syncLiveSlot(AxiomSnapshot snapshot) async {
+  static Future<void> _syncLiveSlot(
+      AxiomSnapshot snapshot, AppLanguage language) async {
     final focus = snapshot.focus;
     if (focus == null) {
       if (await AndroidBridge.liveSlotRunning()) {
@@ -52,14 +61,16 @@ abstract final class SystemSync {
     }
     await AndroidBridge.startLiveSlot(
       kind: 'focus',
-      title: focus.anchorTitle ?? 'Fokus',
-      detail: focus.hasAnchor ? 'Fokus' : 'ohne Anker',
+      title: focus.anchorTitle ?? translate(language, 'Fokus'),
+      detail: translate(
+          language, focus.hasAnchor ? 'Fokus' : 'ohne Anker'),
       startedAt: focus.startedAt,
       planned: focus.planned,
     );
   }
 
-  static (String, String) _describe(AxiomSnapshot snapshot) {
+  static (String, String) _describe(
+      AxiomSnapshot snapshot, AppLanguage language) {
     // Ein anstehender Ankerschritt schlaegt alles andere: Er hat eine
     // Uhrzeit, und verpasste Uhrzeiten kosten am meisten [D4].
     final next = snapshot.nextStep;
@@ -77,23 +88,34 @@ abstract final class SystemSync {
 
     final rule = snapshot.decisionRule;
     if (rule != null) {
-      return (rule.title, 'Regel ${rule.id}');
+      return (rule.title, translate(language, 'Regel {0}', [rule.id]));
     }
     final task = snapshot.startable.firstOrNull;
     if (task != null) {
-      return (task.title, 'Start ${task.activationEnergy}/10');
+      return (
+        task.title,
+        translate(language, 'Start {0}/10', [task.activationEnergy]),
+      );
     }
     final blocked = snapshot.tasks
         .where((t) => t.state == TaskState.ready)
         .isNotEmpty;
     return blocked
-        ? ('Nichts in Reichweite', 'Zerlegen hilft')
-        : ('Nichts anliegend', 'Tippen zum Erfassen');
+        ? (
+            translate(language, 'Nichts in Reichweite'),
+            translate(language, 'Zerlegen hilft'),
+          )
+        : (
+            translate(language, 'Nichts anliegend'),
+            translate(language, 'Tippen zum Erfassen'),
+          );
   }
 
   /// Richtet die Tagesanker ein. Einmal nach dem Onboarding.
-  static Future<void> installDailyAnchors() =>
-      AndroidBridge.scheduleDailyCheckins();
+  static Future<void> installDailyAnchors({
+    AppLanguage language = AppLanguage.de,
+  }) =>
+      AndroidBridge.scheduleDailyCheckins(language: language);
 
   // ── Zeitanker (M3) ────────────────────────────────────────────────────
 
@@ -105,7 +127,10 @@ abstract final class SystemSync {
   /// Das ist der eigentliche Nutzen von M3: Nicht der Termin wird erinnert —
   /// den vergisst dieses Profil ohnehin nicht — sondern der Ausstieg aus dem
   /// Laufenden davor. Genau der geht im Kopfmodell verloren [D4].
-  static Future<void> scheduleAnchorReminders(Anchor anchor) async {
+  static Future<void> scheduleAnchorReminders(
+    Anchor anchor, {
+    AppLanguage language = AppLanguage.de,
+  }) async {
     if (!AndroidBridge.isSupported) return;
     final now = DateTime.now();
 
@@ -122,7 +147,7 @@ abstract final class SystemSync {
         id: id,
         at: fireAt,
         title: step.label,
-        body: _bodyFor(anchor, step),
+        body: _bodyFor(anchor, step, language),
         // Ein Zeitanker darf sichtbar sein, aber nicht schreien.
         channel: step.kind == AnchorStepKind.leaveContext
             ? 'axiom_intervene'
@@ -143,17 +168,19 @@ abstract final class SystemSync {
   static int _alarmId(Anchor anchor, int stepIndex) =>
       _anchorIdBase + (anchor.id.hashCode.abs() % 100000) * 4 + stepIndex;
 
-  static String _bodyFor(Anchor anchor, AnchorStep step) {
+  static String _bodyFor(
+      Anchor anchor, AnchorStep step, AppLanguage language) {
     final at = '${anchor.arriveBy.hour.toString().padLeft(2, "0")}:'
         '${anchor.arriveBy.minute.toString().padLeft(2, "0")}';
     return switch (step.kind) {
-      AnchorStepKind.leaveContext =>
-        '${anchor.title} um $at. Jetzt zu Ende bringen, was läuft.',
-      AnchorStepKind.prepare => '${anchor.title} um $at. Fertigmachen.',
-      AnchorStepKind.depart =>
-        anchor.location == null
-            ? '${anchor.title} um $at. Losgehen.'
-            : 'Los nach ${anchor.location}. ${anchor.title} um $at.',
+      AnchorStepKind.leaveContext => translate(language,
+          '{0} um {1}. Jetzt zu Ende bringen, was läuft.', [anchor.title, at]),
+      AnchorStepKind.prepare => translate(
+          language, '{0} um {1}. Fertigmachen.', [anchor.title, at]),
+      AnchorStepKind.depart => anchor.location == null
+          ? translate(language, '{0} um {1}. Losgehen.', [anchor.title, at])
+          : translate(language, 'Los nach {0}. {1} um {2}.',
+              [anchor.location, anchor.title, at]),
       AnchorStepKind.arrive => anchor.title,
     };
   }

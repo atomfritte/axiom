@@ -21,6 +21,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 Future<bool> showAtomizeSheet(
   BuildContext context,
@@ -101,7 +102,7 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ZERLEGEN', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('ZERLEGEN'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             Text(_task.title,
                 style: Theme.of(context).textTheme.headlineMedium),
@@ -110,12 +111,11 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: Space.xl),
 
-            Text('Was ist die allererste Handlung?',
+            Text(context.t('Was ist die allererste Handlung?'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: Space.xs),
             Text(
-              'Etwas Körperliches, das in zwei Minuten erledigt ist. '
-              'Nicht der Plan — der erste Handgriff.',
+              context.t('Etwas Körperliches, das in zwei Minuten erledigt ist. Nicht der Plan — der erste Handgriff.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.md),
@@ -126,12 +126,12 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: _shape?.examples ?? 'Ordner auf den Tisch legen',
+                hintText: _shape?.examples ?? context.t('Ordner auf den Tisch legen'),
               ),
             ),
             const SizedBox(height: Space.lg),
 
-            Text('ODER EINE DIESER FORMEN',
+            Text(context.t('ODER EINE DIESER FORMEN'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             Wrap(
@@ -163,23 +163,21 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
               Panel(
                 accent: p.caution.withValues(alpha: 0.45),
                 child: Text(
-                  'Das ist noch zu groß. Ein Schritt, der gerade so passt, '
-                  'passt morgen nicht mehr — dann fängt das Ganze von vorn an. '
-                  'Was wäre der Handgriff davor?',
+                  context.t('Das ist noch zu groß. Ein Schritt, der gerade so passt, passt morgen nicht mehr — dann fängt das Ganze von vorn an. Was wäre der Handgriff davor?'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ],
 
             const SizedBox(height: Space.xl),
-            Text('UND DANN? (OPTIONAL)',
+            Text(context.t('UND DANN? (OPTIONAL)'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             TextField(
               controller: _rest,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Der Rest, grob — kommt später dran',
+              decoration: InputDecoration(
+                hintText: context.t('Der Rest, grob — kommt später dran'),
               ),
             ),
 
@@ -187,13 +185,13 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
             FilledButton(
               onPressed:
                   _saving || _first.text.trim().isEmpty ? null : _save,
-              child: const Text('Übernehmen'),
+              child: Text(context.t('Übernehmen')),
             ),
             const SizedBox(height: Space.sm),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Später'),
+                child: Text(context.t('Später')),
               ),
             ),
           ],
@@ -260,10 +258,10 @@ class _EnergyPicker extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Wie schwer fällt dieser Schritt?',
+              child: Text(context.t('Wie schwer fällt dieser Schritt?'),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
-            Text('ZIEL ≤ $target',
+            Text(context.t('ZIEL ≤ {0}', [target]),
                 style: monoStyle(context,
                     size: 10.5, spacing: 0.6, color: p.calm)),
           ],

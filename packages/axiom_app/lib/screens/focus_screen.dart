@@ -21,6 +21,7 @@ import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import '../i18n/i18n.dart';
 
 class FocusScreen extends ConsumerWidget {
   const FocusScreen({super.key});
@@ -30,7 +31,7 @@ class FocusScreen extends ConsumerWidget {
     final snapshot = ref.watch(snapshotProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Fokus')),
+      appBar: AppBar(title: Text(context.t('Fokus'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -69,12 +70,11 @@ class _StartPaneState extends ConsumerState<_StartPane> {
         _BreadcrumbCard(),
         const SizedBox(height: Space.xl),
 
-        const SectionLabel('Worauf'),
+        SectionLabel(context.t('Worauf')),
         if (startable.isEmpty)
           Panel(
             child: Text(
-              'Nichts startbar gerade. Ein Fokusblock ohne Ziel lässt sich '
-              'später nicht bewerten — dann lieber ohne.',
+              context.t('Nichts startbar gerade. Ein Fokusblock ohne Ziel lässt sich später nicht bewerten — dann lieber ohne.'),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           )
@@ -114,7 +114,7 @@ class _StartPaneState extends ConsumerState<_StartPane> {
             ),
 
         const SizedBox(height: Space.xl),
-        const SectionLabel('Wie lange'),
+        SectionLabel(context.t('Wie lange')),
         _MinutePicker(
           value: _minutes,
           max: cap?.inMinutes,
@@ -123,8 +123,8 @@ class _StartPaneState extends ConsumerState<_StartPane> {
         if (cap != null) ...[
           const SizedBox(height: Space.sm),
           Text(
-            '${widget.snapshot.regime.headline}: Blöcke sind auf '
-            '${cap.inMinutes} min begrenzt.',
+            context.t('{0}: Blöcke sind auf {1} min begrenzt.',
+                [context.t(widget.snapshot.regime.headline), cap.inMinutes]),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -142,15 +142,13 @@ class _StartPaneState extends ConsumerState<_StartPane> {
             await HapticFeedback.mediumImpact();
             refreshAxiom(ref);
           },
-          child: const Text('Fokus starten'),
+          child: Text(context.t('Fokus starten')),
         ),
         const SizedBox(height: Space.md),
         Text(
           _target == null
-              ? 'Ohne gesetztes Ziel fragt AXIOM nach 45 Minuten einmal leise '
-                  'nach, ob das noch das Richtige ist.'
-              : 'Mit gesetztem Ziel bleibt es still, solange der Block läuft. '
-                  'Benachrichtigungen werden unterdrückt.',
+              ? context.t('Ohne gesetztes Ziel fragt AXIOM nach 45 Minuten einmal leise nach, ob das noch das Richtige ist.')
+              : context.t('Mit gesetztem Ziel bleibt es still, solange der Block läuft. Benachrichtigungen werden unterdrückt.'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
@@ -170,7 +168,7 @@ class _BreadcrumbCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ZULETZT STEHENGEBLIEBEN',
+          Text(context.t('ZULETZT STEHENGEBLIEBEN'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(crumb, style: Theme.of(context).textTheme.bodyLarge),
@@ -199,11 +197,8 @@ class _LiveSlotHint extends StatelessWidget {
           padding: const EdgeInsets.only(top: Space.md),
           child: Text(
             promoted
-                ? 'Die Restzeit steht in der Statusleiste, auf dem '
-                    'Sperrbildschirm und in der Now Bar. Du musst hier nicht '
-                    'nachsehen.'
-                : 'Die Restzeit steht als laufende Benachrichtigung im '
-                    'Benachrichtigungsbereich.',
+                ? context.t('Die Restzeit steht in der Statusleiste, auf dem Sperrbildschirm und in der Now Bar. Du musst hier nicht nachsehen.')
+                : context.t('Die Restzeit steht als laufende Benachrichtigung im Benachrichtigungsbereich.'),
             style: monoStyle(context, size: 11, color: context.axiom.inkFaint),
           ),
         );
@@ -303,11 +298,11 @@ class _RunningPane extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(session.hasAnchor ? 'LÄUFT AUF' : 'LÄUFT',
+              Text(session.hasAnchor ? context.t('LÄUFT AUF') : context.t('LÄUFT'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.md),
               Text(
-                session.anchorTitle ?? 'Ohne gesetztes Ziel',
+                session.anchorTitle ?? context.t('Ohne gesetztes Ziel'),
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: Space.xl),
@@ -324,7 +319,7 @@ class _RunningPane extends ConsumerWidget {
                       color: p.ink,
                     ),
                   ),
-                  Text(' / ${session.planned.inMinutes} min',
+                  Text(context.t(' / {0} min', [session.planned.inMinutes]),
                       style: monoStyle(context, size: 14)),
                 ],
               ),
@@ -344,7 +339,7 @@ class _RunningPane extends ConsumerWidget {
               if (ratio > 1.0) ...[
                 const SizedBox(height: Space.sm),
                 Text(
-                  '${session.overrun(now).inMinutes} min darüber',
+                  context.t('{0} min darüber', [session.overrun(now).inMinutes]),
                   style: monoStyle(context, size: 11, color: p.signal),
                 ),
               ],
@@ -362,7 +357,7 @@ class _RunningPane extends ConsumerWidget {
         const SizedBox(height: Space.xl),
         FilledButton(
           onPressed: () => _finish(context, ref, session),
-          child: const Text('Fokus beenden'),
+          child: Text(context.t('Fokus beenden')),
         ),
         const SizedBox(height: Space.sm),
         Center(
@@ -374,7 +369,7 @@ class _RunningPane extends ConsumerWidget {
               refreshAxiom(ref);
               if (context.mounted) Navigator.of(context).maybePop();
             },
-            child: const Text('Abbrechen, ohne Notiz'),
+            child: Text(context.t('Abbrechen, ohne Notiz')),
           ),
         ),
       ],
@@ -410,10 +405,10 @@ class _VerdictCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     final (label, color) = switch (verdict.action) {
-      FocusAction.protect => ('GESCHÜTZT', p.calm),
+      FocusAction.protect => (context.t('GESCHÜTZT'), p.calm),
       FocusAction.gentleNudge => ('HINWEIS', p.info),
       FocusAction.clearInterrupt => ('UNTERBRECHUNG', p.signal),
-      FocusAction.hardStop => ('JETZT BEENDEN', p.caution),
+      FocusAction.hardStop => (context.t('JETZT BEENDEN'), p.caution),
     };
 
     return Panel(
@@ -428,7 +423,7 @@ class _VerdictCard extends StatelessWidget {
                   size: 10.5, weight: FontWeight.w600, spacing: 0.8,
                   color: color)),
           const SizedBox(height: Space.sm),
-          Text(verdict.reason,
+          Text(context.p(verdict.reason),
               style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
@@ -475,15 +470,14 @@ class _BreadcrumbSheetState extends State<_BreadcrumbSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('WIEDEREINSTIEG',
+              Text(context.t('WIEDEREINSTIEG'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.md),
               Text(FocusGovernor.breadcrumbPrompt(widget.session),
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: Space.xs),
               Text(
-                'Ein Satz reicht. Er spart dir beim nächsten Mal den halben '
-                'Anlauf.',
+                context.t('Ein Satz reicht. Er spart dir beim nächsten Mal den halben Anlauf.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: Space.lg),
@@ -493,21 +487,21 @@ class _BreadcrumbSheetState extends State<_BreadcrumbSheet> {
                 maxLines: 3,
                 minLines: 2,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Bei Anlage KAP, Zeile 7',
+                decoration: InputDecoration(
+                  hintText: context.t('Bei Anlage KAP, Zeile 7'),
                 ),
               ),
               const SizedBox(height: Space.lg),
               FilledButton(
                 onPressed: () =>
                     Navigator.of(context).pop(_controller.text.trim()),
-                child: const Text('Notieren und beenden'),
+                child: Text(context.t('Notieren und beenden')),
               ),
               const SizedBox(height: Space.sm),
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Ohne Notiz beenden'),
+                  child: Text(context.t('Ohne Notiz beenden')),
                 ),
               ),
             ],

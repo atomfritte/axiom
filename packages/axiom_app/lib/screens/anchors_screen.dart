@@ -17,6 +17,7 @@ import '../design/widgets/anchor_chain.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/system_sync.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 class AnchorsScreen extends ConsumerWidget {
   const AnchorsScreen({super.key});
@@ -27,7 +28,7 @@ class AnchorsScreen extends ConsumerWidget {
     final now = ref.watch(nowProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Anker')),
+      appBar: AppBar(title: Text(context.t('Anker'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -37,7 +38,7 @@ class AnchorsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(
                     Space.lg, Space.sm, Space.lg, Space.huge * 2),
                 children: [
-                  SectionLabel('Anstehend · ${snap.anchors.length}'),
+                  SectionLabel(context.t('Anstehend · {0}', [snap.anchors.length])),
                   for (final anchor in snap.anchors)
                     Padding(
                       padding: const EdgeInsets.only(bottom: Space.md),
@@ -51,9 +52,7 @@ class AnchorsScreen extends ConsumerWidget {
                     ),
                   const SizedBox(height: Space.lg),
                   Text(
-                    'Die Vorlaufzeit ist die Zeit, die im Kalender nicht '
-                    'steht: aussteigen, fertigmachen, Puffer. Sie erklärt, '
-                    'warum ein Termin mehr kostet als seine Dauer.',
+                    context.t('Die Vorlaufzeit ist die Zeit, die im Kalender nicht steht: aussteigen, fertigmachen, Puffer. Sie erklärt, warum ein Termin mehr kostet als seine Dauer.'),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -64,7 +63,7 @@ class AnchorsScreen extends ConsumerWidget {
         backgroundColor: context.axiom.signal,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
-        label: const Text('Termin'),
+        label: Text(context.t('Termin')),
       ),
     );
   }
@@ -93,20 +92,18 @@ class _EmptyAnchors extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: Space.huge),
-            Text('KEINE ANKER', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('KEINE ANKER'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
-            Text('Nichts terminiert.',
+            Text(context.t('Nichts terminiert.'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.md),
             Text(
-              'Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du '
-              'losmusst, wann du anfangen musst dich fertigzumachen, und '
-              'wann Schluss ist mit dem, was du gerade tust.',
+              context.t('Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du losmusst, wann du anfangen musst dich fertigzumachen, und wann Schluss ist mit dem, was du gerade tust.'),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: Space.lg),
             Text(
-              'Der letzte Punkt ist der, den man im Kopf immer vergisst.',
+              context.t('Der letzte Punkt ist der, den man im Kopf immer vergisst.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -168,6 +165,8 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
   Future<void> _save() async {
     if (_saving || _title.text.trim().isEmpty) return;
     setState(() => _saving = true);
+    // Vor dem ersten await lesen: Danach ist der Kontext moeglicherweise weg.
+    final language = context.language;
     final runtime = await ref.read(runtimeProvider.future);
 
     final anchor = widget.existing == null
@@ -184,7 +183,7 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
         : _preview;
 
     if (widget.existing != null) await runtime.updateAnchor(anchor);
-    await SystemSync.scheduleAnchorReminders(anchor);
+    await SystemSync.scheduleAnchorReminders(anchor, language: language);
     await HapticFeedback.mediumImpact();
     refreshAxiom(ref);
     if (mounted) Navigator.of(context).pop();
@@ -213,7 +212,7 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.existing == null ? 'NEUER ANKER' : 'ANKER ÄNDERN',
+            Text(widget.existing == null ? context.t('NEUER ANKER') : context.t('ANKER ÄNDERN'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
@@ -221,13 +220,13 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
               autofocus: widget.existing == null,
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(hintText: 'Wobei musst du sein?'),
+              decoration: InputDecoration(hintText: context.t('Wobei musst du sein?')),
             ),
             const SizedBox(height: Space.md),
             TextField(
               controller: _location,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(hintText: 'Wo? (optional)'),
+              decoration: InputDecoration(hintText: context.t('Wo? (optional)')),
             ),
             const SizedBox(height: Space.lg),
 
@@ -237,34 +236,33 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
             ),
             const SizedBox(height: Space.xl),
 
-            Text('WAS VORHER PASSIEREN MUSS',
+            Text(context.t('WAS VORHER PASSIEREN MUSS'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             _MinuteDial(
-              label: 'Fahrzeit',
-              hint: 'Reine Wegzeit ohne Puffer.',
+              label: context.t('Fahrzeit'),
+              hint: context.t('Reine Wegzeit ohne Puffer.'),
               value: _travel,
               options: const [0, 5, 10, 15, 20, 30, 45, 60, 90],
               onChanged: (v) => setState(() => _travel = v),
             ),
             _MinuteDial(
-              label: 'Fertigmachen',
-              hint: 'Anziehen, Sachen suchen, Tasche packen.',
+              label: context.t('Fertigmachen'),
+              hint: context.t('Anziehen, Sachen suchen, Tasche packen.'),
               value: _prepare,
               options: const [0, 5, 10, 15, 20, 30, 45],
               onChanged: (v) => setState(() => _prepare = v),
             ),
             _MinuteDial(
-              label: 'Puffer',
-              hint: 'Für alles, was dazwischenkommt.',
+              label: context.t('Puffer'),
+              hint: context.t('Für alles, was dazwischenkommt.'),
               value: _buffer,
               options: const [0, 5, 10, 15, 20, 30],
               onChanged: (v) => setState(() => _buffer = v),
             ),
             _MinuteDial(
-              label: 'Aussteigen',
-              hint: 'Aus dem, was du gerade tust, herauszukommen dauert. '
-                  'Der Schritt, den man im Kopf immer vergisst.',
+              label: context.t('Aussteigen'),
+              hint: context.t('Aus dem, was du gerade tust, herauszukommen dauert. Der Schritt, den man im Kopf immer vergisst.'),
               value: _context,
               options: const [0, 5, 10, 15, 20],
               onChanged: (v) => setState(() => _context = v),
@@ -282,14 +280,14 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
 
             FilledButton(
               onPressed: _saving || _title.text.trim().isEmpty ? null : _save,
-              child: Text(widget.existing == null ? 'Anker setzen' : 'Speichern'),
+              child: Text(widget.existing == null ? context.t('Anker setzen') : 'Speichern'),
             ),
             if (widget.existing != null) ...[
               const SizedBox(height: Space.sm),
               Center(
                 child: TextButton(
                   onPressed: _delete,
-                  child: const Text('Anker entfernen'),
+                  child: Text(context.t('Anker entfernen')),
                 ),
               ),
             ],
@@ -333,7 +331,7 @@ class _TimeField extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('DA SEIN UM',
+                Text(context.t('DA SEIN UM'),
                     style: Theme.of(context).textTheme.labelSmall),
                 const SizedBox(height: Space.xs),
                 Text(
@@ -388,7 +386,7 @@ class _MinuteDial extends StatelessWidget {
                 child: Text(label,
                     style: Theme.of(context).textTheme.titleMedium),
               ),
-              Text('$value min',
+              Text(context.t('{0} min', [value]),
                   style: monoStyle(context,
                       size: 13, weight: FontWeight.w600, color: p.signal)),
             ],

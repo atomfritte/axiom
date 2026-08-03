@@ -12,6 +12,7 @@ export 'src/domain/event.dart';
 export 'src/domain/focus.dart';
 export 'src/domain/intercept.dart';
 export 'src/domain/med_window.dart';
+export 'src/domain/phrase.dart';
 export 'src/domain/rule.dart';
 export 'src/domain/sensation.dart';
 export 'src/domain/signal.dart';

@@ -6,6 +6,7 @@ library;
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/foundation.dart';
+import '../i18n/i18n.dart';
 /// Ergebnis eines Auswertungszyklus.
 @immutable
 final class AxiomSnapshot {
@@ -179,7 +180,11 @@ final class AxiomRuntime {
         'slot': slot,
       });
   // ── 2.–5. Derive, Evaluate, Resolve, Emit ─────────────────────────────
-  Future<AxiomSnapshot> evaluate() async {
+  /// [language] wirkt nur auf Texte, nie auf Urteile: Welche Regel feuert,
+  /// haengt nicht von der Anzeigesprache ab (ADR-0003).
+  Future<AxiomSnapshot> evaluate({
+    AppLanguage language = AppLanguage.de,
+  }) async {
     final signals = await _aggregator.aggregate();
     final derived = _deriver.derive(signals, clock.nowUtc());
     final tasks = await store.tasks();
@@ -310,14 +315,20 @@ final class AxiomRuntime {
   }
   /// Erzeugt die Begruendung: Regeltext plus die konkreten Zustandswerte,
   /// die sie ausgeloest haben. Ohne die Zahlen bleibt es eine Behauptung.
-  String explainRule(Rule rule, StateVector state) {
+  String explainRule(
+    Rule rule,
+    StateVector state, {
+    AppLanguage language = AppLanguage.de,
+  }) {
     final referenced = rule.when.referencedVariables
         .where((v) => !v.startsWith('event:') && v != 'time_between')
         .map((v) => '$v ${state.numeric(v) ?? "–"}')
         .join(' · ');
+    final rationale = rule.rationaleFor(language.code).trim();
     return referenced.isEmpty
-        ? rule.rationale.trim()
-        : '${rule.rationale.trim()}\n\nAusgeloest durch: $referenced';
+        ? rationale
+        : '$rationale\n\n'
+            '${translate(language, "Ausgelöst durch:")} $referenced';
   }
   // ── 6. Feedback ───────────────────────────────────────────────────────
   Future<void> respondTo(Decision decision, DecisionResponse response) async {
@@ -631,6 +642,9 @@ final class AxiomRuntime {
   }
   String interceptWaitingText(InterceptRun run) =>
       _interceptor.waitingText(run, clock.nowLocal());
+  /// Derselbe Text mit getrennten Werten — uebersetzbar.
+  Phrase interceptWaitingPhrase(InterceptRun run) =>
+      _interceptor.waitingPhrase(run, clock.nowLocal());
   Future<List<InterceptStats>> interceptStats() => store.interceptStats(
         since: clock.nowUtc().subtract(const Duration(days: 30)),
       );
@@ -771,6 +785,10 @@ final class AxiomRuntime {
       (await store.usageToday(clock.nowLocal())) >= kMetaBudget;
   bool get onboardingDone => store.setting('onboarding_done') == 'true';
   void markOnboardingDone() => store.setSetting('onboarding_done', 'true');
+  /// Anzeigesprache als Sprachcode. Leer heisst: noch nie gewaehlt.
+  String? get language => store.setting('language');
+  set language(String? code) =>
+      store.setSetting('language', code ?? AppLanguage.de.code);
   DateTime? get baselineStart {
     final value = store.setting('baseline_start');
     return value == null ? null : DateTime.tryParse(value);

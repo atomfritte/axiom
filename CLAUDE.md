@@ -68,6 +68,10 @@ Vollständige Semantik: [`docs/04-REGELWERK.md`](docs/04-REGELWERK.md).
 Beim Anlegen oder Ändern einer Regel gilt:
 
 - `rationale` ist **Pflicht** — leer = Ladefehler. So wird G2 erzwungen statt erhofft.
+- `title_en` und `rationale_en` sind **erwünscht, nicht Pflicht**. Fehlen sie,
+  erscheint in der englischen Oberfläche der deutsche Text und der Validator
+  warnt. Sichtbar unfertig ist besser als stumm fehlend — eine deshalb nicht
+  geladene Regel wäre schlimmer.
 - `cooldown` ist **Pflicht** — ohne Cooldown entsteht Benachrichtigungsflut (R2).
 - `id` (`R-NNN`) wird **nie** wiederverwendet, auch nicht nach Löschung.
 - Jede Regel braucht einen Test in `packages/axiom_core/test/rules/`, sonst wird sie nicht geladen.
@@ -81,7 +85,17 @@ Beim Anlegen oder Ändern einer Regel gilt:
 ## Code-Konventionen
 
 - **Dart 3.12 / Flutter 3.44.** Null-safety, `sealed`/`final class` wo sinnvoll.
-- **Code und Bezeichner Englisch. Doku, Kommentare, UI-Texte Deutsch.**
+- **Code und Bezeichner Englisch. Doku und Kommentare Deutsch.**
+- **UI-Texte: Deutsch ist die Quelle, Englisch die Übersetzung.** Der deutsche
+  Satz steht im Quelltext und ist zugleich der Schlüssel:
+  `context.t('Nichts in Reichweite')`. Die englische Fassung steht in
+  `packages/axiom_app/lib/i18n/en.dart`. Warum so: Der Ton entscheidet über die
+  Wirkung, und diese Entscheidung muss dort lesbar sein, wo sie getroffen wird
+  — nicht hinter einem Bezeichner wie `now.emptyTitle`.
+  Für Code ohne `BuildContext` (Benachrichtigungen, Widget) gibt es
+  `translate(language, …)`; die Sprache wird durchgereicht, nie global gelesen.
+  Der Kern liefert Sätze mit Werten als `Phrase('{0} min über …', [n])`, damit
+  Zahlen nicht aus fertigen Sätzen zurückgerechnet werden müssen.
 - Domain-Typen sind unveränderlich (`final`, `copyWith`).
 - Fehler: Fail-Fast im Core. Ein unbekannter Event-Typ oder eine ungültige Regel wird **abgelehnt**,
   nicht stillschweigend übersprungen. In einem regelbasierten System ist eine stumm ignorierte
@@ -138,7 +152,8 @@ drei Paketen.
 
 **Regeltexte sind Nutzertexte.** `title` und `rationale` erscheinen im
 Systeminspektor. Echte Umlaute, keine Ersatzschreibung — `language_test.dart`
-prüft das.
+prüft das. Die englischen Felder (`*_en`) sind davon ausgenommen und werden
+stattdessen von `i18n_test.dart` geprüft.
 
 ---
 
@@ -152,6 +167,8 @@ prüft das.
 | Regelwerk | `axiom_data/test/rule_source_test` | lädt das **echte** `rules/`-Verzeichnis |
 | Verhalten | `axiom_app/test/app_test` | genau eine Handlung (G1), sichtbare Regel-ID (G2) |
 | Sprache | `axiom_app/test/language_test` | keine Schuldsprache, echte Umlaute, kein Netzwerk |
+| Übersetzung | `axiom_app/test/i18n_test` | jeder Text hat eine englische Fassung, gleiche Platzhalter, gleicher Ton |
+| Systemanbindung | `axiom_app/test/platform_integration_test` | Manifest und Kotlin — die Ebene, durch die Widget-Tests fallen |
 | Optik | `axiom_app/test/screenshot_test` | Referenzbilder in `test/screenshots/` |
 
 Beim Schreiben von Tests: Prüfe **Verhalten und Wirkung**, nicht Implementierung.

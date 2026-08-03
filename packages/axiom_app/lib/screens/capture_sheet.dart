@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 Future<void> showCaptureSheet(BuildContext context, {String? initialText}) =>
     showModalBottomSheet<void>(
@@ -74,8 +75,8 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
     } else {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erfasst.'),
+        SnackBar(
+          content: Text(context.t('Erfasst.')),
           duration: Duration(milliseconds: 1200),
         ),
       );
@@ -98,10 +99,10 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
         children: [
           Row(
             children: [
-              Text('ERFASSEN', style: Theme.of(context).textTheme.labelSmall),
+              Text(context.t('ERFASSEN'), style: Theme.of(context).textTheme.labelSmall),
               const Spacer(),
               if (_savedCount > 0)
-                Text('$_savedCount gespeichert',
+                Text(context.t('{0} gespeichert', [_savedCount]),
                     style: monoStyle(context, size: 11, color: p.calm)),
             ],
           ),
@@ -116,13 +117,13 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _save(),
             style: Theme.of(context).textTheme.bodyLarge,
-            decoration: const InputDecoration(
-              hintText: 'Was ist dir gerade eingefallen?',
+            decoration: InputDecoration(
+              hintText: context.t('Was ist dir gerade eingefallen?'),
             ),
           ),
           const SizedBox(height: Space.sm),
           Text(
-            'Rein damit. Sortieren kannst du später.',
+            context.t('Rein damit. Sortieren kannst du später.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.lg),
@@ -131,14 +132,14 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : () => _save(keepOpen: true),
-                  child: const Text('Speichern & weiter'),
+                  child: Text(context.t('Speichern & weiter')),
                 ),
               ),
               const SizedBox(width: Space.md),
               Expanded(
                 child: FilledButton(
                   onPressed: _saving ? null : () => _save(),
-                  child: const Text('Speichern'),
+                  child: Text(context.t('Speichern')),
                 ),
               ),
             ],

@@ -12,6 +12,8 @@ library;
 
 import 'package:meta/meta.dart';
 
+import '../domain/phrase.dart';
+
 enum ReviewScope {
   day(Duration(minutes: 2), 'Tag'),
   week(Duration(minutes: 15), 'Woche'),
@@ -36,7 +38,12 @@ enum ReviewScope {
 final class Metric {
   final String id;
   final String label;
-  final String value;
+
+  /// Der Zahlenwert als Quelltext mit Platzhaltern.
+  ///
+  /// Getrennt gehalten, weil sonst nicht uebersetzbar: Aus „57 %  (12
+  /// gesamt)" liessen sich die Zahlen nur mit Raten zurueckgewinnen.
+  final Phrase valueSource;
 
   /// Wo die Zahl herkommt. Ohne das ist sie nicht überprüfbar (G2).
   final String derivation;
@@ -60,12 +67,15 @@ final class Metric {
   const Metric({
     required this.id,
     required this.label,
-    required this.value,
+    required Phrase value,
     required this.derivation,
     this.trend,
     this.needsAttention = false,
     this.consequence,
-  });
+  }) : valueSource = value;
+
+  /// Der fertige deutsche Wert.
+  String get value => valueSource.text;
 }
 
 /// Richtung der Zahl gegenüber dem Vorzeitraum — ohne Wertung.
@@ -146,7 +156,7 @@ final class ReviewEngine {
   Metric _checkins(ReviewInputs i) => Metric(
         id: 'checkins',
         label: 'Messpunkte erfasst',
-        value: '${(i.checkinRate * 100).round()} %',
+        value: Phrase('{0} %', [(i.checkinRate * 100).round()]),
         derivation: 'Erledigte Check-ins geteilt durch geplante.',
         needsAttention: i.checkinRate < 0.8,
         consequence: i.checkinRate < 0.8
@@ -163,8 +173,9 @@ final class ReviewEngine {
       id: 'load',
       label: 'Kompensationslast',
       value: delta == null
-          ? '${i.loadIndex}'
-          : '${i.loadIndex}  (${delta >= 0 ? "+" : ""}$delta)',
+          ? Phrase('{0}', [i.loadIndex])
+          : Phrase('{0}  ({1}{2})',
+              [i.loadIndex, delta >= 0 ? '+' : '', delta]),
       derivation: 'Gleitender Mittelwert aus Schlafschuld, Erholungsqualität, '
           'Kompensationsaufwand, Reizbarkeit und Rückzug.',
       trend: delta == null
@@ -185,8 +196,8 @@ final class ReviewEngine {
   Metric _capture(ReviewInputs i) => Metric(
         id: 'capture',
         label: 'Erfasst und einsortiert',
-        value: '${i.captures} erfasst · ${i.tasksCreated} übernommen · '
-            '${i.tasksCompleted} erledigt',
+        value: Phrase('{0} erfasst · {1} übernommen · {2} erledigt',
+            [i.captures, i.tasksCreated, i.tasksCompleted]),
         derivation: 'Gezählte Ereignisse im Zeitraum.',
         needsAttention: i.captures > 0 && i.tasksCreated == 0,
         consequence: i.captures > 0 && i.tasksCreated == 0
@@ -202,8 +213,9 @@ final class ReviewEngine {
       id: 'sensation',
       label: 'Reizbedarf geplant gedeckt',
       value: share == null
-          ? 'keine Daten'
-          : '${(share * 100).round()} %  ($total gesamt)',
+          ? const Phrase('keine Daten')
+          : Phrase('{0} %  ({1} gesamt)',
+              [(share * 100).round(), total]),
       derivation: 'Geplante Slots geteilt durch alle Slots.',
       needsAttention: share != null && share < 0.7,
       consequence: share != null && share < 0.7
@@ -218,9 +230,11 @@ final class ReviewEngine {
         id: 'impulse',
         label: 'Impulse abgefangen',
         value: i.impulsesIntercepted == 0
-            ? 'keine'
-            : '${i.impulsesIntercepted - i.impulsesProceeded} von '
-                '${i.impulsesIntercepted} gehalten',
+            ? const Phrase('keine')
+            : Phrase('{0} von {1} gehalten', [
+                i.impulsesIntercepted - i.impulsesProceeded,
+                i.impulsesIntercepted,
+              ]),
         derivation: 'Cooldowns, die abgelaufen sind, ohne dass die Handlung '
             'ausgeführt wurde.',
         consequence: null,
@@ -235,9 +249,12 @@ final class ReviewEngine {
       id: 'meta',
       label: 'Zeit im System gegen Zeit gespart',
       value: ratio == null
-          ? '${i.metaMinutes} min im System'
-          : '${i.metaMinutes} min : ${i.savedMinutesEstimate} min '
-              '(${ratio.toStringAsFixed(2)})',
+          ? Phrase('{0} min im System', [i.metaMinutes])
+          : Phrase('{0} min : {1} min ({2})', [
+              i.metaMinutes,
+              i.savedMinutesEstimate,
+              ratio.toStringAsFixed(2),
+            ]),
       derivation: 'Erfasste Nutzungszeit gegen deine eigene Schätzung.',
       needsAttention: ratio != null && ratio > 1.0,
       consequence: ratio != null && ratio > 1.0

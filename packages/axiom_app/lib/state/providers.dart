@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../i18n/i18n.dart';
 import '../platform/health_sync.dart';
 import '../platform/system_sync.dart';
 import 'runtime.dart';
@@ -96,10 +97,16 @@ final refreshTickProvider =
 /// Der aktuelle Auswertungszyklus.
 final snapshotProvider = FutureProvider<AxiomSnapshot>((ref) async {
   ref.watch(refreshTickProvider);
+  // Die Sprache gehoert hierher, weil die Begruendung im Snapshot steckt:
+  // Ein Sprachwechsel muss den Zyklus neu rechnen, sonst bleibt die alte
+  // Begruendung stehen.
+  final language = ref.watch(languageProvider);
   final runtime = await ref.watch(runtimeProvider.future);
-  final snapshot = await runtime.evaluate();
+  final snapshot = await runtime.evaluate(language: language);
   // Zustand nach aussen spiegeln: Widget, Always-On, Geraeteautomation.
-  unawaited(SystemSync.publish(snapshot));
+  // Die Sprache muss mit: Was auf dem Sperrbildschirm steht, darf nicht in
+  // einer anderen Sprache stehen als der Screen daneben.
+  unawaited(SystemSync.publish(snapshot, language: language));
   return snapshot;
 });
 
@@ -246,6 +253,27 @@ final ruleStatsProvider = FutureProvider<List<RuleStats>>((ref) async {
     since: runtime.clock.nowUtc().subtract(const Duration(days: 7)),
   );
 });
+
+/// Anzeigesprache. Deutsch ist die Quelle, Englisch die Uebersetzung.
+///
+/// Liegt in der Einstellungstabelle und nicht im Speicher: Eine Sprache, die
+/// beim naechsten Start wieder umspringt, waere schlimmer als keine Auswahl.
+final class LanguageChoice extends Notifier<AppLanguage> {
+  @override
+  AppLanguage build() {
+    final runtime = ref.watch(runtimeProvider).value;
+    return AppLanguage.parse(runtime?.language);
+  }
+
+  Future<void> set(AppLanguage language) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    runtime.language = language.code;
+    state = language;
+  }
+}
+
+final languageProvider =
+    NotifierProvider<LanguageChoice, AppLanguage>(LanguageChoice.new);
 
 /// Helligkeit: 0 = System, 1 = dunkel, 2 = hell.
 final class ThemeChoice extends Notifier<int> {

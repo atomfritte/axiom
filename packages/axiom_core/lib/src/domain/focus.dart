@@ -19,6 +19,7 @@ library;
 import 'package:meta/meta.dart';
 
 import 'anchor.dart';
+import 'phrase.dart';
 import 'state_vector.dart';
 
 @immutable
@@ -87,7 +88,10 @@ final class FocusVerdict {
   final FocusAction action;
 
   /// Warum — in Nutzersprache, ohne Vorwurf.
-  final String reason;
+  ///
+  /// Quelltext und Werte getrennt, damit die Oberflaeche uebersetzen kann,
+  /// ohne die Zahlen aus einem fertigen Satz zurueckrechnen zu muessen.
+  final Phrase reason;
 
   /// Nach welcher Zeit erneut prüfen.
   final Duration recheckAfter;
@@ -97,6 +101,9 @@ final class FocusVerdict {
     required this.reason,
     this.recheckAfter = const Duration(minutes: 10),
   });
+
+  /// Der fertige deutsche Satz.
+  String get reasonText => reason.text;
 }
 
 /// Schwellen der Eskalation. Bewusst großzügig: Lieber eine Unterbrechung
@@ -130,8 +137,11 @@ final class FocusGovernor {
       if (!until.isNegative && until <= kAnchorBeatsFocus) {
         return FocusVerdict(
           action: FocusAction.hardStop,
-          reason: '${nextAnchorStep.step.label} in ${until.inMinutes} min — '
-              '${nextAnchorStep.anchor.title}.',
+          reason: Phrase('{0} in {1} min — {2}.', [
+            nextAnchorStep.step.label,
+            until.inMinutes,
+            nextAnchorStep.anchor.title,
+          ]),
           recheckAfter: const Duration(minutes: 2),
         );
       }
@@ -141,8 +151,8 @@ final class FocusGovernor {
     if (state.loadLevel == LoadLevel.l3) {
       return const FocusVerdict(
         action: FocusAction.hardStop,
-        reason: 'Erhaltungsmodus. Für die nächsten Tage nur Pflicht und '
-            'Erholung — auch wenn es gerade läuft.',
+        reason: Phrase('Erhaltungsmodus. Für die nächsten Tage nur Pflicht '
+            'und Erholung — auch wenn es gerade läuft.'),
         recheckAfter: Duration(minutes: 30),
       );
     }
@@ -155,8 +165,10 @@ final class FocusGovernor {
     if (!session.hasAnchor && elapsed >= const Duration(minutes: 45)) {
       return FocusVerdict(
         action: FocusAction.gentleNudge,
-        reason: 'Seit ${elapsed.inMinutes} min vertieft, ohne gesetztes Ziel. '
+        reason: Phrase(
+            'Seit {0} min vertieft, ohne gesetztes Ziel. '
             'Ist das noch das, was du wolltest?',
+            [elapsed.inMinutes]),
         recheckAfter: const Duration(minutes: 20),
       );
     }
@@ -166,8 +178,10 @@ final class FocusGovernor {
     if (sinceBodyPrompt != null && sinceBodyPrompt >= kBodyNeglectAfter) {
       return FocusVerdict(
         action: FocusAction.gentleNudge,
-        reason: 'Seit ${sinceBodyPrompt.inMinutes} min nichts getrunken oder '
-            'bewegt. Kurz aufstehen kostet zwei Minuten.',
+        reason: Phrase(
+            'Seit {0} min nichts getrunken oder bewegt. '
+            'Kurz aufstehen kostet zwei Minuten.',
+            [sinceBodyPrompt.inMinutes]),
         recheckAfter: const Duration(minutes: 30),
       );
     }
@@ -176,15 +190,18 @@ final class FocusGovernor {
     if (overrun >= kClearAfterOverrun) {
       return FocusVerdict(
         action: FocusAction.clearInterrupt,
-        reason: '${overrun.inMinutes} min über der geplanten Zeit. '
+        reason: Phrase(
+            '{0} min über der geplanten Zeit. '
             'Weitermachen ist in Ordnung — bewusst weitermachen auch.',
+            [overrun.inMinutes]),
         recheckAfter: const Duration(minutes: 30),
       );
     }
     if (overrun >= kGentleAfterOverrun) {
       return FocusVerdict(
         action: FocusAction.gentleNudge,
-        reason: '${overrun.inMinutes} min über der geplanten Zeit.',
+        reason: Phrase('{0} min über der geplanten Zeit.',
+            [overrun.inMinutes]),
         recheckAfter: const Duration(minutes: 20),
       );
     }
@@ -192,7 +209,7 @@ final class FocusGovernor {
     // 6. Alles in Ordnung: schützen.
     return const FocusVerdict(
       action: FocusAction.protect,
-      reason: 'Läuft. Benachrichtigungen sind stumm.',
+      reason: Phrase('Läuft. Benachrichtigungen sind stumm.'),
     );
   }
 

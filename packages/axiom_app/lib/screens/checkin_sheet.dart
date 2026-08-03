@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../state/providers.dart';
+import '../i18n/i18n.dart';
 
 Future<bool> showCheckinSheet(BuildContext context, {String slot = 'manual'}) async =>
     await showModalBottomSheet<bool>(
@@ -72,18 +73,18 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CHECK-IN', style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('CHECK-IN'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
             Text(
-              _isEvening ? 'Wie war der Tag?' : 'Wie ist der Stand?',
+              _isEvening ? context.t('Wie war der Tag?') : context.t('Wie ist der Stand?'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: Space.xs),
-            Text('Vier Regler. Ungefähr reicht.',
+            Text(context.t('Vier Regler. Ungefähr reicht.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: Space.xl),
             _Scale(
-              label: 'Energie',
+              label: context.t('Energie'),
               low: 'leer',
               high: 'voll',
               value: _energy,
@@ -91,7 +92,7 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
               onChanged: (v) => setState(() => _energy = v),
             ),
             _Scale(
-              label: 'Fokus',
+              label: context.t('Fokus'),
               low: 'zerstreut',
               high: 'klar',
               value: _focus,
@@ -99,7 +100,7 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
               onChanged: (v) => setState(() => _focus = v),
             ),
             _Scale(
-              label: 'Stimmung',
+              label: context.t('Stimmung'),
               low: 'gereizt',
               high: 'gelassen',
               value: _mood,
@@ -107,7 +108,7 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
               onChanged: (v) => setState(() => _mood = v),
             ),
             _Scale(
-              label: 'Reizhunger',
+              label: context.t('Reizhunger'),
               low: 'ruhig',
               high: 'kribbelig',
               value: _stim,
@@ -119,16 +120,16 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
               Divider(color: p.rule),
               const SizedBox(height: Space.sm),
               _Scale(
-                label: 'Kraftaufwand für Struktur',
-                low: 'lief nebenbei',
-                high: 'ständig nachgehalten',
+                label: context.t('Kraftaufwand für Struktur'),
+                low: context.t('lief nebenbei'),
+                high: context.t('ständig nachgehalten'),
                 value: _compensation,
                 color: p.caution,
                 onChanged: (v) => setState(() => _compensation = v),
               ),
               _Scale(
-                label: 'Erholung hat gewirkt',
-                low: 'gar nicht',
+                label: context.t('Erholung hat gewirkt'),
+                low: context.t('gar nicht'),
                 high: 'deutlich',
                 value: _recovery,
                 color: p.calm,
@@ -138,13 +139,13 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
             const SizedBox(height: Space.lg),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Fertig'),
+              child: Text(context.t('Fertig')),
             ),
             const SizedBox(height: Space.sm),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Jetzt nicht'),
+                child: Text(context.t('Jetzt nicht')),
               ),
             ),
           ],
@@ -191,7 +192,7 @@ final class _Scale extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     selected: value == i,
-                    label: '$label Stufe $i von 5',
+                    label: context.t('{0} Stufe {1} von 5', [label, i]),
                     child: GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();

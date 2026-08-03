@@ -14,12 +14,18 @@
 
 - id: R-100
   title: "Vormittags: trinken und aufstehen"
+  title_en: "Late morning: drink and stand up"
   deficit: D7
   rationale: >
     Durst und Bewegungsbedarf werden systematisch zu spät bemerkt, im
     Hyperfokus gar nicht. Der körperliche Zustand ist zugleich der größte
     einzelne Modulator der Exekutivfunktion — ein dehydrierter Vormittag
     hat objektiv weniger Kapazität. Kostet nichts, wirkt sofort.
+  rationale_en: >
+    Thirst and the need to move are noticed systematically late, and in
+    hyperfocus not at all. Physical state is at the same time the single
+    largest modulator of executive function — a dehydrated morning has
+    objectively less capacity. Costs nothing, works immediately.
   when:
     all:
       - time_between: ["10:30", "11:15"]
@@ -34,11 +40,16 @@
 
 - id: R-101
   title: "Nachmittags: Pause für Augen und Beine"
+  title_en: "Afternoon: a break for eyes and legs"
   deficit: D7
   rationale: >
     Das Nachmittagstief trifft mit ohnehin sinkender Kapazität zusammen.
     Kurz aufstehen und den Blick vom Bildschirm nehmen ist die billigste
     verfügbare Gegenmaßnahme.
+  rationale_en: >
+    The afternoon dip coincides with capacity that is falling anyway.
+    Standing up briefly and looking away from the screen is the cheapest
+    countermeasure available.
   when:
     all:
       - time_between: ["15:00", "15:45"]
@@ -55,6 +66,7 @@
 
 - id: R-110
   title: "Abendgrenze"
+  title_en: "Evening cutoff"
   deficit: D8
   rationale: >
     Die Nacht ist reizarm genug für Hyperfokus und bietet zugleich die
@@ -64,6 +76,14 @@
     den Abendkonsum steigert. Der Ausstiegsanker bricht den Kreis an
     seiner schwächsten Stelle. Bewusst leise: Wer um halb elf angeschrien
     wird, schaltet die App stumm.
+  rationale_en: >
+    The night is quiet enough for hyperfocus and at the same time offers
+    the strongest novelty — nobody interrupts, everything is possible. That
+    produces a self-reinforcing cascade: sleep debt lowers executive
+    function, which raises compensation effort and stimulation need, which
+    raises evening consumption. The exit anchor breaks the loop at its
+    weakest point. Deliberately quiet: anyone shouted at half past ten
+    silences the app.
   when:
     all:
       - time_between: ["22:30", "23:15"]
@@ -78,11 +98,16 @@
 
 - id: R-111
   title: "Schlaf eintragen"
+  title_en: "Log sleep"
   deficit: D8
   rationale: >
     Ohne Schlafdaten fehlt der Kapazitätsformel ihr stärkster Eingangswert,
     und der Zustandsvektor rät. Zwei Uhrzeiten und eine Einschätzung
     genügen — mehr wird nicht gefragt.
+  rationale_en: >
+    Without sleep data the capacity formula is missing its strongest
+    input and the state vector is guessing. Two times and one reading are
+    enough — nothing else is asked.
   when:
     all:
       - time_between: ["07:30", "10:00"]
@@ -99,12 +124,18 @@
 
 - id: R-120
   title: "Tagesabschluss"
+  title_en: "End of day"
   deficit: D12
   rationale: >
     Zwei Minuten, zwei Fragen. Ohne täglichen Abschluss verschwinden Ziele
     lautlos — jenseits von etwa zwei Wochen sind sie motivational praktisch
     unsichtbar. Der Zeitdeckel ist Teil der Regel: Ein Review ohne Grenze
     wird selbst zur Ausweichbeschäftigung.
+  rationale_en: >
+    Two minutes, two questions. Without a daily close, goals disappear
+    quietly — beyond about two weeks they are motivationally invisible. The
+    time cap is part of the rule: a review without a limit becomes an
+    avoidance activity itself.
   when:
     all:
       - time_between: ["21:00", "22:15"]
@@ -124,12 +155,19 @@
 
 - id: R-130
   title: "Termine eintragen"
+  title_en: "Enter appointments"
   deficit: D4
   rationale: >
     Pünktlichkeit ist bei diesem Profil erfolgreich kompensiert — und genau
     das ist teuer: Puffer, ständiges Nachrechnen, Dauerspannung vor jedem
     Termin. Eingetragene Anker verlagern diese Rechnung vom Kopf ins System.
     Solange keine gepflegt werden, läuft die Kompensation weiter wie bisher.
+  rationale_en: >
+    Punctuality is successfully compensated in this profile — and that
+    is exactly what costs: buffers, constant recalculation, background
+    tension before every appointment. Entered anchors move that calculation
+    out of the head and into the system. As long as none are kept, the
+    compensation carries on as before.
   when:
     all:
       - time_between: ["08:00", "09:30"]

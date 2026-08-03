@@ -9,6 +9,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../../i18n/i18n.dart';
 
 @immutable
 final class AxiomMark extends StatelessWidget {
@@ -23,7 +24,7 @@ final class AxiomMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return Semantics(
-      label: 'AXIOM',
+      label: context.t('AXIOM'),
       child: CustomPaint(
         size: Size(size, size * 0.62),
         painter: _MarkPainter(
@@ -82,7 +83,7 @@ final class AxiomWordmark extends StatelessWidget {
         AxiomMark(size: markSize),
         SizedBox(width: markSize * 0.55),
         Text(
-          'AXIOM',
+          context.t('AXIOM'),
           style: TextStyle(
             fontFamily: 'PlexSans',
             fontSize: markSize * 0.62,

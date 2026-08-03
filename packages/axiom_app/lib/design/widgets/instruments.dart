@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../theme.dart';
 import '../tokens.dart';
+import '../../i18n/i18n.dart';
 
 /// Eine Messwertzeile: Name, Balken, Zahl — aufklappbar zur Herleitung.
 final class InstrumentBar extends StatefulWidget {
@@ -54,9 +55,7 @@ class _InstrumentBarState extends State<InstrumentBar> {
 
     return Semantics(
       button: expandable,
-      label: '${widget.label}: ${widget.value} von 100'
-          '${widget.reading == null ? "" : ", ${widget.reading}"}'
-          '${stale ? ", Daten veraltet" : ""}',
+      label: context.t('{0}: {1} von 100{2}{3}', [widget.label, widget.value, widget.reading == null ? "" : ", ${widget.reading}", stale ? context.t(', Daten veraltet') : ""]),
       child: InkWell(
         onTap: expandable
             ? () {
@@ -79,7 +78,7 @@ class _InstrumentBarState extends State<InstrumentBar> {
                   if (stale)
                     Padding(
                       padding: const EdgeInsets.only(right: Space.sm),
-                      child: Text('DATEN ALT',
+                      child: Text(context.t('DATEN ALT'),
                           style: monoStyle(context,
                               size: 9.5, spacing: 0.8, color: p.inkFaint)),
                     ),
@@ -181,7 +180,7 @@ final class _Breakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('SO WIRD GERECHNET',
+          Text(context.t('SO WIRD GERECHNET'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           for (final term in terms)
@@ -227,7 +226,7 @@ final class RuleStamp extends StatelessWidget {
     final tint = color ?? p.info;
     return Semantics(
       button: onTap != null,
-      label: 'Regel $ruleId${onTap == null ? "" : ", zeigt die Begruendung"}',
+      label: context.t('Regel {0}{1}', [ruleId, onTap == null ? "" : context.t(', zeigt die Begruendung')]),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Radii.control),
