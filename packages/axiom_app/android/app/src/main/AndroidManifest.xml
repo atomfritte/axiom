@@ -1,16 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      KEINE INTERNET-BERECHTIGUNG.
+      INTERNET — für den Expertenmodus (ADR-0005).
 
-      Bewusst weggelassen (ADR-0002). Damit ist auf Betriebssystemebene
-      ausgeschlossen, dass Gesundheitsdaten das Gerät verlassen — unabhängig
-      von jedem Bug, jeder transitiven Abhängigkeit und jedem Versehen.
-      Das ist erheblich stärker als jede Zusicherung im Code.
+      Bis dahin war die Berechtigung bewusst weggelassen: Damit war auf
+      Betriebssystemebene ausgeschlossen, dass Daten das Gerät verlassen.
+      Diese strukturelle Garantie gibt es nicht mehr.
 
-      Wird erst mit dem optionalen Sync (Stufe 4) hinzugefügt, und dann mit
-      eigenem ADR.
+      An ihre Stelle tritt eine engere, getestete Zusage: **AXIOM ruft nichts
+      von sich aus auf.** Kein HTTP-Client, keine ausgehende Verbindung, kein
+      SDK, das eine aufbauen könnte — `language_test.dart` verbietet
+      `package:http`, `HttpClient`, `Socket.connect` und `dart:html` im
+      gesamten App-Code. Die App lauscht, und nur solange der Expertenmodus
+      ausdrücklich eingeschaltet ist.
     -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
 
     <!-- Minutengenaue Zeitanker. Wirksamster Interventionstyp [D4]. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -191,6 +196,20 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Zeigt die Restzeit eines laufenden Fokus- oder
                     Reiz-Slots, solange er läuft." />
+        </service>
+
+        <!--
+          Hält den Prozess am Leben, solange der Expertenmodus läuft, und
+          zeigt sichtbar an, dass ein Port offen ist (ADR-0005).
+        -->
+        <service
+            android:name=".ExpertService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Hält den lokalen Server des Expertenmodus am
+                    Leben, solange er vom Nutzer eingeschaltet ist." />
         </service>
 
         <!-- Nimmt Text entgegen, der in der Benachrichtigung getippt wurde. -->

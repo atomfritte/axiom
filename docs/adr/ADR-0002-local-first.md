@@ -1,6 +1,11 @@
 # ADR-0002 — Local-first, Event-Sourcing, kein Netzwerk in S1–S3
 
-**Status:** akzeptiert · **Datum:** 2026-08-03
+**Status:** akzeptiert, Punkt 2 abgelöst durch [ADR-0005](ADR-0005-expertenmodus.md)
+· **Datum:** 2026-08-03
+
+> **Nachtrag 2026-08-03:** Punkt 2 gilt nicht mehr. Mit dem Expertenmodus (ADR-0005) wird
+> `INTERNET` deklariert. An die Stelle der strukturellen Garantie tritt eine engere, getestete
+> Zusage: AXIOM lauscht, ruft aber nichts von sich aus auf. Punkte 1, 3 und 4 bleiben unverändert.
 
 ## Kontext
 

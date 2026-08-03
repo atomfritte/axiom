@@ -79,7 +79,7 @@ first, not last.
 | [06-METRIKEN](docs/06-METRIKEN.md) | Success measurement, baseline protocol |
 | [07-RISIKEN](docs/07-RISIKEN.md) | What goes wrong — R1 is the decisive one |
 | [08-GERAET-S25U](docs/08-GERAET-S25U.md) | S Pen, Health Connect, Android pitfalls |
-| [ADR](docs/adr/) | Architecture decisions, with reasoning |
+| [ADR](docs/adr/) | Architecture decisions, with reasoning — 0005 is the one that changed |
 | [BACKLOG](docs/BACKLOG.md) | Ideas deliberately *not* built yet |
 
 The documentation is in German — it predates the decision to publish, and translating it would
@@ -173,15 +173,39 @@ Edits live as an overlay in the database, never in `rules/core/`. `ruleToYaml` r
 exactly the form `rules/` uses, so anything written on the phone can be copied back into version
 control. A round-trip test keeps that honest.
 
-### Why there is no cloud
+### Expert mode
 
-`INTERNET` is not declared in the manifest. Not "we don't send anything" — the permission is
-absent, so at the operating system level nothing *can* leave the device, regardless of any bug,
-any transitive dependency, any oversight. That is considerably stronger than an assurance in
-code, and it is verified in the built APK by a test.
+A local HTTP server on the phone, **off until you start it**. Point a browser on your computer at
+it and you get what the phone deliberately does not show: the task list with every field, the
+rulebook as editable YAML, the state vector with its derivation, the raw event stream. It works
+on the device's **real** data — unlike the desktop build, which has its own database.
 
-Sync exists nonetheless, as an encrypted file: events are immutable, so their union is
-conflict-free and a repeated import is idempotent. Two devices converge without a server.
+It costs the `INTERNET` permission, so the guardrails are not decoration:
+
+| | |
+|---|---|
+| Start | only on command — no autostart, no restart after a reboot (`START_NOT_STICKY`) |
+| Login | six-digit PIN, new on every start, visible only in the app |
+| Session | `HttpOnly` cookie; the PIN never appears in a URL |
+| Wrong PINs | after five the server stops itself |
+| Idle | after 30 minutes without a request, likewise |
+| Visibility | an ongoing notification with the address and a stop button |
+
+No TLS. A self-signed certificate produces a browser warning you click away, and getting used to
+that is more dangerous than plaintext on your own network. The app says so plainly: **anyone
+listening on the same network sees along.**
+
+### About the network
+
+`INTERNET` used to be absent from the manifest — at the operating system level nothing *could*
+leave the device. Expert mode ends that guarantee. What replaces it is narrower and tested:
+**AXIOM listens, but never calls out.** No HTTP client, no outbound connection, no SDK that could
+open one. `language_test.dart` forbids `package:http`, `HttpClient`, `Socket.connect`,
+`WebSocket.connect` and `dart:html` across the whole app, and asserts that exactly one file opens
+a socket — the server, and only to listen. See [ADR-0005](docs/adr/ADR-0005-expertenmodus.md).
+
+Sync still needs no server: events are immutable, so their union is conflict-free and a repeated
+import is idempotent. Two devices converge over an encrypted file.
 
 ### Two languages
 

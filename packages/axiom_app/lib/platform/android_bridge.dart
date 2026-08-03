@@ -326,6 +326,21 @@ abstract final class AndroidBridge {
 
   static Future<bool> speechAvailable() => _invoke('speechAvailable');
 
+  // ── Expertenmodus ─────────────────────────────────────────────────────
+
+  /// Zeigt an, dass der lokale Server läuft.
+  ///
+  /// Zwei Zwecke, beide notwendig. Erstens hält der Vordergrunddienst den
+  /// Prozess am Leben, während man am Rechner arbeitet — sonst räumt Android
+  /// die App ab und der Server verschwindet mitten im Tippen. Zweitens ist
+  /// ein offener Port etwas, das man sehen muss: Eine Benachrichtigung, die
+  /// sich nicht wegwischen lässt, ist hier kein Ärgernis, sondern die
+  /// ehrliche Anzeige eines Zustands.
+  static Future<bool> startExpertNotice({required String address}) =>
+      _invoke('expertNoticeStart', {'address': address});
+
+  static Future<bool> stopExpertNotice() => _invoke('expertNoticeStop');
+
   // ── Automation ────────────────────────────────────────────────────────
 
   /// Sendet einen Broadcast, den Samsung „Modi und Routinen" aufgreifen kann.

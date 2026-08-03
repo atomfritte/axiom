@@ -12,7 +12,9 @@ import 'package:path_provider/path_provider.dart';
 
 import '../design/tokens.dart';
 import '../i18n/i18n.dart';
+import '../platform/android_bridge.dart';
 import '../platform/health_sync.dart';
+import '../server/expert_server.dart';
 import '../platform/system_sync.dart';
 import 'runtime.dart';
 
@@ -261,6 +263,63 @@ final ruleStatsProvider = FutureProvider<List<RuleStats>>((ref) async {
     since: runtime.clock.nowUtc().subtract(const Duration(days: 7)),
   );
 });
+
+// ── Expertenmodus (ADR-0005) ────────────────────────────────────────────
+
+/// Der lokale Server. **Aus, bis er eingeschaltet wird.**
+///
+/// Kein Autostart, kein Weiterlaufen nach einem Neustart, kein
+/// Wiederanschalten nach einem Absturz. Ein Port mit Gesundheitsdaten geht
+/// nur auf, wenn jemand ihn aufmacht — und schliesst sich von selbst wieder.
+final class ExpertMode extends Notifier<ExpertStatus> {
+  ExpertServer? _server;
+
+  @override
+  ExpertStatus build() {
+    ref.onDispose(() => _server?.stop());
+    return ExpertStatus.off;
+  }
+
+  Future<void> start() async {
+    _server ??= ExpertServer(
+      resolveRuntime: () => ref.read(runtimeProvider.future),
+      onChanged: () {
+        // Was im Browser geaendert wird, muss auf dem Telefon ankommen.
+        ref.invalidate(runtimeProvider);
+        ref.read(refreshTickProvider.notifier).bump();
+        _sync();
+      },
+    );
+    state = await _server!.start();
+    await AndroidBridge.startExpertNotice(address: state.address ?? '');
+  }
+
+  Future<void> stop() async {
+    await _server?.stop();
+    _server = null;
+    state = ExpertStatus.off;
+    await AndroidBridge.stopExpertNotice();
+  }
+
+  /// Uebernimmt den Zustand des Servers, wenn er sich selbst abgeschaltet hat
+  /// — nach Leerlauf oder zu vielen Fehlversuchen.
+  void _sync() {
+    final running = _server?.isRunning ?? false;
+    if (!running && state.running) {
+      state = ExpertStatus.off;
+      AndroidBridge.stopExpertNotice();
+    } else if (running) {
+      state = _server!.status;
+    }
+  }
+
+  /// Fuer die Anzeige: der Server kann sich zwischen zwei Blicken selbst
+  /// abgeschaltet haben.
+  void refresh() => _sync();
+}
+
+final expertModeProvider =
+    NotifierProvider<ExpertMode, ExpertStatus>(ExpertMode.new);
 
 /// Anzeigesprache. Deutsch ist die Quelle, Englisch die Uebersetzung.
 ///

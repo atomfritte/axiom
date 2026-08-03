@@ -196,8 +196,12 @@ Golden-Bilder nur erneuern, wenn die Änderung beabsichtigt war.
 Die Daten dokumentieren psychische Verfassung, Impulskontrolle, Substanzkonsum, Beziehungskonflikte
 und Medikation. Entsprechend:
 
-- **`INTERNET` wird in S1–S3 nicht im Manifest deklariert.** Damit ist auf Systemebene garantiert,
-  dass nichts das Gerät verlassen kann — stärker als jede Zusicherung im Code.
+- **`INTERNET` ist deklariert** (ADR-0005, Expertenmodus). An die Stelle der früheren
+  strukturellen Garantie tritt eine engere, getestete Zusage: **AXIOM ruft nichts von sich aus
+  auf.** Kein HTTP-Client, keine ausgehende Verbindung, kein SDK, das eine aufbauen könnte —
+  `language_test.dart` verbietet `package:http`, `HttpClient`, `Socket.connect` und `dart:html`
+  im gesamten App-Code. Die App **lauscht** nur, und nur solange der Expertenmodus
+  eingeschaltet ist.
 - Keine Telemetrie, kein Analytics-SDK, kein Crash-Reporting an Dritte. Nie. Auch nicht "anonym".
 - SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate.
 - `rules/personal/` und alle `*.axiom`-Exporte bleiben lokal.
@@ -230,8 +234,10 @@ ausdrücklich revidiert wurde:
 | Cloud-Pflicht, Account-Zwang, Telemetrie | Datenhoheit (R6) |
 | Schuldbasierte Erinnerungen und Formulierungen | erzeugt Vermeidung statt Handlung |
 | Endlose Konfigurierbarkeit, Einstellungs-Wildwuchs | D3 |
+| Ausgehende Netzwerkverbindungen jeder Art | ADR-0005: AXIOM lauscht, ruft nie |
+| Expertenmodus mit Autostart oder ohne PIN | ein offener Port mit Gesundheitsdaten |
 | Regeleditor ohne Schattenzeit oder ohne Pflicht-`rationale` | wäre reines Meta-Work-Vehikel (D3, R1) |
-| Microservices, Multi-User, Rollen/Rechte, Web-Frontend | kein Anwendungsfall |
+| Microservices, Multi-User, Rollen/Rechte | kein Anwendungsfall |
 | UI-Redesign, bevor S1–S3 laufen | klassische Ausweichbaustelle |
 
 ---

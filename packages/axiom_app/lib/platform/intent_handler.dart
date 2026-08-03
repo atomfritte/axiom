@@ -61,6 +61,7 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       // Systemdialog zurueckkommt, darf nicht den alten Stand sehen — sonst
       // wirkt eine erteilte Freigabe wie eine abgelehnte (R8).
       ref.invalidate(healthAvailabilityProvider);
+      ref.read(expertModeProvider.notifier).refresh();
       refreshAxiom(ref);
     }
   }
@@ -92,6 +93,11 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
           await showCaptureSheet(context);
         case 'de.axiom.CHECKIN':
           await showCheckinSheet(context);
+        case 'de.axiom.EXPERT_STOP':
+          // Der Knopf auf der Benachrichtigung. Er oeffnet die App, weil der
+          // Server im App-Prozess laeuft — ihn von aussen zu beenden hiesse,
+          // den Prozess zu beenden, und das waere ein Absturz, kein Stopp.
+          await ref.read(expertModeProvider.notifier).stop();
       }
       refreshAxiom(ref);
     } on Object {

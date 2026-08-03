@@ -171,11 +171,21 @@ void main() {
       }
     });
 
-    test('INTERNET bleibt auch mit Health Connect draußen (ADR-0002)', () {
-      expect(
-        android('AndroidManifest.xml'),
-        isNot(contains('android.permission.INTERNET')),
-      );
+    test('INTERNET ist deklariert und begründet (ADR-0005)', () {
+      final manifest = android('AndroidManifest.xml');
+      expect(manifest, contains('android.permission.INTERNET'));
+      // Eine Berechtigung ohne Begründung im Manifest ist in einem halben
+      // Jahr eine Berechtigung ohne bekannten Grund.
+      expect(manifest, contains('ADR-0005'));
+    });
+
+    test('der Expertenmodus startet nicht von selbst', () {
+      final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
+      expect(service, contains('START_NOT_STICKY'));
+      expect(android('AndroidManifest.xml'),
+          isNot(contains('EXPERT_START" />')),
+          reason: 'Kein Intent-Filter, über den ihn etwas anderes starten '
+              'könnte als die App selbst');
     });
   });
 }

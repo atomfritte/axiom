@@ -26,6 +26,7 @@ import '../state/providers.dart';
 import '../state/runtime.dart';
 import 'channels_screen.dart';
 import 'check_screen.dart';
+import 'expert_screen.dart';
 import 'rule_editor_screen.dart';
 import 'signal_screen.dart';
 import 'vault_screen.dart';
@@ -127,6 +128,13 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
                 label: context.t('Systemcheck'),
                 detail: context.t('Was das Gerät wirklich freigegeben hat'),
                 target: const CheckScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
+                icon: Icons.desktop_windows_outlined,
+                label: context.t('Expertenmodus'),
+                detail: context.t('Regeln und Listen am großen Bildschirm — aus, bis du ihn startest'),
+                target: const ExpertScreen(),
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(

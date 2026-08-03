@@ -1,0 +1,246 @@
+/// Expertenmodus — der Schalter für den lokalen Server.
+///
+/// Hier steht bewusst mehr Text als sonst irgendwo in dieser App. Ein
+/// offener Port mit Gesundheitsdaten ist die eine Stelle, an der Kürze der
+/// falsche Wert wäre: Wer ihn einschaltet, soll wissen, was er einschaltet,
+/// und wer ihn vergisst, soll es auf der Benachrichtigung sehen.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../design/theme.dart';
+import '../design/tokens.dart';
+import '../design/widgets/instruments.dart';
+import '../i18n/i18n.dart';
+import '../server/expert_server.dart';
+import '../state/providers.dart';
+
+class ExpertScreen extends ConsumerStatefulWidget {
+  const ExpertScreen({super.key});
+
+  @override
+  ConsumerState<ExpertScreen> createState() => _ExpertScreenState();
+}
+
+class _ExpertScreenState extends ConsumerState<ExpertScreen>
+    with WidgetsBindingObserver {
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Der Server kann sich zwischen zwei Blicken selbst abgeschaltet haben —
+  /// nach Leerlauf oder nach zu vielen Fehlversuchen.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(expertModeProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    final status = ref.watch(expertModeProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(context.t('Expertenmodus'))),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+            Space.lg, Space.lg, Space.lg, Space.huge),
+        children: [
+          Text(
+            context.t('Regeln schreiben, die Aufgabenliste mit allen Feldern überblicken, den Ereignisstrom lesen — am großen Bildschirm, auf den echten Daten dieses Geräts.'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: Space.xl),
+
+          if (status.running)
+            _Running(status: status)
+          else
+            Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(context.t('AUS'),
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    context.t('Der Server läuft nur, solange du ihn eingeschaltet lässt. Kein Autostart, kein Wiederanlaufen nach einem Neustart.'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: Space.lg),
+          FilledButton(
+            onPressed: _busy ? null : _toggle,
+            child: Text(status.running
+                ? context.t('Server beenden')
+                : context.t('Server starten')),
+          ),
+
+          const SizedBox(height: Space.xl),
+          SectionLabel(context.t('Was das kostet')),
+          Panel(
+            accent: p.caution.withValues(alpha: 0.45),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Point(
+                  title: context.t('Unverschlüsselt'),
+                  body: context.t('Wer im selben Netz mitliest, sieht mit. Das eigene WLAN ist dafür in Ordnung, ein Hotel- oder Café-Netz nicht. Ein selbst signiertes Zertifikat wäre keine Lösung — man klickt die Warnung weg und gewöhnt sich daran.'),
+                ),
+                Divider(color: p.rule, height: Space.xl),
+                _Point(
+                  title: context.t('AXIOM hat jetzt die Netzwerkberechtigung'),
+                  body: context.t('Bis hierher war auf Systemebene ausgeschlossen, dass Daten das Gerät verlassen. Das gilt nicht mehr. Was bleibt: AXIOM lauscht, ruft aber nichts von sich aus auf — kein Netzwerk-Client im Code, und ein Test hält das fest.'),
+                ),
+                Divider(color: p.rule, height: Space.xl),
+                _Point(
+                  title: context.t('Was ihn wieder ausmacht'),
+                  body: context.t('Fünf falsche PINs, dreißig Minuten ohne Anfrage, der Knopf hier, oder der Knopf auf der Benachrichtigung. Beim Beenden der App ist er ohnehin weg.'),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: Space.xl),
+          SectionLabel(context.t('Was dort geht')),
+          Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Point(
+                  title: context.t('Aufgaben als Liste'),
+                  body: context.t('Alle Felder, alle Zustände, direkt änderbar. Die App zeigt bewusst nur eine Handlung — Planen ist etwas anderes als Entscheiden im Moment.'),
+                ),
+                Divider(color: p.rule, height: Space.xl),
+                _Point(
+                  title: context.t('Regelwerk im YAML'),
+                  body: context.t('Ungültiges wird abgelehnt, nicht übersprungen. Jede gespeicherte Änderung läuft sieben Tage stumm mit — dieselbe Zusage wie im Editor hier.'),
+                ),
+                Divider(color: p.rule, height: Space.xl),
+                _Point(
+                  title: context.t('Zustand und Ereignisstrom'),
+                  body: context.t('Die Werte mit ihrer Herleitung, und darunter der Strom, aus dem sie gerechnet werden. Nur lesend — Ereignisse sind unveränderlich.'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggle() async {
+    setState(() => _busy = true);
+    final notifier = ref.read(expertModeProvider.notifier);
+    final wasRunning = ref.read(expertModeProvider).running;
+    try {
+      if (wasRunning) {
+        await notifier.stop();
+      } else {
+        await notifier.start();
+      }
+      await HapticFeedback.mediumImpact();
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.t('Der Server ließ sich nicht starten: {0}', [e])),
+        ));
+      }
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+}
+
+/// Adresse und PIN — die zwei Dinge, die man am Rechner braucht.
+class _Running extends StatelessWidget {
+  final ExpertStatus status;
+  const _Running({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Panel(
+      accent: p.signal.withValues(alpha: 0.6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.t('LÄUFT'),
+              style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: Space.md),
+          Text(context.t('Im Browser öffnen'),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: Space.xs),
+          SelectableText(
+            status.address ?? '',
+            style: monoStyle(context,
+                size: 19, weight: FontWeight.w500, color: p.ink),
+          ),
+          const SizedBox(height: Space.lg),
+          Text(context.t('PIN — gilt nur für diesen Start'),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: Space.xs),
+          SelectableText(
+            _spaced(status.pin ?? ''),
+            style: monoStyle(context,
+                size: 30, weight: FontWeight.w600, color: p.signal, spacing: 4),
+          ),
+          const SizedBox(height: Space.lg),
+          Row(
+            children: [
+              Icon(Icons.timer_outlined, size: 15, color: p.inkFaint),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  context.t('Schaltet sich ohne Anfrage nach 30 Minuten ab.'),
+                  style: monoStyle(context, size: 12, color: p.inkFaint),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sechs Ziffern in Zweiergruppen — so tippt man sie ohne zu verzählen.
+  static String _spaced(String pin) {
+    final buffer = StringBuffer();
+    for (var i = 0; i < pin.length; i++) {
+      if (i > 0 && i % 2 == 0) buffer.write(' ');
+      buffer.write(pin[i]);
+    }
+    return buffer.toString();
+  }
+}
+
+class _Point extends StatelessWidget {
+  final String title;
+  final String body;
+  const _Point({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: Space.xs),
+          Text(body, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      );
+}

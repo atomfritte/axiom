@@ -201,7 +201,11 @@ void main() {
   });
 
   group('Datenschutz', () {
-    test('kein Netzwerkzugriff im App-Code', () {
+    test('AXIOM ruft nichts von sich aus auf (ADR-0005)', () {
+      // Die frühere Zusage war stärker: Ohne INTERNET-Berechtigung *konnte*
+      // nichts hinaus. Mit dem Expertenmodus ist die Berechtigung da, und
+      // was bleibt, ist diese engere Aussage — AXIOM lauscht, ruft aber nie.
+      // Ohne diesen Test wäre sie eine Absichtserklärung.
       final hits = <String>[];
       for (final file in appSources()) {
         final content = file.readAsStringSync();
@@ -210,25 +214,27 @@ void main() {
           'package:http/',
           'HttpClient(',
           'Socket.connect',
+          'WebSocket.connect',
         ]) {
           if (content.contains(forbidden)) {
             hits.add('${file.path}: $forbidden');
           }
         }
       }
-      expect(hits, isEmpty, reason: 'Netzwerkzugriff gefunden:\n${hits.join("\n")}');
+      expect(hits, isEmpty,
+          reason: 'Ausgehender Netzwerkzugriff gefunden:\n${hits.join("\n")}');
     });
 
-    test('INTERNET ist im Release-Manifest nicht deklariert (ADR-0002)', () {
-      final manifest = File('android/app/src/main/AndroidManifest.xml');
-      if (!manifest.existsSync()) return;
-      expect(
-        manifest.readAsStringSync().contains('android.permission.INTERNET'),
-        isFalse,
-        reason: 'Das Hauptmanifest darf keine INTERNET-Berechtigung '
-            'deklarieren. Nur die Debug- und Profile-Varianten dürfen das, '
-            'weil Flutter sie für Hot Reload braucht.',
-      );
+    test('der lauschende Server ist die einzige Netzwerkstelle', () {
+      // Genau eine Datei darf einen Socket öffnen, und auch die nur
+      // lauschend. Wächst diese Liste, ist das eine Entscheidung und kein
+      // Versehen.
+      final binding = appSources()
+          .where((f) => f.readAsStringSync().contains('HttpServer.bind'))
+          .map((f) => f.path)
+          .toList();
+      expect(binding, hasLength(1));
+      expect(binding.single, endsWith('server/expert_server.dart'));
     });
   });
 }

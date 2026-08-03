@@ -109,6 +109,7 @@ class MainActivity : FlutterActivity() {
         createChannels(this)
         PresenceService.createChannel(this)
         LiveSlotService.createChannel(this)
+        ExpertService.createChannel(this)
         // Muss bei jedem Start erneut angemeldet werden: Das System raeumt
         // langlebige Shortcuts auf, wenn die App laenger nicht lief.
         ShareTargets.publish(this)
@@ -282,6 +283,18 @@ class MainActivity : FlutterActivity() {
                         call.argument<String>("locale"), result
                     )
 
+                    // ── Expertenmodus (ADR-0005) ────────────────────────
+                    "expertNoticeStart" -> {
+                        ExpertService.start(
+                            this, call.argument<String>("address").orEmpty())
+                        result.success(true)
+                    }
+
+                    "expertNoticeStop" -> {
+                        ExpertService.stop(this)
+                        result.success(true)
+                    }
+
                     "pendingSharedText" -> result.success(consumeSharedText())
 
                     "launchAction" -> result.success(consumeLaunchAction())
@@ -303,6 +316,7 @@ class MainActivity : FlutterActivity() {
                 "de.axiom.CHECKIN",
                 "de.axiom.FOCUS",
                 "de.axiom.SENSATION",
+                ExpertService.ACTION_STOP,
             )
         ) return null
         intent.action = Intent.ACTION_MAIN

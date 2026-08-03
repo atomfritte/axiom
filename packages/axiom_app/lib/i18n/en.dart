@@ -983,6 +983,57 @@ const Map<String, String> kEnglish = {
       'Off — and without the notification permission above it cannot start '
           'either.',
 
+  // ── Expertenmodus (ADR-0005) ─────────────────────────────────────────
+  'Expertenmodus': 'Expert mode',
+  'Regeln und Listen am großen Bildschirm — aus, bis du ihn startest':
+      'Rules and lists on a big screen — off until you start it',
+  'Regeln schreiben, die Aufgabenliste mit allen Feldern überblicken, den Ereignisstrom lesen — am großen Bildschirm, auf den echten Daten dieses Geräts.':
+      'Write rules, see the task list with every field, read the event '
+          'stream — on a big screen, on this device’s real data.',
+  'AUS': 'OFF',
+  'Der Server läuft nur, solange du ihn eingeschaltet lässt. Kein Autostart, kein Wiederanlaufen nach einem Neustart.':
+      'The server runs only while you leave it on. No autostart, no restart '
+          'after a reboot.',
+  'Server starten': 'Start the server',
+  'Server beenden': 'Stop the server',
+  'Der Server ließ sich nicht starten: {0}': 'The server could not start: {0}',
+  'Im Browser öffnen': 'Open in a browser',
+  'PIN — gilt nur für diesen Start': 'PIN — valid for this run only',
+  'Schaltet sich ohne Anfrage nach 30 Minuten ab.':
+      'Shuts down after 30 minutes without a request.',
+  'Was das kostet': 'What it costs',
+  'Unverschlüsselt': 'Unencrypted',
+  'Wer im selben Netz mitliest, sieht mit. Das eigene WLAN ist dafür in Ordnung, ein Hotel- oder Café-Netz nicht. Ein selbst signiertes Zertifikat wäre keine Lösung — man klickt die Warnung weg und gewöhnt sich daran.':
+      'Anyone listening on the same network sees along. Your own Wi-Fi is '
+          'fine for this, a hotel or café network is not. A self-signed '
+          'certificate would not fix it — you click the warning away and get '
+          'used to doing so.',
+  'AXIOM hat jetzt die Netzwerkberechtigung':
+      'AXIOM now holds the network permission',
+  'Bis hierher war auf Systemebene ausgeschlossen, dass Daten das Gerät verlassen. Das gilt nicht mehr. Was bleibt: AXIOM lauscht, ruft aber nichts von sich aus auf — kein Netzwerk-Client im Code, und ein Test hält das fest.':
+      'Until now it was ruled out at the system level that data could leave '
+          'the device. That no longer holds. What remains: AXIOM listens but '
+          'never calls out — no network client in the code, and a test pins '
+          'that down.',
+  'Was ihn wieder ausmacht': 'What turns it off again',
+  'Fünf falsche PINs, dreißig Minuten ohne Anfrage, der Knopf hier, oder der Knopf auf der Benachrichtigung. Beim Beenden der App ist er ohnehin weg.':
+      'Five wrong PINs, thirty minutes without a request, the button here, or '
+          'the one on the notification. Closing the app ends it anyway.',
+  'Was dort geht': 'What works there',
+  'Aufgaben als Liste': 'Tasks as a list',
+  'Alle Felder, alle Zustände, direkt änderbar. Die App zeigt bewusst nur eine Handlung — Planen ist etwas anderes als Entscheiden im Moment.':
+      'Every field, every state, editable in place. The app deliberately '
+          'shows one action — planning is not the same as deciding in the '
+          'moment.',
+  'Regelwerk im YAML': 'Rulebook as YAML',
+  'Ungültiges wird abgelehnt, nicht übersprungen. Jede gespeicherte Änderung läuft sieben Tage stumm mit — dieselbe Zusage wie im Editor hier.':
+      'Invalid input is rejected, not skipped. Every saved change runs '
+          'silently for seven days — the same promise as in the editor here.',
+  'Zustand und Ereignisstrom': 'State and event stream',
+  'Die Werte mit ihrer Herleitung, und darunter der Strom, aus dem sie gerechnet werden. Nur lesend — Ereignisse sind unveränderlich.':
+      'The values with their derivation, and below them the stream they are '
+          'calculated from. Read-only — events are immutable.',
+
   // ── Regeleditor ──────────────────────────────────────────────────────
   'Neue Regel': 'New rule',
   'Bearbeiten': 'Edit',

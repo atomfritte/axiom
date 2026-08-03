@@ -1,0 +1,349 @@
+<!--
+  Expertenmodus — die Oberfläche am großen Bildschirm.
+
+  Vollständig eigenständig: kein CDN, keine Schriftart von außen, kein
+  Skript, das nachgeladen wird. Das ist keine Sparsamkeit, sondern die
+  Bedingung aus ADR-0005 — AXIOM ruft nichts von sich aus auf, und eine
+  Seite, die eine Schriftart von einem fremden Server holt, täte genau das.
+
+  Zeigt bewusst, was die App bewusst nicht zeigt: Listen, Rohwerte, Felder.
+  Die Entscheidung im Moment bleibt auf dem Telefon genau eine Handlung.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AXIOM · Expertenmodus</title>
+<style>
+  :root{
+    --base:#0E1113; --panel:#171B1E; --raised:#1F2529; --rule:#2A3237;
+    --ink:#ECEAE4; --dim:#9BA4AB; --faint:#7A848B;
+    --signal:#E8A33D; --calm:#7FA88A; --caution:#C4653A; --info:#6E90A4;
+    --mono:ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--base);color:var(--ink);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+  a{color:var(--signal)}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:14px 20px;border-bottom:1px solid var(--rule);
+    position:sticky;top:0;background:var(--base);z-index:5}
+  .mark{font:600 15px/1 var(--mono);letter-spacing:.22em;color:var(--signal)}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  nav button{background:transparent;border:1px solid transparent;color:var(--dim);
+    font:600 12px/1 var(--mono);letter-spacing:.08em;padding:9px 13px;
+    border-radius:4px;cursor:pointer}
+  nav button:hover{color:var(--ink)}
+  nav button[aria-selected=true]{background:var(--panel);border-color:var(--rule);color:var(--ink)}
+  main{padding:20px;max-width:1280px}
+  section[hidden]{display:none}
+  h2{font:500 20px/1.25 inherit;margin:0 0 4px}
+  .hint{color:var(--dim);font-size:13.5px;margin:0 0 18px;max-width:70ch}
+  .panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;
+    padding:16px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font:600 11px/1 var(--mono);letter-spacing:.09em;
+    color:var(--faint);padding:0 10px 9px;white-space:nowrap}
+  td{padding:9px 10px;border-top:1px solid var(--rule);vertical-align:middle}
+  tr:hover td{background:var(--raised)}
+  input,textarea,select{background:var(--base);color:var(--ink);
+    border:1px solid var(--rule);border-radius:4px;padding:7px 9px;font:inherit;width:100%}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--signal)}
+  textarea{font:13px/1.5 var(--mono);min-height:250px;resize:vertical}
+  .num{width:72px;font:14px/1 var(--mono);text-align:center}
+  button.act{background:var(--signal);color:#14100A;border:0;border-radius:4px;
+    padding:10px 16px;font:600 13px/1 inherit;cursor:pointer}
+  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--rule);
+    border-radius:4px;padding:8px 12px;font:13px/1 inherit;cursor:pointer}
+  button.ghost:hover{color:var(--ink);border-color:var(--dim)}
+  .tag{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.07em;
+    padding:4px 7px;border-radius:3px;border:1px solid currentColor;margin-right:5px}
+  .mono{font:12.5px/1.5 var(--mono);color:var(--dim)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+  .metric .k{font:600 10.5px/1 var(--mono);letter-spacing:.09em;color:var(--faint)}
+  .metric .v{font:300 34px/1.1 var(--mono);margin-top:6px}
+  .bar{height:3px;background:var(--rule);margin-top:8px;border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--signal)}
+  #gate{max-width:420px;margin:14vh auto;text-align:center}
+  #gate input{text-align:center;font:400 30px/1 var(--mono);letter-spacing:.3em;padding:14px}
+  .warn{border-color:var(--caution);color:var(--caution)}
+  .ok{color:var(--calm)}
+  .err{color:var(--caution);font-size:13px;margin-top:10px;white-space:pre-wrap}
+  footer{color:var(--faint);font-size:12px;padding:24px 20px 40px;max-width:80ch}
+</style>
+
+<div id="gate">
+  <div class="mark">AXIOM</div>
+  <h2 style="margin-top:20px">Expertenmodus</h2>
+  <p class="hint" style="text-align:left">
+    Die sechsstellige PIN steht in der App unter <em>System → Expertenmodus</em>.
+    Sie ist bei jedem Start neu. Nach fünf Fehlversuchen schaltet sich der
+    Server ab.
+  </p>
+  <input id="pin" inputmode="numeric" maxlength="6" placeholder="······" autofocus>
+  <div style="margin-top:14px"><button class="act" id="unlock">Öffnen</button></div>
+  <div class="err" id="gateErr"></div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <span class="mark">AXIOM</span>
+    <nav>
+      <button data-tab="state" aria-selected="true">ZUSTAND</button>
+      <button data-tab="tasks">AUFGABEN</button>
+      <button data-tab="rules">REGELWERK</button>
+      <button data-tab="events">EREIGNISSE</button>
+    </nav>
+    <span style="flex:1"></span>
+    <button class="ghost" id="reload">Neu laden</button>
+    <button class="ghost warn" id="shutdown">Server beenden</button>
+  </header>
+
+  <main>
+    <section id="state">
+      <h2>Zustand</h2>
+      <p class="hint">Die Werte, gegen die jede Regel prüft — mit der Herleitung,
+        aus der sie entstanden sind. Kein Wert ohne sichtbare Formel.</p>
+      <div class="grid" id="metrics"></div>
+      <div class="panel" id="breakdown"></div>
+    </section>
+
+    <section id="tasks" hidden>
+      <h2>Aufgaben</h2>
+      <p class="hint">Alle Felder, alle Zustände. Die App zeigt bewusst nur eine
+        Handlung — hier ist die Liste, weil Planen etwas anderes ist als
+        Entscheiden im Moment.</p>
+      <div class="panel">
+        <div class="row">
+          <input id="newTitle" placeholder="Neue Aufgabe" style="flex:1;min-width:220px">
+          <label class="mono">Start <input class="num" id="newAe" type="number" min="1" max="10" value="5"></label>
+          <label class="mono">Sog <input class="num" id="newSal" type="number" min="1" max="5" value="3"></label>
+          <label class="mono">Folgen <input class="num" id="newStakes" type="number" min="1" max="5" value="3"></label>
+          <button class="act" id="addTask">Anlegen</button>
+        </div>
+      </div>
+      <div class="panel" style="overflow-x:auto"><table id="taskTable"></table></div>
+    </section>
+
+    <section id="rules" hidden>
+      <h2>Regelwerk</h2>
+      <p class="hint">Bearbeiten geht direkt im YAML. Ungültiges wird abgelehnt,
+        nicht stillschweigend übersprungen. Jede gespeicherte Änderung läuft
+        sieben Tage stumm mit.</p>
+      <div id="ruleList"></div>
+    </section>
+
+    <section id="events" hidden>
+      <h2>Ereignisse</h2>
+      <p class="hint">Der Strom, aus dem alles andere gerechnet wird. Append-only:
+        Es gibt hier nichts zu ändern, nur zu lesen.</p>
+      <div class="panel" style="overflow-x:auto"><table id="eventTable"></table></div>
+    </section>
+  </main>
+
+  <footer>
+    Diese Verbindung ist unverschlüsselt. Wer im selben Netz mitliest, sieht mit —
+    der Expertenmodus gehört ins eigene Netz, nicht ins Hotel-WLAN.
+    Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (t, p = {}) => Object.assign(document.createElement(t), p);
+const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
+  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {'Content-Type': 'application/json', ...(opts.headers || {})},
+  });
+  if (res.status === 401) { gate(); throw new Error('unauthorised'); }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.issues ? body.issues.join('\n') : (body.error || res.statusText));
+  return body;
+}
+
+function gate() { $('#gate').hidden = false; $('#app').hidden = true; }
+
+$('#unlock').onclick = async () => {
+  const pin = $('#pin').value.trim();
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pin}),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) { $('#gate').hidden = true; $('#app').hidden = false; loadAll(); return; }
+  $('#gateErr').textContent = body.attemptsLeft !== undefined
+    ? `${body.error}. Noch ${body.attemptsLeft} Versuch(e).`
+    : body.error || 'Fehlgeschlagen';
+  $('#pin').value = '';
+};
+$('#pin').onkeydown = e => { if (e.key === 'Enter') $('#unlock').click(); };
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['state','tasks','rules','events'].forEach(id => $('#' + id).hidden = id !== b.dataset.tab);
+});
+
+$('#reload').onclick = loadAll;
+$('#shutdown').onclick = async () => {
+  await fetch('/api/stop', {method: 'POST'}).catch(() => {});
+  document.body.innerHTML =
+    '<main><h2>Server beendet.</h2><p class="hint">Neu starten geht in der App.</p></main>';
+};
+
+// ── Zustand ───────────────────────────────────────────────────────────
+async function loadState() {
+  const s = await api('/api/state');
+  $('#metrics').innerHTML = Object.entries(s.values).map(([k, v]) => `
+    <div class="panel metric">
+      <div class="k">${esc(v.label).toUpperCase()}</div>
+      <div class="v">${v.value ?? '–'}</div>
+      <div class="bar"><i style="width:${Math.max(0, Math.min(100, v.value ?? 0))}%"></i></div>
+      <div class="mono" style="margin-top:8px">Konfidenz ${(v.confidence ?? 1).toFixed(2)}</div>
+    </div>`).join('');
+
+  const rows = Object.entries(s.breakdown).map(([key, terms]) => `
+    <div style="margin-bottom:14px">
+      <div class="k mono" style="color:var(--faint)">${esc(key).toUpperCase()}</div>
+      ${terms.map(t => `<div class="mono">${esc(t.label)}
+        <span style="color:${t.contribution < 0 ? 'var(--caution)' : 'var(--calm)'}">
+        ${t.contribution >= 0 ? '+' : '−'}${Math.abs(t.contribution).toFixed(1)}</span></div>`).join('')}
+    </div>`).join('');
+  $('#breakdown').innerHTML =
+    `<div class="k mono" style="color:var(--faint);margin-bottom:12px">SO WIRD GERECHNET</div>${rows}
+     <div class="mono" style="margin-top:14px">Laststufe ${esc(s.loadLevel)} · ${esc(s.regime)}
+     · Meta-Work heute ${s.metaMinutesToday} min</div>`;
+}
+
+// ── Aufgaben ──────────────────────────────────────────────────────────
+const STATES = ['ready','active','blocked','done','dropped'];
+
+async function loadTasks() {
+  const {tasks} = await api('/api/tasks');
+  const t = $('#taskTable');
+  t.innerHTML = `<thead><tr>
+    <th>Titel</th><th>Start</th><th>Sog</th><th>Folgen</th>
+    <th>Zustand</th><th>Verfällt</th><th>ID</th></tr></thead>`;
+  const body = el('tbody');
+  for (const task of tasks) {
+    const tr = el('tr');
+    tr.innerHTML = `
+      <td><input value="${esc(task.title)}" data-f="title"></td>
+      <td><input class="num" type="number" min="1" max="10" value="${task.activationEnergy}" data-f="activationEnergy"></td>
+      <td><input class="num" type="number" min="1" max="5" value="${task.salience}" data-f="salience"></td>
+      <td><input class="num" type="number" min="1" max="5" value="${task.stakes}" data-f="stakes"></td>
+      <td><select data-f="state">${STATES.map(s =>
+        `<option ${s === task.state ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+      <td class="mono">${task.decayAt ? esc(task.decayAt.slice(0, 16).replace('T', ' ')) : '–'}</td>
+      <td class="mono" style="font-size:11px">${esc(task.id.slice(-6))}</td>`;
+    tr.querySelectorAll('[data-f]').forEach(input => {
+      const save = async () => {
+        const field = input.dataset.f;
+        const value = input.type === 'number' ? Number(input.value) : input.value;
+        try { await api('/api/tasks/' + task.id, {
+          method: 'PATCH', body: JSON.stringify({[field]: value})});
+        } catch (e) { alert(e.message); }
+      };
+      input.onchange = save;
+    });
+    body.append(tr);
+  }
+  t.append(body);
+}
+
+$('#addTask').onclick = async () => {
+  const title = $('#newTitle').value.trim();
+  if (!title) return;
+  await api('/api/tasks', {method: 'POST', body: JSON.stringify({
+    title,
+    activationEnergy: Number($('#newAe').value),
+    salience: Number($('#newSal').value),
+    stakes: Number($('#newStakes').value),
+  })});
+  $('#newTitle').value = '';
+  loadTasks();
+};
+
+// ── Regelwerk ─────────────────────────────────────────────────────────
+async function loadRules() {
+  const {rules, issues} = await api('/api/rules');
+  const host = $('#ruleList');
+  host.innerHTML = issues.length
+    ? `<div class="panel warn"><b>Nicht geladen</b><div class="mono">${
+        issues.map(esc).join('<br>')}</div></div>`
+    : '';
+
+  for (const rule of rules) {
+    const box = el('div', {className: 'panel'});
+    box.innerHTML = `
+      <div class="row">
+        <span class="mono" style="color:var(--info)">${esc(rule.id)}</span>
+        <b style="flex:1">${esc(rule.title)}</b>
+        <span class="tag" style="color:var(--signal)">${esc(rule.severity).toUpperCase()}</span>
+        ${rule.deficit ? `<span class="tag" style="color:var(--dim)">${esc(rule.deficit)}</span>` : ''}
+        ${rule.edited ? '<span class="tag" style="color:var(--info)">BEARBEITET</span>' : ''}
+        ${rule.shadowDaysLeft ? `<span class="tag" style="color:var(--caution)">STUMM NOCH ${rule.shadowDaysLeft} T</span>` : ''}
+        <button class="ghost" data-toggle>Bearbeiten</button>
+      </div>
+      <div class="mono" style="margin-top:8px">${esc(rule.condition)} → ${esc(rule.action)}</div>
+      <div hidden data-editor style="margin-top:12px">
+        <textarea spellcheck="false">${esc(rule.yaml)}</textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="act" data-save>Speichern</button>
+          ${rule.edited ? '<button class="ghost" data-reset>Zurücksetzen</button>' : ''}
+          <span class="mono">Speichern startet sieben Tage Schattenzeit.</span>
+        </div>
+        <div class="err" data-err></div>
+      </div>`;
+
+    const editor = box.querySelector('[data-editor]');
+    box.querySelector('[data-toggle]').onclick = () => editor.hidden = !editor.hidden;
+    box.querySelector('[data-save]').onclick = async () => {
+      const err = box.querySelector('[data-err]');
+      err.textContent = '';
+      try {
+        await api('/api/rules/' + rule.id, {method: 'PUT',
+          body: JSON.stringify({yaml: box.querySelector('textarea').value})});
+        loadRules();
+      } catch (e) { err.textContent = e.message; }
+    };
+    const reset = box.querySelector('[data-reset]');
+    if (reset) reset.onclick = async () => {
+      await api('/api/rules/' + rule.id, {method: 'DELETE'});
+      loadRules();
+    };
+    host.append(box);
+  }
+}
+
+// ── Ereignisse ────────────────────────────────────────────────────────
+async function loadEvents() {
+  const {events} = await api('/api/events?limit=300');
+  const t = $('#eventTable');
+  t.innerHTML = `<thead><tr><th>Zeit</th><th>Typ</th><th>Quelle</th><th>Inhalt</th></tr></thead>`;
+  const body = el('tbody');
+  for (const e of events) {
+    const tr = el('tr');
+    tr.innerHTML = `<td class="mono">${esc(e.at.slice(0, 16).replace('T', ' '))}</td>
+      <td class="mono" style="color:var(--info)">${esc(e.type)}</td>
+      <td class="mono">${esc(e.source)}</td>
+      <td class="mono" style="color:var(--dim)">${esc(JSON.stringify(e.payload))}</td>`;
+    body.append(tr);
+  }
+  t.append(body);
+}
+
+async function loadAll() {
+  try {
+    await Promise.all([loadState(), loadTasks(), loadRules(), loadEvents()]);
+  } catch (e) { if (e.message !== 'unauthorised') console.error(e); }
+}
+
+// Beim Laden prüfen, ob die Sitzung noch gilt.
+fetch('/api/state').then(r => {
+  if (r.ok) { $('#gate').hidden = true; $('#app').hidden = false; loadAll(); }
+});
+</script>
