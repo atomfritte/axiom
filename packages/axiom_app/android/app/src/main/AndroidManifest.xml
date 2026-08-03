@@ -240,11 +240,29 @@
             android:value="2" />
     </application>
 
+    <!--
+      Paketsichtbarkeit (Android 11+). Ohne diese Eintraege meldet das System
+      "nicht vorhanden" statt "nicht freigegeben" — und die App zeigt dann
+      eine Funktion als fehlend an, die in Wahrheit nur unsichtbar ist.
+    -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
+
+        <!-- Health Connect: eigene App bis Android 13, Systemmodul ab 14. -->
         <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+
+        <!-- Spracherkennung fuer die Diktierfunktion beim Erfassen. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 </manifest>

@@ -56,6 +56,11 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
     // Beim Zurückkommen: Wartendes einsammeln und neu auswerten.
     if (state == AppLifecycleState.resumed) {
       unawaited(_drainPending());
+      // Systemfreigaben aendern sich ausserhalb der App: Health Connect,
+      // Benachrichtigungen, die Notiz-Rolle. Wer gerade aus dem
+      // Systemdialog zurueckkommt, darf nicht den alten Stand sehen — sonst
+      // wirkt eine erteilte Freigabe wie eine abgelehnte (R8).
+      ref.invalidate(healthAvailabilityProvider);
       refreshAxiom(ref);
     }
   }

@@ -840,6 +840,145 @@ const Map<String, String> kEnglish = {
   '„Mache ich" wird frei, wenn die Wartezeit um ist.':
       '“Doing it” unlocks once the waiting period is over.',
 
+  // ── Systemcheck und Einrichtung ──────────────────────────────────────
+  'Systemcheck': 'System check',
+  'Was das Gerät wirklich freigegeben hat': 'What the device has actually granted',
+  'Neu prüfen': 'Check again',
+  'Gerät': 'Device',
+  'Modell': 'Model',
+  'Einrichten': 'Set up',
+  'Nachsehen': 'Look up',
+  'Regelwerk': 'Rulebook',
+  'Wege in die App': 'Ways into the app',
+  'Bekannte Grenzen': 'Known limits',
+  'Damit Erinnerungen ankommen': 'So reminders arrive',
+  'Benachrichtigungen': 'Notifications',
+  'Freigeben': 'Grant',
+  'Freigegeben.': 'Granted.',
+  'Auf die Minute genau.': 'Accurate to the minute.',
+  'AXIOM darf im Hintergrund aufwachen.': 'AXIOM may wake in the background.',
+  'Jede Zeile hier ist eine Aussage des Geräts, keine Vermutung der App. Was markiert ist, erklärt eine Funktion, die nicht tut, was sie soll — der Knopf daneben führt genau dorthin, wo es freigegeben wird.':
+      'Every line here is a statement from the device, not a guess by the '
+          'app. Whatever is marked explains a function that is not doing what '
+          'it should — the button next to it goes straight to where it gets '
+          'granted.',
+  'Nicht freigegeben. Ohne das bleibt jede Erinnerung stumm — und ein stiller Ausfall fällt erst auf, wenn etwas verpasst ist.':
+      'Not granted. Without it every reminder stays silent — and a silent '
+          'failure only shows up once something has been missed.',
+  'Ohne diese Freigabe kommen Zeitanker ungefähr statt pünktlich — der wirksamste Interventionstyp wird damit wertlos.':
+      'Without this, time anchors arrive approximately instead of on time — '
+          'which makes the most effective kind of intervention worthless.',
+  'Samsung beendet Hintergrund-Apps aggressiv. Ohne Ausnahme feuern Erinnerungen unzuverlässig.':
+      'Samsung shuts down background apps aggressively. Without an exception '
+          'reminders fire unreliably.',
+  'Jetzt hinzufügen': 'Add it now',
+  'Widget hinzufügen': 'Add widget',
+  '{0} Stück platziert.': '{0} placed.',
+  'Noch keins platziert. Samsungs Startbildschirm merkt sich die Widget-Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig — dieser Knopf geht daran vorbei.':
+      'None placed yet. Samsung’s home screen caches an app’s widget list and '
+          'does not reliably refresh it after an update — this button goes '
+          'around that.',
+  'Falls es in der Widget-Auswahl fehlt: Samsungs Startbildschirm merkt sich die Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig. Der Knopf hier fragt das System direkt.':
+      'If it is missing from the widget picker: Samsung’s home screen caches '
+          'an app’s list and does not reliably refresh it after an update. '
+          'This button asks the system directly.',
+  'Anfrage gestellt — bestätige sie auf dem Startbildschirm.':
+      'Request sent — confirm it on the home screen.',
+  'Der Startbildschirm nimmt keine Anfrage entgegen. Dann über die Widget-Auswahl: lange auf den Homescreen tippen → Widgets → AXIOM.':
+      'The home screen does not accept requests. Use the picker instead: long '
+          'press the home screen → Widgets → AXIOM.',
+  'Der Startbildschirm nimmt keine Anfrage entgegen. Dann über: lange auf den Homescreen tippen → Widgets → AXIOM.':
+      'The home screen does not accept requests. Instead: long press the home '
+          'screen → Widgets → AXIOM.',
+  'S-Pen und Notiz-Taste': 'S Pen and note button',
+  'AXIOM ist die Notiz-App des Systems.': 'AXIOM is the system’s note app.',
+  'AXIOM dafür setzen': 'Make AXIOM the one',
+  'AXIOM als Notiz-App setzen': 'Set AXIOM as the note app',
+  'Diese Rolle gibt es erst ab Android 14.':
+      'That role only exists from Android 14 on.',
+  'Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht.':
+      'The pen double-tap does not look for the intent filter, it looks for '
+          'the “note app” role. While that sits elsewhere, AXIOM does not '
+          'appear there.',
+  'Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht — eine einmalige Einstellung, kein Fehler.':
+      'The pen double-tap does not look for the intent filter, it looks for '
+          'the “note app” role. While that sits elsewhere, AXIOM does not '
+          'appear there — a one-time setting, not a fault.',
+  'Läuft im Benachrichtigungsbereich.': 'Running in the notification shade.',
+  'Aus. Einschalten unter Erfassen — sie braucht die Benachrichtigungsfreigabe von oben.':
+      'Off. Switch it on under Capture — it needs the notification permission '
+          'above.',
+  'Spracheingabe': 'Voice input',
+  'Diktieren': 'Dictate',
+  'Hört zu …': 'Listening …',
+  'Diktieren steht im Erfassungsfeld bereit.':
+      'Dictation is ready in the capture field.',
+  'Auf diesem Gerät ist keine Spracherkennung installiert.':
+      'No speech recognition is installed on this device.',
+  'Rein damit — tippen oder sprechen. Sortieren kannst du später.':
+      'Get it in — type or speak. You can sort it later.',
+  'Direkt beim Erfassen: Das Mikrofon im Eingabefeld diktiert, ohne dass etwas eingerichtet werden muss.':
+      'Right at capture: the microphone in the input field dictates, with '
+          'nothing to set up.',
+  'Health Connect': 'Health Connect',
+  'Verbunden, liest Schlaf und Schritte.':
+      'Connected, reading sleep and steps.',
+  'Vorhanden, aber noch nicht freigegeben.':
+      'Present, but not granted yet.',
+  'Die Systemkomponente ist zu alt und muss aktualisiert werden.':
+      'The system component is too old and needs updating.',
+  'Das System meldet Health Connect als nicht vorhanden (Status {0}).':
+      'The system reports Health Connect as unavailable (status {0}).',
+  'Schlaf und Bewegung aus Health Connect':
+      'Sleep and movement from Health Connect',
+  'Sieben Wege hinein — Widget, Benachrichtigung, Stift, Sprache':
+      'Seven ways in — widget, notification, pen, voice',
+  '{0} Regeln, jede lesbar und abschaltbar':
+      '{0} rules, each readable and switchable',
+  '„Hey Google, Notiz in AXIOM"': '“Hey Google, take a note in AXIOM”',
+  'Sprachbefehle über den Assistenten setzen voraus, dass die App über Google Play verteilt wird. Bei einer selbst installierten App prüft Google die Anmeldung nicht — der Befehl bleibt unbekannt. Was stattdessen funktioniert: die Notiz-Rolle oben, eine Bixby-Routine, oder ein Link auf axiom://capture?text=…':
+      'Assistant voice commands require the app to be distributed through '
+          'Google Play. For a sideloaded app Google never verifies the '
+          'registration, so the command stays unknown. What does work: the '
+          'note role above, a Bixby routine, or a link to '
+          'axiom://capture?text=…',
+  '„Hey Google, Notiz in AXIOM" setzt dagegen voraus, dass die App über Google Play verteilt wird — bei einer selbst installierten prüft Google die Anmeldung nicht. Was hier funktioniert: eine Bixby-Routine oder ein Link auf axiom://capture?text=…':
+      '“Hey Google, take a note in AXIOM”, on the other hand, requires '
+          'distribution through Google Play — for a sideloaded app Google '
+          'never verifies the registration. What works here: a Bixby routine '
+          'or a link to axiom://capture?text=…',
+  'Lockscreen-Widget': 'Lock screen widget',
+  'Gibt es auf Android nicht — mit 5.0 entfernt. Die dauerhafte Benachrichtigung ist der verbliebene Weg zu ständiger Sichtbarkeit im gesperrten Zustand.':
+      'Does not exist on Android — removed in 5.0. The ongoing notification '
+          'is the remaining route to permanent visibility while locked.',
+  'Screen-off-Memo mit dem Stift': 'Screen-off memo with the pen',
+  'Landet in Samsung Notes. Dafür gibt es keine öffentliche Schnittstelle, jeder Weg dorthin wäre Reverse Engineering und würde das nächste Systemupdate nicht überleben.':
+      'Lands in Samsung Notes. There is no public interface for it; any route '
+          'in would be reverse engineering and would not survive the next '
+          'system update.',
+  'Auf dem Desktop gibt es keine Systemrechte zu prüfen. Erfassen, Check-ins und der Regelinspektor laufen trotzdem vollständig.':
+      'There are no system permissions to check on the desktop. Capture, '
+          'check-ins and the rule inspector still run in full.',
+
+  // ── Anzeige-Einstellungen ────────────────────────────────────────────
+  'Textgröße': 'Text size',
+  'Helligkeit': 'Brightness',
+  'Farbschema': 'Colour scheme',
+  'AUTO': 'AUTO',
+  'DUNKEL': 'DARK',
+  'HELL': 'LIGHT',
+
+  // Bezeichnungen der Aufzaehlungen. Sie laufen ueber eine Variable durch
+  // die Uebersetzung (context.t(size.label)) und sind deshalb im Quelltext
+  // nicht als Literal zu finden — i18n_test prueft sie getrennt.
+  'Kompakt': 'Compact',
+  'Normal': 'Normal',
+  'Groß': 'Large',
+  'Sehr groß': 'Very large',
+  'Instrument': 'Instrument',
+  'Kontrast': 'Contrast',
+  'Gedämpft': 'Muted',
+
   // ── Texte, die nicht aus dem Screen-Quelltext stammen ────────────────
   // Widget, Benachrichtigungen und Kern-Saetze. Sie erscheinen ausserhalb
   // der App und muessen dieselbe Sprache sprechen wie sie.

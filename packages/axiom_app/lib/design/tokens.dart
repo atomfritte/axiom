@@ -80,9 +80,12 @@ final class AxiomPalette {
     panel: Color(0xFF171B1E),
     panelRaised: Color(0xFF1F2529),
     rule: Color(0xFF2A3237),
-    ink: Color(0xFFE6E4DE),
-    inkDim: Color(0xFF8A9299),
-    inkFaint: Color(0xFF5A646B),
+    ink: Color(0xFFECEAE4),
+    // Tertiaertext lag bei etwa 4,0:1 — an der Grenze und bei Muedigkeit
+    // darunter. Skalenzahlen und Fussnoten muessen ablesbar sein, sonst
+    // sind sie Dekoration.
+    inkDim: Color(0xFF9BA4AB),
+    inkFaint: Color(0xFF7A848B),
     signal: Color(0xFFE8A33D),
     signalDeep: Color(0xFFB8761F),
     calm: Color(0xFF7FA88A),
@@ -96,15 +99,89 @@ final class AxiomPalette {
     base: Color(0xFFF2F1ED),
     panel: Color(0xFFFFFFFF),
     panelRaised: Color(0xFFFAF9F6),
-    rule: Color(0xFFDCDAD3),
-    ink: Color(0xFF1A1E21),
-    inkDim: Color(0xFF5C666D),
-    inkFaint: Color(0xFF8F979D),
+    rule: Color(0xFFCFCCC4),
+    ink: Color(0xFF15181B),
+    // Angehoben gegenueber der ersten Fassung: #5C666D/#8F979D lagen bei
+    // etwa 4,5:1 und 3,0:1. Der zweite Wert war auf einem hellen
+    // Hintergrund schlicht nicht mehr zuverlaessig lesbar.
+    inkDim: Color(0xFF4A545B),
+    inkFaint: Color(0xFF6E767C),
     signal: Color(0xFF9A6510),
     signalDeep: Color(0xFF7A4E08),
     calm: Color(0xFF3F6B4F),
     caution: Color(0xFF9C4522),
     info: Color(0xFF3E6072),
+  );
+
+  /// Hochkontrast — dieselbe Instrumenten-Logik, aufgedreht.
+  ///
+  /// Nicht "haesslicher, dafuer lesbar": Die Farbrollen bleiben, nur der
+  /// Abstand zwischen Papier und Text waechst. Sekundaertext liegt hier
+  /// ueber 7:1, Tertiaertext ueber 5:1 — auch bei Sonne auf dem Display
+  /// und auch, wenn die Augen muede sind.
+  static const darkContrast = AxiomPalette(
+    base: Color(0xFF0A0C0E),
+    panel: Color(0xFF15191C),
+    panelRaised: Color(0xFF1E2428),
+    rule: Color(0xFF3D474D),
+    ink: Color(0xFFF5F3EE),
+    inkDim: Color(0xFFC2C9CE),
+    inkFaint: Color(0xFF9BA5AC),
+    signal: Color(0xFFFFBB55),
+    signalDeep: Color(0xFFD08A28),
+    calm: Color(0xFF9CC7A6),
+    caution: Color(0xFFE08356),
+    info: Color(0xFF8FB3C7),
+  );
+
+  static const lightContrast = AxiomPalette(
+    base: Color(0xFFFAFAF8),
+    panel: Color(0xFFFFFFFF),
+    panelRaised: Color(0xFFF2F1ED),
+    rule: Color(0xFFB4B0A7),
+    ink: Color(0xFF0D1012),
+    inkDim: Color(0xFF3B4248),
+    inkFaint: Color(0xFF5C666D),
+    signal: Color(0xFF7A4E08),
+    signalDeep: Color(0xFF5C3A05),
+    calm: Color(0xFF2E5239),
+    caution: Color(0xFF7C3316),
+    info: Color(0xFF2B4757),
+  );
+
+  /// Gedaempft — fuer den Abend.
+  ///
+  /// Ein grelles Interface um 23 Uhr arbeitet gegen das Sleep Gate (D8).
+  /// Diese Fassung nimmt Leuchtdichte und Blauanteil zurueck; Kontraste
+  /// bleiben ueber der Lesbarkeitsgrenze, aber nichts leuchtet mehr.
+  static const darkMuted = AxiomPalette(
+    base: Color(0xFF12100D),
+    panel: Color(0xFF1A1714),
+    panelRaised: Color(0xFF221E1A),
+    rule: Color(0xFF332C26),
+    ink: Color(0xFFE0D8CC),
+    inkDim: Color(0xFFA3988A),
+    inkFaint: Color(0xFF7D7264),
+    signal: Color(0xFFD79A55),
+    signalDeep: Color(0xFFA87433),
+    calm: Color(0xFF8FA98C),
+    caution: Color(0xFFBE7A55),
+    info: Color(0xFF8B9AA0),
+  );
+
+  static const lightMuted = AxiomPalette(
+    base: Color(0xFFF4F0E7),
+    panel: Color(0xFFFBF8F1),
+    panelRaised: Color(0xFFFFFDF8),
+    rule: Color(0xFFD5CDBE),
+    ink: Color(0xFF221E19),
+    inkDim: Color(0xFF57503F),
+    inkFaint: Color(0xFF7A7263),
+    signal: Color(0xFF8A5A16),
+    signalDeep: Color(0xFF6B450F),
+    calm: Color(0xFF44634A),
+    caution: Color(0xFF8C4A26),
+    info: Color(0xFF3F5A66),
   );
 
   /// Farbe fuer eine Load-Stufe. Bewusst ohne Rot — siehe Kopfkommentar.
@@ -114,6 +191,66 @@ final class AxiomPalette {
         2 => signal,
         _ => caution,
       };
+}
+
+/// Farbschema — drei, nicht dreissig.
+///
+/// Einstellungs-Wildwuchs ist bei diesem Profil selbst ein Problem (D3),
+/// deshalb hat jede Fassung hier einen Grund und nicht bloss einen Namen:
+///
+///  * [instrument] ist die Gestaltung, gegen die entworfen wurde.
+///  * [contrast] existiert fuer Lesbarkeit — Sonne, Muedigkeit, kleine
+///    Schrift. Ein Text, der nicht gelesen wird, wirkt nicht.
+///  * [muted] existiert fuer den Abend. Ein grelles Interface um 23 Uhr
+///    arbeitet gegen das Sleep Gate (D8).
+enum AxiomScheme {
+  instrument('Instrument'),
+  contrast('Kontrast'),
+  muted('Gedämpft');
+
+  const AxiomScheme(this.label);
+
+  /// Deutscher Quelltext — die Oberflaeche uebersetzt ihn.
+  final String label;
+
+  AxiomPalette palette(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    return switch (this) {
+      AxiomScheme.instrument =>
+        dark ? AxiomPalette.dark : AxiomPalette.light,
+      AxiomScheme.contrast =>
+        dark ? AxiomPalette.darkContrast : AxiomPalette.lightContrast,
+      AxiomScheme.muted =>
+        dark ? AxiomPalette.darkMuted : AxiomPalette.lightMuted,
+    };
+  }
+
+  static AxiomScheme parse(String? name) => AxiomScheme.values.firstWhere(
+        (s) => s.name == name,
+        orElse: () => AxiomScheme.instrument,
+      );
+}
+
+/// Textgroesse in Stufen.
+///
+/// Kein stufenloser Regler: Ein Regler ist eine Entscheidung mit unendlich
+/// vielen Antworten, und genau die kostet hier am meisten (G1). Vier Stufen
+/// mit klaren Namen sind in zwei Sekunden erledigt.
+enum TextSize {
+  compact('Kompakt', 0.9),
+  normal('Normal', 1.0),
+  large('Groß', 1.18),
+  larger('Sehr groß', 1.38);
+
+  const TextSize(this.label, this.scale);
+
+  final String label;
+  final double scale;
+
+  static TextSize parse(String? name) => TextSize.values.firstWhere(
+        (s) => s.name == name,
+        orElse: () => TextSize.normal,
+      );
 }
 
 /// Abstaende. Vierer-Raster — genug Struktur fuer ein Instrument,

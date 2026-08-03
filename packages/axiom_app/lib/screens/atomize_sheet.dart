@@ -23,6 +23,13 @@ import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
+/// Handle auf die Aktivierungsenergie-Skala.
+///
+/// Die Skala ist der einzige Weg, den Wert zu setzen. Ein Test, der sie
+/// ueber „der letzte Row im Baum" sucht, bricht bei jeder Layoutaenderung
+/// an einer voellig anderen Stelle.
+const Key kEnergyScaleKey = ValueKey('atomize_energy_scale');
+
 Future<bool> showAtomizeSheet(
   BuildContext context,
   AtomizeCandidate candidate,
@@ -267,7 +274,11 @@ class _EnergyPicker extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Space.md),
+        // Fester Schluessel: Die Skala ist der einzige Weg, den Wert zu
+        // setzen, und ein Test, der sie ueber "der letzte Row im Baum"
+        // sucht, bricht bei jeder Layoutaenderung woanders.
         Row(
+          key: kEnergyScaleKey,
           children: [
             for (var i = 1; i <= 10; i++)
               Expanded(

@@ -9,6 +9,7 @@ library;
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../i18n/i18n.dart';
@@ -16,6 +17,13 @@ import '../i18n/i18n.dart';
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
 
+  /// Ob die Systembruecke auf diesem Geraet ueberhaupt etwas tun kann.
+  ///
+  /// `kIsWeb` kommt aus Flutter, nicht aus einer eigenen Konstante. Die
+  /// selbstgebaute Fassung (`bool.fromEnvironment('dart.library.js_util')`)
+  /// war eine stille Wette darauf, wie der Compiler diese Kennung fuer
+  /// Android beantwortet — und faellt sie falsch aus, ist *jede*
+  /// Systemfunktion tot, ohne dass irgendwo ein Fehler erscheint.
   static bool get isSupported => !kIsWeb && Platform.isAndroid;
 
   // ── Berechtigungen ────────────────────────────────────────────────────
@@ -217,6 +225,79 @@ abstract final class AndroidBridge {
     }
   }
 
+  // ── Widget ────────────────────────────────────────────────────────────
+
+  /// Bittet das System, das Widget zu platzieren.
+  ///
+  /// Der Umweg ueber die Widget-Auswahl des Launchers ist unzuverlaessig:
+  /// Samsungs Startbildschirm merkt sich die Widget-Liste einer App und
+  /// aktualisiert sie nach einem Update nicht immer. Wer dort nichts findet
+  /// oder ein „konnte nicht hinzugefuegt werden" bekommt, kommt hierueber
+  /// trotzdem ans Ziel.
+  static Future<bool> requestPinWidget() => _invoke('requestPinWidget');
+
+  /// Wie viele Widget-Instanzen tatsaechlich auf dem Startbildschirm liegen.
+  static Future<int> widgetCount() async {
+    if (!isSupported) return 0;
+    try {
+      return await _channel.invokeMethod<int>('widgetCount') ?? 0;
+    } on PlatformException {
+      return 0;
+    } on MissingPluginException {
+      return 0;
+    }
+  }
+
+  // ── Notiz-Rolle (S-Pen) ───────────────────────────────────────────────
+
+  /// Fragt die Rolle „Notiz-App" an.
+  ///
+  /// Ohne diese Rolle taucht AXIOM beim Stift-Doppeltipp nicht auf. Der
+  /// Intent-Filter allein reicht nicht — das System fragt die Rolle ab,
+  /// nicht den Filter.
+  static Future<bool> requestNotesRole() => _invoke('requestNotesRole');
+
+  // ── Diagnose ──────────────────────────────────────────────────────────
+
+  /// Rohwerte, so wie das Geraet sie meldet.
+  ///
+  /// Existiert, weil „geht nicht" keine Fehlermeldung ist. Jede Zeile hier
+  /// ist eine Aussage des Systems, nicht eine Vermutung der App.
+  static Future<Map<String, Object?>> diagnostics() async {
+    if (!isSupported) return const {};
+    try {
+      final result =
+          await _channel.invokeMapMethod<String, Object?>('diagnostics');
+      return result ?? const {};
+    } on PlatformException catch (e) {
+      return {'error': e.message};
+    } on MissingPluginException {
+      return const {'error': 'Kein Kanal'};
+    }
+  }
+
+  // ── Spracheingabe ─────────────────────────────────────────────────────
+
+  /// Oeffnet die Spracherkennung des Systems und gibt den Text zurueck.
+  ///
+  /// Bewusst ueber den System-Recognizer statt ueber eine Bibliothek: Die
+  /// App braucht so weder eine eigene Netzwerkberechtigung noch ein
+  /// Mikrofonrecht — beides liegt bei der Erkennungs-App. Ist offline ein
+  /// Sprachpaket installiert, funktioniert es auch ohne Netz.
+  static Future<String?> listen({String? locale}) async {
+    if (!isSupported) return null;
+    try {
+      return await _channel
+          .invokeMethod<String>('listen', {'locale': ?locale});
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  static Future<bool> speechAvailable() => _invoke('speechAvailable');
+
   // ── Automation ────────────────────────────────────────────────────────
 
   /// Sendet einen Broadcast, den Samsung „Modi und Routinen" aufgreifen kann.
@@ -261,5 +342,3 @@ abstract final class AndroidBridge {
     }
   }
 }
-
-const bool kIsWeb = bool.fromEnvironment('dart.library.js_util');

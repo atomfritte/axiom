@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../design/tokens.dart';
 import '../i18n/i18n.dart';
 import '../platform/health_sync.dart';
 import '../platform/system_sync.dart';
@@ -275,12 +276,54 @@ final class LanguageChoice extends Notifier<AppLanguage> {
 final languageProvider =
     NotifierProvider<LanguageChoice, AppLanguage>(LanguageChoice.new);
 
+// ── Anzeige ─────────────────────────────────────────────────────────────
+//
+// Drei Einstellungen: Textgroesse, Helligkeit, Farbschema. Alle drei
+// ueberleben den Neustart — eine Einstellung, die zurueckspringt, ist
+// schlimmer als keine.
+
 /// Helligkeit: 0 = System, 1 = dunkel, 2 = hell.
 final class ThemeChoice extends Notifier<int> {
   @override
-  int build() => 0;
-  void set(int mode) => state = mode;
+  int build() => ref.watch(runtimeProvider).value?.brightnessChoice ?? 0;
+
+  Future<void> set(int mode) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    runtime.brightnessChoice = mode;
+    state = mode;
+  }
 }
 
-final themeModeProvider =
-    NotifierProvider<ThemeChoice, int>(ThemeChoice.new);
+final themeModeProvider = NotifierProvider<ThemeChoice, int>(ThemeChoice.new);
+
+/// Textgroesse in vier Stufen.
+final class TextSizeChoice extends Notifier<TextSize> {
+  @override
+  TextSize build() =>
+      TextSize.parse(ref.watch(runtimeProvider).value?.textSizeName);
+
+  Future<void> set(TextSize size) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    runtime.textSizeName = size.name;
+    state = size;
+  }
+}
+
+final textSizeProvider =
+    NotifierProvider<TextSizeChoice, TextSize>(TextSizeChoice.new);
+
+/// Farbschema.
+final class SchemeChoice extends Notifier<AxiomScheme> {
+  @override
+  AxiomScheme build() =>
+      AxiomScheme.parse(ref.watch(runtimeProvider).value?.colorSchemeName);
+
+  Future<void> set(AxiomScheme scheme) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    runtime.colorSchemeName = scheme.name;
+    state = scheme;
+  }
+}
+
+final schemeProvider =
+    NotifierProvider<SchemeChoice, AxiomScheme>(SchemeChoice.new);

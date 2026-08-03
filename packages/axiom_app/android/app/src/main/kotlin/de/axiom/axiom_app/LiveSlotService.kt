@@ -91,9 +91,13 @@ class LiveSlotService : Service() {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean("running", false)
                 .apply()
-            context.startService(
-                Intent(context, LiveSlotService::class.java).setAction(ACTION_STOP)
-            )
+            try {
+                context.startService(
+                    Intent(context, LiveSlotService::class.java).setAction(ACTION_STOP)
+                )
+            } catch (e: Throwable) {
+                // Laeuft nicht mehr — dann ist nichts zu stoppen.
+            }
         }
 
         fun isRunning(context: Context): Boolean =

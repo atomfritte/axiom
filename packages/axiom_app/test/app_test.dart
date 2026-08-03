@@ -108,7 +108,7 @@ void main() {
     testWidgets('Systeminspektor zeigt Regel-ID, Begründung und Bedingung',
         (tester) async {
       h.completeOnboarding();
-      await pumpPhone(tester, h.wrap(const SystemScreen()));
+      await pumpPhone(tester, h.wrap(const RulesScreen()));
 
       expect(find.textContaining('R-0'), findsWidgets);
 

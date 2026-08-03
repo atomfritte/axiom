@@ -25,6 +25,7 @@ import '../platform/health_sync.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
 import 'channels_screen.dart';
+import 'check_screen.dart';
 import 'signal_screen.dart';
 import 'vault_screen.dart';
 
@@ -57,7 +58,6 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
     final runtime = ref.watch(runtimeProvider);
     _runtime ??= runtime.value;
     final snapshot = ref.watch(snapshotProvider);
-    final stats = ref.watch(ruleStatsProvider).value ?? const [];
     final p = context.axiom;
 
     return Scaffold(
@@ -66,111 +66,118 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
         data: (rt) {
-          final skipped = snapshot.value?.skipped ?? const <SkippedRule>[];
-          final skipReasons = {
-            for (final s in skipped) s.rule.id: s.reason,
-          };
           final used = snapshot.value?.metaUsedToday ?? Duration.zero;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(
-                Space.lg, Space.sm, Space.lg, Space.huge),
+              Space.lg,
+              Space.sm,
+              Space.lg,
+              Space.huge,
+            ),
             children: [
+              // Reihenfolge nach Aufmerksamkeit, nicht nach Systematik:
+              // oben steht, was einen Zustand meldet, darunter das, was man
+              // einmal einstellt. Alles, was laenger als ein Bildschirm ist
+              // — Regelwerk, Systemcheck, Erfassungswege — liegt hinter
+              // genau einem Tipp. Eine Seite, auf der man scrollen muss, um
+              // eine Einstellung wiederzufinden, wird nicht benutzt.
+              //
+              // Das Meta-Work-Budget steht oben und nicht unten: Es ist die
+              // Selbstbegrenzung (G4), und eine Grenze, die man erst nach
+              // dem Scrollen sieht, ist keine.
               _BudgetCard(used: used),
+
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Eichung')),
               _BaselineSection(
                 ungauged: rt.rules
-                    .where((r) =>
-                        !r.isShadow &&
-                        r.when.referencedVariables
-                            .intersection(_uncalibratedInputs)
-                            .isNotEmpty)
+                    .where(
+                      (r) =>
+                          !r.isShadow &&
+                          r.when.referencedVariables
+                              .intersection(_uncalibratedInputs)
+                              .isNotEmpty,
+                    )
                     .length,
               ),
               if (rt.ruleIssues.isNotEmpty) ...[
                 const SizedBox(height: Space.lg),
                 _IssuesCard(issues: rt.ruleIssues),
               ],
-              const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Regelwerk · {0}', [rt.rules.length])),
-              for (final rule in rt.rules)
-                _RuleTile(
-                  rule: rule,
-                  calibrated: rt.weightsCalibrated,
-                  skipReason: skipReasons[rule.id],
-                  stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
-                ),
-              const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Grenzen')),
-              Panel(
-                child: Column(
-                  children: [
-                    _Limit(
-                        label: context.t('Interventionen pro Tag'),
-                        value: '${rt.limits.maxInterventionsPerDay}'),
-                    _Limit(
-                        label: context.t('Meldungen pro Stunde'),
-                        value: '${rt.limits.maxNotificationsPerHour}'),
-                    _Limit(
-                        label: context.t('Ruhezeit'),
-                        value: '${_hhmm(rt.limits.quietFromMinutes)}'
-                            '–${_hhmm(rt.limits.quietToMinutes)}'),
-                    _Limit(
-                        label: context.t('Mindestkonfidenz'),
-                        value: rt.limits.minConfidence.toStringAsFixed(2)),
-                  ],
-                ),
-              ),
+
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Anzeige')),
-              const _LanguageRow(),
+              const _DisplaySettings(),
 
               const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Datenquellen')),
-              const _HealthCard(),
-
-              const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Weiteres')),
+              SectionLabel(context.t('Einrichten')),
               _LinkRow(
                 icon: Icons.bolt_outlined,
                 label: context.t('Erfassen'),
-                detail: context.t('Wege in die App: Widget, Benachrichtigung, Stift'),
+                detail: context.t(
+                  'Sieben Wege hinein — Widget, Benachrichtigung, Stift, Sprache',
+                ),
                 target: const ChannelsScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
+                icon: Icons.fact_check_outlined,
+                label: context.t('Systemcheck'),
+                detail: context.t('Was das Gerät wirklich freigegeben hat'),
+                target: const CheckScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
+                icon: Icons.monitor_heart_outlined,
+                label: context.t('Datenquellen'),
+                detail: context.t('Schlaf und Bewegung aus Health Connect'),
+                target: const SourcesScreen(),
+              ),
+
+              const SizedBox(height: Space.xl),
+              SectionLabel(context.t('Nachsehen')),
+              _LinkRow(
+                icon: Icons.rule,
+                label: context.t('Regelwerk'),
+                detail: context.t('{0} Regeln, jede lesbar und abschaltbar', [
+                  rt.rules.length,
+                ]),
+                target: const RulesScreen(),
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(
                 icon: Icons.history_toggle_off,
                 label: context.t('Vorfälle'),
-                detail: context.t('Emotionale Spitzen festhalten und einordnen'),
+                detail: context.t(
+                  'Emotionale Spitzen festhalten und einordnen',
+                ),
                 target: const SignalScreen(),
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(
                 icon: Icons.lock_outline,
                 label: context.t('Daten'),
-                detail: context.t('Verschlüsselter Export, Import, Wirkfenster'),
+                detail: context.t(
+                  'Verschlüsselter Export, Import, Wirkfenster',
+                ),
                 target: const VaultScreen(),
               ),
 
               const SizedBox(height: Space.xl),
               Text(
-                context.t('Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. Neue Regeln laufen mindestens sieben Tage stumm mit (log_only), bevor sie etwas sagen dürfen.'),
-                style: Theme.of(context).textTheme.bodySmall,
+                context.t('SCHEMA v{0} · {1} REGELN', [
+                  kSchemaVersion,
+                  rt.rules.length,
+                ]),
+                style: monoStyle(context, size: 11, color: p.inkFaint),
               ),
-              const SizedBox(height: Space.md),
-              Text(context.t('SCHEMA v{0} · {1} REGELN', [kSchemaVersion, rt.rules.length]),
-                  style: monoStyle(context, size: 10.5, color: p.inkFaint)),
             ],
           );
         },
       ),
     );
   }
-
-  static String _hhmm(int minutes) =>
-      '${(minutes ~/ 60).toString().padLeft(2, "0")}:'
-      '${(minutes % 60).toString().padLeft(2, "0")}';
 }
 
 class _BudgetCard extends StatelessWidget {
@@ -186,29 +193,39 @@ class _BudgetCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('META-WORK-BUDGET'),
-              style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            context.t('META-WORK-BUDGET'),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
           const SizedBox(height: Space.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('${used.inMinutes}',
-                  style: TextStyle(
-                    fontFamily: Fonts.mono,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w300,
-                    color: over ? p.caution : p.ink,
-                  )),
-              Text(context.t(' / {0} min heute', [kMetaBudget.inMinutes]),
-                  style: monoStyle(context, size: 13)),
+              Text(
+                '${used.inMinutes}',
+                style: TextStyle(
+                  fontFamily: Fonts.mono,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w300,
+                  color: over ? p.caution : p.ink,
+                ),
+              ),
+              Text(
+                context.t(' / {0} min heute', [kMetaBudget.inMinutes]),
+                style: monoStyle(context, size: 13),
+              ),
             ],
           ),
           const SizedBox(height: Space.md),
           Text(
             over
-                ? context.t('Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.')
-                : context.t('Zeit, die du im System verbringst statt im Leben. Erfassen zählt nicht mit.'),
+                ? context.t(
+                    'Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.',
+                  )
+                : context.t(
+                    'Zeit, die du im System verbringst statt im Leben. Erfassen zählt nicht mit.',
+                  ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -217,75 +234,206 @@ class _BudgetCard extends StatelessWidget {
   }
 }
 
-/// Anzeigesprache.
+/// Anzeige: Sprache, Textgröße, Helligkeit, Farbschema.
 ///
-/// Deutsch ist die Quelle, Englisch die Uebersetzung. Regeltexte kommen aus
-/// dem YAML — fehlt dort eine Uebersetzung, steht der deutsche Satz da.
-/// Sichtbar unfertig ist besser als still falsch.
-class _LanguageRow extends ConsumerWidget {
-  const _LanguageRow();
+/// Vier Zeilen, mehr nicht. Endlose Konfigurierbarkeit ist bei diesem Profil
+/// selbst ein Problem (D3) — aber eine Oberfläche, die man nicht lesen kann,
+/// bekommt keine ehrlichen Daten. Die vier hier zahlen alle darauf ein, dass
+/// der Text ankommt; sie sind keine Geschmacksfragen.
+class _DisplaySettings extends ConsumerWidget {
+  const _DisplaySettings();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final current = ref.watch(languageProvider);
+    final language = ref.watch(languageProvider);
+    final textSize = ref.watch(textSizeProvider);
+    final brightness = ref.watch(themeModeProvider);
+    final scheme = ref.watch(schemeProvider);
+
+    return Column(
+      children: [
+        _ChoiceRow(
+          icon: Icons.translate,
+          label: context.t('Sprache der Oberfläche'),
+          options: [
+            for (final l in AppLanguage.values)
+              (
+                key: l.code.toUpperCase(),
+                selected: l == language,
+                onTap: () => ref.read(languageProvider.notifier).set(l),
+              ),
+          ],
+        ),
+        const SizedBox(height: Space.sm),
+        _ChoiceRow(
+          icon: Icons.format_size,
+          label: context.t('Textgröße'),
+          hint: context.t(textSize.label),
+          options: [
+            for (final size in TextSize.values)
+              (
+                key: switch (size) {
+                  TextSize.compact => 'S',
+                  TextSize.normal => 'M',
+                  TextSize.large => 'L',
+                  TextSize.larger => 'XL',
+                },
+                selected: size == textSize,
+                onTap: () => ref.read(textSizeProvider.notifier).set(size),
+              ),
+          ],
+        ),
+        const SizedBox(height: Space.sm),
+        _ChoiceRow(
+          icon: Icons.contrast,
+          label: context.t('Helligkeit'),
+          options: [
+            for (final (index, name) in const [
+              (0, 'AUTO'),
+              (1, 'DUNKEL'),
+              (2, 'HELL'),
+            ])
+              (
+                key: context.t(name),
+                selected: index == brightness,
+                onTap: () => ref.read(themeModeProvider.notifier).set(index),
+              ),
+          ],
+        ),
+        const SizedBox(height: Space.sm),
+        _ChoiceRow(
+          icon: Icons.palette_outlined,
+          label: context.t('Farbschema'),
+          hint: context.t(scheme.label),
+          options: [
+            for (final s in AxiomScheme.values)
+              (
+                key: context.t(s.label).toUpperCase(),
+                selected: s == scheme,
+                onTap: () => ref.read(schemeProvider.notifier).set(s),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+typedef _Option = ({String key, bool selected, VoidCallback onTap});
+
+class _ChoiceRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? hint;
+  final List<_Option> options;
+
+  const _ChoiceRow({
+    required this.icon,
+    required this.label,
+    required this.options,
+    this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
     return Panel(
       padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
-      child: Row(
+        horizontal: Space.lg,
+        vertical: Space.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.translate, size: 18, color: context.axiom.inkDim),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Text(context.t('Sprache der Oberfläche'),
-                style: Theme.of(context).textTheme.bodyLarge),
-          ),
-          for (final language in AppLanguage.values)
-            Padding(
-              padding: const EdgeInsets.only(left: Space.sm),
-              child: _LanguageChip(
-                language: language,
-                selected: language == current,
+          Row(
+            children: [
+              Icon(icon, size: 19, color: p.inkDim),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
-            ),
+              if (hint != null)
+                Text(hint!, style: monoStyle(context, size: 12)),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          // Umbrechend statt in einer Zeile gequetscht: Bei grosser Schrift
+          // passen vier Chips sonst nicht nebeneinander.
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
+              for (final option in options)
+                _Chip(
+                  label: option.key,
+                  selected: option.selected,
+                  onTap: option.onTap,
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _LanguageChip extends ConsumerWidget {
-  final AppLanguage language;
+class _Chip extends StatelessWidget {
+  final String label;
   final bool selected;
+  final VoidCallback onTap;
 
-  const _LanguageChip({required this.language, required this.selected});
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final p = context.axiom;
-    return GestureDetector(
-      onTap: selected
-          ? null
-          : () async {
-              await HapticFeedback.selectionClick();
-              await ref.read(languageProvider.notifier).set(language);
-            },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.md, vertical: Space.xs),
-        decoration: BoxDecoration(
-          color: selected ? p.signal.withValues(alpha: 0.9) : p.base,
-          borderRadius: BorderRadius.circular(Radii.control),
-          border: Border.all(color: selected ? p.signal : p.rule),
-        ),
-        child: Text(
-          language.code.toUpperCase(),
-          style: monoStyle(context,
-              size: 11,
+    return Semantics(
+      button: true,
+      selected: selected,
+      // Ohne Beschriftung liest die Vorlesefunktion nur „S", „M", „L" vor —
+      // ohne zu sagen, wovon.
+      label: label,
+      child: GestureDetector(
+        onTap: selected
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap();
+              },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          // 48 dp ist die Untergrenze fuer ein Tippziel. Darunter trifft man
+          // im Gehen daneben, und Danebentreffen kostet hier einen zweiten
+          // Anlauf [D2].
+          constraints: const BoxConstraints(minWidth: 56, minHeight: 48),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.md,
+            vertical: Space.sm,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? p.signal.withValues(alpha: 0.9) : p.base,
+            borderRadius: BorderRadius.circular(Radii.control),
+            border: Border.all(color: selected ? p.signal : p.rule),
+          ),
+          child: Text(
+            label,
+            style: monoStyle(
+              context,
+              size: 12.5,
               weight: FontWeight.w600,
               color: selected
                   ? Theme.of(context).colorScheme.onPrimary
-                  : p.inkDim),
+                  : p.inkDim,
+            ),
+          ),
         ),
       ),
     );
@@ -316,25 +464,33 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
     final (label, body, action) = switch (availability) {
       null => (context.t('Wird geprüft'), context.t('Einen Moment.'), null),
       HealthAvailability.unavailable => (
-          context.t('Nicht verfügbar'),
-          context.t('Auf diesem Gerät gibt es kein Health Connect. Schlaf und Bewegung kommen weiterhin aus deiner Eingabe.'),
-          null,
+        context.t('Nicht verfügbar'),
+        context.t(
+          'Auf diesem Gerät gibt es kein Health Connect. Schlaf und Bewegung kommen weiterhin aus deiner Eingabe.',
         ),
+        null,
+      ),
       HealthAvailability.needsUpdate => (
-          context.t('Aktualisierung nötig'),
-          context.t('Die Systemkomponente ist älter als das, was AXIOM liest. Sie lässt sich in den Systemeinstellungen aktualisieren.'),
-          context.t('Einstellungen öffnen'),
+        context.t('Aktualisierung nötig'),
+        context.t(
+          'Die Systemkomponente ist älter als das, was AXIOM liest. Sie lässt sich in den Systemeinstellungen aktualisieren.',
         ),
+        context.t('Einstellungen öffnen'),
+      ),
       HealthAvailability.notGranted => (
-          context.t('Nicht freigegeben'),
-          context.t('AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide gehen in die Kapazität ein — heute nur, soweit du sie selbst einträgst.'),
-          'Freigeben',
+        context.t('Nicht freigegeben'),
+        context.t(
+          'AXIOM liest zwei Größen: Schlaffenster und Tagesschritte. Beide gehen in die Kapazität ein — heute nur, soweit du sie selbst einträgst.',
         ),
+        'Freigeben',
+      ),
       HealthAvailability.ready => (
-          'Verbunden',
-          context.t('Schlaffenster und Tagesschritte werden beim Start nachgezogen. Nur lesend, nur diese beiden, jederzeit widerrufbar.'),
-          context.t('Jetzt abgleichen'),
+        'Verbunden',
+        context.t(
+          'Schlaffenster und Tagesschritte werden beim Start nachgezogen. Nur lesend, nur diese beiden, jederzeit widerrufbar.',
         ),
+        context.t('Jetzt abgleichen'),
+      ),
     };
 
     return Panel(
@@ -346,15 +502,19 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
         children: [
           Row(
             children: [
-              Icon(Icons.monitor_heart_outlined,
-                  size: 19,
-                  color: availability == HealthAvailability.ready
-                      ? p.calm
-                      : p.inkDim),
+              Icon(
+                Icons.monitor_heart_outlined,
+                size: 19,
+                color: availability == HealthAvailability.ready
+                    ? p.calm
+                    : p.inkDim,
+              ),
               const SizedBox(width: Space.md),
               Expanded(
-                child: Text(context.t('Health Connect · {0}', [label]),
-                    style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  context.t('Health Connect · {0}', [label]),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ],
           ),
@@ -362,8 +522,10 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
           Text(body, style: Theme.of(context).textTheme.bodySmall),
           if (_lastResult != null) ...[
             const SizedBox(height: Space.md),
-            Text(_lastResult!,
-                style: monoStyle(context, size: 11, color: p.signal)),
+            Text(
+              _lastResult!,
+              style: monoStyle(context, size: 11, color: p.signal),
+            ),
           ],
           if (action != null) ...[
             const SizedBox(height: Space.md),
@@ -377,7 +539,9 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
           ],
           const SizedBox(height: Space.md),
           Text(
-            context.t('Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.'),
+            context.t(
+              'Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.',
+            ),
             style: monoStyle(context, size: 10.5, color: p.inkFaint),
           ),
         ],
@@ -409,7 +573,10 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
       // Sachlich zaehlen, nicht loben. Auch "nichts Neues" ist ein Ergebnis.
       _lastResult = result.imported == 0
           ? context.t('Nichts Neues · {0} bereits vorhanden', [result.skipped])
-          : context.t('{0} Nächte · {1} Tage Schritte übernommen', [result.sleepNights, result.stepDays]);
+          : context.t('{0} Nächte · {1} Tage Schritte übernommen', [
+              result.sleepNights,
+              result.stepDays,
+            ]);
     });
     if (result.imported > 0) refreshAxiom(ref);
   }
@@ -438,7 +605,15 @@ class _BaselineSection extends ConsumerWidget {
               const SizedBox(width: Space.sm),
               Expanded(
                 child: Text(
-                  context.t('{0} aktive {1} auf geschätzten Gewichten — unten markiert.', [ungauged, ungauged == 1 ? context.t('Regel läuft') : context.t('Regeln laufen')]),
+                  context.t(
+                    '{0} aktive {1} auf geschätzten Gewichten — unten markiert.',
+                    [
+                      ungauged,
+                      ungauged == 1
+                          ? context.t('Regel läuft')
+                          : context.t('Regeln laufen'),
+                    ],
+                  ),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -462,19 +637,25 @@ class _IssuesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('NICHT GELADEN · {0}', [issues.length]),
-              style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            context.t('NICHT GELADEN · {0}', [issues.length]),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
           const SizedBox(height: Space.sm),
           Text(
-            context.t('Diese Regeln wurden abgelehnt und sind nicht aktiv. Eine stumm übersprungene Regel wäre schlimmer als ein Fehler: Man verlässt sich auf etwas, das es nicht gibt.'),
+            context.t(
+              'Diese Regeln wurden abgelehnt und sind nicht aktiv. Eine stumm übersprungene Regel wäre schlimmer als ein Fehler: Man verlässt sich auf etwas, das es nicht gibt.',
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.md),
           for (final issue in issues)
             Padding(
               padding: const EdgeInsets.only(bottom: Space.xs),
-              child: Text('${issue.ruleId}: ${issue.message}',
-                  style: monoStyle(context, size: 11, color: p.caution)),
+              child: Text(
+                '${issue.ruleId}: ${issue.message}',
+                style: monoStyle(context, size: 11, color: p.caution),
+              ),
             ),
         ],
       ),
@@ -541,46 +722,61 @@ class _RuleTile extends StatelessWidget {
             collapsedShape: const Border(),
             tilePadding: const EdgeInsets.symmetric(horizontal: Space.lg),
             childrenPadding: const EdgeInsets.fromLTRB(
-                Space.lg, 0, Space.lg, Space.lg),
+              Space.lg,
+              0,
+              Space.lg,
+              Space.lg,
+            ),
             title: Row(
               children: [
-                Text(rule.id,
-                    style: monoStyle(context,
-                        size: 12,
-                        weight: FontWeight.w600,
-                        color: shadow ? p.inkFaint : p.info)),
+                Text(
+                  rule.id,
+                  style: monoStyle(
+                    context,
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: shadow ? p.inkFaint : p.info,
+                  ),
+                ),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text(context.ruleTitle(rule),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: p.ink,
-                          )),
+                  child: Text(
+                    context.ruleTitle(rule),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: p.ink),
+                  ),
                 ),
               ],
             ),
+            // Wrap statt Row: Bis zu vier Marken, jede so breit wie ihr Text
+            // — bei grosser Schrift passen die nicht mehr nebeneinander. Ein
+            // ueberlaufender Row schneidet ausgerechnet die letzte Marke ab,
+            // und die letzte ist hier UNGEEICHT oder die Befolgungsquote.
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Row(
+              child: Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.xs,
                 children: [
                   _Tag(
                     text: shadow ? 'SHADOW' : rule.severity.name.toUpperCase(),
                     color: shadow ? p.inkFaint : p.signal,
                   ),
-                  if (rule.deficit != null) ...[
-                    const SizedBox(width: Space.sm),
+                  if (rule.deficit != null)
                     _Tag(text: rule.deficit!, color: p.inkDim),
-                  ],
-                  if (_isUngauged) ...[
-                    const SizedBox(width: Space.sm),
-                    _Tag(text: 'UNGEEICHT', color: p.caution),
-                  ],
-                  if (followRate != null) ...[
-                    const SizedBox(width: Space.sm),
+                  if (_isUngauged)
                     _Tag(
-                      text: context.t('{0}% befolgt', [(followRate * 100).round()]),
+                      text: context.t('Ungeeicht').toUpperCase(),
+                      color: p.caution,
+                    ),
+                  if (followRate != null)
+                    _Tag(
+                      text: context.t('{0}% befolgt', [
+                        (followRate * 100).round(),
+                      ]),
                       color: followRate < 0.4 ? p.caution : p.calm,
                     ),
-                  ],
                 ],
               ),
             ),
@@ -588,17 +784,29 @@ class _RuleTile extends StatelessWidget {
               if (_isUngauged)
                 _Field(
                   label: context.t('Ungeeicht'),
-                  value: context.t('Diese Regel prüft auf Werte, deren Formelgewichte noch geschätzt sind. Sie kann danebenliegen, bis weights.yaml an echten Daten kalibriert ist.'),
+                  value: context.t(
+                    'Diese Regel prüft auf Werte, deren Formelgewichte noch geschätzt sind. Sie kann danebenliegen, bis weights.yaml an echten Daten kalibriert ist.',
+                  ),
                 ),
               _Field(
-                  label: context.t('Begründung'),
-                  value: context.ruleRationale(rule).trim()),
-              _Field(label: context.t('Bedingung'), value: _describe(rule.when), mono: true),
-              _Field(label: context.t('Aktion'), value: rule.then.type.token, mono: true),
+                label: context.t('Begründung'),
+                value: context.ruleRationale(rule).trim(),
+              ),
+              _Field(
+                label: context.t('Bedingung'),
+                value: _describe(rule.when),
+                mono: true,
+              ),
+              _Field(
+                label: context.t('Aktion'),
+                value: rule.then.type.token,
+                mono: true,
+              ),
               _Field(
                 label: context.t('Grenzen'),
                 mono: true,
-                value: 'Priorität ${rule.priority} · '
+                value:
+                    'Priorität ${rule.priority} · '
                     'Abstand ${rule.cooldown.minInterval.inMinutes} min'
                     '${rule.cooldown.maxPerDay == null ? "" : " · max ${rule.cooldown.maxPerDay}/Tag"}'
                     '${rule.cooldown.exponentialBackoff ? " · Backoff" : ""}',
@@ -607,7 +815,8 @@ class _RuleTile extends StatelessWidget {
                 _Field(
                   label: context.t('Letzte 7 Tage'),
                   mono: true,
-                  value: '${stats!.fires}× gefeuert · '
+                  value:
+                      '${stats!.fires}× gefeuert · '
                       '${stats!.suppressed}× verdrängt · '
                       '${stats!.followed} befolgt / ${stats!.deferred} später / '
                       '${stats!.rejected} abgelehnt',
@@ -630,10 +839,16 @@ class _RuleTile extends StatelessWidget {
         SkipReason.disabled => context.t('abgeschaltet'),
         SkipReason.conditionFalse => context.t('Bedingung trifft nicht zu'),
         SkipReason.cooldownActive => context.t('Cooldown läuft'),
-        SkipReason.dailyLimitReached => context.t('Tageslimit dieser Regel erreicht'),
-        SkipReason.globalLimitReached => context.t('globales Tageslimit erreicht'),
+        SkipReason.dailyLimitReached => context.t(
+          'Tageslimit dieser Regel erreicht',
+        ),
+        SkipReason.globalLimitReached => context.t(
+          'globales Tageslimit erreicht',
+        ),
         SkipReason.quietHours => context.t('Ruhezeit'),
-        SkipReason.lowConfidence => context.t('Datenlage zu dünn — lieber schweigen'),
+        SkipReason.lowConfidence => context.t(
+          'Datenlage zu dünn — lieber schweigen',
+        ),
       };
 
   /// Textform des Bedingungsbaums.
@@ -658,22 +873,24 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: Space.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.xs),
-            Text(
-              value,
-              style: mono
-                  ? monoStyle(context, size: 11.5)
-                  : Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: Space.md),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall,
         ),
-      );
+        const SizedBox(height: Space.xs),
+        Text(
+          value,
+          style: mono
+              ? monoStyle(context, size: 11.5)
+              : Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    ),
+  );
 }
 
 class _LinkRow extends StatelessWidget {
@@ -694,10 +911,12 @@ class _LinkRow extends StatelessWidget {
     final p = context.axiom;
     return Panel(
       padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => target),
+        horizontal: Space.lg,
+        vertical: Space.md,
       ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => target)),
       child: Row(
         children: [
           Icon(icon, size: 18, color: p.inkDim),
@@ -725,15 +944,21 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Text(text,
-            style: monoStyle(context,
-                size: 9.5, weight: FontWeight.w600, color: color)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      border: Border.all(color: color.withValues(alpha: 0.4)),
+      borderRadius: BorderRadius.circular(2),
+    ),
+    child: Text(
+      text,
+      style: monoStyle(
+        context,
+        size: 9.5,
+        weight: FontWeight.w600,
+        color: color,
+      ),
+    ),
+  );
 }
 
 class _Limit extends StatelessWidget {
@@ -743,20 +968,133 @@ class _Limit extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: Space.xs + 2),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label,
-                  style: Theme.of(context).textTheme.bodyMedium),
-            ),
-            Text(value,
-                style: monoStyle(context,
-                    size: 12,
-                    weight: FontWeight.w500,
-                    color: context.axiom.ink)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: Space.xs + 2),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
-      );
+        Text(
+          value,
+          style: monoStyle(
+            context,
+            size: 12,
+            weight: FontWeight.w500,
+            color: context.axiom.ink,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
+/// Das Regelwerk — die lange Liste, jetzt auf eigener Seite.
+///
+/// Sie stand vorher mitten im Systemscreen und hat alles darunter begraben:
+/// Wer die Anzeige umstellen wollte, musste an siebzehn Regeln vorbei. Eine
+/// lange Liste gehoert hinter einen Tipp, nicht in den Weg.
+class RulesScreen extends ConsumerWidget {
+  const RulesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final runtime = ref.watch(runtimeProvider);
+    final snapshot = ref.watch(snapshotProvider);
+    final stats = ref.watch(ruleStatsProvider).value ?? const [];
+    final p = context.axiom;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(context.t('Regelwerk'))),
+      body: runtime.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('$e')),
+        data: (rt) {
+          final skipped = snapshot.value?.skipped ?? const <SkippedRule>[];
+          final skipReasons = {for (final s in skipped) s.rule.id: s.reason};
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.sm,
+              Space.lg,
+              Space.huge,
+            ),
+            children: [
+              for (final rule in rt.rules)
+                _RuleTile(
+                  rule: rule,
+                  calibrated: rt.weightsCalibrated,
+                  skipReason: skipReasons[rule.id],
+                  stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
+                ),
+              const SizedBox(height: Space.xl),
+              SectionLabel(context.t('Grenzen')),
+              Panel(
+                child: Column(
+                  children: [
+                    _Limit(
+                      label: context.t('Interventionen pro Tag'),
+                      value: '${rt.limits.maxInterventionsPerDay}',
+                    ),
+                    _Limit(
+                      label: context.t('Meldungen pro Stunde'),
+                      value: '${rt.limits.maxNotificationsPerHour}',
+                    ),
+                    _Limit(
+                      label: context.t('Ruhezeit'),
+                      value:
+                          '${_hhmm(rt.limits.quietFromMinutes)}'
+                          '–${_hhmm(rt.limits.quietToMinutes)}',
+                    ),
+                    _Limit(
+                      label: context.t('Mindestkonfidenz'),
+                      value: rt.limits.minConfidence.toStringAsFixed(2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Space.xl),
+              Text(
+                context.t(
+                  'Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. Neue Regeln laufen mindestens sieben Tage stumm mit (log_only), bevor sie etwas sagen dürfen.',
+                ),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: Space.md),
+              Text(
+                context.t('SCHEMA v{0} · {1} REGELN', [
+                  kSchemaVersion,
+                  rt.rules.length,
+                ]),
+                style: monoStyle(context, size: 11, color: p.inkFaint),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static String _hhmm(int minutes) =>
+      '${(minutes ~/ 60).toString().padLeft(2, "0")}:'
+      '${(minutes % 60).toString().padLeft(2, "0")}';
+}
+
+/// Datenquellen — bisher eine Karte mitten im Systemscreen.
+class SourcesScreen extends StatelessWidget {
+  const SourcesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(context.t('Datenquellen'))),
+    body: ListView(
+      padding: const EdgeInsets.fromLTRB(
+        Space.lg,
+        Space.lg,
+        Space.lg,
+        Space.huge,
+      ),
+      children: const [_HealthCard()],
+    ),
+  );
+}

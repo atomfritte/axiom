@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:axiom_app/design/tokens.dart';
 import 'package:axiom_app/i18n/en.dart';
 import 'package:axiom_app/i18n/i18n.dart';
 
@@ -79,6 +80,24 @@ void main() {
       );
     });
 
+    test('auch die Bezeichnungen der Aufzählungen', () {
+      // Diese laufen als Variable durch die Uebersetzung
+      // (`context.t(size.label)`) und sind im Quelltext nicht als Literal zu
+      // finden. Der Scanner kann sie deshalb nicht sehen — sie muessen hier
+      // von Hand aufgezaehlt werden, sonst faellt die Luecke erst auf, wenn
+      // ein englischer Screen "Gedämpft" anzeigt.
+      final labels = [
+        ...AppLanguage.values.map((l) => l.label),
+        ...TextSize.values.map((t) => t.label),
+        ...AxiomScheme.values.map((s) => s.label),
+      ];
+      final missing = labels
+          .where((l) => l != 'Deutsch' && l != 'English')
+          .where((l) => !kEnglish.containsKey(l))
+          .toList();
+      expect(missing, isEmpty, reason: 'Fehlend: ${missing.join(", ")}');
+    });
+
     test('kein Eintrag ohne Verwendung', () {
       // Karteileichen sind harmlos, aber sie taeuschen Abdeckung vor: Man
       // sieht 550 Zeilen und glaubt, alles sei uebersetzt.
@@ -114,7 +133,12 @@ void main() {
       'you failed',
       'you should',
       'you still have',
-      'again',
+      // Nicht das blosse "again": Es steckt in "check again" und meint dort
+      // nichts. Vorwurf traegt erst die Verbindung mit einer Person oder
+      // einer Wiederholung, die als Versaeumnis gelesen wird.
+      'yet again',
+      'once again you',
+      'still not',
       'lazy',
       'streak',
       'don’t forget',

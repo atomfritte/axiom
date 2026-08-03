@@ -66,58 +66,74 @@ class _BodyStripState extends ConsumerState<BodyStrip> {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return Row(
-      children: [
-        for (final signal in BodySignal.values)
-          Expanded(
-            child: Semantics(
-              button: true,
-              label: context.t('{0} erledigt', [signal.label]),
-              child: GestureDetector(
-                onTap: () => _ack(signal),
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  height: 56,
-                  margin: EdgeInsets.only(
-                      right: signal == BodySignal.eyes ? 0 : Space.sm),
-                  decoration: BoxDecoration(
-                    color: _justAcked.contains(signal.key)
-                        ? p.calm.withValues(alpha: 0.18)
-                        : p.panel,
-                    borderRadius: BorderRadius.circular(Radii.control),
-                    border: Border.all(
-                      color: _justAcked.contains(signal.key)
-                          ? p.calm
-                          : p.rule,
+    // IntrinsicHeight, damit alle Kacheln die Hoehe der hoechsten bekommen:
+    // Die Beschriftungen sind unterschiedlich lang und brechen bei grosser
+    // Schrift unterschiedlich um. Ohne die feste Hoehe braucht der Row eine
+    // bekannte Hoehe, sonst ist `stretch` nicht definiert.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final signal in BodySignal.values)
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: context.t('{0} erledigt', [signal.label]),
+                child: GestureDetector(
+                  onTap: () => _ack(signal),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    // Feste Hoehe waere hier falsch: Sie haelt genau so lange,
+                    // bis jemand die Schrift groesser stellt.
+                    constraints: const BoxConstraints(minHeight: 60),
+                    padding: const EdgeInsets.symmetric(vertical: Space.sm),
+                    margin: EdgeInsets.only(
+                      right: signal == BodySignal.eyes ? 0 : Space.sm,
                     ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _justAcked.contains(signal.key)
-                            ? Icons.check
-                            : signal.icon,
-                        size: 18,
+                    decoration: BoxDecoration(
+                      color: _justAcked.contains(signal.key)
+                          ? p.calm.withValues(alpha: 0.18)
+                          : p.panel,
+                      borderRadius: BorderRadius.circular(Radii.control),
+                      border: Border.all(
                         color: _justAcked.contains(signal.key)
                             ? p.calm
-                            : p.inkDim,
+                            : p.rule,
                       ),
-                      const SizedBox(height: 3),
-                      Text(signal.label,
-                          style: monoStyle(context,
-                              size: 9.5,
-                              spacing: 0.4,
-                              color: _justAcked.contains(signal.key)
-                                  ? p.calm
-                                  : p.inkFaint)),
-                    ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _justAcked.contains(signal.key)
+                              ? Icons.check
+                              : signal.icon,
+                          size: 18,
+                          color: _justAcked.contains(signal.key)
+                              ? p.calm
+                              : p.inkDim,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          signal.label,
+                          textAlign: TextAlign.center,
+                          style: monoStyle(
+                            context,
+                            size: 12,
+                            spacing: 0.4,
+                            color: _justAcked.contains(signal.key)
+                                ? p.calm
+                                : p.inkFaint,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -181,13 +197,20 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('SCHLAF'), style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.xs),
-            Text(context.t('Wie lang, wie gut?'),
-                style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              context.t('SCHLAF'),
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
             const SizedBox(height: Space.xs),
             Text(
-              context.t('Der stärkste einzelne Einfluss auf die Kapazität von heute. Grob geschätzt reicht.'),
+              context.t('Wie lang, wie gut?'),
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              context.t(
+                'Der stärkste einzelne Einfluss auf die Kapazität von heute. Grob geschätzt reicht.',
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.xl),
@@ -225,8 +248,10 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             ),
             const SizedBox(height: Space.xl),
 
-            Text(context.t('Hat es getragen?'),
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              context.t('Hat es getragen?'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: Space.sm),
             Row(
               children: [
@@ -244,7 +269,8 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
                         decoration: BoxDecoration(
                           color: _quality >= i
                               ? p.calm.withValues(
-                                  alpha: _quality == i ? 0.9 : 0.28)
+                                  alpha: _quality == i ? 0.9 : 0.28,
+                                )
                               : p.panel,
                           borderRadius: BorderRadius.circular(Radii.control),
                           border: Border.all(
@@ -260,8 +286,14 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(context.t('gar nicht'), style: monoStyle(context, size: 10.5)),
-                Text(context.t('vollständig'), style: monoStyle(context, size: 10.5)),
+                Text(
+                  context.t('gar nicht'),
+                  style: monoStyle(context, size: 10.5),
+                ),
+                Text(
+                  context.t('vollständig'),
+                  style: monoStyle(context, size: 10.5),
+                ),
               ],
             ),
 
@@ -300,15 +332,18 @@ class _TimeButton extends StatelessWidget {
     final p = context.axiom;
     return Panel(
       padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
+        horizontal: Space.lg,
+        vertical: Space.md,
+      ),
       onTap: () async {
         final time = await showTimePicker(
           context: context,
           initialTime: TimeOfDay.fromDateTime(value),
         );
         if (time == null) return;
-        onChanged(DateTime(
-            value.year, value.month, value.day, time.hour, time.minute));
+        onChanged(
+          DateTime(value.year, value.month, value.day, time.hour, time.minute),
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,8 +388,13 @@ abstract final class SleepGate {
     if (!AndroidBridge.isSupported) return;
     final now = DateTime.now();
 
-    var windDown =
-        DateTime(now.year, now.month, now.day, windDownHour, windDownMinute);
+    var windDown = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      windDownHour,
+      windDownMinute,
+    );
     if (windDown.isBefore(now)) {
       windDown = windDown.add(const Duration(days: 1));
     }
@@ -362,8 +402,10 @@ abstract final class SleepGate {
       id: alarmWindDown,
       at: windDown,
       title: translate(language, 'Abendgrenze'),
-      body: translate(language,
-          'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.'),
+      body: translate(
+        language,
+        'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.',
+      ),
       channel: 'axiom_nudge',
     );
 

@@ -325,9 +325,10 @@ void main() {
     });
 
     testWidgets('betroffene Regeln tragen eine Marke', (tester) async {
-      await pumpPhone(tester, h.wrap(const SystemScreen()));
+      // Das Regelwerk hat eine eigene Seite: Die lange Liste im Systemscreen
+      // hat alles darunter begraben.
+      await pumpPhone(tester, h.wrap(const RulesScreen()));
 
-      // Die markierten Regeln stehen weiter unten in der Liste.
       for (var i = 0; i < 12 && find.text('UNGEEICHT').evaluate().isEmpty; i++) {
         await tester.drag(find.byType(ListView), const Offset(0, -400));
         await tester.pumpAndSettle();

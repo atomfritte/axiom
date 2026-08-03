@@ -68,18 +68,30 @@ class PresenceService : Service() {
                 .putString("headline", headline)
                 .putString("detail", detail)
                 .apply()
-            context.startService(
-                Intent(context, PresenceService::class.java).setAction(ACTION_UPDATE)
-            )
+            // Ab Android 8 wirft startService aus dem Hintergrund, wenn der
+            // Dienst nicht schon laeuft — etwa nachdem das System den Prozess
+            // beendet hat. Der Text ist dann beim naechsten Start wieder da;
+            // ein Absturz waere der teurere Weg dorthin.
+            try {
+                context.startService(
+                    Intent(context, PresenceService::class.java).setAction(ACTION_UPDATE)
+                )
+            } catch (e: Throwable) {
+                // Naechster Vordergrundstart holt es nach.
+            }
         }
 
         fun stop(context: Context) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean("enabled", false)
                 .apply()
-            context.startService(
-                Intent(context, PresenceService::class.java).setAction(ACTION_STOP)
-            )
+            try {
+                context.startService(
+                    Intent(context, PresenceService::class.java).setAction(ACTION_STOP)
+                )
+            } catch (e: Throwable) {
+                // Laeuft nicht mehr — dann ist nichts zu stoppen.
+            }
         }
 
         fun isEnabled(context: Context): Boolean =

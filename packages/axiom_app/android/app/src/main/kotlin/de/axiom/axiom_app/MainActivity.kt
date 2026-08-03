@@ -1,16 +1,25 @@
 package de.axiom.axiom_app
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.role.RoleManager
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -33,6 +42,10 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         const val CHANNEL = "de.axiom/system"
+
+        const val REQ_NOTIFICATIONS = 8802
+        const val REQ_NOTES_ROLE = 8803
+        const val REQ_SPEECH = 8804
 
         data class ChannelSpec(val id: String, val name: String, val importance: Int)
 
@@ -72,6 +85,9 @@ class MainActivity : FlutterActivity() {
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /** Laufende Spracheingabe. Es kann immer nur eine geben. */
+    private var pendingSpeech: MethodChannel.Result? = null
+
     /** Neuer Intent bei bereits laufender App (singleTop). */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -79,6 +95,11 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        // Eine laufende Spracheingabe muss beantwortet werden, auch wenn die
+        // Activity vorher stirbt: Sonst wartet die Dart-Seite fuer immer und
+        // das Mikrofon im Erfassungsfeld bleibt dauerhaft "hoert zu".
+        pendingSpeech?.success(null)
+        pendingSpeech = null
         scope.cancel()
         super.onDestroy()
     }
@@ -199,7 +220,14 @@ class MainActivity : FlutterActivity() {
                         result.success(LiveSlotService.isPromotable())
 
                     // ── Health Connect ──────────────────────────────────
-                    "healthStatus" -> result.success(HealthBridge.status(this))
+                    // Asynchron: Der Aufruf geht ueber eine Prozessgrenze
+                    // zum Health-Connect-Dienst und darf den UI-Thread nicht
+                    // blockieren.
+                    "healthStatus" -> scope.launch {
+                        val status = HealthBridge.status(this@MainActivity)
+                        healthGrantedCached = status["granted"] == true
+                        result.success(status)
+                    }
 
                     "healthRequestPermissions" ->
                         result.success(HealthBridge.requestPermissions(this))
@@ -219,6 +247,33 @@ class MainActivity : FlutterActivity() {
                     "healthOpenSettings" -> {
                         result.success(openHealthSettings())
                     }
+
+                    // ── Widget ──────────────────────────────────────────
+                    "requestPinWidget" -> result.success(requestPinWidget())
+
+                    "widgetCount" -> result.success(widgetCount())
+
+                    // ── Notiz-Rolle (S-Pen) ─────────────────────────────
+                    "requestNotesRole" -> result.success(requestNotesRole())
+
+                    // ── Diagnose ────────────────────────────────────────
+                    "diagnostics" -> scope.launch {
+                        // Erst den Health-Stand nachziehen, dann den Rest:
+                        // Ein Systemcheck, der veraltete Werte zeigt, ist
+                        // schlimmer als keiner.
+                        healthGrantedCached =
+                            HealthBridge.hasPermissions(this@MainActivity)
+                        result.success(diagnostics())
+                    }
+
+                    // ── Spracheingabe ───────────────────────────────────
+                    "speechAvailable" -> result.success(
+                        SpeechRecognizer.isRecognitionAvailable(this)
+                    )
+
+                    "listen" -> startListening(
+                        call.argument<String>("locale"), result
+                    )
 
                     "pendingSharedText" -> result.success(consumeSharedText())
 
@@ -299,13 +354,203 @@ class MainActivity : FlutterActivity() {
         return false
     }
 
+    /**
+     * Benachrichtigungen freigeben lassen.
+     *
+     * Ab Android 13 ist das eine Laufzeitberechtigung — sie muss *angefragt*
+     * werden. Die frühere Fassung öffnete nur die Einstellungen; wer dort
+     * nichts fand, hatte anschließend eine App, deren Erinnerungen still
+     * ins Leere liefen, ohne dass irgendwo ein Fehler stand. Genau der
+     * stille Ausfall, den R4 beschreibt.
+     */
     private fun requestNotifications(): Boolean {
         if (NotificationManagerCompat.from(this).areNotificationsEnabled()) return true
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val state = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS,
+            )
+            if (state != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQ_NOTIFICATIONS,
+                )
+                return false
+            }
+        }
+
+        // Berechtigung da, aber der Nutzer hat den Kanal abgeschaltet:
+        // Dafuer gibt es nur den Weg ueber die Einstellungen.
         startActivity(
             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         )
         return false
+    }
+
+    /**
+     * Bittet das System, das Widget zu platzieren.
+     *
+     * Der Umweg über die Widget-Auswahl des Launchers ist unzuverlässig:
+     * Samsungs Startbildschirm merkt sich die Widget-Liste einer App und
+     * aktualisiert sie nach einem Update nicht zuverlässig. Diese Anfrage
+     * geht am Cache vorbei.
+     */
+    private fun requestPinWidget(): Boolean {
+        val manager = getSystemService(AppWidgetManager::class.java)
+        if (!manager.isRequestPinAppWidgetSupported) return false
+        return try {
+            manager.requestPinAppWidget(
+                ComponentName(this, AxiomWidgetProvider::class.java),
+                null,
+                null,
+            )
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    private fun widgetCount(): Int = try {
+        getSystemService(AppWidgetManager::class.java)
+            .getAppWidgetIds(ComponentName(this, AxiomWidgetProvider::class.java))
+            .size
+    } catch (e: Throwable) {
+        0
+    }
+
+    /**
+     * Fragt die Rolle „Notiz-App" an.
+     *
+     * Ohne sie erscheint AXIOM beim Stift-Doppeltipp nicht. Der
+     * Intent-Filter allein genügt nicht — das System fragt die Rolle ab,
+     * nicht den Filter. Das war der Grund, warum die Stift-Aktion trotz
+     * korrekt registriertem `ACTION_CREATE_NOTE` nicht auftauchte.
+     */
+    private fun requestNotesRole(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+        return try {
+            val roles = getSystemService(RoleManager::class.java)
+            if (!roles.isRoleAvailable(RoleManager.ROLE_NOTES)) return false
+            if (roles.isRoleHeld(RoleManager.ROLE_NOTES)) return true
+            startActivityForResult(
+                roles.createRequestRoleIntent(RoleManager.ROLE_NOTES),
+                REQ_NOTES_ROLE,
+            )
+            false
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    private fun notesRoleHeld(): Boolean = try {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            getSystemService(RoleManager::class.java)
+                .isRoleHeld(RoleManager.ROLE_NOTES)
+    } catch (e: Throwable) {
+        false
+    }
+
+    /**
+     * Rohwerte für den Systemcheck.
+     *
+     * „Geht nicht" ist keine Fehlermeldung. Jeder Wert hier ist eine Aussage
+     * des Systems — nicht eine Vermutung der App darüber, was das System
+     * wohl gerade tut.
+     */
+    /// Letzter bekannter Health-Freigabestand, gesetzt von healthStatus.
+    private var healthGrantedCached = false
+
+    private fun diagnostics(): Map<String, Any?> {
+        val alarms = getSystemService(AlarmManager::class.java)
+        val power = getSystemService(PowerManager::class.java)
+        val health = try {
+            androidx.health.connect.client.HealthConnectClient.getSdkStatus(this)
+        } catch (e: Throwable) {
+            -1
+        }
+        return mapOf(
+            "sdkInt" to Build.VERSION.SDK_INT,
+            "release" to Build.VERSION.RELEASE,
+            "manufacturer" to Build.MANUFACTURER,
+            "model" to Build.MODEL,
+            "channelAlive" to true,
+            "notifications" to
+                NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            "postNotificationsGranted" to (
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                    ContextCompat.checkSelfPermission(
+                        this, Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
+                ),
+            "exactAlarm" to (
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    alarms.canScheduleExactAlarms()
+                ),
+            "batteryUnrestricted" to
+                power.isIgnoringBatteryOptimizations(packageName),
+            "healthSdkStatus" to health,
+            // Bewusst nicht abgefragt: Der Aufruf ist suspendierend, und
+            // dieser Ueberblick darf den UI-Thread nicht anhalten. Den
+            // genauen Stand liefert healthStatus.
+            "healthGranted" to healthGrantedCached,
+            "widgetCount" to widgetCount(),
+            "widgetPinSupported" to
+                getSystemService(AppWidgetManager::class.java)
+                    .isRequestPinAppWidgetSupported,
+            "notesRoleAvailable" to (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                ),
+            "notesRoleHeld" to notesRoleHeld(),
+            "presenceRunning" to PresenceService.isEnabled(this),
+            "liveSlotPromotable" to LiveSlotService.isPromotable(),
+            "speechAvailable" to SpeechRecognizer.isRecognitionAvailable(this),
+        )
+    }
+
+    /**
+     * Spracheingabe über den System-Recognizer.
+     *
+     * Bewusst kein eigenes Mikrofonrecht und keine Bibliothek: Die
+     * Erkennung passiert in der Recognizer-App, AXIOM bekommt nur den
+     * fertigen Text. Damit bleibt die App ohne Netz- und Mikrofonrechte.
+     */
+    private fun startListening(locale: String?, result: MethodChannel.Result) {
+        if (pendingSpeech != null) {
+            result.success(null)
+            return
+        }
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+            )
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale ?: "de-DE")
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // Offline bevorzugen, wenn ein Sprachpaket da ist: schneller und
+            // ohne dass Gesprochenes das Geraet verlaesst.
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Sprich einfach.")
+        return try {
+            pendingSpeech = result
+            startActivityForResult(intent, REQ_SPEECH)
+        } catch (e: Throwable) {
+            pendingSpeech = null
+            result.success(null)
+        }
+    }
+
+    @Deprecated("Ohne ComponentActivity gibt es keinen ActivityResultLauncher.")
+    override fun onActivityResult(request: Int, code: Int, data: Intent?) {
+        super.onActivityResult(request, code, data)
+        if (request != REQ_SPEECH) return
+        val pending = pendingSpeech ?: return
+        pendingSpeech = null
+        val text = data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+            ?.trim()
+        pending.success(if (code == RESULT_OK && !text.isNullOrEmpty()) text else null)
     }
 
     /**

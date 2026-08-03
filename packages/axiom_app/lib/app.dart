@@ -24,11 +24,13 @@ class AxiomApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
     final language = ref.watch(languageProvider);
+    final scheme = ref.watch(schemeProvider);
+    final textSize = ref.watch(textSizeProvider);
     return MaterialApp(
       title: 'AXIOM',
       debugShowCheckedModeBanner: false,
-      theme: buildAxiomTheme(brightness: Brightness.light),
-      darkTheme: buildAxiomTheme(brightness: Brightness.dark),
+      theme: buildAxiomTheme(brightness: Brightness.light, scheme_: scheme),
+      darkTheme: buildAxiomTheme(brightness: Brightness.dark, scheme_: scheme),
       themeMode: switch (mode) {
         1 => ThemeMode.dark,
         2 => ThemeMode.light,
@@ -41,12 +43,47 @@ class AxiomApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // Ueber der Navigation, damit jeder Screen dieselbe Sprache sieht.
-      builder: (context, child) => AxiomLanguage(
+      // Ueber der Navigation, damit jeder Screen dieselbe Sprache und
+      // dieselbe Textgroesse sieht.
+      builder: (context, child) => _Display(
         language: language,
+        textSize: textSize,
         child: child ?? const SizedBox.shrink(),
       ),
       home: const AxiomGate(),
+    );
+  }
+}
+
+/// Setzt Sprache und Textgroesse fuer den gesamten Baum.
+///
+/// Die Systemeinstellung wird **multipliziert**, nicht ersetzt. Wer im
+/// Betriebssystem bereits groesser gestellt hat, soll das hier nicht wieder
+/// verlieren — und wer „Kompakt" waehlt, bekommt tatsaechlich kompakter,
+/// nicht bloss „nicht kleiner als". Die Grenzen verhindern beides:
+/// unlesbar klein und so gross, dass das Layout bricht.
+class _Display extends StatelessWidget {
+  final AppLanguage language;
+  final TextSize textSize;
+  final Widget child;
+
+  const _Display({
+    required this.language,
+    required this.textSize,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    // Effektiver Systemfaktor, aus dem Scaler zurueckgerechnet — es gibt
+    // keinen direkten Weg, zwei TextScaler zu verketten.
+    final system = media.textScaler.scale(16) / 16;
+    final combined = (system * textSize.scale).clamp(0.85, 2.4);
+
+    return MediaQuery(
+      data: media.copyWith(textScaler: TextScaler.linear(combined)),
+      child: AxiomLanguage(language: language, child: child),
     );
   }
 }

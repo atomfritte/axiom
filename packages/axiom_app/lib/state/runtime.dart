@@ -6,6 +6,7 @@ library;
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/foundation.dart';
+import '../design/tokens.dart';
 import '../i18n/i18n.dart';
 /// Ergebnis eines Auswertungszyklus.
 @immutable
@@ -789,6 +790,22 @@ final class AxiomRuntime {
   String? get language => store.setting('language');
   set language(String? code) =>
       store.setSetting('language', code ?? AppLanguage.de.code);
+  // ── Anzeige ───────────────────────────────────────────────────────────
+  //
+  // Drei Einstellungen, mehr nicht. Sie stehen hier statt im Speicher, weil
+  // eine Schriftgroesse, die beim naechsten Start zurueckspringt, schlimmer
+  // waere als gar keine Auswahl.
+  String? get textSizeName => store.setting('text_size');
+  set textSizeName(String? name) =>
+      store.setSetting('text_size', name ?? TextSize.normal.name);
+  String? get colorSchemeName => store.setting('color_scheme');
+  set colorSchemeName(String? name) =>
+      store.setSetting('color_scheme', name ?? AxiomScheme.instrument.name);
+  /// 0 = System, 1 = dunkel, 2 = hell.
+  int get brightnessChoice =>
+      int.tryParse(store.setting('brightness') ?? '') ?? 0;
+  set brightnessChoice(int value) =>
+      store.setSetting('brightness', '$value');
   DateTime? get baselineStart {
     final value = store.setting('baseline_start');
     return value == null ? null : DateTime.tryParse(value);

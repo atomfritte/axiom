@@ -40,16 +40,32 @@ void main() {
       }
     });
 
-    testWidgets('nennt für jeden Kanal, wo man ihn findet', (tester) async {
+    testWidgets('das Widget laesst sich von hier aus platzieren',
+        (tester) async {
+      // Eine Anleitung durch fremde Systemmenues wird nicht befolgt — und
+      // im Fall des Widgets fuehrte sie ins Leere, weil Samsungs
+      // Startbildschirm seine Widget-Liste zwischenspeichert. Der Knopf
+      // fragt das System direkt.
       await pumpPhone(tester, h.wrap(const ChannelsScreen()));
-      // Ein Kanal, von dem man nicht weiss, ist kein Kanal.
       await tester.dragUntilVisible(
-        find.textContaining('Langes Tippen auf den Homescreen'),
+        find.text('Widget hinzufügen'),
         find.byType(ListView),
         const Offset(0, -180),
       );
-      expect(find.textContaining('Langes Tippen auf den Homescreen'),
-          findsOneWidget);
+      expect(find.text('Widget hinzufügen'), findsOneWidget);
+    });
+
+    testWidgets('der Stift braucht die Notiz-Rolle, und die ist setzbar',
+        (tester) async {
+      await pumpPhone(tester, h.wrap(const ChannelsScreen()));
+      await tester.dragUntilVisible(
+        find.text('AXIOM als Notiz-App setzen'),
+        find.byType(ListView),
+        const Offset(0, -180),
+      );
+      expect(find.text('AXIOM als Notiz-App setzen'), findsOneWidget);
+      // Der Grund muss dabeistehen: Ohne ihn wirkt es wie ein Fehler.
+      expect(find.textContaining('Rolle'), findsWidgets);
     });
 
     testWidgets('S-Pen und Sprache sind mit Anleitung dabei', (tester) async {

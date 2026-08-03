@@ -52,7 +52,7 @@ object HealthBridge {
      * vorhanden aber nicht freigegeben, nutzbar. Ein pauschales "geht nicht"
      * würde den Nutzer im Dunkeln lassen, warum keine Schlafdaten ankommen.
      */
-    fun status(context: Context): Map<String, Any> {
+    suspend fun status(context: Context): Map<String, Any> {
         val sdk = try {
             HealthConnectClient.getSdkStatus(context)
         } catch (e: Throwable) {
@@ -73,12 +73,18 @@ object HealthBridge {
         )
     }
 
-    fun hasPermissions(context: Context): Boolean = try {
+    /**
+     * Ob alle benoetigten Freigaben vorliegen.
+     *
+     * Suspendierend, nicht blockierend: Die frueherere Fassung rief
+     * `runBlocking` auf — und weil `status()` aus dem MethodChannel-Handler
+     * kommt, hing damit der UI-Thread an einer Prozessgrenze. Bei einem
+     * langsamen Health-Connect-Dienst ist das ein ANR beim App-Start.
+     */
+    suspend fun hasPermissions(context: Context): Boolean = try {
         val client = HealthConnectClient.getOrCreate(context)
-        val granted = runBlockingSafe {
-            client.permissionController.getGrantedPermissions()
-        } ?: emptySet()
-        granted.containsAll(PERMISSIONS)
+        client.permissionController.getGrantedPermissions()
+            .containsAll(PERMISSIONS)
     } catch (e: Throwable) {
         false
     }
@@ -142,7 +148,13 @@ object HealthBridge {
                 timeRangeSlicer = Period.ofDays(1),
             )
         )
+        val today = java.time.LocalDate.now(zone)
         for (bucket in steps) {
+            // Den laufenden Tag auslassen: Sein Zaehler waechst noch. Einmal
+            // importiert, traegt er eine Quell-ID und wuerde beim naechsten
+            // Import als "schon vorhanden" uebersprungen — der Tag bliebe
+            // fuer immer auf dem Stand des ersten Imports stehen.
+            if (!bucket.startTime.toLocalDate().isBefore(today)) continue
             val count = bucket.result[StepsRecord.COUNT_TOTAL] ?: continue
             out += mapOf(
                 "kind" to "steps",
@@ -160,13 +172,4 @@ object HealthBridge {
         return out
     }
 
-    /**
-     * Nur für die Berechtigungsabfrage, die synchron beantwortet werden muss.
-     * Alles Lesende laeuft ueber die Koroutine in MainActivity.
-     */
-    private fun <T> runBlockingSafe(block: suspend () -> T): T? = try {
-        kotlinx.coroutines.runBlocking { block() }
-    } catch (e: Throwable) {
-        null
-    }
 }

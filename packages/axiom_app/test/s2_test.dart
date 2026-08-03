@@ -140,11 +140,18 @@ void main() {
       await tester.pumpAndSettle();
 
       // Eine hohe Stufe antippen — deutlich ueber dem Ziel von 2.
+      //
+      // Erst sichtbar machen: Das Blatt scrollt, und ein Tipp ins Leere
+      // wuerde sonst stumm bleiben. Genau das hat die frueherere Fassung
+      // mit `warnIfMissed: false` getan — der Test war damit blind fuer
+      // seinen eigenen Fehlschlag.
+      await tester.ensureVisible(find.byKey(kEnergyScaleKey));
+      await tester.pumpAndSettle();
       final scale = find.descendant(
-        of: find.byType(Row).last,
+        of: find.byKey(kEnergyScaleKey),
         matching: find.byType(GestureDetector),
       );
-      await tester.tap(scale.at(7), warnIfMissed: false);
+      await tester.tap(scale.at(7));
       await tester.pumpAndSettle();
       expect(find.textContaining('noch zu groß'), findsOneWidget);
     });

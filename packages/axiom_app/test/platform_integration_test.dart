@@ -67,6 +67,19 @@ void main() {
     String android(String path) =>
         File('android/app/src/main/$path').readAsStringSync();
 
+    /// Quelltext ohne Kommentare.
+    ///
+    /// Noetig, weil die Kommentare hier genau die Begriffe nennen, die im
+    /// Code nicht mehr vorkommen duerfen — sie erklaeren ja, warum. Ohne
+    /// diesen Schritt verbietet der Test das Erklaeren des Fehlers.
+    String code(String source) => source
+        .split('\n')
+        .where((l) {
+          final t = l.trimLeft();
+          return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+        })
+        .join('\n');
+
     test('das Widget ist exportiert, sonst lässt es sich nicht hinzufügen',
         () {
       final manifest = android('AndroidManifest.xml');
@@ -109,6 +122,37 @@ void main() {
       // Schreibende Health-Berechtigungen waeren ein Eingriff in fremde
       // Daten und in keiner Regel begruendbar.
       expect(manifest, isNot(contains('permission.health.WRITE')));
+    });
+
+    test('die Plattformerkennung kommt von Flutter, nicht von uns', () {
+      // Eine selbstgebaute `kIsWeb`-Konstante war eine stille Wette darauf,
+      // wie der Compiler `dart.library.js_util` fuer Android beantwortet.
+      // Faellt sie falsch aus, ist *jede* Systemfunktion tot — ohne dass
+      // irgendwo ein Fehler erscheint.
+      final source = code(
+          File('lib/platform/android_bridge.dart').readAsStringSync());
+      expect(source, isNot(contains("bool.fromEnvironment('dart.library")));
+      expect(source, contains('package:flutter/foundation.dart'));
+    });
+
+    test('der laufende Tag wird nicht als Tagessumme importiert', () {
+      // Events sind append-only: Der heutige Schritte-Eimer waechst noch,
+      // traegt aber schon eine Quell-ID. Einmal importiert, wuerde er beim
+      // naechsten Lauf als "vorhanden" uebersprungen — und der Tag bliebe
+      // fuer immer auf dem Stand des ersten Imports.
+      expect(
+        android('kotlin/de/axiom/axiom_app/HealthBridge.kt'),
+        contains('isBefore(today)'),
+      );
+    });
+
+    test('Health Connect blockiert den Hauptthread nicht', () {
+      // Der Aufruf geht ueber eine Prozessgrenze. runBlocking im
+      // MethodChannel-Handler ist ein ANR beim Start.
+      expect(
+        code(android('kotlin/de/axiom/axiom_app/HealthBridge.kt')),
+        isNot(contains('runBlocking')),
+      );
     });
 
     test('INTERNET bleibt auch mit Health Connect draußen (ADR-0002)', () {

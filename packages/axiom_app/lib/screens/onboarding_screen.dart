@@ -162,21 +162,31 @@ class _Page extends StatelessWidget {
     this.leading,
   });
 
+  /// Bewusst kein `ListView`: Eine Onboarding-Seite hat eine Handvoll fest
+  /// bekannter Kinder, und `ListView` baut nur, was gerade sichtbar ist. Bei
+  /// grosser Schrift fiel damit das Ende der Seite aus dem Baum — die
+  /// Zusagen unten („Keine Streaks, die brechen können") existierten dann
+  /// schlicht nicht, bis man scrollte. Fuer eine Zusage ist das der
+  /// schlechteste denkbare Zustand.
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.lg),
-        children: [
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(height: Space.xxl),
+  Widget build(BuildContext context) => SingleChildScrollView(
+        padding:
+            const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (leading != null) ...[
+              Align(alignment: Alignment.centerLeft, child: leading!),
+              const SizedBox(height: Space.xxl),
+            ],
+            Text(eyebrow.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: Space.md),
+            Text(title, style: Theme.of(context).textTheme.displayMedium),
+            const SizedBox(height: Space.xl),
+            ...children,
           ],
-          Text(eyebrow.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
-          Text(title, style: Theme.of(context).textTheme.displayMedium),
-          const SizedBox(height: Space.xl),
-          ...children,
-        ],
+        ),
       );
 }
 

@@ -111,7 +111,17 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
             title: context.t('Homescreen-Widget'),
             body: context.t('Zeigt die nächste Handlung und die Kapazität. Tippen auf „ERFASSEN" springt direkt ins Eingabefeld.'),
             ready: true,
-            hint: context.t('Langes Tippen auf den Homescreen → Widgets → AXIOM.'),
+            hint: context.t('Falls es in der Widget-Auswahl fehlt: Samsungs Startbildschirm merkt sich die Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig. Der Knopf hier fragt das System direkt.'),
+            action: context.t('Widget hinzufügen'),
+            onAction: () async {
+              final ok = await AndroidBridge.requestPinWidget();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(ok
+                    ? context.t('Anfrage gestellt — bestätige sie auf dem Startbildschirm.')
+                    : context.t('Der Startbildschirm nimmt keine Anfrage entgegen. Dann über: lange auf den Homescreen tippen → Widgets → AXIOM.')),
+              ));
+            },
           ),
           _ChannelCard(
             icon: Icons.share_outlined,
@@ -131,16 +141,18 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
           _ChannelCard(
             icon: Icons.edit_outlined,
             title: context.t('S-Pen'),
-            body: context.t('AXIOM meldet sich beim System als Notiz-App an. Damit erscheint es beim Doppeltipp mit dem Stift und in der Schnelleinstellung „Notiz".'),
+            body: context.t('Der Stift-Doppeltipp fragt nicht nach dem Intent-Filter, sondern nach der Rolle „Notiz-App". Solange die woanders liegt, erscheint AXIOM dort nicht — eine einmalige Einstellung, kein Fehler.'),
             ready: false,
             hint: context.t('Zusätzlich in Samsung: Einstellungen → Erweiterte Funktionen → S Pen → Air Actions → Stiftknopf → AXIOM. Screen-off-Memos landen weiterhin in Samsung Notes — dafür gibt es keine offene Schnittstelle.'),
+            action: context.t('AXIOM als Notiz-App setzen'),
+            onAction: () => AndroidBridge.requestNotesRole(),
           ),
           _ChannelCard(
             icon: Icons.mic_none_outlined,
             title: context.t('Sprache'),
-            body: context.t('AXIOM ist als Notiz-Fähigkeit angemeldet. „Hey Google, Notiz in AXIOM" öffnet die Erfassung.'),
-            ready: false,
-            hint: context.t('Bixby: Routinen → Meine Routinen → Aktion hinzufügen → App öffnen → AXIOM. Dort lässt sich auch ein Sprachbefehl hinterlegen.'),
+            body: context.t('Direkt beim Erfassen: Das Mikrofon im Eingabefeld diktiert, ohne dass etwas eingerichtet werden muss.'),
+            ready: true,
+            hint: context.t('„Hey Google, Notiz in AXIOM" setzt dagegen voraus, dass die App über Google Play verteilt wird — bei einer selbst installierten prüft Google die Anmeldung nicht. Was hier funktioniert: eine Bixby-Routine oder ein Link auf axiom://capture?text=…'),
           ),
           _ChannelCard(
             icon: Icons.route_outlined,
@@ -188,12 +200,21 @@ class _ChannelCard extends StatelessWidget {
   /// Wie man es einrichtet oder wiederfindet.
   final String? hint;
 
+  /// Wo es einen Knopf gibt, der die Einrichtung direkt erledigt.
+  ///
+  /// Eine Anleitung, die durch fünf Systemmenüs führt, wird nicht befolgt —
+  /// jeder Schritt darin ist eine Gelegenheit auszusteigen [D2].
+  final String? action;
+  final Future<void> Function()? onAction;
+
   const _ChannelCard({
     required this.icon,
     required this.title,
     required this.body,
     required this.ready,
     this.hint,
+    this.action,
+    this.onAction,
   });
 
   @override
@@ -224,6 +245,19 @@ class _ChannelCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (action != null && onAction != null) ...[
+              const SizedBox(height: Space.md),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await HapticFeedback.selectionClick();
+                    await onAction!();
+                  },
+                  child: Text(action!),
+                ),
+              ),
+            ],
             if (hint != null) ...[
               const SizedBox(height: Space.md),
               Container(

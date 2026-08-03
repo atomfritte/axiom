@@ -28,10 +28,11 @@ extension AxiomThemeContext on BuildContext {
   AxiomPalette get axiom => AxiomTheme.of(this);
 }
 
-ThemeData buildAxiomTheme({required Brightness brightness}) {
-  final p = brightness == Brightness.dark
-      ? AxiomPalette.dark
-      : AxiomPalette.light;
+ThemeData buildAxiomTheme({
+  required Brightness brightness,
+  AxiomScheme scheme_ = AxiomScheme.instrument,
+}) {
+  final p = scheme_.palette(brightness);
 
   final scheme = ColorScheme(
     brightness: brightness,
@@ -73,21 +74,26 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
 
     // Typskala. Die grossen Grade sind LEICHT gesetzt (w300): Ein genervter
     // Nutzer soll gelesen, nicht angeschrien werden.
+    // Durchgehend angehoben gegenueber der ersten Fassung. Die alten Grade
+    // (Fliesstext 12,5 · Beschriftung 11) sahen als Screenshot praezise aus
+    // und waren auf dem Geraet zu klein — und eine Zeile, die man
+    // zusammenkneifen muss, wird uebersprungen. Wer es kompakter will,
+    // stellt es unter System -> Anzeige zurueck.
     textTheme: TextTheme(
-      displayLarge: sans(40, FontWeight.w300, height: 1.1, spacing: -0.8),
-      displayMedium: sans(32, FontWeight.w300, height: 1.15, spacing: -0.5),
-      headlineLarge: sans(26, FontWeight.w400, height: 1.2, spacing: -0.3),
-      headlineMedium: sans(21, FontWeight.w500, height: 1.25),
-      titleLarge: sans(17, FontWeight.w500, height: 1.3),
-      titleMedium: sans(15, FontWeight.w500, height: 1.35),
-      bodyLarge: sans(16, FontWeight.w400, height: 1.5, color: p.ink),
-      bodyMedium: sans(14, FontWeight.w400, height: 1.5, color: p.inkDim),
-      bodySmall: sans(12.5, FontWeight.w400, height: 1.45, color: p.inkDim),
-      labelLarge: sans(14, FontWeight.w500, spacing: 0.2),
-      labelMedium: sans(12, FontWeight.w500, spacing: 0.4),
+      displayLarge: sans(42, FontWeight.w300, height: 1.1, spacing: -0.8),
+      displayMedium: sans(34, FontWeight.w300, height: 1.15, spacing: -0.5),
+      headlineLarge: sans(27, FontWeight.w400, height: 1.2, spacing: -0.3),
+      headlineMedium: sans(22, FontWeight.w500, height: 1.25),
+      titleLarge: sans(18.5, FontWeight.w500, height: 1.3),
+      titleMedium: sans(16.5, FontWeight.w500, height: 1.35),
+      bodyLarge: sans(17, FontWeight.w400, height: 1.5, color: p.ink),
+      bodyMedium: sans(15.5, FontWeight.w400, height: 1.5, color: p.inkDim),
+      bodySmall: sans(14, FontWeight.w400, height: 1.5, color: p.inkDim),
+      labelLarge: sans(15, FontWeight.w500, spacing: 0.2),
+      labelMedium: sans(13.5, FontWeight.w500, spacing: 0.4),
       labelSmall: TextStyle(
         fontFamily: Fonts.mono,
-        fontSize: 11,
+        fontSize: 12.5,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.8,
         color: p.inkFaint,
@@ -102,8 +108,8 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: sans(17, FontWeight.w500),
-      iconTheme: IconThemeData(color: p.inkDim, size: 22),
+      titleTextStyle: sans(19, FontWeight.w500),
+      iconTheme: IconThemeData(color: p.inkDim, size: 24),
     ),
 
     cardTheme: CardThemeData(
@@ -126,7 +132,7 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.control),
         ),
-        textStyle: sans(16, FontWeight.w500),
+        textStyle: sans(17, FontWeight.w500),
       ),
     ),
 
@@ -138,21 +144,21 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.control),
         ),
-        textStyle: sans(15, FontWeight.w400),
+        textStyle: sans(16, FontWeight.w400),
       ),
     ),
 
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: p.inkDim,
-        textStyle: sans(14, FontWeight.w400),
+        textStyle: sans(15.5, FontWeight.w400),
       ),
     ),
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: p.panel,
-      hintStyle: sans(16, FontWeight.w400, color: p.inkFaint),
+      hintStyle: sans(17, FontWeight.w400, color: p.inkFaint),
       contentPadding: const EdgeInsets.all(Space.lg),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Radii.control),
@@ -170,7 +176,7 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
 
     snackBarTheme: SnackBarThemeData(
       backgroundColor: p.panelRaised,
-      contentTextStyle: sans(14, FontWeight.w400),
+      contentTextStyle: sans(15.5, FontWeight.w400),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.control),
@@ -191,14 +197,14 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
       surfaceTintColor: Colors.transparent,
       indicatorColor: p.signal.withValues(alpha: 0.16),
       elevation: 0,
-      height: 64,
+      height: 70,
       labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => sans(11.5, FontWeight.w500,
+        (states) => sans(13, FontWeight.w500,
             color: states.contains(WidgetState.selected) ? p.ink : p.inkDim),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
-          size: 22,
+          size: 24,
           color: states.contains(WidgetState.selected) ? p.signal : p.inkDim,
         ),
       ),
@@ -223,17 +229,24 @@ ThemeData buildAxiomTheme({required Brightness brightness}) {
   );
 }
 
+/// Kleinste Schriftgroesse, die noch als Text gilt.
+///
+/// Darunter wird nichts mehr gelesen, es wird erkannt — und was nur erkannt
+/// wird, traegt keine Information. Der Wert ist eine Untergrenze, kein
+/// Vorschlag: `monoStyle` hebt jede kleinere Angabe darauf an.
+const double kMinReadableSize = 12.5;
+
 /// Monospace-Stil fuer Messwerte, IDs und Skalen.
 TextStyle monoStyle(
   BuildContext context, {
-  double size = 13,
+  double size = 14,
   FontWeight weight = FontWeight.w400,
   Color? color,
   double spacing = 0.2,
 }) =>
     TextStyle(
       fontFamily: Fonts.mono,
-      fontSize: size,
+      fontSize: size < kMinReadableSize ? kMinReadableSize : size,
       fontWeight: weight,
       letterSpacing: spacing,
       color: color ?? AxiomTheme.of(context).inkDim,
