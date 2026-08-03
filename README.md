@@ -190,10 +190,14 @@ It costs the `INTERNET` permission, so the guardrails are not decoration:
 | Wrong PINs | after five the server stops itself |
 | Idle | after 30 minutes without a request, likewise |
 | Visibility | an ongoing notification with the address and a stop button |
+| Transport | TLS with a self-signed certificate; if TLS fails, the server does not start |
 
-No TLS. A self-signed certificate produces a browser warning you click away, and getting used to
-that is more dangerous than plaintext on your own network. The app says so plainly: **anyone
-listening on the same network sees along.**
+The browser will warn once — no outside authority vouches for the certificate. The point is not
+to click that warning away: **the certificate's SHA-256 fingerprint is shown in the app**, and
+the browser shows the same value under "View certificate". If they match, you are talking to your
+phone and to nothing in between. The certificate is stored and reused across restarts, so the
+warning appears once rather than every time — repetition is exactly what turns a warning into a
+reflex.
 
 ### About the network
 
