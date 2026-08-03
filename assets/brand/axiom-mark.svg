@@ -1,0 +1,30 @@
+<!--
+  AXIOM — Bildmarke
+
+  Eine Skala mit einem gesetzten Schwellenstrich. Genau das Kernbild der App,
+  und genau das, was ein Axiom ist: eine Grenze, die man setzt, nicht ableitet.
+
+  Links des Strichs, kräftig: was in Reichweite ist.
+  Rechts, gedämpft: was heute darüber hinausgeht.
+
+  Bewusst kein Gehirn, keine Glühbirne, kein Häkchen, keine Zielfahne. Das
+  Zeichen kommt aus der Welt der Messinstrumente, nicht aus der Bildsprache
+  von Selbstoptimierungs-Apps — und eine Zielfahne würde "Ziel erreichen"
+  konnotieren, während es hier um "Grenze kennen" geht.
+
+  Farben aus packages/axiom_app/lib/design/tokens.dart.
+  Bei Änderung dort mitziehen.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <rect width="108" height="108" fill="#0E1113"/>
+
+  <!-- In Reichweite: kräftig. -->
+  <rect x="18" y="59" width="36" height="9" fill="#E8A33D"/>
+
+  <!-- Darüber hinaus: vorhanden, aber zurückgenommen. -->
+  <rect x="54" y="62" width="36" height="3" fill="#3D474D"/>
+
+  <!-- Die gesetzte Schwelle. Steht oben deutlich über, unten knapp —
+       sie markiert nach vorn, nicht nach hinten. -->
+  <rect x="50" y="32" width="9" height="44" fill="#E8A33D"/>
+</svg>

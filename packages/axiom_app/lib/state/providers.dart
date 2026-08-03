@@ -175,6 +175,50 @@ final breadcrumbProvider = FutureProvider<String?>((ref) async {
   return runtime.lastBreadcrumb();
 });
 
+// ── Stufe 4 ─────────────────────────────────────────────────────────────
+
+/// Vorfaelle der letzten 30 Tage (M10).
+final incidentsProvider = FutureProvider<List<SignalIncident>>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.incidents();
+});
+
+/// Vorfaelle, deren Nachbetrachtung jetzt sinnvoll ist.
+final pendingPostMortemsProvider =
+    FutureProvider<List<SignalIncident>>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.awaitingPostMortem();
+});
+
+final incidentPatternsProvider =
+    FutureProvider<Map<TriggerClass, int>>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.incidentPatterns();
+});
+
+/// Um wie viel niedriger ein Vorfall im Rueckblick ausfaellt.
+final hindsightProvider = FutureProvider<double?>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.hindsightDelta();
+});
+
+/// Wirkfenster (M13, opt-in).
+final medStateProvider = FutureProvider<MedWindowState>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.medState();
+});
+
+final medEntriesProvider = FutureProvider<List<MedEntry>>((ref) async {
+  ref.watch(refreshTickProvider);
+  final runtime = await ref.watch(runtimeProvider.future);
+  return runtime.medEnabled ? runtime.medEntries() : const [];
+});
+
 /// Regelstatistik der letzten 7 Tage fuer den Systeminspektor.
 final ruleStatsProvider = FutureProvider<List<RuleStats>>((ref) async {
   ref.watch(refreshTickProvider);

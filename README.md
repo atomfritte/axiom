@@ -1,4 +1,4 @@
-# AXIOM
+<img src="assets/brand/axiom-wordmark.svg" alt="AXIOM" width="320">
 
 Deterministisches, lokal laufendes Regelwerk zur Selbstregulation.
 Ein Exocortex für ein hochkompensiertes ADHS-Profil.
@@ -85,11 +85,11 @@ dart run tools/bin/sync_rules.dart
 
 ## Status
 
-**S1 bis S3 stehen.** Android-APK und Linux-Desktop bauen und starten.
+**S1 bis S4 stehen.** Android-APK und Linux-Desktop bauen und starten.
 
 | | |
 |---|---|
-| Tests | 334 grün (177 Core · 71 Daten · 86 App) |
+| Tests | 416 grün (215 Core · 88 Daten · 113 App) |
 | Analyzer | keine Meldungen in allen Paketen |
 | Regelwerk | 17 Regeln gültig, 16 aktiv — davon 8 **ungeeicht** |
 | Release-APK | gebaut, **ohne INTERNET-Berechtigung** — im APK verifiziert |
@@ -105,6 +105,10 @@ erzwungenem Zeitdeckel (M11).
 **Stufe 3** — Focus Governor (M4), Reiz-Haushalt mit Slot-als-Währung (M5),
 Impuls-Bremse mit selbst geschriebener Checkliste (M6), Load Monitor mit
 realen Konsequenzen bis zum Erhaltungsmodus (M9).
+
+**Stufe 4** — Signal-Log mit getrenntem Erfassen und Nachbetrachten (M10),
+Wirkfenster-Protokoll (M13, opt-in), verschlüsselter Datenabgleich per Datei
+statt Server.
 
 ### Eichung
 
@@ -143,3 +147,20 @@ Danach verschwinden die UNGEEICHT-Markierungen.
 
 Referenzbilder unter `packages/axiom_app/test/screenshots/` — sie entstehen
 aus den Tests und sind damit immer auf dem Stand des Codes.
+
+## Die Bildmarke
+
+Eine Skala mit einem gesetzten Schwellenstrich. Links, kräftig: was in
+Reichweite ist. Rechts, gedämpft: was heute darüber hinausgeht. Genau das
+Kernbild der App — und genau das, was ein Axiom ist: eine Grenze, die man
+setzt, nicht ableitet.
+
+Kein Gehirn, keine Glühbirne, kein Häkchen, keine Zielfahne. Das Zeichen
+kommt aus der Welt der Messinstrumente, nicht aus der Bildsprache von
+Selbstoptimierungs-Apps.
+
+Quellen in `assets/brand/`. Die Android-Symbole werden daraus erzeugt:
+
+```bash
+tools/bin/make-icons.sh
+```

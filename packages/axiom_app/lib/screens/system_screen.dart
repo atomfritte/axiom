@@ -21,6 +21,8 @@ import '../design/widgets/baseline_card.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import 'signal_screen.dart';
+import 'vault_screen.dart';
 
 class SystemScreen extends ConsumerStatefulWidget {
   const SystemScreen({super.key});
@@ -116,6 +118,22 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: Space.xl),
+              const SectionLabel('Weiteres'),
+              _LinkRow(
+                icon: Icons.bolt_outlined,
+                label: 'Vorfälle',
+                detail: 'Emotionale Spitzen festhalten und einordnen',
+                target: const SignalScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
+                icon: Icons.lock_outline,
+                label: 'Daten',
+                detail: 'Verschlüsselter Export, Import, Wirkfenster',
+                target: const VaultScreen(),
+              ),
+
               const SizedBox(height: Space.xl),
               Text(
                 'Regeln werden in YAML gepflegt und liegen unter Versionskontrolle. '
@@ -448,6 +466,48 @@ class _Field extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _LinkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String detail;
+  final Widget target;
+
+  const _LinkRow({
+    required this.icon,
+    required this.label,
+    required this.detail,
+    required this.target,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Panel(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg, vertical: Space.md),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => target),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: p.inkDim),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: Theme.of(context).textTheme.bodyLarge),
+                Text(detail, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+        ],
+      ),
+    );
+  }
 }
 
 class _Tag extends StatelessWidget {

@@ -21,7 +21,10 @@ import 'package:sqlite3/sqlite3.dart';
 /// v3: `anchors` — Zeitanker mit Rückwärtsverkettung (M3).
 /// v4: `focus_sessions`, `sensation_channels`, `intercept_triggers`,
 ///     `intercept_runs`, `load_state` — Stufe 3.
-const int kSchemaVersion = 4;
+/// v5: `post_mortems`, `med_entries` — Stufe 4. Vorfaelle selbst liegen
+///     als Events, die Nachbetrachtung braucht eine eigene Tabelle, weil
+///     sie spaeter entsteht und ergaenzt wird.
+const int kSchemaVersion = 5;
 
 final class SqliteEventStore implements EventStore {
   final Database _db;
@@ -223,6 +226,28 @@ final class SqliteEventStore implements EventStore {
           level TEXT    NOT NULL,
           since INTEGER NOT NULL
         );
+      ''');
+    }
+
+    if (current < 5) {
+      _db.execute('''
+        CREATE TABLE IF NOT EXISTS post_mortems (
+          incident_id TEXT PRIMARY KEY,
+          at          INTEGER NOT NULL,
+          root_cause  TEXT,
+          counter     TEXT,
+          hindsight   INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS med_entries (
+          id        TEXT PRIMARY KEY,
+          label     TEXT    NOT NULL,
+          dose      TEXT,
+          taken_at  INTEGER NOT NULL,
+          onset_min INTEGER NOT NULL DEFAULT 0,
+          dur_min   INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_med_taken ON med_entries(taken_at);
       ''');
     }
 

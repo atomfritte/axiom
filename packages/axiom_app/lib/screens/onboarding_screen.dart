@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme.dart';
 import '../design/tokens.dart';
+import '../design/widgets/axiom_mark.dart';
 import '../design/widgets/capacity_line.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
@@ -149,16 +150,25 @@ class _Page extends StatelessWidget {
   final String eyebrow;
   final String title;
   final List<Widget> children;
+
+  /// Optionaler Kopf ueber der Rubrik — nur auf der ersten Seite.
+  final Widget? leading;
+
   const _Page({
     required this.eyebrow,
     required this.title,
     required this.children,
+    this.leading,
   });
 
   @override
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.lg),
         children: [
+          if (leading != null) ...[
+            leading!,
+            const SizedBox(height: Space.xxl),
+          ],
           Text(eyebrow.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
@@ -176,6 +186,7 @@ class _PageWhat extends StatelessWidget {
   Widget build(BuildContext context) => _Page(
         eyebrow: 'Was das hier ist',
         title: 'Ein Regelwerk,\nkeine To-do-App.',
+        leading: const AxiomWordmark(markSize: 30),
         children: [
           const _Para(
             'AXIOM misst deinen Zustand, wendet Regeln darauf an, die du '

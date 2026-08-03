@@ -12,8 +12,11 @@ void main() {
   });
   tearDown(() => store.close());
 
-  group('Schema v4', () {
-    test('ist auf Version 4', () => expect(kSchemaVersion, 4));
+  group('Schema', () {
+    test('kennt die Stufe-3-Tabellen ab v4', () {
+      // Keine feste Zahl festhalten — die Version steigt mit jeder Stufe.
+      expect(kSchemaVersion, greaterThanOrEqualTo(4));
+    });
 
     test('Bestandsdaten überleben die Migration', () async {
       await store.append(Event(

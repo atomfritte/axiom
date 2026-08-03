@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!--
+  Startbildschirm bis der Flutter-Baum steht.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+  Markenfarbe statt Weiss: Eine dunkle App, die kurz weiss aufblitzt, blendet
+  genau dann, wenn sie abends geoeffnet wird — und das arbeitet gegen das
+  Sleep Gate (D8).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/axiom_base" />
+    <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+            android:src="@mipmap/ic_launcher" />
+    </item>
 </layer-list>

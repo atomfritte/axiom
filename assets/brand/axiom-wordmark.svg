@@ -1,0 +1,10 @@
+<!-- Bildmarke plus Schriftzug. IBM Plex Sans Light, weit gesperrt —
+     dieselbe Anmutung wie die Instrumentenbeschriftung in der App. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 108" width="420" height="108">
+  <rect width="420" height="108" fill="#0E1113"/>
+  <rect x="18" y="59" width="36" height="9" fill="#E8A33D"/>
+  <rect x="54" y="62" width="36" height="3" fill="#3D474D"/>
+  <rect x="50" y="32" width="9" height="44" fill="#E8A33D"/>
+  <text x="120" y="70" font-family="IBM Plex Sans, DejaVu Sans, sans-serif"
+        font-size="42" font-weight="300" letter-spacing="10" fill="#E6E4DE">AXIOM</text>
+</svg>

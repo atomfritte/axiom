@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'design/theme.dart';
 import 'design/tokens.dart';
+import 'design/widgets/axiom_mark.dart';
 import 'platform/intent_handler.dart';
 import 'screens/now_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -127,14 +128,7 @@ class _Splash extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('AXIOM',
-                style: TextStyle(
-                  fontFamily: Fonts.mono,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 8,
-                  color: p.signal,
-                )),
+            const AxiomWordmark(markSize: 38),
             const SizedBox(height: Space.xl),
             SizedBox(
               width: 80,

@@ -24,6 +24,7 @@ import 'body_sheet.dart';
 import 'focus_screen.dart';
 import 'intercept_screen.dart';
 import 'sensation_screen.dart';
+import 'signal_screen.dart';
 import 'capture_sheet.dart';
 import 'checkin_sheet.dart';
 import 'inbox_screen.dart';
@@ -74,6 +75,7 @@ class NowScreen extends ConsumerWidget {
                 ],
                 const SizedBox(height: Space.md),
                 const _BaselineTeaser(),
+                const _PostMortemTeaser(),
                 const _ReviewTeaser(),
                 const SizedBox(height: Space.xxl),
                 Panel(child: CapacityLine(
@@ -801,6 +803,47 @@ class _AnchorStrip extends ConsumerWidget {
         anchor: next.anchor,
         step: next.step,
         now: now,
+      ),
+    );
+  }
+}
+
+/// Bietet eine faellige Nachbetrachtung an.
+///
+/// Erscheint fruehestens zwoelf Stunden nach dem Vorfall — vorher ist
+/// niemand analysefaehig, und die Aufforderung verlaengert das Ereignis [D10].
+class _PostMortemTeaser extends ConsumerWidget {
+  const _PostMortemTeaser();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(pendingPostMortemsProvider).value ?? const [];
+    if (pending.isEmpty) return const SizedBox.shrink();
+    final p = context.axiom;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: Panel(
+        padding: const EdgeInsets.symmetric(
+            horizontal: Space.lg, vertical: Space.md),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const SignalScreen()),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.history_toggle_off, size: 18, color: p.inkDim),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Text(
+                pending.length == 1
+                    ? 'Ein Vorfall wartet auf Einordnung'
+                    : '${pending.length} Vorfälle warten auf Einordnung',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+          ],
+        ),
       ),
     );
   }

@@ -1,0 +1,12 @@
+<!--
+  Vordergrund fuer Androids adaptives Symbol.
+
+  Das Motiv sitzt in der garantiert sichtbaren Zone (innere 66 von 108 dp).
+  Alles ausserhalb kann vom Geraetehersteller beschnitten werden — runde,
+  eckige oder tropfenfoermige Masken sind alle erlaubt.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <rect x="29" y="52" width="25" height="6.5" fill="#E8A33D"/>
+  <rect x="54" y="54" width="25" height="2.5" fill="#3D474D"/>
+  <rect x="51" y="34" width="6.5" height="32" fill="#E8A33D"/>
+</svg>

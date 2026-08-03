@@ -15,6 +15,7 @@ import 'package:axiom_app/screens/focus_screen.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
 import 'package:axiom_app/screens/intercept_screen.dart';
 import 'package:axiom_app/screens/sensation_screen.dart';
+import 'package:axiom_app/screens/signal_screen.dart';
 import 'package:axiom_app/screens/review_screen.dart';
 import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/onboarding_screen.dart';
@@ -297,6 +298,20 @@ void main() {
       h.clock.advance(const Duration(hours: 24));
     }
     await shoot(tester, '16-eichung-laeuft', const SystemScreen());
+  });
+
+  testWidgets('17 vorfaelle — nachbetrachtung faellig', (tester) async {
+    h.completeOnboarding();
+    for (final (trigger, intensity) in [
+      (TriggerClass.rejection, 5),
+      (TriggerClass.criticism, 3),
+      (TriggerClass.rejection, 4),
+      (TriggerClass.overload, 2),
+    ]) {
+      await h.runtime.logIncident(intensity: intensity, triggerClass: trigger);
+      h.clock.advance(const Duration(hours: 30));
+    }
+    await shoot(tester, '17-vorfaelle', const SignalScreen());
   });
 
   testWidgets('08 jetzt — hell', (tester) async {

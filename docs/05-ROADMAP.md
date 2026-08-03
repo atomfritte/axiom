@@ -102,18 +102,46 @@ mehr als jede verpasste Unterbrechung einbringt (D6).
 
 ---
 
-## S4 — Vertiefung  (offen)
+## S4 — Vertiefung  ✅ gebaut
 
 **Module:** M10 Signal Log · M13 Med Window (opt-in) · Sync
 
-Erst wenn S1–S3 seit **mindestens 8 Wochen stabil** laufen.
+Ebenfalls vorgezogen.
 
-| Deliverable | Bemerkung |
+| Deliverable | Stand |
 |---|---|
-| M10 Signal Log | Incident/Post-Mortem-Framing, RSD-Muster (D10) |
-| M13 Med Window | **Default aus.** Reine Protokollierung, keine Dosisempfehlung |
-| Sync | self-hosted, E2E-verschlüsselt, Server sieht nie Klartext |
-| Regel-Analytik | Trefferquoten, Konfliktmuster, Streichkandidaten |
+| M10 Signal Log | ✅ Vorfall + Nachbetrachtung, Häufungen, Rückblick-Differenz |
+| M13 Med Window | ✅ Opt-in, reine Protokollierung, Abgrenzungstext überall |
+| Abgleich | ✅ **Verschlüsselte Datei statt Server** — siehe unten |
+| Regel-Analytik | ✅ Trefferquoten, Streichkandidaten, Konfliktmuster im Review |
+
+### Warum kein Server-Sync
+
+Die Roadmap sah einen selbst gehosteten Abgleich vor. Der bräuchte
+`INTERNET` im Manifest und würde damit die stärkste Zusicherung des Projekts
+aufheben: dass Gesundheitsdaten das Gerät auf Betriebssystemebene nicht
+verlassen können (ADR-0002).
+
+Für den tatsächlichen Zweck — Telefon und Rechner abgleichen, ein Backup
+halten — genügt eine verschlüsselte Datei. Events sind unveränderlich, also
+ist ihre Vereinigung konfliktfrei: Beide Seiten importieren die Datei der
+anderen, danach haben beide alles. Der Import ist wiederholbar und
+überschreibt nichts.
+
+Verfahren: Schlüsselableitung nach PBKDF2-Muster über HMAC-SHA-256
+(120 000 Runden), Stromchiffre im Zählermodus, Authentifizierung per HMAC.
+Inhalt ist NDJSON — mit dem Kennwort auch ohne AXIOM lesbar, sonst wäre es
+keine Datenhoheit.
+
+Ein echter Server-Sync bliebe möglich, braucht dann aber ein eigenes ADR und
+die bewusste Rücknahme der Manifest-Garantie.
+
+### Besonderheit bei M10
+
+Erfassen und Nachbetrachten sind getrennt, und die Trennung ist der Punkt:
+Erfasst wird im Spike (zwei Tipps), eingeordnet frühestens zwölf Stunden
+später. Vorher ist niemand analysefähig, und die Aufforderung verlängert das
+Ereignis, statt es abzuschließen (D10).
 
 Alles darüber hinaus ist Meta-Work, bis das Gegenteil bewiesen ist.
 

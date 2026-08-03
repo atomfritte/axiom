@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptives Symbol. Der Hintergrund ist eine Farbe, der Vordergrund das
+  Motiv in der Safe Zone — so kann jeder Hersteller beliebig maskieren,
+  ohne dass die Schwelle angeschnitten wird.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/axiom_base" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

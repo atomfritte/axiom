@@ -11,6 +11,8 @@ environment:
 dependencies:
   axiom_core:
     path: ../axiom_core
+  crypto: ^3.0.7
+  meta: ^1.16.0
   sqlite3: ^2.9.0
   yaml: ^3.1.3
 
