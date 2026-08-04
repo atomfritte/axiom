@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.net.wifi.WifiManager
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -213,6 +214,13 @@ class MainActivity : FlutterActivity() {
                     // Der gespeicherte Schalter sagt, was gewollt war.
                     // Das hier sagt, was tatsaechlich haengt.
                     "presenceActive" -> result.success(PresenceService.isActive(this))
+
+                    // Solange sie gehalten wird, reicht der WLAN-Treiber
+                    // Multicast-Pakete durch. Sie kostet Strom, deshalb
+                    // haengt sie am Expertenmodus und nicht am App-Start.
+                    "multicastLock" -> result.success(
+                        setMulticastLock(call.argument<Boolean>("hold") ?: false)
+                    )
 
                     "presenceDiagnosis" ->
                         result.success(PresenceService.diagnosis(this))
@@ -429,6 +437,34 @@ class MainActivity : FlutterActivity() {
         intent.removeExtra(Intent.EXTRA_TEXT)
         intent.removeExtra("text")
         return text?.takeIf { it.isNotBlank() }
+    }
+
+    private var multicastLock: WifiManager.MulticastLock? = null
+
+    /**
+     * Hält die Multicast-Sperre, solange der Expertenmodus läuft.
+     *
+     * Android filtert Multicast im WLAN-Treiber weg, wenn niemand sie
+     * anfordert — aus Stromgründen. Ohne sie hört der mDNS-Responder keine
+     * einzige Frage, und `axiom.local` löst nirgends auf.
+     */
+    private fun setMulticastLock(hold: Boolean): Boolean = try {
+        if (hold) {
+            if (multicastLock?.isHeld != true) {
+                val wifi = applicationContext
+                    .getSystemService(Context.WIFI_SERVICE) as WifiManager
+                multicastLock = wifi.createMulticastLock("axiom-mdns").apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+            }
+        } else {
+            multicastLock?.takeIf { it.isHeld }?.release()
+            multicastLock = null
+        }
+        true
+    } catch (e: Throwable) {
+        false
     }
 
     private fun permissionStatus(): Map<String, Boolean> {

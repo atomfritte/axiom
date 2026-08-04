@@ -42,12 +42,19 @@ import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../state/runtime.dart';
+import 'mdns_responder.dart';
 import 'expert_certificate.dart';
 
 /// Was der Server gerade tut — für die Anzeige in der App.
 final class ExpertStatus {
   final bool running;
   final String? address;
+
+  /// Der Weg über die IP. Steht neben dem Namen, weil Multicast in manchen
+  /// Netzen gesperrt ist — dann löst `axiom.local` nicht auf, und eine
+  /// Adresse, die nicht funktioniert, wäre schlimmer als zwei.
+  final String? fallbackAddress;
+
   final String? pin;
 
   /// SHA-256 des Zertifikats. Der Wert, den auch der Browser anzeigt.
@@ -59,6 +66,7 @@ final class ExpertStatus {
   const ExpertStatus({
     this.running = false,
     this.address,
+    this.fallbackAddress,
     this.pin,
     this.fingerprint,
     this.idleStopAt,
@@ -91,12 +99,20 @@ final class ExpertServer {
   final void Function() onChanged;
 
   HttpServer? _server;
+
+  /// Meldet den Namen im lokalen Netz an, solange der Server laeuft.
+  final _mdns = MdnsResponder();
   String? _pin;
   final Set<String> _sessions = {};
   int _failedAttempts = 0;
   Timer? _idleTimer;
   DateTime? _idleStopAt;
   String? _address;
+
+  /// Die Adresse ueber die IP. Steht daneben, wenn der Name nicht
+  /// aufloest — in manchen Netzen ist Multicast gesperrt, und dann waere
+  /// eine Adresse, die nicht funktioniert, schlimmer als zwei.
+  String? _fallbackAddress;
   ExpertCertificate? _certificate;
 
   bool get isRunning => _server != null;
@@ -105,6 +121,8 @@ final class ExpertServer {
       ? ExpertStatus(
           running: true,
           address: _address,
+          fallbackAddress:
+              _fallbackAddress == _address ? null : _fallbackAddress,
           pin: _pin,
           fingerprint: _certificate?.readableFingerprint,
           idleStopAt: _idleStopAt,
@@ -136,7 +154,14 @@ final class ExpertServer {
     // Den tatsaechlich vergebenen Port nehmen, nicht den gewuenschten: Bei
     // Port 0 waehlt ihn das System, und die angezeigte Adresse zeigte sonst
     // auf einen Port, an dem nichts lauscht.
-    _address = 'https://$host:${_server!.port}';
+    // Der Name zuerst, die IP als Rueckfallweg: Ein Name, der bleibt, ist
+    // die Bedingung dafuer, dass der Fingerabdruck-Vergleich zur Gewohnheit
+    // wird — bei wechselnder IP faengt man jedes Mal von vorn an.
+    final named = await _mdns.start(host);
+    _address = named
+        ? 'https://$kAxiomHostname:${_server!.port}'
+        : 'https://$host:${_server!.port}';
+    _fallbackAddress = 'https://$host:${_server!.port}';
     _touch();
 
     unawaited(_serve());
@@ -152,7 +177,9 @@ final class ExpertServer {
     final server = _server;
     _server = null;
     _address = null;
+    _fallbackAddress = null;
     _certificate = null;
+    await _mdns.stop();
     await server?.close(force: true);
     onChanged();
   }

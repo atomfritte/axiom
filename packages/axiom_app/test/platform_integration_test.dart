@@ -346,6 +346,35 @@ void main() {
       );
     });
 
+    test('mDNS bekommt die Multicast-Sperre, sonst hört es nichts', () {
+      // Androids WLAN-Treiber verwirft eingehende Multicast-Pakete,
+      // solange niemand die Sperre haelt. Ohne sie laege der Socket nur
+      // herum: kein Fehler, kein Log, `axiom.local` loest nirgends auf.
+      final manifest = android('AndroidManifest.xml');
+      expect(manifest,
+          contains('android.permission.CHANGE_WIFI_MULTICAST_STATE'));
+      expect(
+        android('kotlin/de/axiom/axiom_app/MainActivity.kt'),
+        contains('createMulticastLock'),
+      );
+      expect(
+        code(File('lib/server/mdns_responder.dart').readAsStringSync()),
+        contains('multicastLock(hold: true)'),
+      );
+    });
+
+    test('das Zertifikat kennt den Namen, unter dem es aufgerufen wird', () {
+      // Ohne passenden Subject Alternative Name lehnt der Browser
+      // `axiom.local` rundheraus ab — ohne die Ausnahme anzubieten, die
+      // bei der IP noch da war.
+      final cert = code(
+          File('lib/server/expert_certificate.dart').readAsStringSync());
+      expect(cert, contains('kAxiomHostname'));
+      // Und ein alt gespeichertes Zertifikat darf nicht weiterverwendet
+      // werden, nur weil die Adresse gleich geblieben ist.
+      expect(cert, contains('_shape'));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

@@ -1377,4 +1377,10 @@ const Map<String, String> kEnglish = {
       'Android\nonly.',
   'Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins — dieselben Regeln, nur eine Quelle weniger.':
       'Health Connect only exists on Android. On the desktop AXIOM works from your check-ins — same rules, one source fewer.',
+  'Der Name wird im Netz angesagt':
+      'The name is announced on the network',
+  'Damit „axiom.local" aufgeht, beantwortet AXIOM Namensanfragen im lokalen Netz. Das Paket geht an eine Adresse, die kein Router weiterleitet, enthält nur Name und IP dieses Geräts, und läuft nur, solange der Server läuft. Beim Beenden wird der Name zurückgenommen.':
+      'For „axiom.local" to resolve, AXIOM answers name queries on the local network. The packet goes to an address no router forwards, carries only this device’s name and IP, and runs only while the server runs. On shutdown the name is withdrawn.',
+  'Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:':
+      'If the name does not resolve — some networks block multicast:',
 };

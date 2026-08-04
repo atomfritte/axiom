@@ -26,6 +26,7 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:crypto/crypto.dart';
 
 import '../state/runtime.dart';
+import 'mdns_responder.dart' show kAxiomHostname;
 
 final class ExpertCertificate {
   final String certificatePem;
@@ -71,6 +72,15 @@ final class ExpertCertificate {
 }
 
 abstract final class ExpertCertificates {
+  /// Zaehlt hoch, wenn sich der Inhalt des Zertifikats aendert.
+  ///
+  /// Ein gespeichertes Zertifikat wird an der Adresse wiedererkannt. Aendert
+  /// sich aber, *was* drinsteht — etwa weil `axiom.local` als Subject
+  /// Alternative Name dazukommt —, passt das alte trotzdem zur Adresse und
+  /// wuerde weiterverwendet. Der Browser lehnte den neuen Weg dann ab, und
+  /// von aussen sahe es aus, als ginge mDNS nicht.
+  static const _shape = 2;
+
   static const _certKey = 'expert_cert_pem';
   static const _keyKey = 'expert_key_pem';
   static const _forKey = 'expert_cert_for';
@@ -92,11 +102,11 @@ abstract final class ExpertCertificates {
     final key = runtime.store.setting(_keyKey);
     final issuedFor = runtime.store.setting(_forKey);
 
-    if (stored != null && key != null && issuedFor == address) {
+    if (stored != null && key != null && issuedFor == '$_shape:$address') {
       return ExpertCertificate(
         certificatePem: stored,
         privateKeyPem: key,
-        issuedFor: issuedFor!,
+        issuedFor: address,
       );
     }
 
@@ -104,7 +114,7 @@ abstract final class ExpertCertificates {
     runtime.store
       ..setSetting(_certKey, generated.certificatePem)
       ..setSetting(_keyKey, generated.privateKeyPem)
-      ..setSetting(_forKey, address);
+      ..setSetting(_forKey, '$_shape:$address');
     return generated;
   }
 
@@ -148,9 +158,11 @@ abstract final class ExpertCertificates {
       privateKey,
       csr,
       _days,
-      // Beide Wege hinein: über die LAN-Adresse und über eine
-      // Portweiterleitung per adb.
-      sans: [address, 'localhost', '127.0.0.1'],
+      // Alle Wege hinein: über die LAN-Adresse, über den mDNS-Namen und
+      // über eine Portweiterleitung per adb. Fehlt einer, lehnt der
+      // Browser genau auf diesem Weg ab — mit einer Warnung, die keine
+      // Ausnahme anbietet.
+      sans: [address, kAxiomHostname, 'localhost', '127.0.0.1'],
       // **Kein `keyUsage`.** basic_utils kodiert die BIT STRING dort mit
       // einem gesetzten Bit in den als ungenutzt deklarierten Stellen. OpenSSL
       // toleriert das, BoringSSL — und damit Dart, Chrome und Android — lehnt

@@ -27,9 +27,37 @@ Es ist nicht mehr auf Betriebssystemebene ausgeschlossen, dass Daten das Gerät 
 **2. An ihre Stelle tritt eine engere, prüfbare Zusage:** *AXIOM ruft nichts von sich aus auf.*
 Die App hat keinen HTTP-Client, keine ausgehende Verbindung, kein SDK, das eine aufbauen könnte.
 Sie **lauscht** auf einem Port, und nur solange sie ausdrücklich eingeschaltet ist.
-`language_test.dart` hält das fest: `package:http`, `HttpClient`, `Socket.connect` und
-`dart:html` sind im gesamten App-Code verboten. Ein Analytics-SDK bliebe damit ebenso wirkungslos
-wie vorher — es käme nicht heraus.
+`language_test.dart` hält das fest: `package:http`, `HttpClient`, `Socket.connect`,
+`WebSocket.connect` und `dart:html` sind im gesamten App-Code verboten. Ein Analytics-SDK bliebe
+damit ebenso wirkungslos wie vorher — es käme nicht heraus.
+
+**2a. Eine Ausnahme, und nur eine: der Name im lokalen Netz.**
+
+Der Server meldet sich per Multicast DNS als `axiom.local` an. Das ist die einzige Stelle, an der
+AXIOM von sich aus ein Paket verschickt, und sie braucht eine Begründung.
+
+*Warum überhaupt.* Ohne Namen steht auf dem Telefon eine IP, die man abtippt — und die der Router
+neu vergibt, sobald das Gerät länger weg war. Mit ihr wechselt das Zertifikat, und die
+Browser-Warnung kommt erneut. Genau die Wiederholung erzeugt die Gewöhnung, gegen die Punkt 4
+argumentiert. Ein Name, der bleibt, ist deshalb keine Bequemlichkeit, sondern die Bedingung dafür,
+dass der Fingerabdruck-Vergleich einmal stattfindet und danach nur noch bestätigt wird.
+
+*Warum es die Zusage nicht bricht.* Drei Eigenschaften, alle drei in `language_test.dart` geprüft:
+
+| | |
+|---|---|
+| Ziel | `224.0.0.251` — link-lokal. Kein Router leitet das weiter; es gibt keinen Empfänger außerhalb des eigenen Netzsegments |
+| Inhalt | Name und IP **dieses** Geräts. Keine Nutzdaten, keine Kennung, nichts aus der Datenbank |
+| Dauer | nur solange der Expertenmodus läuft. Beim Beenden geht ein Abschied mit TTL 0 hinaus, damit der Name nicht in fremden Zwischenspeichern stehen bleibt |
+
+Ein Test hält fest, dass genau **eine** Datei einen Datagramm-Socket öffnet, dass sie an keine
+andere Adresse als die Multicast-Gruppe sendet und dass der Abschied existiert. Wächst diese
+Liste, ist das eine Entscheidung und kein Versehen.
+
+*Was dazu nötig war.* Android filtert eingehende Multicast-Pakete im WLAN-Treiber weg, solange
+niemand einen `MulticastLock` hält. Ohne ihn — und ohne
+`CHANGE_WIFI_MULTICAST_STATE` — hört der Responder keine einzige Anfrage, ohne Fehler und ohne
+Logeintrag. Die Sperre hängt am Expertenmodus, nicht am App-Start: Sie kostet Strom.
 
 **3. Der Server ist aus, bis er eingeschaltet wird.** Kein Autostart, kein Weiterlaufen nach
 einem Neustart. Er hält sich an fünf Regeln:
@@ -62,8 +90,10 @@ Das Warn-Argument stimmt nur, solange die Warnung nichts Überprüfbares zeigt. 
   Ausweichweg wäre das Schlechteste von beidem.
 
 Erzeugt wird es auf dem Gerät (RSA-2048, in einem eigenen Isolate, damit der Knopf nicht hängt),
-mit der LAN-Adresse als Subject Alternative Name — ohne SAN lehnen aktuelle Browser rundheraus
-ab, statt eine Ausnahme anzubieten.
+mit LAN-Adresse **und** `axiom.local` als Subject Alternative Name — ohne passenden SAN lehnen
+aktuelle Browser rundheraus ab, statt eine Ausnahme anzubieten. Ändert sich, *was* im Zertifikat
+steht, zählt eine Formmarke hoch: Sonst würde das gespeicherte Zertifikat an der unveränderten
+Adresse wiedererkannt und weiterverwendet, und der neue Weg schlüge fehl.
 
 ## Begründung
 

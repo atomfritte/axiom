@@ -45,6 +45,14 @@
     -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
+    <!--
+      Ohne diese Berechtigung und ohne MulticastLock verwirft Androids
+      WLAN-Treiber eingehende Multicast-Pakete, bevor die App sie sieht.
+      Der mDNS-Responder hoerte dann nie eine Frage nach `axiom.local` —
+      ohne Fehler, ohne Log, einfach still.
+    -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 

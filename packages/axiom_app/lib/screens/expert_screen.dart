@@ -110,6 +110,11 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
                 ),
                 Divider(color: p.rule, height: Space.xl),
                 _Point(
+                  title: context.t('Der Name wird im Netz angesagt'),
+                  body: context.t('Damit „axiom.local" aufgeht, beantwortet AXIOM Namensanfragen im lokalen Netz. Das Paket geht an eine Adresse, die kein Router weiterleitet, enthält nur Name und IP dieses Geräts, und läuft nur, solange der Server läuft. Beim Beenden wird der Name zurückgenommen.'),
+                ),
+                Divider(color: p.rule, height: Space.xl),
+                _Point(
                   title: context.t('Was ihn wieder ausmacht'),
                   body: context.t('Fünf falsche PINs, dreißig Minuten ohne Anfrage, der Knopf hier, oder der Knopf auf der Benachrichtigung. Beim Beenden der App ist er ohnehin weg.'),
                 ),
@@ -191,6 +196,16 @@ class _Running extends StatelessWidget {
             style: monoStyle(context,
                 size: 19, weight: FontWeight.w500, color: p.ink),
           ),
+          if (status.fallbackAddress != null) ...[
+            const SizedBox(height: Space.sm),
+            Text(context.t('Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:'),
+                style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: Space.xs),
+            SelectableText(
+              status.fallbackAddress!,
+              style: monoStyle(context, size: 15, color: p.inkDim),
+            ),
+          ],
           const SizedBox(height: Space.lg),
           Text(context.t('PIN — gilt nur für diesen Start'),
               style: Theme.of(context).textTheme.bodySmall),

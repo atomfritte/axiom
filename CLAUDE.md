@@ -199,9 +199,11 @@ und Medikation. Entsprechend:
 - **`INTERNET` ist deklariert** (ADR-0005, Expertenmodus). An die Stelle der früheren
   strukturellen Garantie tritt eine engere, getestete Zusage: **AXIOM ruft nichts von sich aus
   auf.** Kein HTTP-Client, keine ausgehende Verbindung, kein SDK, das eine aufbauen könnte —
-  `language_test.dart` verbietet `package:http`, `HttpClient`, `Socket.connect` und `dart:html`
-  im gesamten App-Code. Die App **lauscht** nur, und nur solange der Expertenmodus
-  eingeschaltet ist.
+  `language_test.dart` verbietet `package:http`, `HttpClient`, `Socket.connect`,
+  `WebSocket.connect` und `dart:html` im gesamten App-Code. Die App **lauscht** nur, und nur
+  solange der Expertenmodus eingeschaltet ist. **Eine Ausnahme:** Der Expertenmodus meldet sich
+  per mDNS als `axiom.local` an — link-lokales Multicast, nur Name und IP, nur solange er läuft
+  (ADR-0005 Punkt 2a). Genau eine Datei darf das, und ein Test hält die Liste kurz.
 - Keine Telemetrie, kein Analytics-SDK, kein Crash-Reporting an Dritte. Nie. Auch nicht "anonym".
 - SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate.
 - `rules/personal/` und alle `*.axiom`-Exporte bleiben lokal.

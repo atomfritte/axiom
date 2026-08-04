@@ -215,7 +215,14 @@ void main() {
           'HttpClient(',
           'Socket.connect',
           'WebSocket.connect',
+          // Auch ohne Verbindung: Wer ein Paket verschickt, ruft etwas
+          // auf. Die eine erlaubte Ausnahme steht im Test darunter.
+          'RawDatagramSocket.bind',
         ]) {
+          if (file.path.endsWith('server/mdns_responder.dart') &&
+              forbidden == 'RawDatagramSocket.bind') {
+            continue;
+          }
           if (content.contains(forbidden)) {
             hits.add('${file.path}: $forbidden');
           }
@@ -223,6 +230,37 @@ void main() {
       }
       expect(hits, isEmpty,
           reason: 'Ausgehender Netzwerkzugriff gefunden:\n${hits.join("\n")}');
+    });
+
+    test('genau eine Datei darf etwas ins Netz schicken', () {
+      // mDNS sendet — damit ist es die einzige Stelle, an der AXIOM von
+      // sich aus ein Paket verschickt. Die Zusage aus ADR-0005 bleibt
+      // trotzdem gehalten, aber nur unter drei Bedingungen, und die
+      // stehen hier als Test, nicht als Absichtserklaerung:
+      //
+      //   1. link-lokale Multicast-Adresse (kein Router leitet sie weiter)
+      //   2. nur Name und IP dieses Geraets, keine Nutzdaten
+      //   3. nur solange der Expertenmodus laeuft
+      final senders = appSources()
+          .where((f) => f.readAsStringSync().contains('RawDatagramSocket'))
+          .map((f) => f.path)
+          .toList();
+      expect(senders, hasLength(1));
+      expect(senders.single, endsWith('server/mdns_responder.dart'));
+
+      final source = File(senders.single).readAsStringSync();
+      // Nur an die feste Gruppe aus RFC 6762, an keine andere Adresse.
+      final targets = RegExp(r'InternetAddress\(([^)]*)\)')
+          .allMatches(source)
+          .map((m) => m.group(1)!.trim())
+          .toSet();
+      expect(targets, {'kMdnsGroup'},
+          reason: 'Ein anderes Ziel als die Multicast-Gruppe wäre eine '
+              'ausgehende Verbindung');
+      expect(source, contains("kMdnsGroup = '224.0.0.251'"));
+      // Der Abschied beim Beenden gehoert dazu: Ohne ihn zeigt der Name
+      // noch minutenlang auf ein Geraet, das nicht mehr lauscht.
+      expect(source, contains('ttl: 0'));
     });
 
     test('der lauschende Server ist die einzige Netzwerkstelle', () {

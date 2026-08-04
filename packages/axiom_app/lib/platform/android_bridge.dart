@@ -216,6 +216,14 @@ abstract final class AndroidBridge {
   /// Schalter springt zurück" und einem Satz, der sagt, warum.
   static Future<bool> presenceActive() => _invoke('presenceActive');
 
+  /// Hält die Multicast-Sperre, solange der Expertenmodus läuft.
+  ///
+  /// Ohne sie verwirft Androids WLAN-Treiber eingehende Multicast-Pakete,
+  /// und der mDNS-Responder hört keine einzige Frage — ohne Fehler, ohne
+  /// Log, einfach still.
+  static Future<bool> multicastLock({required bool hold}) =>
+      _invoke('multicastLock', {'hold': hold});
+
   /// Öffnet die Einstellungen genau dieses Kanals, nicht die App-Übersicht.
   static Future<bool> openPresenceChannel() => _invoke('openPresenceChannel');
 
