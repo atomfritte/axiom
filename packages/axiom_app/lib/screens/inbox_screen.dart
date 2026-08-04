@@ -84,23 +84,10 @@ class _EmptyInbox extends StatelessWidget {
   const _EmptyInbox();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: Space.huge),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.t('EINGANG LEER'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.md),
-            Text(context.t('Nichts zu sortieren.'),
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: Space.md),
-            Text(
-              context.t('Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.'),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => EmptyState(
+        label: context.t('EINGANG LEER'),
+        headline: context.t('Nichts zu sortieren.'),
+        body: context.t('Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.'),
       );
 }
 
@@ -143,20 +130,39 @@ class _NoteCard extends StatelessWidget {
               Text(note.payload['text'] as String? ?? '',
                   style: Theme.of(context).textTheme.bodyLarge),
               const SizedBox(height: Space.md),
-              Row(
-                children: [
-                  Text(
-                    '${at.day}.${at.month}. '
-                    '${at.hour.toString().padLeft(2, "0")}:'
-                    '${at.minute.toString().padLeft(2, "0")}',
-                    style: monoStyle(context, size: 11, color: p.inkFaint),
-                  ),
-                  const Spacer(),
-                  Text(context.t('SORTIEREN'),
-                      style: monoStyle(context,
-                          size: 10.5, weight: FontWeight.w600, color: p.signal)),
-                  Icon(Icons.chevron_right, size: 16, color: p.signal),
-                ],
+              // `Wrap` statt `Row` mit `Spacer`: Der Spacer kann nicht
+              // negativ werden, und bei grosser Schrift braucht er genau
+              // das. Die feste Breite ist noetig, weil ein `Wrap` sich
+              // sonst am Inhalt misst und `spaceBetween` nichts zu
+              // verteilen haette — die Aktion klebte dann am Datum, statt
+              // in jeder Karte an derselben Stelle zu stehen.
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: Space.md,
+                  runSpacing: Space.xs,
+                  children: [
+                    Text(
+                      '${at.day}.${at.month}. '
+                      '${at.hour.toString().padLeft(2, "0")}:'
+                      '${at.minute.toString().padLeft(2, "0")}',
+                      style: monoStyle(context, size: 11, color: p.inkFaint),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(context.t('SORTIEREN'),
+                            style: monoStyle(context,
+                                size: 10.5,
+                                weight: FontWeight.w600,
+                                color: p.signal)),
+                        Icon(Icons.chevron_right, size: 16, color: p.signal),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -409,13 +415,7 @@ class _Dial extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Space.xs + 2),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(low, style: monoStyle(context, size: 10.5)),
-            Text(high, style: monoStyle(context, size: 10.5)),
-          ],
-        ),
+        ScaleEnds(low: low, high: high),
       ],
     );
   }

@@ -216,24 +216,10 @@ class _BudgetCard extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall,
           ),
           const SizedBox(height: Space.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '${used.inMinutes}',
-                style: TextStyle(
-                  fontFamily: Fonts.mono,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w300,
-                  color: over ? p.caution : p.ink,
-                ),
-              ),
-              Text(
-                context.t(' / {0} min heute', [kMetaBudget.inMinutes]),
-                style: monoStyle(context, size: 13),
-              ),
-            ],
+          BigReading(
+            value: '${used.inMinutes}',
+            unit: context.t('/ {0} min heute', [kMetaBudget.inMinutes]),
+            valueColor: over ? p.caution : p.ink,
           ),
           const SizedBox(height: Space.md),
           Text(

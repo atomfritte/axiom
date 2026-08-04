@@ -272,23 +272,9 @@ class _Empty extends StatelessWidget {
   const _Empty();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(Space.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: Space.huge),
-            Text(context.t('NICHTS EINGETRAGEN'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.md),
-            Text(context.t('Keine Aufgaben.'),
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: Space.md),
-            Text(
-              context.t('Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.'),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => EmptyState(
+        label: context.t('NICHTS EINGETRAGEN'),
+        headline: context.t('Keine Aufgaben.'),
+        body: context.t('Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.'),
       );
 }

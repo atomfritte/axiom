@@ -1327,4 +1327,10 @@ const Map<String, String> kEnglish = {
       'No tasks.',
   'Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.':
       'What you capture lands in the inbox first. After sorting it shows up here.',
+  '/ {0} min heute':
+      '/ {0} min today',
+  'min offen':
+      'min available',
+  'abgelaufen':
+      'time is up',
 };

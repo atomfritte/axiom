@@ -283,18 +283,9 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
               ],
             ),
             const SizedBox(height: Space.xs + 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.t('gar nicht'),
-                  style: monoStyle(context, size: 10.5),
-                ),
-                Text(
-                  context.t('vollständig'),
-                  style: monoStyle(context, size: 10.5),
-                ),
-              ],
+            ScaleEnds(
+              low: context.t('gar nicht'),
+              high: context.t('vollständig'),
             ),
 
             const SizedBox(height: Space.xl),

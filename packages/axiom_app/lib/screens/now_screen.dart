@@ -77,6 +77,16 @@ class NowScreen extends ConsumerWidget {
                   const SizedBox(height: Space.lg),
                   _AnchorStrip(next: snap.nextStep!),
                 ],
+                // Die Regel bekommt die Karte, die laufende Aufgabe diesen
+                // Streifen. Ohne ihn waere sie in genau dem Moment
+                // unsichtbar, in dem etwas anderes dazwischenkommt — und
+                // das ist der Moment, in dem man sie am ehesten vergisst.
+                if (snap.decision != null && snap.decisionRule != null)
+                  for (final task in snap.tasks
+                      .where((t) => t.state == TaskState.active)) ...[
+                    const SizedBox(height: Space.lg),
+                    _RunningStrip(task: task),
+                  ],
                 const SizedBox(height: Space.xl),
                 _PrimaryAction(snapshot: snap),
                 if (inbox.isNotEmpty) ...[
@@ -102,6 +112,7 @@ class NowScreen extends ConsumerWidget {
                         .where((t) => t.state == TaskState.ready)
                         .toList(),
                     highlightTaskId: snap.startable.firstOrNull?.id,
+                    onOpen: true,
                   ),
                 ),
                 const SizedBox(height: Space.xxl),
@@ -178,7 +189,10 @@ class _Header extends ConsumerWidget {
         // ausgerechnet dann, wenn er relevant wird.
         if (baseline != null &&
             baseline.status == BaselineStatus.collecting)
-          Container(
+          // Flexible mit Ellipse: Bei grosser Schrift ist die Marke breiter
+          // als der Platz, den die Begruessung uebrig laesst.
+          Flexible(
+              child: Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: Space.sm, vertical: Space.xs),
             decoration: BoxDecoration(
@@ -186,9 +200,11 @@ class _Header extends ConsumerWidget {
               borderRadius: BorderRadius.circular(Radii.control),
             ),
             child: Text(context.t('BASELINE TAG {0}', [baseline.day]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: monoStyle(context,
                     size: 10, weight: FontWeight.w600, color: p.info)),
-          ),
+          )),
       ],
     );
   }
@@ -216,18 +232,6 @@ class _PrimaryAction extends ConsumerWidget {
     final candidate = snapshot.atomizeCandidates.firstOrNull;
     final next = snapshot.startable.firstOrNull;
 
-    // Eine angefangene Aufgabe schlägt jeden Vorschlag.
-    //
-    // Sie fiel vorher aus der Auswahl heraus — `startable` kennt nur
-    // `ready` — und war damit weg: nicht abschließbar, nicht auffindbar,
-    // nirgends sichtbar. Für ein Profil ohne Objektpermanenz ist das der
-    // teuerste Fehler, den diese Oberfläche machen kann [D9]. Und einen
-    // neuen Vorschlag daneben zu stellen, während etwas läuft, wären zwei
-    // Handlungen zur Auswahl (G1).
-    final running = snapshot.tasks
-        .where((t) => t.state == TaskState.active)
-        .firstOrNull;
-    if (running != null) return _RunningCard(task: running);
 
     // Eine Regel hat gefeuert — sie gewinnt vor jedem eigenen Vorschlag.
     //
@@ -244,6 +248,21 @@ class _PrimaryAction extends ConsumerWidget {
         _ => _DecisionCard(decision: decision, rule: rule),
       };
     }
+
+    // Eine angefangene Aufgabe schlägt jeden eigenen Vorschlag — aber
+    // keine Regel.
+    //
+    // Sie fiel vorher aus der Auswahl heraus (`startable` kennt nur
+    // `ready`) und war damit weg: nicht abschließbar, nicht auffindbar,
+    // nirgends sichtbar [D9]. Sie hier vor die Regeln zu setzen wäre
+    // allerdings der nächste Fehler: Eine feuernde Regel ist die Instanz,
+    // die entscheidet, und ein Termin in zehn Minuten schlägt jede laufende
+    // Vertiefung. Feuert eine, steht die laufende Aufgabe stattdessen als
+    // Streifen darüber — sichtbar, nur nicht als Handlung.
+    final running = snapshot.tasks
+        .where((t) => t.state == TaskState.active)
+        .firstOrNull;
+    if (running != null) return _RunningCard(task: running);
 
     if (next != null) return _TaskCard(task: next);
 
@@ -1273,4 +1292,56 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
 
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
+}
+
+/// Die laufende Aufgabe, während eine Regel die Hauptkarte belegt.
+///
+/// Schmal und ohne Knöpfe: Sie ist hier kein Angebot, sondern eine
+/// Erinnerung daran, dass etwas offen ist. Der Tipp führt zur Liste, wo sie
+/// sich abschließen lässt.
+class _RunningStrip extends ConsumerWidget {
+  final Task task;
+  const _RunningStrip({required this.task});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    return Panel(
+      accent: p.calm.withValues(alpha: 0.5),
+      padding:
+          const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 34,
+            decoration: BoxDecoration(
+              color: p.calm,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.t('LÄUFT'),
+                    style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: 2),
+                Text(task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge),
+              ],
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+        ],
+      ),
+    );
+  }
 }

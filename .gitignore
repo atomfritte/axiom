@@ -32,6 +32,7 @@ doc/api/
 **/android/key.properties
 *.jks
 *.keystore
+*.p12
 
 # ── Linux ───────────────────────────────────────────────────────────────
 **/linux/flutter/ephemeral/

@@ -79,7 +79,23 @@ final class SqliteEventStore implements EventStore {
 
   void _migrate() {
     final current = _db.select('PRAGMA user_version;').first.values.first as int;
-    if (current >= kSchemaVersion) return;
+
+    // Eine Datei aus einer neueren Fassung. Das passiert beim Zurueckspielen
+    // eines Backups oder nach einer Installation der vorherigen APK.
+    //
+    // Weiterlaufen waere hier der teurere Weg: Die Projektionen wuerden
+    // gegen ein Schema rechnen, das sie nicht kennen, und das Ergebnis waere
+    // still falsch statt laut kaputt. In einem regelbasierten System ist
+    // eine stumm falsche Zahl schlimmer als ein Abbruch (CLAUDE.md).
+    if (current > kSchemaVersion) {
+      throw StateError(
+        'Diese Datenbank stammt aus einer neueren Fassung von AXIOM '
+        '(Schema $current, diese Fassung kennt $kSchemaVersion). '
+        'Aktualisiere die App, statt die Daten zu riskieren.',
+      );
+    }
+
+    if (current == kSchemaVersion) return;
 
     if (current < 1) {
       _db.execute('''

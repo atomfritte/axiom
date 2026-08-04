@@ -125,6 +125,31 @@ dart run tools/bin/sync_rules.dart
 (cd packages/axiom_app && flutter run -d <device>)     # adb devices
 ```
 
+### Signing a release build
+
+`flutter build apk --release` works without setup, but falls back to the
+Android debug key and says so in the build log. That key is on every machine
+with Flutter installed, so anything signed with it can be replaced by anyone.
+
+For a real key, create `packages/axiom_app/android/key.properties` — it is
+git-ignored, along with `*.p12` and `*.jks`:
+
+```properties
+storeFile=axiom-release.p12
+storePassword=…
+keyAlias=axiom
+keyPassword=…
+```
+
+```bash
+keytool -genkeypair -v -keystore axiom-release.p12 -storetype PKCS12 \
+  -keyalg RSA -keysize 4096 -validity 10950 -alias axiom
+```
+
+Keep the keystore. Without it no build can be installed over an existing one
+— only uninstall and reinstall, and that wipes the database. Export first
+(*System → Data*).
+
 ## Status
 
 **S1 through S4 are in place.** The Android APK and the Linux desktop build and run.

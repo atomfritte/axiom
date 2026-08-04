@@ -283,6 +283,36 @@ void main() {
       expect(handler, contains('AxiomRoute.anchors'));
     });
 
+    test('R8 behält jede Klasse, die nur im Manifest steht', () {
+      // Eine Activity oder ein Service wird nirgends im Code aufgerufen —
+      // das System sucht sie ueber den Namen im Manifest. R8 sieht keine
+      // Referenz und wirft sie weg. Der Fehler faellt beim Bauen nicht auf,
+      // sondern auf dem Geraet, und dort als „passiert nichts".
+      final manifest = android('AndroidManifest.xml');
+      final rules =
+          File('android/app/proguard-rules.pro').readAsStringSync();
+
+      final components = RegExp(r'android:name="\.([A-Za-z]+)"')
+          .allMatches(manifest)
+          .map((m) => m.group(1)!)
+          .toSet();
+      expect(components, isNotEmpty);
+      for (final name in components) {
+        expect(rules, contains('de.axiom.axiom_app.$name'), reason: name);
+      }
+    });
+
+    test('das Release ist nicht mit dem Debug-Schlüssel signiert', () {
+      // Den Debug-Schluessel kennt jeder Rechner mit Flutter. Eine damit
+      // signierte APK laesst sich von jedem als Aktualisierung ueberschreiben.
+      final gradle =
+          File('android/app/build.gradle.kts').readAsStringSync();
+      expect(gradle, contains('key.properties'));
+      expect(gradle, isNot(contains('TODO: Add your own signing config')));
+      // Der Rueckfall auf den Debug-Schluessel darf bleiben — aber nur laut.
+      expect(gradle, contains('logger.warn'));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

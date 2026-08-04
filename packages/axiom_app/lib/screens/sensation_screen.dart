@@ -132,19 +132,11 @@ class _BudgetCard extends StatelessWidget {
         children: [
           Text(context.t('VERDIENT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text('${budget.availableMinutes}',
-                  style: TextStyle(
-                    fontFamily: Fonts.mono,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w300,
-                    color: budget.hasCredit ? p.calm : p.inkDim,
-                  )),
-              Text(context.t(' min offen'), style: monoStyle(context, size: 13)),
-            ],
+          BigReading(
+            value: '${budget.availableMinutes}',
+            unit: context.t('min offen'),
+            valueColor: budget.hasCredit ? p.calm : p.inkDim,
+            size: 32,
           ),
           const SizedBox(height: Space.md),
           Text(

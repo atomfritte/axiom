@@ -119,13 +119,19 @@ void main() {
         stakes: 5,
       );
       await h.runtime.startTask(task);
-      await pumpPhone(tester, h.wrap(const NowScreen()));
 
+      // Auf „Jetzt" muss sie zu sehen sein — als Karte, wenn keine Regel
+      // feuert, sonst als Streifen über der Regelkarte.
+      await pumpPhone(tester, h.wrap(const NowScreen()));
       expect(find.text('Steuerunterlagen sortieren'), findsWidgets);
+      // Kein Vorschlag, etwas anderes anzufangen, solange etwas läuft (G1).
+      expect(find.text('Anfangen'), findsNothing);
+      await unmount(tester);
+
+      // Und sie muss sich abschließen lassen.
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
       expect(find.text('Erledigt'), findsOneWidget);
       expect(find.text('Zurücklegen'), findsOneWidget);
-      // Kein zweiter Vorschlag daneben, solange etwas läuft (G1).
-      expect(find.text('Anfangen'), findsNothing);
     });
 
     testWidgets('es läuft immer höchstens eine Aufgabe', (tester) async {
@@ -189,6 +195,26 @@ void main() {
       expect(find.textContaining('Sortieren nach'), findsNothing);
       expect(find.textContaining('Reihenfolge ist die der Auswahl'),
           findsOneWidget);
+    });
+
+    testWidgets('eine feuernde Regel schlägt die laufende Aufgabe',
+        (tester) async {
+      // Die Regel ist die Instanz, die entscheidet (G2) — ein Termin in
+      // zehn Minuten schlägt jede laufende Vertiefung. Sichtbar bleiben
+      // muss die Aufgabe trotzdem, sonst ist sie genau dann weg, wenn
+      // etwas dazwischenkommt.
+      h.completeOnboarding();
+      final task = await h.runtime.createTask(
+        title: 'Etwas Angefangenes',
+        activationEnergy: 2, salience: 5, stakes: 5);
+      await h.runtime.startTask(task);
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      // Um 12:15 feuert der Mittags-Check-in. Er bekommt die Karte …
+      expect(find.textContaining('R-'), findsWidgets);
+      // … und die laufende Aufgabe bleibt daneben sichtbar.
+      expect(find.text('LÄUFT'), findsWidgets);
+      expect(find.text('Etwas Angefangenes'), findsWidgets);
     });
 
     testWidgets('„Jetzt" zeigt trotzdem weiter genau eine Handlung',

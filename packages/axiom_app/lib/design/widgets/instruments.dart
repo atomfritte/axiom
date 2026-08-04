@@ -404,3 +404,166 @@ class _PatientLoaderState extends State<PatientLoader> {
     );
   }
 }
+
+/// Wie hoch ein Element mit Text sein muss.
+///
+/// Feste Höhen um Text herum sind die häufigste Ursache für abgeschnittene
+/// Zeilen: Bei 1,6-fach ist die Schrift größer, der Kasten nicht. Die App
+/// lässt bis 2,4-fach zu — wer die Oberfläche schlecht liest, stellt hoch,
+/// und genau dann darf sie nicht kaputtgehen.
+///
+/// Nur für Kästen mit Text. Punkte, Linien und Farbbalken bleiben, wie sie
+/// sind; ein Zeitstrahl, der mit der Schrift wächst, wird zum Balken.
+double scaledHeight(BuildContext context, double base) =>
+    MediaQuery.textScalerOf(context).scale(base).clamp(base, base * 2.2);
+
+/// Ein Zustand, in dem nichts da ist — und das eine Aussage, kein Fehler.
+///
+/// **Warum scrollbar.** Der Erklärtext ist hier absichtlich lang: Ein leerer
+/// Screen ist die Stelle, an der man erfährt, wozu es ihn gibt. Bei großer
+/// Schrift passt er nicht mehr auf ein 640er Display, und eine feste Spalte
+/// schneidet ihn dann unten ab — ausgerechnet die Erklärung.
+///
+/// **Warum ohne Illustration und ohne Aufforderung.** „Leg jetzt deine erste
+/// Aufgabe an!" ist eine Handlungsaufforderung ohne Anlass. Hier steht, was
+/// der Fall ist, und woher etwas käme.
+final class EmptyState extends StatelessWidget {
+  /// Kurz, in Versalien — der Zustand als Messwert.
+  final String label;
+
+  /// Ein Satz, der den Zustand benennt.
+  final String headline;
+
+  /// Woher etwas käme. Zwei, drei Sätze.
+  final String body;
+
+  /// Optionaler Nachsatz, kleiner gesetzt.
+  final String? footnote;
+
+  const EmptyState({
+    super.key,
+    required this.label,
+    required this.headline,
+    required this.body,
+    this.footnote,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: Space.md),
+        Text(headline, style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: Space.md),
+        Text(body, style: Theme.of(context).textTheme.bodyMedium),
+        if (footnote != null) ...[
+          const SizedBox(height: Space.lg),
+          Text(footnote!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ],
+    );
+
+    // Derselbe Baustein steht mal als ganzer Bildschirminhalt da und mal als
+    // Eintrag in einer Liste. Als Bildschirminhalt braucht er eine eigene
+    // Scrollansicht, sonst laeuft der Erklaertext bei grosser Schrift unten
+    // hinaus; in einer Liste waere dieselbe Scrollansicht ein Fehler
+    // („unbounded height"). Die Randbedingung sagt, welcher Fall vorliegt:
+    // In einer Liste ist die Hoehe unbegrenzt.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const padding = EdgeInsets.fromLTRB(
+            Space.lg, Space.huge, Space.lg, Space.huge);
+        if (!constraints.hasBoundedHeight) {
+          return Padding(padding: padding, child: content);
+        }
+        return SingleChildScrollView(padding: padding, child: content);
+      },
+    );
+  }
+}
+
+/// Ein Messwert in groß, mit seiner Einheit daneben.
+///
+/// Dreimal fast gleich gebaut gewesen — und dreimal mit demselben Fehler:
+/// eine `Row` aus zwei unbeschränkten Texten. Bei großer Schrift wird die
+/// Zahl so breit, dass die Einheit rechts hinausläuft.
+///
+/// `Wrap` statt `Row`: Passt beides nebeneinander, steht es nebeneinander;
+/// sonst rutscht die Einheit unter die Zahl. Beides ist lesbar, ein
+/// abgeschnittener Wert wäre es nicht.
+final class BigReading extends StatelessWidget {
+  final String value;
+
+  /// Mit führendem Leerzeichen im Quelltext nicht nötig — der Abstand kommt
+  /// aus dem Layout.
+  final String unit;
+  final Color? valueColor;
+  final double size;
+
+  const BigReading({
+    super.key,
+    required this.value,
+    required this.unit,
+    this.valueColor,
+    this.size = 34,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.end,
+      spacing: Space.sm,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: Fonts.mono,
+            fontSize: size,
+            fontWeight: FontWeight.w300,
+            height: 1.1,
+            color: valueColor ?? p.ink,
+          ),
+        ),
+        Padding(
+          // Die Einheit sitzt auf der Grundlinie der Zahl, nicht auf ihrer
+          // Oberkante — `Wrap` kennt keine Grundlinie, also von Hand.
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(unit, style: monoStyle(context, size: 13)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Die beiden Enden einer Skala — links das eine, rechts das andere.
+///
+/// `Row` mit `spaceBetween` sieht richtig aus, bis die Wörter lang werden:
+/// Der Zwischenraum kann nicht negativ werden, und dann läuft das rechte
+/// Wort hinaus. Mit je einem `Expanded` und Ausrichtung nach außen bleiben
+/// die Enden verankert, und lange Beschriftungen brechen um statt zu
+/// verschwinden.
+final class ScaleEnds extends StatelessWidget {
+  final String low;
+  final String high;
+  const ScaleEnds({super.key, required this.low, required this.high});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(low,
+                style: monoStyle(context, size: 10.5, spacing: 0.4)),
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Text(high,
+                textAlign: TextAlign.right,
+                style: monoStyle(context, size: 10.5, spacing: 0.4)),
+          ),
+        ],
+      );
+}

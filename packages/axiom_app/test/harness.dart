@@ -105,3 +105,30 @@ Future<void> pumpPhone(
   await tester.pumpWidget(widget);
   await tester.pumpAndSettle(const Duration(milliseconds: 600));
 }
+
+/// Rendert ein Widget in vorgegebener Groesse und Schriftskalierung.
+///
+/// Die Skalierung geht ueber `MediaQuery`, nicht ueber das Theme: Genau so
+/// kommt sie in der App an (`app.dart` verrechnet Systemgroesse und eigene
+/// Einstellung zu einem `TextScaler`), und nur so faellt auf, was bei
+/// 2,4-fach bricht.
+Future<void> pumpScaled(
+  WidgetTester tester,
+  Widget widget, {
+  Size size = const Size(412, 915),
+  double textScale = 1.0,
+}) async {
+  tester.view.physicalSize = size * 3;
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(
+        size: size,
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: widget,
+    ),
+  );
+  await tester.pumpAndSettle(const Duration(milliseconds: 600));
+}

@@ -86,28 +86,11 @@ class _EmptyAnchors extends StatelessWidget {
   const _EmptyAnchors();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(Space.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: Space.huge),
-            Text(context.t('KEINE ANKER'), style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.md),
-            Text(context.t('Nichts terminiert.'),
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: Space.md),
-            Text(
-              context.t('Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du losmusst, wann du anfangen musst dich fertigzumachen, und wann Schluss ist mit dem, was du gerade tust.'),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: Space.lg),
-            Text(
-              context.t('Der letzte Punkt ist der, den man im Kopf immer vergisst.'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => EmptyState(
+        label: context.t('KEINE ANKER'),
+        headline: context.t('Nichts terminiert.'),
+        body: context.t('Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du losmusst, wann du anfangen musst dich fertigzumachen, und wann Schluss ist mit dem, was du gerade tust.'),
+        footnote: context.t('Der letzte Punkt ist der, den man im Kopf immer vergisst.'),
       );
 }
 
@@ -395,7 +378,7 @@ class _MinuteDial extends StatelessWidget {
           Text(hint, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: Space.sm),
           SizedBox(
-            height: 38,
+            height: scaledHeight(context, 38),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: options.length,

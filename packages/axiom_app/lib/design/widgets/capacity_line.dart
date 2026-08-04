@@ -33,11 +33,16 @@ final class CapacityLine extends StatelessWidget {
   /// Hervorgehobene Aufgabe (die aktuell vorgeschlagene).
   final String? highlightTaskId;
 
+  /// Ob die Leiste zu etwas führt. Steuert nur das Zeichen — den Tipp
+  /// nimmt das umgebende `Panel` entgegen.
+  final bool onOpen;
+
   const CapacityLine({
     super.key,
     required this.capacity,
     required this.tasks,
     this.highlightTaskId,
+    this.onOpen = false,
   });
 
   @override
@@ -85,7 +90,14 @@ final class CapacityLine extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Space.sm),
-          Text(
+          // Die Leiste führt zur vollständigen Liste. Ohne sichtbares
+          // Zeichen sieht sie aus wie jede andere Kachel, und ein Weg, den
+          // man nicht sieht, ist keiner [D9].
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
             switch ((reachable.length, beyond)) {
               (0, 0) => context.t('Noch keine Aufgaben erfasst.'),
               (0, _) => context.t('Heute liegt nichts davon in Reichweite. Zerlegen hilft mehr als Anlauf nehmen.'),
@@ -93,7 +105,18 @@ final class CapacityLine extends StatelessWidget {
               (final r, final b) =>
                 context.t('{0} startbar · {1} heute außerhalb der Reichweite', [r, b]),
             },
-            style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (onOpen) ...[
+                const SizedBox(width: Space.sm),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(Icons.chevron_right,
+                      size: 16, color: context.axiom.inkFaint),
+                ),
+              ],
+            ],
           ),
         ],
       ),

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme.dart';
 import '../design/tokens.dart';
+import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
@@ -219,13 +220,7 @@ final class _Scale extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.xs + 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(low, style: monoStyle(context, size: 10.5, spacing: 0.4)),
-              Text(high, style: monoStyle(context, size: 10.5, spacing: 0.4)),
-            ],
-          ),
+          ScaleEnds(low: low, high: high),
         ],
       ),
     );

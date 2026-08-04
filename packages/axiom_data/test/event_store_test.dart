@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 void main() {
+  _schemaGuard();
   late FakeClock clock;
   late SqliteEventStore store;
 
@@ -240,6 +244,38 @@ void main() {
       final at = DateTime.utc(2026, 8, 3, 10);
       final ids = List.generate(500, (_) => newUlid(at)).toSet();
       expect(ids, hasLength(500));
+    });
+  });
+}
+
+void _schemaGuard() {
+  group('Schema-Grenze', () {
+    late Directory dir;
+    setUp(() => dir = Directory.systemTemp.createTempSync('axiom_schema'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('eine Datei aus einer neueren Fassung wird abgelehnt', () {
+      // Weiterlaufen hiesse, gegen ein unbekanntes Schema zu rechnen. Das
+      // Ergebnis waere still falsch — und das ist teurer als ein Abbruch.
+      final path = '${dir.path}/axiom.db';
+      sqlite3.open(path)
+        ..execute('PRAGMA user_version = ${kSchemaVersion + 1};')
+        ..dispose();
+
+      expect(
+        () => SqliteEventStore.open(path, clock: FakeClock(DateTime(2026))),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('eine Datei derselben Fassung bleibt unveraendert', () async {
+      final path = '${dir.path}/axiom.db';
+      final clock = FakeClock(DateTime(2026));
+      SqliteEventStore.open(path, clock: clock).close();
+      // Zweites Oeffnen darf nichts erneut anlegen und nichts werfen.
+      final again = SqliteEventStore.open(path, clock: clock);
+      expect(await again.eventCount(), 0);
+      again.close();
     });
   });
 }

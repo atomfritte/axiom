@@ -118,7 +118,10 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return Padding(
+    // Scrollbar, weil das Blatt bei grosser Schrift hoeher wird als das
+    // Display — und weil das hier die Drei-Sekunden-Strecke ist: Was unten
+    // abgeschnitten waere, waere der Speichern-Knopf.
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: Space.lg,
         right: Space.lg,
@@ -131,11 +134,17 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
         children: [
           Row(
             children: [
-              Text(context.t('ERFASSEN'), style: Theme.of(context).textTheme.labelSmall),
-              const Spacer(),
+              Text(context.t('ERFASSEN'),
+                  style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(width: Space.md),
               if (_savedCount > 0)
-                Text(context.t('{0} gespeichert', [_savedCount]),
-                    style: monoStyle(context, size: 11, color: p.calm)),
+                Expanded(
+                  child: Text(context.t('{0} gespeichert', [_savedCount]),
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: monoStyle(context, size: 11, color: p.calm)),
+                ),
             ],
           ),
           const SizedBox(height: Space.md),

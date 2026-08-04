@@ -191,14 +191,19 @@ class _TimeCapNotice extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall),
         ),
         const SizedBox(width: Space.md),
-        Text(
-          left.isNegative
-              ? 'abgelaufen'
-              : context.t('{0}:{1} übrig', [minutes, seconds.toString().padLeft(2, "0")]),
-          style: monoStyle(context,
-              size: 13,
-              weight: FontWeight.w600,
-              color: minutes < 2 ? p.caution : p.inkDim),
+        Flexible(
+          child: Text(
+            left.isNegative
+                ? context.t('abgelaufen')
+                : context.t('{0}:{1} übrig',
+                    [minutes, seconds.toString().padLeft(2, "0")]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: monoStyle(context,
+                size: 13,
+                weight: FontWeight.w600,
+                color: minutes < 2 ? p.caution : p.inkDim),
+          ),
         ),
         const SizedBox(width: Space.md),
         Expanded(
