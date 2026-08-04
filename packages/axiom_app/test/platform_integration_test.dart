@@ -313,6 +313,39 @@ void main() {
       expect(gradle, contains('logger.warn'));
     });
 
+    test('die Bitte um die Pille ist auch erlaubt', () {
+      // `setRequestPromotedOngoing` ohne diese Berechtigung ist ein
+      // Aufruf ins Leere: Android 16 ignoriert ihn, die Benachrichtigung
+      // bleibt eine gewoehnliche, und weder Statusleisten-Pille noch
+      // Samsungs Now Bar zeigen sie. Genau so lief es seit S3.
+      final manifest = android('AndroidManifest.xml');
+      final live = android('kotlin/de/axiom/axiom_app/LiveSlotService.kt');
+      final presence =
+          android('kotlin/de/axiom/axiom_app/PresenceService.kt');
+
+      for (final source in [live, presence]) {
+        if (source.contains('setRequestPromotedOngoing')) {
+          expect(manifest,
+              contains('android.permission.POST_PROMOTED_NOTIFICATIONS'));
+        }
+      }
+      expect(presence, contains('setRequestPromotedOngoing'));
+    });
+
+    test('die Pille meldet, was daraus wurde — nicht was möglich wäre', () {
+      // `isPromotable` sagt nur, dass das Geraet Android 16 hat. Ob das
+      // System die Bitte angenommen hat, steht allein an der geposteten
+      // Benachrichtigung.
+      expect(
+        android('kotlin/de/axiom/axiom_app/LiveSlotService.kt'),
+        contains('FLAG_PROMOTED_ONGOING'),
+      );
+      expect(
+        code(File('lib/screens/check_screen.dart').readAsStringSync()),
+        contains('presencePromoted'),
+      );
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

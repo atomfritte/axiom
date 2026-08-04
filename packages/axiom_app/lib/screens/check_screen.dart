@@ -231,6 +231,17 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                           : context.t('Aus — und ohne die Benachrichtigungsfreigabe von oben kann sie auch nicht starten.'),
                 ),
                 _Check(
+                  ok: _flag('presencePromoted'),
+                  label: context.t('Pille und Now Bar'),
+                  detail: !_flag('liveSlotPromotable')
+                      ? context.t('Live Updates gibt es erst ab Android 16.')
+                      : _flag('presencePromoted')
+                          ? context.t('Die nächste Handlung steht neben der Uhr und in der Now Bar.')
+                          : _flag('presenceRunning')
+                              ? context.t('Das System hat die Beförderung abgelehnt. Die Pille ist für zeitlich begrenzte Vorgänge gedacht — eine dauerhafte Anzeige zählt nicht immer dazu. Als Benachrichtigung bleibt sie sichtbar.')
+                              : context.t('Erst die dauerhafte Anzeige einschalten — die Pille zeigt sie, nicht umgekehrt.'),
+                ),
+                _Check(
                   ok: _flag('speechAvailable'),
                   label: context.t('Spracheingabe'),
                   detail: _flag('speechAvailable')
@@ -287,6 +298,11 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       _Limitation(
                         title: context.t('Screen-off-Memo mit dem Stift'),
                         body: context.t('Landet in Samsung Notes. Dafür gibt es keine öffentliche Schnittstelle, jeder Weg dorthin wäre Reverse Engineering und würde das nächste Systemupdate nicht überleben.'),
+                      ),
+                      Divider(color: p.rule, height: Space.xl),
+                      _Limitation(
+                        title: context.t('Samsungs Now Bar'),
+                        body: context.t('Es gibt keine eigene Samsung-Schnittstelle dafür. One UI 8 füllt die Now Bar aus den Live Updates von Android 16 — dieselbe Bitte, die AXIOM stellt. Angenommen wird sie für zeitlich begrenzte Vorgänge zuverlässig, für eine dauerhafte Anzeige nicht garantiert. Die Zeile oben sagt, wie es auf diesem Gerät ausgegangen ist.'),
                       ),
                       Divider(color: p.rule, height: Space.xl),
                       _Limitation(

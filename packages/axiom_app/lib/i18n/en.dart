@@ -1333,4 +1333,48 @@ const Map<String, String> kEnglish = {
       'min available',
   'abgelaufen':
       'time is up',
+  'Pille und Now Bar':
+      'Pill and Now Bar',
+  'Live Updates gibt es erst ab Android 16.':
+      'Live updates start with Android 16.',
+  'Die nächste Handlung steht neben der Uhr und in der Now Bar.':
+      'The next action sits next to the clock and in the Now Bar.',
+  'Das System hat die Beförderung abgelehnt. Die Pille ist für zeitlich begrenzte Vorgänge gedacht — eine dauerhafte Anzeige zählt nicht immer dazu. Als Benachrichtigung bleibt sie sichtbar.':
+      'The system turned the promotion down. The pill is meant for time-bound activities, and a persistent display does not always count as one. It stays visible as a notification.',
+  'Erst die dauerhafte Anzeige einschalten — die Pille zeigt sie, nicht umgekehrt.':
+      'Switch on the persistent display first — the pill shows it, not the other way round.',
+  'Samsungs Now Bar':
+      'Samsung’s Now Bar',
+  'Es gibt keine eigene Samsung-Schnittstelle dafür. One UI 8 füllt die Now Bar aus den Live Updates von Android 16 — dieselbe Bitte, die AXIOM stellt. Angenommen wird sie für zeitlich begrenzte Vorgänge zuverlässig, für eine dauerhafte Anzeige nicht garantiert. Die Zeile oben sagt, wie es auf diesem Gerät ausgegangen ist.':
+      'There is no separate Samsung interface for it. One UI 8 fills the Now Bar from Android 16’s live updates — the same request AXIOM makes. It is granted reliably for time-bound activities, not guaranteed for a persistent display. The row above says how it went on this device.',
+  'Freiwillig':
+      'Optional',
+  'Schlaf und\nSchritte.':
+      'Sleep and\nsteps.',
+  'Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.':
+      'The last few nights of sleep are the single strongest factor in capacity. Entered by hand it is missing on exactly the days it matters — so AXIOM would rather read it from Health Connect.',
+  'WAS GELESEN WIRD':
+      'WHAT IS READ',
+  'Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.':
+      'Sleep times and steps per day. Nothing else — no heart rate, no weight, no location. Nothing is ever written: AXIOM puts nothing into Health Connect.',
+  'Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.':
+      'The data stays on the device and feeds two values: capacity and sleep debt. Both appear under State with their derivation.',
+  'Health Connect verbinden':
+      'Connect Health Connect',
+  'Wird geprüft …':
+      'Checking …',
+  'Auf diesem Gerät nicht vorhanden. AXIOM rechnet dann aus den Check-ins.':
+      'Not present on this device. AXIOM then works from your check-ins.',
+  'Verbunden. Der erste Import holt die letzten vier Wochen.':
+      'Connected. The first import fetches the last four weeks.',
+  'Öffnet die Freigabe von Health Connect. Du wählst dort selbst, was AXIOM sehen darf.':
+      'Opens the Health Connect permission screen. You choose there what AXIOM may see.',
+  'Das lässt sich jederzeit ändern — unter System → Systemcheck, in beide Richtungen. Ohne Health Connect fehlt AXIOM nichts Grundsätzliches, nur Genauigkeit.':
+      'This can be changed at any time — under System → System check, in both directions. Without Health Connect nothing fundamental is missing, only precision.',
+  'Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins.':
+      'Health Connect only exists on Android. On the desktop AXIOM works from your check-ins.',
+  'Nur auf\nAndroid.':
+      'Android\nonly.',
+  'Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins — dieselben Regeln, nur eine Quelle weniger.':
+      'Health Connect only exists on Android. On the desktop AXIOM works from your check-ins — same rules, one source fewer.',
 };

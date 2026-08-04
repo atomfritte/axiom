@@ -110,6 +110,28 @@ class LiveSlotService : Service() {
          */
         fun isPromotable(): Boolean = Build.VERSION.SDK_INT >= 36
 
+        /**
+         * Ob eine Benachrichtigung tatsächlich befördert wurde.
+         *
+         * Die Bitte um die Pille ist eine Bitte. Ob das System sie annimmt,
+         * steht allein an der geposteten Benachrichtigung — und nur das ist
+         * die Antwort auf „steht es oben?". Ohne diese Unterscheidung sagt
+         * die App, Live Updates gingen, und der Nutzer sieht nichts.
+         */
+        fun isPromoted(context: Context, id: Int): Boolean {
+            if (Build.VERSION.SDK_INT < 36) return false
+            return try {
+                val posted = context.getSystemService(NotificationManager::class.java)
+                    .activeNotifications
+                    .firstOrNull { it.id == id }
+                    ?: return false
+                posted.notification.flags and
+                    android.app.Notification.FLAG_PROMOTED_ONGOING != 0
+            } catch (e: Throwable) {
+                false
+            }
+        }
+
         fun createChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val channel = android.app.NotificationChannel(

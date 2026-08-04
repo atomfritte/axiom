@@ -163,6 +163,18 @@ void main() {
     await shoot(tester, '07-eingang', const InboxScreen());
   });
 
+  testWidgets('19 onboarding — health connect', (tester) async {
+    await pumpPhone(tester, h.wrap(OnboardingScreen(onDone: () {})));
+    for (var i = 0; i < 5; i++) {
+      await tester.tap(find.text('Weiter').last);
+      await tester.pumpAndSettle();
+    }
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('screenshots/19-onboarding-health.png'),
+    );
+  });
+
   testWidgets('18 aufgaben — der ganze bestand', (tester) async {
     h.completeOnboarding();
     final tasks = [

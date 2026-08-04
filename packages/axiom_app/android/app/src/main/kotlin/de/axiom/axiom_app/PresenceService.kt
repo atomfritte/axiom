@@ -44,6 +44,9 @@ class PresenceService : Service() {
 
         const val KEY_TEXT = "axiom_quick_text"
 
+        /** Was in der Pille Platz hat. Wenige Zeichen, kein Satz. */
+        const val SHORT_LABEL = "Jetzt"
+
         private const val PREFS = "axiom_presence"
 
         /**
@@ -301,7 +304,7 @@ class PresenceService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        return NotificationCompat.Builder(this, CHANNEL)
+        val builder = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(headline)
             .setContentText(detail)
@@ -328,6 +331,21 @@ class PresenceService : Service() {
                 "Check-in",
                 checkinIntent,
             )
-            .build()
+
+        if (Build.VERSION.SDK_INT >= 36) {
+            // Die naechste Handlung als Pille neben der Uhr und in Samsungs
+            // Now Bar. Es gibt keine eigene Samsung-Schnittstelle dafuer —
+            // One UI 8 fuellt die Now Bar aus genau diesen Live Updates.
+            //
+            // Das System entscheidet, ob es die Bitte annimmt: Die Regel
+            // ist auf zeitlich begrenzte, selbst gestartete Vorgaenge
+            // zugeschnitten, und eine dauerhafte Anzeige ist das nicht.
+            // Deshalb wird hier gebeten, nicht behauptet — und der
+            // Systemcheck sagt, was daraus geworden ist.
+            builder.setRequestPromotedOngoing(true)
+            builder.setShortCriticalText(SHORT_LABEL)
+        }
+
+        return builder.build()
     }
 }

@@ -54,17 +54,35 @@ void main() {
   });
 
   group('Onboarding fuehrt durch', () {
-    testWidgets('fuenf Schritte, jeder ueberspringbar', (tester) async {
+    testWidgets('sechs Schritte, jeder ueberspringbar', (tester) async {
       await pumpPhone(tester, h.wrap(OnboardingScreen(onDone: () {})));
 
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('1/6'), findsOneWidget);
       expect(find.text('Überspringen'), findsOneWidget);
 
-      for (var i = 2; i <= 5; i++) {
+      for (var i = 2; i <= 6; i++) {
         await tester.tap(find.text('Weiter').last);
         await tester.pumpAndSettle();
-        expect(find.text('$i/5'), findsOneWidget);
+        expect(find.text('$i/6'), findsOneWidget);
       }
+      expect(find.text('Los geht’s'), findsOneWidget);
+    });
+
+    testWidgets('fragt Health Connect, ohne es vorauszusetzen',
+        (tester) async {
+      // Die drei Systemrechte davor sind Voraussetzungen. Das hier ist eine
+      // Entscheidung — und sie muss als solche gestellt werden, samt der
+      // Aussage, was gelesen wird und was nicht.
+      await pumpPhone(tester, h.wrap(OnboardingScreen(onDone: () {})));
+      for (var i = 0; i < 5; i++) {
+        await tester.tap(find.text('Weiter').last);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('6/6'), findsOneWidget);
+      // Im Test laeuft die App nicht auf Android. Die Seite sagt dann, was
+      // dort gilt, statt eine Freigabe anzubieten, die es nicht gibt —
+      // dieselbe Ehrlichkeit wie ueberall an der Systemgrenze.
+      expect(find.textContaining('nur auf Android'), findsWidgets);
       expect(find.text('Los geht’s'), findsOneWidget);
     });
 

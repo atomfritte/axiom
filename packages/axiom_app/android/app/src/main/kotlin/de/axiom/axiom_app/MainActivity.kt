@@ -649,6 +649,11 @@ class MainActivity : FlutterActivity() {
             "presenceRunning" to PresenceService.isActive(this),
             "presenceWanted" to PresenceService.isEnabled(this),
             "liveSlotPromotable" to LiveSlotService.isPromotable(),
+            // Was daraus geworden ist, nicht was moeglich waere.
+            "presencePromoted" to
+                LiveSlotService.isPromoted(this, PresenceService.NOTIFICATION_ID),
+            "liveSlotPromoted" to
+                LiveSlotService.isPromoted(this, LiveSlotService.NOTIFICATION_ID),
             "speechAvailable" to SpeechRecognizer.isRecognitionAvailable(this),
         )
     }

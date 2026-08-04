@@ -37,6 +37,14 @@
       Der Dienst zeigt Zustand an und nimmt Eingaben entgegen — dafür ist
       SPECIAL_USE der vorgesehene Typ.
     -->
+    <!--
+      Ohne diese Berechtigung ignoriert Android 16 jedes
+      `setRequestPromotedOngoing` — die Benachrichtigung bleibt eine
+      gewoehnliche, und weder Statusleisten-Pille noch Samsungs Now Bar
+      zeigen sie. Der Aufruf stand seit S3 im Code und lief ins Leere.
+    -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 

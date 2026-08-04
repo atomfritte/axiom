@@ -20,6 +20,7 @@ import '../design/widgets/axiom_mark.dart';
 import '../design/widgets/capacity_line.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
+import '../platform/health_sync.dart';
 import '../state/providers.dart';
 import 'checkin_sheet.dart';
 import '../i18n/i18n.dart';
@@ -37,7 +38,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _page = 0;
   bool _checkinDone = false;
 
-  static const _pageCount = 5;
+  static const _pageCount = 6;
 
   @override
   void dispose() {
@@ -103,6 +104,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onDone: () => setState(() => _checkinDone = true),
                   ),
                   const _PagePermissions(),
+                  const _PageHealth(),
                 ],
               ),
             ),
@@ -362,6 +364,139 @@ class _PageFirstCheckin extends ConsumerWidget {
   }
 }
 
+/// Health Connect — die einzige Datenquelle, die AXIOM nicht selbst erhebt.
+///
+/// **Warum eine eigene Seite.** Die drei Systemrechte davor sind
+/// Voraussetzungen: Ohne sie funktioniert die App nicht richtig. Das hier
+/// ist eine Entscheidung: Sollen Schlaf und Schritte aus einer fremden
+/// Datenbank einfließen? Beides auf eine Seite zu legen hieße, die Frage
+/// wie eine Formalie aussehen zu lassen.
+///
+/// **Warum überhaupt gefragt wird.** Der Schlaf der letzten Nächte ist der
+/// stärkste Einzelfaktor der Kapazität, und selbst eingetragen wird er
+/// unzuverlässig — genau an den Tagen nicht, an denen er zählt. Trotzdem
+/// bleibt es freiwillig: Ohne Health Connect rechnet AXIOM aus Check-ins
+/// weiter, nur ungenauer.
+class _PageHealth extends ConsumerStatefulWidget {
+  const _PageHealth();
+
+  @override
+  ConsumerState<_PageHealth> createState() => _PageHealthState();
+}
+
+class _PageHealthState extends ConsumerState<_PageHealth> {
+  HealthAvailability? _availability;
+  bool _connected = false;
+  String? _reason;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final availability = await HealthSync.availability();
+    final status = await AndroidBridge.healthStatus();
+    if (!mounted) return;
+    setState(() {
+      _availability = availability;
+      _connected = status['granted'] == true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AndroidBridge.isSupported) {
+      // Nicht noch einmal „Bereit." — die Seite davor sagt das auf dem
+      // Desktop schon, und zwei gleiche Schlussseiten hintereinander lesen
+      // sich wie ein Fehler.
+      return _Page(
+        eyebrow: context.t('Datenquellen'),
+        title: context.t('Nur auf\nAndroid.'),
+        children: [
+          _Para(context.t('Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins — dieselben Regeln, nur eine Quelle weniger.')),
+        ],
+      );
+    }
+
+    return _Page(
+      eyebrow: context.t('Freiwillig'),
+      title: context.t('Schlaf und\nSchritte.'),
+      children: [
+        _Para(
+          context.t('Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.'),
+        ),
+        const SizedBox(height: Space.xl),
+        Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.t('WAS GELESEN WIRD'),
+                  style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: Space.sm),
+              Text(
+                context.t('Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: Space.md),
+              Text(
+                context.t('Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.xl),
+        _PermissionRow(
+          title: context.t('Health Connect verbinden'),
+          body: switch (_availability) {
+            null => context.t('Wird geprüft …'),
+            HealthAvailability.unavailable =>
+              context.t('Auf diesem Gerät nicht vorhanden. AXIOM rechnet dann aus den Check-ins.'),
+            HealthAvailability.needsUpdate =>
+              context.t('Die Systemkomponente ist zu alt und muss aktualisiert werden.'),
+            _ => _connected
+                ? context.t('Verbunden. Der erste Import holt die letzten vier Wochen.')
+                : context.t('Öffnet die Freigabe von Health Connect. Du wählst dort selbst, was AXIOM sehen darf.'),
+          },
+          granted: _connected,
+          onTap: !_busy &&
+                  (_availability == HealthAvailability.notGranted ||
+                      _availability == HealthAvailability.ready)
+              ? _connect
+              : null,
+        ),
+        if (_reason != null) ...[
+          const SizedBox(height: Space.sm),
+          Text(_reason!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+        const SizedBox(height: Space.lg),
+        _Para(
+          context.t('Das lässt sich jederzeit ändern — unter System → Systemcheck, in beide Richtungen. Ohne Health Connect fehlt AXIOM nichts Grundsätzliches, nur Genauigkeit.'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _connect() async {
+    setState(() {
+      _busy = true;
+      _reason = null;
+    });
+    final outcome = await HealthSync.connect();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      // Kein stummes Nichts: Wenn die Freigabe nicht aufgeht, steht hier
+      // warum — dieselbe Zusage wie ueberall sonst an der Systemgrenze.
+      _reason = outcome.ok ? null : outcome.reason;
+    });
+    await _load();
+  }
+}
+
 class _PagePermissions extends ConsumerStatefulWidget {
   const _PagePermissions();
 
@@ -531,7 +666,10 @@ class _PermissionRow extends StatelessWidget {
   final String title;
   final String body;
   final bool granted;
-  final VoidCallback onTap;
+
+  /// Null heisst: nichts zu holen. Ein Knopf, der nichts tut, ist
+  /// schlimmer als keiner.
+  final VoidCallback? onTap;
 
   const _PermissionRow({
     required this.title,
