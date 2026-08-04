@@ -245,6 +245,11 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
   int _stakes = 5;
   bool _saving = false;
 
+  /// Ab wann es weh tut. Treibt die Dringlichkeit in der Auswahl, war aber
+  /// bisher nur über den Expertenmodus setzbar — am Telefon gab es keinen
+  /// Weg dorthin, obwohl die Aufgabe hier entsteht.
+  DateTime? _decayAt;
+
   @override
   void dispose() {
     _title.dispose();
@@ -262,6 +267,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
       // ehrlich zugaenglich. Mittelwert, bis Nutzungsdaten Besseres zeigen.
       salience: 5,
       stakes: _stakes,
+      decayAt: _decayAt,
     );
     await runtime.record(EventType.taskCreated, payload: {
       'task_id': task.id,
@@ -270,6 +276,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
       'ae': _ae,
       'salience': 5,
       'stakes': _stakes,
+      'decay_at': ?_decayAt?.toIso8601String(),
       'state': TaskState.ready.name,
     });
     await HapticFeedback.mediumImpact();
@@ -316,6 +323,11 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
               low: 'nichts',
               high: 'viel',
               onChanged: (v) => setState(() => _stakes = v),
+            ),
+            const SizedBox(height: Space.xl),
+            _Deadline(
+              value: _decayAt,
+              onChanged: (v) => setState(() => _decayAt = v),
             ),
             const SizedBox(height: Space.xl),
             FilledButton(
@@ -406,5 +418,91 @@ class _Dial extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Wann es weh tut — vier Griffe, kein Kalender.
+///
+/// Absichtlich keine Uhrzeit und kein Standard-Kalenderdialog an erster
+/// Stelle: Ein Datum auszuwählen ist im Sortiermoment die teuerste Frage
+/// auf dem Blatt, und die häufigen Fälle sind ohnehin „heute", „morgen"
+/// und „diese Woche". Wer ein echtes Datum braucht, bekommt es hinter dem
+/// letzten Griff.
+class _Deadline extends StatelessWidget {
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+  const _Deadline({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day, 23, 59);
+    final options = <(String, DateTime?)>[
+      (context.t('offen'), null),
+      (context.t('heute'), today),
+      (context.t('morgen'), today.add(const Duration(days: 1))),
+      (context.t('diese Woche'),
+          today.add(Duration(days: 7 - now.weekday))),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.t('Ab wann tut es weh?'),
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: Space.xs),
+        Text(context.t('Treibt die Dringlichkeit. Kein Termin, keine Mahnung.'),
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: Space.md),
+        Wrap(
+          spacing: Space.sm,
+          runSpacing: Space.sm,
+          children: [
+            for (final (label, at) in options)
+              ChoiceChip(
+                label: Text(label),
+                selected: _sameDay(value, at),
+                onSelected: (_) => onChanged(at),
+              ),
+            ActionChip(
+              label: Text(_custom(context)),
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: value ?? today,
+                  firstDate: today,
+                  lastDate: today.add(const Duration(days: 365 * 3)),
+                );
+                if (picked != null) {
+                  onChanged(DateTime(
+                      picked.year, picked.month, picked.day, 23, 59));
+                }
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Zeigt das gewählte Datum, sobald es keiner der Voreinstellungen ist.
+  String _custom(BuildContext context) {
+    final v = value;
+    if (v == null) return context.t('Datum …');
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day, 23, 59);
+    for (final preset in [
+      today,
+      today.add(const Duration(days: 1)),
+      today.add(Duration(days: 7 - now.weekday)),
+    ]) {
+      if (_sameDay(v, preset)) return context.t('Datum …');
+    }
+    return '${v.day}.${v.month}.';
+  }
+
+  static bool _sameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return a == null && b == null;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

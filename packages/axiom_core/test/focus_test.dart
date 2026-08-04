@@ -2,6 +2,7 @@ import 'package:axiom_core/axiom_core.dart';
 import 'package:test/test.dart';
 
 void main() {
+  _plannedFocus();
   const governor = FocusGovernor();
   final start = DateTime(2026, 8, 3, 10);
 
@@ -210,5 +211,27 @@ void main() {
     final b = assess(after: const Duration(minutes: 80));
     expect(a.action, b.action);
     expect(a.reason, b.reason);
+  });
+}
+
+void _plannedFocus() {
+  group('Fokusdauer folgt der Kapazität', () {
+    test('an knappen Tagen kürzer, an guten länger', () {
+      // Ein starres Intervall misst nichts. An einem Tag mit Kapazität 30
+      // wird das lange Fenster abgebrochen — und das Abbrechen selbst macht
+      // das Anfangen beim naechsten Mal teurer [D2].
+      expect(plannedFocusFor(20), const Duration(minutes: 15));
+      expect(plannedFocusFor(50), const Duration(minutes: 25));
+      expect(plannedFocusFor(90), const Duration(minutes: 45));
+    });
+
+    test('monoton: mehr Kapazität heisst nie weniger Zeit', () {
+      var previous = Duration.zero;
+      for (var capacity = 0; capacity <= 100; capacity++) {
+        final planned = plannedFocusFor(capacity);
+        expect(planned >= previous, isTrue, reason: 'bei $capacity');
+        previous = planned;
+      }
+    });
   });
 }

@@ -29,15 +29,21 @@ class AlarmReceiver : BroadcastReceiver() {
 
         MainActivity.createChannels(context)
 
+        // Das Ziel wandert mit dem Alarm mit. Ohne das oeffnete jede
+        // Benachrichtigung nur „die App": Der Check-in um 9 Uhr landete auf
+        // der Uebersicht, und der Weg zur eigentlichen Handlung begann von
+        // vorn — genau die Reibung, die den Anstoss wertlos macht [D2].
+        val route = intent.getStringExtra("route")
         val open = PendingIntent.getActivity(
             context, id,
             Intent(context, MainActivity::class.java)
+                .setAction(route ?: Intent.ACTION_MAIN)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(context, channel)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -59,6 +65,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 title = title,
                 body = body,
                 channel = channel,
+                route = route,
             )
         }
     }

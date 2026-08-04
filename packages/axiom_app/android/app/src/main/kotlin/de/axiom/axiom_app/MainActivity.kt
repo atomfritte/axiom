@@ -168,6 +168,7 @@ class MainActivity : FlutterActivity() {
                             title = call.argument<String>("title").orEmpty(),
                             body = call.argument<String>("body").orEmpty(),
                             channel = call.argument<String>("channel") ?: "axiom_nudge",
+                            route = call.argument<String>("route"),
                         )
                     )
 
@@ -393,6 +394,10 @@ class MainActivity : FlutterActivity() {
                 "de.axiom.CHECKIN",
                 "de.axiom.FOCUS",
                 "de.axiom.SENSATION",
+                "de.axiom.ANCHORS",
+                "de.axiom.REVIEW",
+                "de.axiom.BODY",
+                "de.axiom.INBOX",
                 ExpertService.ACTION_STOP,
             )
         ) return null
@@ -736,6 +741,7 @@ object AlarmScheduler {
         title: String,
         body: String,
         channel: String,
+        route: String? = null,
     ): Boolean {
         val alarms = context.getSystemService(AlarmManager::class.java)
         val intent = Intent(context, AlarmReceiver::class.java).apply {
@@ -744,6 +750,8 @@ object AlarmScheduler {
             putExtra("body", body)
             putExtra("channel", channel)
             putExtra("plannedAt", atMillis)
+            // Wohin der Tipp auf die Benachrichtigung fuehrt.
+            putExtra("route", route)
         }
         val pending = PendingIntent.getBroadcast(
             context, id, intent,

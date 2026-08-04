@@ -390,15 +390,75 @@ final class AxiomRuntime {
   Future<void> completeTask(Task task) async {
     await store.upsertTask(task.copyWith(state: TaskState.done));
     await record(EventType.taskCompleted, payload: {'task_id': task.id});
+    // Ein Fokusfenster, das an dieser Aufgabe hing, hat seinen Anker
+    // verloren. Es weiterlaufen zu lassen hiesse, Zeit auf etwas zu buchen,
+    // das es nicht mehr gibt.
+    await _closeFocusFor(task, exit: 'completed');
   }
   Future<void> dropTask(Task task) async {
     await store.upsertTask(task.copyWith(state: TaskState.dropped));
     await record(EventType.taskAbandoned,
         payload: {'task_id': task.id, 'reason': 'manual'});
   }
-  Future<void> startTask(Task task) async {
+  /// Beginnt eine Aufgabe — und zwar genau eine.
+  ///
+  /// Zwei gleichzeitig laufende Aufgaben wären eine Liste mit zwei
+  /// Einträgen, und die Frage „welche gilt jetzt?" ist genau die
+  /// Entscheidung, die AXIOM abnehmen soll (G1). Die vorherige geht deshalb
+  /// zurück in den Bestand, kommentarlos.
+  ///
+  /// Dazu startet ein Fokusfenster, an die Aufgabe gebunden. Ohne das war
+  /// „Anfangen" ein Zustandswechsel ohne sichtbare Folge: Die Aufgabe
+  /// verschwand aus der Auswahl, tauchte nirgends wieder auf und ließ sich
+  /// nicht mehr abschließen [D9].
+  Future<void> startTask(Task task, {Duration? planned}) async {
+    for (final other in await store.tasks(states: {TaskState.active})) {
+      if (other.id == task.id) continue;
+      await store.upsertTask(other.copyWith(state: TaskState.ready));
+      await record(EventType.taskAbandoned,
+          payload: {'task_id': other.id, 'reason': 'superseded'});
+    }
+
     await store.upsertTask(task.copyWith(state: TaskState.active));
     await record(EventType.taskStarted, payload: {'task_id': task.id});
+
+    // Läuft schon ein Fokus, bleibt er. Ihn neu zu starten würde die
+    // bisherige Zeit verwerfen.
+    if (await store.activeFocus() == null) {
+      // Die Länge folgt der Kapazität, nicht einem festen Ritual: Ein
+      // kurzes Fenster, das hält, ist mehr wert als ein langes, das reißt.
+      await startFocus(
+        taskId: task.id,
+        taskTitle: task.title,
+        planned: planned ?? plannedFocusFor(await _capacityNow()),
+      );
+    }
+  }
+
+  /// Die Kapazität von jetzt — für die Länge des Fokusfensters.
+  Future<int> _capacityNow() async {
+    final signals = await _aggregator.aggregate();
+    return _deriver.derive(signals, clock.nowUtc()).vector.capacity;
+  }
+
+  /// Zurück in den Bestand — ohne Kommentar, ohne Bewertung.
+  ///
+  /// Etwas anzufangen und nicht zu beenden ist der Normalfall, nicht das
+  /// Versagen. Der Weg zurück muss deshalb genauso leicht sein wie der
+  /// hinein, sonst wird die laufende Aufgabe zu einem Vorwurf, der stehen
+  /// bleibt [D10].
+  Future<void> releaseTask(Task task) async {
+    await store.upsertTask(task.copyWith(state: TaskState.ready));
+    await record(EventType.taskAbandoned,
+        payload: {'task_id': task.id, 'reason': 'released'});
+    await _closeFocusFor(task, exit: 'released');
+  }
+
+  /// Schliesst ein Fokusfenster, das an [task] hing — und nur dann.
+  Future<void> _closeFocusFor(Task task, {required String exit}) async {
+    final focus = await store.activeFocus();
+    if (focus == null || focus.anchorTaskId != task.id) return;
+    await endFocus(focus, exit: exit);
   }
   // ── Zerlegen (M2) ─────────────────────────────────────────────────────
   static const _atomizer = Atomizer();

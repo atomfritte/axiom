@@ -34,6 +34,24 @@ final class PlatformOutcome {
   );
 }
 
+/// Wohin eine Benachrichtigung führt.
+///
+/// Die Zeichenketten sind Intent-Actions und stehen genauso in
+/// `MainActivity.consumeLaunchAction`. Sie hier zu benennen ist der Punkt:
+/// Ein Tippfehler in einem freien String hätte zur Folge, dass die
+/// Benachrichtigung stumm auf der Übersicht landet — funktionierend genug,
+/// um nicht aufzufallen.
+abstract final class AxiomRoute {
+  static const capture = 'de.axiom.CAPTURE';
+  static const checkin = 'de.axiom.CHECKIN';
+  static const focus = 'de.axiom.FOCUS';
+  static const sensation = 'de.axiom.SENSATION';
+  static const anchors = 'de.axiom.ANCHORS';
+  static const review = 'de.axiom.REVIEW';
+  static const body = 'de.axiom.BODY';
+  static const inbox = 'de.axiom.INBOX';
+}
+
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
 
@@ -96,6 +114,7 @@ abstract final class AndroidBridge {
     required String title,
     required String body,
     String channel = 'axiom_nudge',
+    String? route,
   }) async {
     if (!isSupported) return false;
     return _invoke('scheduleExact', {
@@ -104,6 +123,9 @@ abstract final class AndroidBridge {
       'title': title,
       'body': body,
       'channel': channel,
+      // Wohin der Tipp führt. Ohne das endet jeder Anstoß auf der
+      // Übersicht, und der Weg zur Handlung beginnt von vorn [D2].
+      'route': ?route,
     });
   }
 
@@ -127,6 +149,7 @@ abstract final class AndroidBridge {
         title: translate(language, 'Check-in'),
         body: translate(language, 'Vier Regler, ungefähr reicht.'),
         channel: 'axiom_nudge',
+        route: AxiomRoute.checkin,
       );
     }
   }

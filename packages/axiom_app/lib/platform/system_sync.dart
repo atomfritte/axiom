@@ -152,6 +152,9 @@ abstract final class SystemSync {
         channel: step.kind == AnchorStepKind.leaveContext
             ? 'axiom_intervene'
             : 'axiom_nudge',
+        // Auf die Kette, zu der der Schritt gehört — nicht auf die
+        // Übersicht, von der aus man ihn erst wieder suchen müsste.
+        route: AxiomRoute.anchors,
       );
     }
   }

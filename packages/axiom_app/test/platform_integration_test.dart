@@ -251,6 +251,38 @@ void main() {
       );
     });
 
+    test('jede Benachrichtigung führt an ihr Ziel, nicht nur in die App',
+        () {
+      // Ein Anstoß, der auf der Übersicht endet, ist kein Anstoß: Der Weg
+      // zur eigentlichen Handlung beginnt dann von vorn [D2].
+      final receiver =
+          android('kotlin/de/axiom/axiom_app/AlarmReceiver.kt');
+      expect(receiver, contains('getStringExtra("route")'));
+      expect(receiver, contains('.setAction(route'));
+
+      // Jedes Ziel, das gesendet wird, muss auch angenommen werden. Eine
+      // Route, die die Whitelist nicht kennt, landet stumm auf der
+      // Übersicht — funktionierend genug, um nicht aufzufallen.
+      final bridge =
+          code(File('lib/platform/android_bridge.dart').readAsStringSync());
+      final routes = RegExp(r"'(de\.axiom\.[A-Z_]+)'")
+          .allMatches(bridge)
+          .map((m) => m.group(1)!)
+          .toSet();
+      expect(routes, isNotEmpty);
+      final main = android('kotlin/de/axiom/axiom_app/MainActivity.kt');
+      final whitelist = main.substring(main.indexOf('fun consumeLaunchAction'));
+      for (final route in routes) {
+        expect(whitelist, contains('"$route"'), reason: route);
+      }
+
+      // Und die Dart-Seite muss wissen, was sie damit tut.
+      final handler =
+          code(File('lib/platform/intent_handler.dart').readAsStringSync());
+      expect(handler, contains('AxiomRoute.checkin'));
+      expect(handler, contains('AxiomRoute.anchors'));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

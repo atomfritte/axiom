@@ -1289,4 +1289,22 @@ const Map<String, String> kEnglish = {
       'Open the channel',
   'Akkuoptimierung':
       'Battery optimisation',
+  '{0} von {1} min':
+      '{0} of {1} min',
+  'Zurücklegen':
+      'Put it back',
+  'Ab wann tut es weh?':
+      'When does it start to hurt?',
+  'Treibt die Dringlichkeit. Kein Termin, keine Mahnung.':
+      'Drives urgency. Not an appointment, not a reminder.',
+  'offen':
+      'open',
+  'heute':
+      'today',
+  'morgen':
+      'tomorrow',
+  'diese Woche':
+      'this week',
+  'Datum …':
+      'Pick a date …',
 };

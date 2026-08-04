@@ -62,7 +62,13 @@ class NowScreen extends ConsumerWidget {
                   const SizedBox(height: Space.lg),
                   _InterceptStrip(run: snap.activeIntercept!),
                 ],
-                if (snap.focus != null) ...[
+                // Hängt der Fokus an der laufenden Aufgabe, steht die Zeit
+                // schon auf deren Karte. Zweimal dasselbe wäre eine Liste
+                // mit einem Eintrag.
+                if (snap.focus != null &&
+                    !snap.tasks.any((t) =>
+                        t.state == TaskState.active &&
+                        t.id == snap.focus!.anchorTaskId)) ...[
                   const SizedBox(height: Space.lg),
                   _FocusStrip(snapshot: snap),
                 ],
@@ -200,6 +206,19 @@ class _PrimaryAction extends ConsumerWidget {
     final candidate = snapshot.atomizeCandidates.firstOrNull;
     final next = snapshot.startable.firstOrNull;
 
+    // Eine angefangene Aufgabe schlägt jeden Vorschlag.
+    //
+    // Sie fiel vorher aus der Auswahl heraus — `startable` kennt nur
+    // `ready` — und war damit weg: nicht abschließbar, nicht auffindbar,
+    // nirgends sichtbar. Für ein Profil ohne Objektpermanenz ist das der
+    // teuerste Fehler, den diese Oberfläche machen kann [D9]. Und einen
+    // neuen Vorschlag daneben zu stellen, während etwas läuft, wären zwei
+    // Handlungen zur Auswahl (G1).
+    final running = snapshot.tasks
+        .where((t) => t.state == TaskState.active)
+        .firstOrNull;
+    if (running != null) return _RunningCard(task: running);
+
     // Eine Regel hat gefeuert — sie gewinnt vor jedem eigenen Vorschlag.
     //
     // Aber: Die Aktion bestimmt, WAS gezeigt wird. Eine Regel, die zerlegen
@@ -222,6 +241,82 @@ class _PrimaryAction extends ConsumerWidget {
     if (candidate != null) return _AtomizeCard(candidate: candidate);
 
     return _EmptyState(snapshot: snapshot);
+  }
+}
+
+/// Die Aufgabe, die gerade läuft.
+///
+/// Solange sie läuft, ist sie die Ausgabe — kein Vorschlag daneben, keine
+/// Auswahl. Zwei Wege hinaus, beide gleich leicht: fertig oder zurück in
+/// den Bestand. Der Rückweg ist absichtlich genauso prominent wie der
+/// Abschluss; etwas anzufangen und nicht zu beenden ist der Normalfall und
+/// bekommt hier keinen Kommentar [D10].
+class _RunningCard extends ConsumerWidget {
+  final Task task;
+  const _RunningCard({required this.task});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    final session = ref.watch(snapshotProvider).value?.focus;
+    final focus = session?.anchorTaskId == task.id ? session : null;
+    final elapsed = focus?.elapsed(ref.watch(nowProvider));
+
+    return Panel(
+      accent: p.calm.withValues(alpha: 0.6),
+      padding: const EdgeInsets.all(Space.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(context.t('LÄUFT'),
+                    style: Theme.of(context).textTheme.labelSmall),
+              ),
+              if (elapsed != null && focus != null)
+                Text(
+                  context.t('{0} von {1} min',
+                      [elapsed.inMinutes, focus.planned.inMinutes]),
+                  style: monoStyle(context,
+                      size: 13, weight: FontWeight.w600, color: p.calm),
+                ),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          Text(task.title, style: Theme.of(context).textTheme.displayMedium),
+          const SizedBox(height: Space.xl),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: FilledButton(
+                  onPressed: () async {
+                    final runtime = await ref.read(runtimeProvider.future);
+                    await runtime.completeTask(task);
+                    await HapticFeedback.mediumImpact();
+                    refreshAxiom(ref);
+                  },
+                  child: Text(context.t('Erledigt')),
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final runtime = await ref.read(runtimeProvider.future);
+                    await runtime.releaseTask(task);
+                    await HapticFeedback.selectionClick();
+                    refreshAxiom(ref);
+                  },
+                  child: Text(context.t('Zurücklegen')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

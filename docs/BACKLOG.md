@@ -75,7 +75,7 @@ bereits getroffen ist, bevor der Reiz kommt.
 | Punkte/Badges ohne reale Konsequenz | Habituiert binnen Tagen und entwertet den Mechanismus dauerhaft |
 | Social, Sharing, Leaderboards | Trifft Rejection Sensitivity frontal (D10) |
 | Veröffentlichung im Play Store | Anderes Projekt. Ändert alle Datenschutzannahmen |
-| Web-Frontend | Kein Anwendungsfall, zusätzliche Angriffsfläche für Gesundheitsdaten |
+| Pomodoro als starres Ritual (feste 25/5, Pausenzwang, Pomodoro-Zähler) | Der nützliche Teil — ein sichtbares, begrenztes Zeitfenster — ist M4. Der starre Teil wäre eine Verschlechterung: Ein festes Intervall misst nichts, unterbricht produktiven Hyperfokus (G3) und der Pausenhaushalt ist Meta-Work (D3). Der Zähler wäre ein Streak (D10). Stattdessen: `plannedFocusFor(capacity)` |
 | Multi-User, Rollen, Rechte | Kein Anwendungsfall |
 | UI-Redesign vor S3 | Die klassische Ausweichbaustelle |
 

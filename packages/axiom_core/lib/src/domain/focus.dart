@@ -118,6 +118,24 @@ const Duration kBodyNeglectAfter = Duration(minutes: 100);
 /// terminiert, unumkehrbar und die Kompensation dafür ist teuer [D4].
 const Duration kAnchorBeatsFocus = Duration(minutes: 15);
 
+/// Wie lang ein Fokusfenster geplant wird — als Funktion der Kapazität.
+///
+/// **Warum keine feste Länge.** Ein starres Intervall — 25 Minuten für
+/// jeden, an jedem Tag — misst nichts und passt sich an nichts an. An einem
+/// Tag mit Kapazität 30 ist es zu viel und wird abgebrochen; das Abbrechen
+/// selbst ist die Erfahrung, die das Anfangen beim nächsten Mal teurer
+/// macht [D2]. Ein kurzes Fenster, das hält, ist mehr wert als ein langes,
+/// das reißt.
+///
+/// Die Schwellen sind grob und sollen es sein: Genauigkeit würde hier eine
+/// Messgenauigkeit vortäuschen, die es nicht gibt. Sichtbar ist die Formel
+/// trotzdem — kein Wert ohne Herleitung (G2).
+Duration plannedFocusFor(int capacity) => switch (capacity) {
+      < 35 => const Duration(minutes: 15),
+      < 70 => const Duration(minutes: 25),
+      _ => const Duration(minutes: 45),
+    };
+
 final class FocusGovernor {
   const FocusGovernor();
 

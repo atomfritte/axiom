@@ -17,6 +17,7 @@ import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/state_screen.dart';
 import 'package:axiom_app/screens/system_screen.dart';
 import 'package:axiom_core/axiom_core.dart';
+import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -101,6 +102,58 @@ void main() {
       // Fünf startbare Aufgaben, aber nur EIN "Jetzt"-Block.
       expect(find.text('JETZT'), findsOneWidget);
       expect(find.text('Anfangen').evaluate().length, lessThanOrEqualTo(1));
+    });
+
+    testWidgets('eine angefangene Aufgabe bleibt sichtbar und abschließbar',
+        (tester) async {
+      // Der teuerste Fehler dieser Oberfläche: „Anfangen" setzte den
+      // Zustand auf `active`, und `active` fällt aus `startable` heraus.
+      // Die Aufgabe war damit weg — nicht abschließbar, nicht auffindbar,
+      // nirgends sichtbar [D9].
+      h.completeOnboarding();
+      final task = await h.runtime.createTask(
+        title: 'Steuerunterlagen sortieren',
+        activationEnergy: 2,
+        salience: 5,
+        stakes: 5,
+      );
+      await h.runtime.startTask(task);
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      expect(find.text('Steuerunterlagen sortieren'), findsWidgets);
+      expect(find.text('Erledigt'), findsOneWidget);
+      expect(find.text('Zurücklegen'), findsOneWidget);
+      // Kein zweiter Vorschlag daneben, solange etwas läuft (G1).
+      expect(find.text('Anfangen'), findsNothing);
+    });
+
+    testWidgets('es läuft immer höchstens eine Aufgabe', (tester) async {
+      h.completeOnboarding();
+      final first = await h.runtime.createTask(
+        title: 'Erste', activationEnergy: 2, salience: 5, stakes: 5);
+      final second = await h.runtime.createTask(
+        title: 'Zweite', activationEnergy: 2, salience: 5, stakes: 5);
+
+      await h.runtime.startTask(first);
+      await h.runtime.startTask(second);
+
+      final active = (await h.store.tasks(states: {TaskState.active}))
+          .map((t) => t.title)
+          .toList();
+      expect(active, ['Zweite']);
+    });
+
+    testWidgets('abschließen beendet auch das Fokusfenster', (tester) async {
+      h.completeOnboarding();
+      final task = await h.runtime.createTask(
+        title: 'Kurz was', activationEnergy: 2, salience: 5, stakes: 5);
+      await h.runtime.startTask(task);
+      expect(await h.store.activeFocus(), isNotNull);
+
+      await h.runtime.completeTask(task);
+      // Zeit auf etwas zu buchen, das es nicht mehr gibt, wäre eine
+      // Messung ohne Gegenstand.
+      expect(await h.store.activeFocus(), isNull);
     });
   });
 

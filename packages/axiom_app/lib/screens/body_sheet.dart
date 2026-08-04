@@ -407,6 +407,7 @@ abstract final class SleepGate {
         'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.',
       ),
       channel: 'axiom_nudge',
+      route: AxiomRoute.review,
     );
 
     var log = DateTime(now.year, now.month, now.day, logHour);
@@ -417,6 +418,8 @@ abstract final class SleepGate {
       title: translate(language, 'Schlaf eintragen'),
       body: translate(language, 'Zwei Zeiten, eine Einschätzung.'),
       channel: 'axiom_nudge',
+      // Führt direkt ins Schlafblatt statt auf die Übersicht.
+      route: AxiomRoute.body,
     );
   }
 }

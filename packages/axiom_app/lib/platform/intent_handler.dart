@@ -11,9 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../screens/anchors_screen.dart';
 import '../screens/capture_sheet.dart';
 import '../screens/body_sheet.dart';
 import '../screens/checkin_sheet.dart';
+import '../screens/focus_screen.dart';
+import '../screens/inbox_screen.dart';
+import '../screens/review_screen.dart';
+import '../screens/sensation_screen.dart';
 import '../state/providers.dart';
 import 'android_bridge.dart';
 import 'system_sync.dart';
@@ -89,10 +94,25 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       final action = await _invokeString('launchAction');
       if (!mounted) return;
       switch (action) {
-        case 'de.axiom.CAPTURE':
+        case AxiomRoute.capture:
           await showCaptureSheet(context);
-        case 'de.axiom.CHECKIN':
+        case AxiomRoute.checkin:
           await showCheckinSheet(context);
+        case AxiomRoute.body:
+          await showSleepSheet(context);
+        // Ein Anstoß, der auf der Übersicht endet, ist kein Anstoß: Der Weg
+        // zur eigentlichen Handlung beginnt dann von vorn, und genau dieser
+        // Zwischenschritt ist die Stelle, an der es hängenbleibt [D2].
+        case AxiomRoute.focus:
+          await _open(const FocusScreen());
+        case AxiomRoute.sensation:
+          await _open(const SensationScreen());
+        case AxiomRoute.anchors:
+          await _open(const AnchorsScreen());
+        case AxiomRoute.review:
+          await _open(const ReviewScreen());
+        case AxiomRoute.inbox:
+          await _open(const InboxScreen());
         case 'de.axiom.EXPERT_STOP':
           // Der Knopf auf der Benachrichtigung. Er oeffnet die App, weil der
           // Server im App-Prozess laeuft — ihn von aussen zu beenden hiesse,
@@ -106,6 +126,9 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       _handling = false;
     }
   }
+
+  Future<void> _open(Widget screen) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => screen));
 
   static Future<String?> _invokeString(String method) async {
     try {
