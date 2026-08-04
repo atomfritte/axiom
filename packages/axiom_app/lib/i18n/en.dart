@@ -1307,4 +1307,24 @@ const Map<String, String> kEnglish = {
       'this week',
   'Datum …':
       'Pick a date …',
+  'Aufgaben':
+      'Tasks',
+  'Alles Eingetragene, in der Reihenfolge der Auswahl':
+      'Everything on file, in the order the system picks',
+  'Die Reihenfolge ist die der Auswahl — dieselbe Formel, kein zweiter Maßstab. Sie lässt sich hier nicht umstellen.':
+      'The order is the one the system picks by — same formula, no second yardstick. It cannot be changed here.',
+  'In Reichweite · {0}':
+      'Within reach · {0}',
+  'Nicht in Reichweite · {0}':
+      'Not within reach · {0}',
+  'Startenergie über der heutigen Kapazität ({0}). Zerlegen macht sie erreichbar.':
+      'Start energy above today’s capacity ({0}). Breaking them down brings them within reach.',
+  'Erledigt · {0}':
+      'Done · {0}',
+  'NICHTS EINGETRAGEN':
+      'NOTHING ON FILE',
+  'Keine Aufgaben.':
+      'No tasks.',
+  'Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.':
+      'What you capture lands in the inbox first. After sorting it shows up here.',
 };

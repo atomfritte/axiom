@@ -29,6 +29,7 @@ import 'check_screen.dart';
 import 'expert_screen.dart';
 import 'rule_editor_screen.dart';
 import 'signal_screen.dart';
+import 'tasks_screen.dart';
 import 'vault_screen.dart';
 
 class SystemScreen extends ConsumerStatefulWidget {
@@ -109,7 +110,6 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
               ],
 
               const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Anzeige')),
               const _DisplaySettings(),
 
               const SizedBox(height: Space.xl),
@@ -146,6 +146,15 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
 
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Nachsehen')),
+              _LinkRow(
+                icon: Icons.checklist_outlined,
+                label: context.t('Aufgaben'),
+                detail: context.t(
+                  'Alles Eingetragene, in der Reihenfolge der Auswahl',
+                ),
+                target: const TasksScreen(),
+              ),
+              const SizedBox(height: Space.sm),
               _LinkRow(
                 icon: Icons.rule,
                 label: context.t('Regelwerk'),
@@ -249,18 +258,54 @@ class _BudgetCard extends StatelessWidget {
 /// selbst ein Problem (D3) — aber eine Oberfläche, die man nicht lesen kann,
 /// bekommt keine ehrlichen Daten. Die vier hier zahlen alle darauf ein, dass
 /// der Text ankommt; sie sind keine Geschmacksfragen.
-class _DisplaySettings extends ConsumerWidget {
+/// Zugeklappt, weil man sie einmal einstellt und danach nie wieder.
+///
+/// Vier Wahlzeilen dauerhaft offen sind vier Zeilen Aufforderung, etwas zu
+/// verstellen — auf einem Screen, den man aufsucht, um etwas anderes zu tun.
+/// Der eingestellte Zustand bleibt trotzdem lesbar: Er steht in der
+/// Kopfzeile. Zuklappen darf verbergen, was man ändern kann, nie das, was
+/// gilt.
+class _DisplaySettings extends ConsumerStatefulWidget {
   const _DisplaySettings();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DisplaySettings> createState() => _DisplaySettingsState();
+}
+
+class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
     final language = ref.watch(languageProvider);
     final textSize = ref.watch(textSizeProvider);
     final brightness = ref.watch(themeModeProvider);
     final scheme = ref.watch(schemeProvider);
 
+    final summary = [
+      language.code.toUpperCase(),
+      switch (textSize) {
+        TextSize.compact => 'S',
+        TextSize.normal => 'M',
+        TextSize.large => 'L',
+        TextSize.larger => 'XL',
+      },
+      context.t(const ['AUTO', 'DUNKEL', 'HELL'][brightness]),
+      context.t(scheme.label).toUpperCase(),
+    ].join(' · ');
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _FoldHeader(
+          label: context.t('Anzeige'),
+          summary: summary,
+          open: _open,
+          onTap: () => setState(() => _open = !_open),
+        ),
+        if (!_open) const SizedBox(height: Space.xs),
+        if (_open) ...[
+          const SizedBox(height: Space.md),
         _ChoiceRow(
           icon: Icons.translate,
           label: context.t('Sprache der Oberfläche'),
@@ -323,7 +368,62 @@ class _DisplaySettings extends ConsumerWidget {
               ),
           ],
         ),
+        ],
       ],
+    );
+  }
+}
+
+/// Kopfzeile einer zuklappbaren Gruppe.
+///
+/// Zeigt zugeklappt, was gilt — nicht bloss den Namen der Gruppe. Eine
+/// Kopfzeile ohne Zustand zwingt zum Aufklappen, nur um nachzusehen.
+class _FoldHeader extends StatelessWidget {
+  final String label;
+  final String summary;
+  final bool open;
+  final VoidCallback onTap;
+
+  const _FoldHeader({
+    required this.label,
+    required this.summary,
+    required this.open,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.control),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.sm),
+        child: Row(
+          children: [
+            // Bewusst kein `SectionLabel`: Dessen Trennlinie beansprucht
+            // den Platz, den hier die Zusammenfassung braucht. Und eine
+            // abgeschnittene Zusammenfassung zwingt zum Aufklappen, nur um
+            // nachzusehen — genau das, was das Zuklappen sparen soll.
+            Text(label.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(width: Space.md),
+            if (!open) ...[
+              Expanded(
+                child: Text(
+                  summary,
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                  style: monoStyle(context, size: 11, color: p.inkFaint),
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+            ],
+            Icon(open ? Icons.expand_less : Icons.expand_more,
+                size: 18, color: p.inkDim),
+          ],
+        ),
+      ),
     );
   }
 }

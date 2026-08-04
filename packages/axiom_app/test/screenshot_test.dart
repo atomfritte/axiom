@@ -21,6 +21,7 @@ import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/state_screen.dart';
 import 'package:axiom_app/screens/system_screen.dart';
+import 'package:axiom_app/screens/tasks_screen.dart';
 import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -160,6 +161,27 @@ void main() {
       await h.runtime.capture(text);
     }
     await shoot(tester, '07-eingang', const InboxScreen());
+  });
+
+  testWidgets('18 aufgaben — der ganze bestand', (tester) async {
+    h.completeOnboarding();
+    final tasks = [
+      ('Steuerunterlagen sortieren', 3),
+      ('Rechnung Werkstatt bezahlen', 2),
+      ('Wohnung streichen', 9),
+      ('Rückruf Vermieter', 2),
+    ];
+    for (final (title, ae) in tasks) {
+      await h.runtime.createTask(
+        title: title,
+        activationEnergy: ae,
+        salience: 5,
+        stakes: 6,
+      );
+    }
+    final all = await h.store.tasks();
+    await h.runtime.startTask(all.firstWhere((t) => t.activationEnergy == 2));
+    await shoot(tester, '18-aufgaben', const TasksScreen());
   });
 
   testWidgets('09 anker — rückwärtsverkettung', (tester) async {

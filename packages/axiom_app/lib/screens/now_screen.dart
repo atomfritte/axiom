@@ -30,6 +30,7 @@ import 'checkin_sheet.dart';
 import 'inbox_screen.dart';
 import 'review_screen.dart';
 import 'system_screen.dart';
+import 'tasks_screen.dart';
 import '../i18n/i18n.dart';
 
 class NowScreen extends ConsumerWidget {
@@ -87,13 +88,22 @@ class NowScreen extends ConsumerWidget {
                 const _PostMortemTeaser(),
                 const _ReviewTeaser(),
                 const SizedBox(height: Space.xxl),
-                Panel(child: CapacityLine(
-                  capacity: snap.state.capacity,
-                  tasks: snap.tasks
-                      .where((t) => t.state == TaskState.ready)
-                      .toList(),
-                  highlightTaskId: snap.startable.firstOrNull?.id,
-                )),
+                // Die Leiste zeigt den Bestand schon als Balken — sie ist
+                // der natuerliche Weg zur vollstaendigen Liste. Erreichbar,
+                // aber nie der Standardweg (G1).
+                Panel(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) => const TasksScreen()),
+                  ),
+                  child: CapacityLine(
+                    capacity: snap.state.capacity,
+                    tasks: snap.tasks
+                        .where((t) => t.state == TaskState.ready)
+                        .toList(),
+                    highlightTaskId: snap.startable.firstOrNull?.id,
+                  ),
+                ),
                 const SizedBox(height: Space.xxl),
                 _QuickState(snapshot: snap),
                 const SizedBox(height: Space.xl),

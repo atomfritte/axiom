@@ -16,6 +16,7 @@ import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/state_screen.dart';
 import 'package:axiom_app/screens/system_screen.dart';
+import 'package:axiom_app/screens/tasks_screen.dart';
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/material.dart';
@@ -154,6 +155,53 @@ void main() {
       // Zeit auf etwas zu buchen, das es nicht mehr gibt, wäre eine
       // Messung ohne Gegenstand.
       expect(await h.store.activeFocus(), isNull);
+    });
+  });
+
+  group('Die Liste ist erreichbar, aber nicht der Standardweg', () {
+    testWidgets('zeigt den ganzen Bestand, auch das Laufende',
+        (tester) async {
+      h.completeOnboarding();
+      for (final (title, ae) in [('Leicht', 2), ('Schwer', 10)]) {
+        await h.runtime.createTask(
+          title: title, activationEnergy: ae, salience: 5, stakes: 5);
+      }
+      final all = await h.store.tasks();
+      await h.runtime.startTask(all.firstWhere((t) => t.title == 'Leicht'));
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      // Nichts wird versteckt, nur eingeordnet — verbieten tut AXIOM
+      // nichts (G3). Auch die laufende Aufgabe steht hier.
+      expect(find.text('Leicht'), findsOneWidget);
+      expect(find.text('Schwer'), findsOneWidget);
+      expect(find.text('Zurücklegen'), findsOneWidget);
+    });
+
+    testWidgets('sortiert nach der Formel und bietet keinen zweiten Maßstab',
+        (tester) async {
+      h.completeOnboarding();
+      await h.runtime.createTask(
+        title: 'Egal', activationEnergy: 2, salience: 5, stakes: 5);
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      // Sortierregler und Filterleisten waeren Meta-Work mit Aussicht (D3).
+      expect(find.byType(DropdownButton<String>), findsNothing);
+      expect(find.textContaining('Sortieren nach'), findsNothing);
+      expect(find.textContaining('Reihenfolge ist die der Auswahl'),
+          findsOneWidget);
+    });
+
+    testWidgets('„Jetzt" zeigt trotzdem weiter genau eine Handlung',
+        (tester) async {
+      // Die Liste darf G1 nicht durch die Hintertuer aushebeln.
+      h.completeOnboarding();
+      for (var i = 0; i < 4; i++) {
+        await h.runtime.createTask(
+          title: 'Aufgabe $i', activationEnergy: 2, salience: 5, stakes: 5);
+      }
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+      expect(find.text('JETZT'), findsOneWidget);
+      expect(find.text('Anfangen').evaluate().length, lessThanOrEqualTo(1));
     });
   });
 
