@@ -111,20 +111,6 @@ final class AtomizeCandidate {
       };
 }
 
-/// Steht die Aufgabe noch aus?
-///
-/// Zerlegung interessiert sich nur für offene Aufgaben — und „offen"
-/// schließt `blocked` ein: Eine zerlegte Aufgabe ist nicht erledigt,
-/// sondern von ihren eigenen Schritten vertreten.
-bool isTaskOpen(Task task) => switch (task.state) {
-      TaskState.inbox ||
-      TaskState.ready ||
-      TaskState.active ||
-      TaskState.blocked =>
-        true,
-      TaskState.done || TaskState.dropped => false,
-    };
-
 /// Hat die Aufgabe noch offene Teilschritte?
 ///
 /// Nur offene zählen. Wären erledigte Kinder mitgezählt, bliebe eine

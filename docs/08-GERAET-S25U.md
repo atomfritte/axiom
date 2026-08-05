@@ -121,10 +121,10 @@ Grenznutzen.
 AXIOM sendet Broadcast-Intents, die Samsung-Routinen auslösen:
 
 ```
-axiom.FOCUS_START   → DND an, Graustufen, Fokusmodus       (M4)
-axiom.FOCUS_END     → zurücksetzen
-axiom.WINDDOWN      → Blaulichtfilter, Lautstärke runter    (M8)
-axiom.L3_ENTER      → Erhaltungsmodus: Benachrichtigungen minimieren  (M9)
+de.atomfritte.axiom.FOCUS_START   → DND an, Graustufen, Fokusmodus       (M4)
+de.atomfritte.axiom.FOCUS_END     → zurücksetzen
+de.atomfritte.axiom.WINDDOWN      → Blaulichtfilter, Lautstärke runter    (M8)
+de.atomfritte.axiom.L3_ENTER      → Erhaltungsmodus: Benachrichtigungen minimieren  (M9)
 ```
 
 Umgekehrt können Routinen AXIOM triggern (Ankunft zu Hause, Bluetooth-Auto verbunden,

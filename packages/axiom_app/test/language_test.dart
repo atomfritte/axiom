@@ -252,7 +252,7 @@ void main() {
       }
       // Und der BootReceiver darf ihn nicht kennen.
       expect(
-        File('android/app/src/main/kotlin/de/axiom/axiom_app/BootReceiver.kt')
+        File('android/app/src/main/kotlin/de/atomfritte/axiom/BootReceiver.kt')
             .readAsStringSync(),
         isNot(contains('Expert')),
       );

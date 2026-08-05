@@ -101,11 +101,11 @@ void main() {
     test('Direct Share hat ein Ziel und eine passende Kategorie', () {
       final shortcuts = android('res/xml/shortcuts.xml');
       expect(shortcuts, contains('<share-target'));
-      expect(shortcuts, contains('de.axiom.category.CAPTURE'));
+      expect(shortcuts, contains('de.atomfritte.axiom.category.CAPTURE'));
       // Die Kategorie muss beidseitig stimmen, sonst erscheint das Ziel nie.
       expect(
-        android('kotlin/de/axiom/axiom_app/ShareTargets.kt'),
-        contains('de.axiom.category.CAPTURE'),
+        android('kotlin/de/atomfritte/axiom/ShareTargets.kt'),
+        contains('de.atomfritte.axiom.category.CAPTURE'),
       );
     });
 
@@ -141,7 +141,7 @@ void main() {
       // naechsten Lauf als "vorhanden" uebersprungen — und der Tag bliebe
       // fuer immer auf dem Stand des ersten Imports.
       expect(
-        android('kotlin/de/axiom/axiom_app/HealthBridge.kt'),
+        android('kotlin/de/atomfritte/axiom/HealthBridge.kt'),
         contains('isBefore(today)'),
       );
     });
@@ -150,7 +150,7 @@ void main() {
       // Der Aufruf geht ueber eine Prozessgrenze. runBlocking im
       // MethodChannel-Handler ist ein ANR beim Start.
       expect(
-        code(android('kotlin/de/axiom/axiom_app/HealthBridge.kt')),
+        code(android('kotlin/de/atomfritte/axiom/HealthBridge.kt')),
         isNot(contains('runBlocking')),
       );
     });
@@ -191,7 +191,7 @@ void main() {
       // getOrCreate baut eine Binder-Verbindung auf. Auf dem Hauptthread
       // blockiert das die gesamte Oberflaeche.
       final source = code(
-          android('kotlin/de/axiom/axiom_app/MainActivity.kt'));
+          android('kotlin/de/atomfritte/axiom/MainActivity.kt'));
       expect(source, contains('Dispatchers.IO'));
       expect(source, isNot(contains('SupervisorJob() + Dispatchers.Main')));
     });
@@ -216,7 +216,7 @@ void main() {
       expect(screen, isNot(contains('presenceEnabled')));
 
       final service =
-          android('kotlin/de/axiom/axiom_app/PresenceService.kt');
+          android('kotlin/de/atomfritte/axiom/PresenceService.kt');
       expect(service, contains('activeNotifications'));
       expect(service, contains('IMPORTANCE_NONE'),
           reason: 'Ein einzeln abgeschalteter Kanal ist der häufigste Grund, '
@@ -232,7 +232,7 @@ void main() {
       // Präsenz ist das ein Fehler — und für jede Prüfung „hängt sie?"
       // innerhalb dieser zehn Sekunden ein falsches Nein.
       expect(
-        android('kotlin/de/axiom/axiom_app/PresenceService.kt'),
+        android('kotlin/de/atomfritte/axiom/PresenceService.kt'),
         contains('FOREGROUND_SERVICE_IMMEDIATE'),
       );
     });
@@ -241,7 +241,7 @@ void main() {
       // Ohne die Rolle gibt es in den Standard-Apps keinen Eintrag
       // „Notizen". Sie trotzdem zu öffnen heißt, in einem Menü nach etwas
       // zu suchen, das es dort nicht gibt.
-      final source = android('kotlin/de/axiom/axiom_app/MainActivity.kt');
+      final source = android('kotlin/de/atomfritte/axiom/MainActivity.kt');
       final block = source.substring(source.indexOf('fun requestNotesRole'));
       final guard = block.indexOf('isRoleAvailable');
       final next = block.indexOf('fun ', 4);
@@ -256,7 +256,7 @@ void main() {
       // Ein Anstoß, der auf der Übersicht endet, ist kein Anstoß: Der Weg
       // zur eigentlichen Handlung beginnt dann von vorn [D2].
       final receiver =
-          android('kotlin/de/axiom/axiom_app/AlarmReceiver.kt');
+          android('kotlin/de/atomfritte/axiom/AlarmReceiver.kt');
       expect(receiver, contains('getStringExtra("route")'));
       expect(receiver, contains('.setAction(route'));
 
@@ -265,12 +265,33 @@ void main() {
       // Übersicht — funktionierend genug, um nicht aufzufallen.
       final bridge =
           code(File('lib/platform/android_bridge.dart').readAsStringSync());
-      final routes = RegExp(r"'(de\.axiom\.[A-Z_]+)'")
-          .allMatches(bridge)
+      // Das Praefix wird aus dem Manifest gelesen, nicht hier
+      // hineingeschrieben: Beim Wechsel der Paketkennung waere ein fest
+      // verdrahtetes Muster still leer geworden — der Test haette dann
+      // nichts mehr geprueft und trotzdem gruen gemeldet.
+      final pkg = RegExp(r'applicationId = "([a-z.]+)"')
+              .firstMatch(File('android/app/build.gradle.kts').readAsStringSync())
+              ?.group(1) ??
+          'de.atomfritte.axiom';
+      // Nur die Konstanten aus `AxiomRoute` — nicht jede Zeichenkette, die
+      // so aussieht.
+      //
+      // Vorher schoepfte das Muster die ganze Datei ab. Das fiel nicht auf,
+      // solange die ausgehenden Broadcasts anders hiessen (`axiom.FOCUS_START`
+      // ohne Praefix); seit sie dieselbe Form haben, verlangte der Test, dass
+      // ein Broadcast an eine Routine in der Start-Whitelist steht. Er tut
+      // dort nichts zu suchen: Das eine sagt „AXIOM oeffnen und dorthin",
+      // das andere sagt einem fremden System „bei mir ist gerade etwas
+      // passiert".
+      final routeBlock = bridge.substring(
+        bridge.indexOf('abstract final class AxiomRoute'),
+      );
+      final routes = RegExp("'(${RegExp.escape(pkg)}\\.[A-Z_]+)'")
+          .allMatches(routeBlock.substring(0, routeBlock.indexOf('}')))
           .map((m) => m.group(1)!)
           .toSet();
       expect(routes, isNotEmpty);
-      final main = android('kotlin/de/axiom/axiom_app/MainActivity.kt');
+      final main = android('kotlin/de/atomfritte/axiom/MainActivity.kt');
       final whitelist = main.substring(main.indexOf('fun consumeLaunchAction'));
       for (final route in routes) {
         expect(whitelist, contains('"$route"'), reason: route);
@@ -298,7 +319,7 @@ void main() {
           .toSet();
       expect(components, isNotEmpty);
       for (final name in components) {
-        expect(rules, contains('de.axiom.axiom_app.$name'), reason: name);
+        expect(rules, contains('de.atomfritte.axiom.$name'), reason: name);
       }
     });
 
@@ -319,9 +340,9 @@ void main() {
       // bleibt eine gewoehnliche, und weder Statusleisten-Pille noch
       // Samsungs Now Bar zeigen sie. Genau so lief es seit S3.
       final manifest = android('AndroidManifest.xml');
-      final live = android('kotlin/de/axiom/axiom_app/LiveSlotService.kt');
+      final live = android('kotlin/de/atomfritte/axiom/LiveSlotService.kt');
       final presence =
-          android('kotlin/de/axiom/axiom_app/PresenceService.kt');
+          android('kotlin/de/atomfritte/axiom/PresenceService.kt');
 
       for (final source in [live, presence]) {
         if (source.contains('setRequestPromotedOngoing')) {
@@ -337,7 +358,7 @@ void main() {
       // System die Bitte angenommen hat, steht allein an der geposteten
       // Benachrichtigung.
       expect(
-        android('kotlin/de/axiom/axiom_app/LiveSlotService.kt'),
+        android('kotlin/de/atomfritte/axiom/LiveSlotService.kt'),
         contains('FLAG_PROMOTED_ONGOING'),
       );
       expect(
@@ -354,7 +375,7 @@ void main() {
       expect(manifest,
           contains('android.permission.CHANGE_WIFI_MULTICAST_STATE'));
       expect(
-        android('kotlin/de/axiom/axiom_app/MainActivity.kt'),
+        android('kotlin/de/atomfritte/axiom/MainActivity.kt'),
         contains('createMulticastLock'),
       );
       expect(
@@ -384,7 +405,7 @@ void main() {
       // lautlos.
       // Ohne Kommentare: Sie erklaeren genau die Begriffe, die im Code
       // nicht mehr vorkommen duerfen.
-      final boot = code(android('kotlin/de/axiom/axiom_app/BootReceiver.kt'));
+      final boot = code(android('kotlin/de/atomfritte/axiom/BootReceiver.kt'));
       expect(boot, contains('restoreAll'));
       // Keine fest verdrahteten Zeiten und keine deutschen Texte mehr:
       // Der Empfaenger kennt die Sprache des Nutzers nicht.
@@ -392,7 +413,7 @@ void main() {
       expect(boot, isNot(contains('Calendar')));
 
       final scheduler =
-          code(android('kotlin/de/axiom/axiom_app/MainActivity.kt'));
+          code(android('kotlin/de/atomfritte/axiom/MainActivity.kt'));
       expect(scheduler, contains('fun restoreAll'));
       // Gespiegelt beim Planen, vergessen beim Abbestellen — sonst feuert
       // nach einem Neustart ein Alarm, den jemand laengst geloescht hat.
@@ -437,7 +458,7 @@ void main() {
           manifest.substring(manifest.indexOf('.PlaceReceiver'));
       final block = receiver.substring(0, receiver.indexOf('</receiver>'));
       expect(block, contains('android:exported="true"'));
-      expect(block, contains('de.axiom.PLACE'));
+      expect(block, contains('de.atomfritte.axiom.PLACE'));
 
       // Und ohne android:permission. Das prueft den *Sender*, und Samsungs
       // Routinen halten keine selbst definierte Berechtigung von AXIOM —
@@ -451,7 +472,7 @@ void main() {
       // ihn und legt ihn ab. Kein Datenbankzugriff, keine Rueckgabe, kein
       // Start von irgendetwas.
       final source =
-          code(android('kotlin/de/axiom/axiom_app/PlaceReceiver.kt'));
+          code(android('kotlin/de/atomfritte/axiom/PlaceReceiver.kt'));
       expect(source, contains('if (intent.action != ACTION) return'),
           reason: 'Ein exportierter Empfaenger bekommt auch alles, was per '
               'Komponentennamen direkt an ihn geht');
@@ -472,7 +493,7 @@ void main() {
       // Dasselbe Zweischrittmuster wie bei den Notizen: erst lesen, dann
       // speichern lassen, dann erst loeschen. Wer in einem Zug liest und
       // leert, verliert den Eintrag, sobald das Speichern danach scheitert.
-      final inbox = android('kotlin/de/axiom/axiom_app/PlaceReceiver.kt');
+      final inbox = android('kotlin/de/atomfritte/axiom/PlaceReceiver.kt');
       expect(inbox, contains('fun peek'));
       expect(inbox, contains('fun ack'));
       expect(inbox, contains('.commit()'),
@@ -507,7 +528,7 @@ void main() {
     });
 
     test('der Expertenmodus startet nicht von selbst', () {
-      final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
+      final service = android('kotlin/de/atomfritte/axiom/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));
       expect(android('AndroidManifest.xml'),
           isNot(contains('EXPERT_START" />')),

@@ -613,26 +613,42 @@ class _EmptyState extends ConsumerWidget {
     final p = context.axiom;
     final hasTasks = snapshot.tasks.any((t) => t.state == TaskState.ready);
     final blocked = hasTasks && snapshot.startable.isEmpty;
+    // Wartet alles Offene auf etwas anderes, ist die Begründung eine andere:
+    // Nicht die Startenergie hält zurück, sondern eine Abhängigkeit. Den
+    // falschen Grund zu nennen ist schlimmer als keinen (G2).
+    final waiting = blocked &&
+        snapshot.waiting.isNotEmpty &&
+        snapshot.waiting.length ==
+            snapshot.tasks.where((t) => t.state == TaskState.ready).length;
 
     return Panel(
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(blocked ? context.t('NICHTS IN REICHWEITE') : context.t('NICHTS ANLIEGEND'),
+          Text(
+              waiting
+                  ? context.t('ALLES WARTET')
+                  : blocked
+                      ? context.t('NICHTS IN REICHWEITE')
+                      : context.t('NICHTS ANLIEGEND'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(
-            blocked
-                ? context.t('Heute liegt nichts unter der Linie.')
-                : context.t('Ruhig gerade.'),
+            waiting
+                ? context.t('Alles Offene hängt an etwas anderem.')
+                : blocked
+                    ? context.t('Heute liegt nichts unter der Linie.')
+                    : context.t('Ruhig gerade.'),
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: Space.md),
           Text(
-            blocked
-                ? context.t('Alles Offene braucht mehr Anlauf, als heute da ist. Das ist eine Messung, keine Bewertung. Eine Aufgabe in kleinere Schritte zu zerlegen hilft mehr als Anlauf nehmen.')
-                : context.t('Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du unten erfassen.'),
+            waiting
+                ? context.t('Jede offene Aufgabe wartet auf einen Blocker, der selbst noch aussteht. Die Aufgabenliste zeigt, worauf.')
+                : blocked
+                    ? context.t('Alles Offene braucht mehr Anlauf, als heute da ist. Das ist eine Messung, keine Bewertung. Eine Aufgabe in kleinere Schritte zu zerlegen hilft mehr als Anlauf nehmen.')
+                    : context.t('Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du unten erfassen.'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (blocked) ...[
@@ -645,8 +661,11 @@ class _EmptyState extends ConsumerWidget {
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
               ),
-              icon: Icon(Icons.call_split, size: 18, color: p.signal),
-              label: Text(context.t('Aufgabe zerlegen')),
+              icon: Icon(waiting ? Icons.link : Icons.call_split,
+                  size: 18, color: p.signal),
+              label: Text(waiting
+                  ? context.t('Ansehen, was wartet')
+                  : context.t('Aufgabe zerlegen')),
             ),
           ],
         ],

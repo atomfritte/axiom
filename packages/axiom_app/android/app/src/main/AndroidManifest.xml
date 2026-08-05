@@ -260,7 +260,7 @@
             android:exported="true"
             android:enabled="true">
             <intent-filter>
-                <action android:name="de.axiom.PLACE" />
+                <action android:name="de.atomfritte.axiom.PLACE" />
             </intent-filter>
         </receiver>
 

@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.content.Context
 

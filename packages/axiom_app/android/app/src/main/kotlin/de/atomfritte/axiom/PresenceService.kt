@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -37,10 +37,10 @@ class PresenceService : Service() {
         const val CHANNEL = "axiom_presence"
         const val NOTIFICATION_ID = 4711
 
-        const val ACTION_START = "de.axiom.PRESENCE_START"
-        const val ACTION_STOP = "de.axiom.PRESENCE_STOP"
-        const val ACTION_UPDATE = "de.axiom.PRESENCE_UPDATE"
-        const val ACTION_QUICK_CAPTURE = "de.axiom.QUICK_CAPTURE"
+        const val ACTION_START = "de.atomfritte.axiom.PRESENCE_START"
+        const val ACTION_STOP = "de.atomfritte.axiom.PRESENCE_STOP"
+        const val ACTION_UPDATE = "de.atomfritte.axiom.PRESENCE_UPDATE"
+        const val ACTION_QUICK_CAPTURE = "de.atomfritte.axiom.QUICK_CAPTURE"
 
         const val KEY_TEXT = "axiom_quick_text"
 
@@ -300,7 +300,7 @@ class PresenceService : Service() {
         val checkinIntent = PendingIntent.getActivity(
             this, 2,
             Intent(this, MainActivity::class.java)
-                .setAction("de.axiom.CHECKIN")
+                .setAction("de.atomfritte.axiom.CHECKIN")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

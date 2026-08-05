@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.Manifest
 import android.app.AlarmManager
@@ -44,7 +44,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : FlutterActivity() {
 
     companion object {
-        const val CHANNEL = "de.axiom/system"
+        const val CHANNEL = "de.atomfritte.axiom/system"
 
         const val REQ_NOTIFICATIONS = 8802
         const val REQ_NOTES_ROLE = 8803
@@ -470,14 +470,14 @@ class MainActivity : FlutterActivity() {
     private fun consumeLaunchAction(): String? {
         val action = intent?.action ?: return null
         if (action !in setOf(
-                "de.axiom.CAPTURE",
-                "de.axiom.CHECKIN",
-                "de.axiom.FOCUS",
-                "de.axiom.SENSATION",
-                "de.axiom.ANCHORS",
-                "de.axiom.REVIEW",
-                "de.axiom.BODY",
-                "de.axiom.INBOX",
+                "de.atomfritte.axiom.CAPTURE",
+                "de.atomfritte.axiom.CHECKIN",
+                "de.atomfritte.axiom.FOCUS",
+                "de.atomfritte.axiom.SENSATION",
+                "de.atomfritte.axiom.ANCHORS",
+                "de.atomfritte.axiom.REVIEW",
+                "de.atomfritte.axiom.BODY",
+                "de.atomfritte.axiom.INBOX",
                 ExpertService.ACTION_STOP,
             )
         ) return null
@@ -492,7 +492,7 @@ class MainActivity : FlutterActivity() {
     private fun consumeSharedText(): String? {
         val action = intent?.action ?: return null
         val relevant = action == Intent.ACTION_SEND ||
-            action == "de.axiom.CAPTURE" ||
+            action == "de.atomfritte.axiom.CAPTURE" ||
             action == Intent.ACTION_VIEW
         if (!relevant) return null
 

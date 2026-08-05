@@ -327,7 +327,7 @@ progress, and once all of them are met, the full procedure with copyable command
 noise — worse than an honest estimate. So all three are checked and shown separately.
 
 ```bash
-adb exec-out run-as de.axiom.axiom_app cat files/axiom.db > axiom.db
+adb exec-out run-as de.atomfritte.axiom cat files/axiom.db > axiom.db
 dart run tools/bin/calibrate.dart axiom.db      # writes nothing, only proposes
 # Review the proposals in the weekly review, then enter them in
 # rules/core/weights.yaml and set calibration.status to calibrated:

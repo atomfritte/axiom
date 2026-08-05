@@ -19,6 +19,7 @@ export 'src/domain/sensation.dart';
 export 'src/domain/signal.dart';
 export 'src/domain/state_vector.dart';
 export 'src/domain/task.dart';
+export 'src/domain/task_link.dart';
 export 'src/engine/atomizer.dart';
 export 'src/engine/baseline.dart';
 export 'src/engine/eval_context.dart';

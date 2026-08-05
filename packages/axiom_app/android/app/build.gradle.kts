@@ -17,7 +17,7 @@ plugins {
 }
 
 android {
-    namespace = "de.axiom.axiom_app"
+    namespace = "de.atomfritte.axiom"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "de.axiom.axiom_app"
+        applicationId = "de.atomfritte.axiom"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // Health Connect verlangt mindestens 26. Kein Verlust: Zielgeraet ist

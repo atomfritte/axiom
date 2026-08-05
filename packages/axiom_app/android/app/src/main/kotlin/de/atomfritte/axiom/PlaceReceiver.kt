@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,13 +9,13 @@ import org.json.JSONObject
 /**
  * Nimmt den aktuellen Ort von einer Geräteroutine entgegen.
  *
- * Das Gegenstück zu den ausgehenden Broadcasts (`axiom.FOCUS_START` und
+ * Das Gegenstück zu den ausgehenden Broadcasts (`de.atomfritte.axiom.FOCUS_START` und
  * Geschwister): Eine Samsung-Routine „WLAN Büro verbunden → Broadcast senden"
  * setzt damit den Ort — ohne GPS, ohne Geofence, ohne
  * `ACCESS_BACKGROUND_LOCATION`. Ein verbundenes WLAN ist ohnehin genauer als
  * ein Kreis mit 200 m Radius, und es kostet nichts.
  *
- *     adb shell am broadcast -a de.axiom.PLACE --es place "Büro"
+ *     adb shell am broadcast -a de.atomfritte.axiom.PLACE --es place "Büro"
  *
  * Ein leerer oder fehlender `place`-Zusatz heißt: kein Ort mehr gesetzt.
  *
@@ -39,7 +39,7 @@ import org.json.JSONObject
  */
 class PlaceReceiver : BroadcastReceiver() {
     companion object {
-        const val ACTION = "de.axiom.PLACE"
+        const val ACTION = "de.atomfritte.axiom.PLACE"
         const val EXTRA_PLACE = "place"
 
         /** Ein Ortsname, kein Textfeld. Alles darüber ist ein Fehler. */

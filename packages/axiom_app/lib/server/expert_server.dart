@@ -113,6 +113,7 @@ final class _Invalid implements Exception {
   _Invalid(this.message);
 }
 
+
 /// Wie lange der Server ohne Anfrage weiterläuft.
 const Duration kExpertIdleTimeout = Duration(minutes: 30);
 
@@ -394,8 +395,15 @@ final class ExpertServer {
       case ('GET', ['api', 'tasks']):
         final tasks = await runtime.store.tasks();
         final counts = _childCounts(tasks);
+        // Nur die Zahlen, nicht der Graph: Eine Abfrage, egal wie viele
+        // Aufgaben es sind — die volle Liste zu jeder Aufgabe würde dagegen
+        // mit der Zahl der Beziehungen wachsen.
+        final graph = TaskLinkGraph.from(
+          tasks: tasks,
+          links: await runtime.taskLinks(),
+        );
         return _json(request, 200, {
-          'tasks': [for (final task in tasks) _task(task, counts)],
+          'tasks': [for (final task in tasks) _task(task, counts, graph)],
         });
 
       case ('POST', ['api', 'tasks']):
@@ -414,6 +422,21 @@ final class ExpertServer {
 
       case ('PATCH', ['api', 'tasks', final id]):
         return _patchTask(request, runtime, id);
+
+      case ('GET', ['api', 'tasks', final id]):
+        return _taskDetail(request, runtime, id);
+
+      // ── Blocker-Beziehungen ───────────────────────────────────────────
+      //
+      // Genau eine Art von Beziehung: A blockiert B. `TaskState.blocked`
+      // heißt an anderer Stelle „zerlegt" — deshalb steht das Wort hier
+      // nirgends noch einmal in einer anderen Bedeutung, weder im Feldnamen
+      // (`blockerId`/`blockedId`) noch im Fehlertext.
+      case ('POST', ['api', 'tasks', final id, 'blockers']):
+        return _linkBlocker(request, runtime, id);
+
+      case ('DELETE', ['api', 'tasks', final id, 'blockers', final blockerId]):
+        return _unlinkBlocker(request, runtime, id, blockerId);
 
       case ('GET', ['api', 'rules']):
         return _json(request, 200, await _rules(runtime));
@@ -619,9 +642,14 @@ final class ExpertServer {
         final notes = await runtime.store.query(types: {EventType.capture});
         final all = await runtime.store.tasks();
         final inboxCounts = _childCounts(all);
+        final inboxGraph = TaskLinkGraph.from(
+          tasks: all,
+          links: await runtime.taskLinks(),
+        );
         final sorted = [
           for (final task in all)
-            if (task.state == TaskState.inbox) _task(task, inboxCounts),
+            if (task.state == TaskState.inbox)
+              _task(task, inboxCounts, inboxGraph),
         ];
         return _json(request, 200, {
           'notes': notes.reversed
@@ -901,7 +929,130 @@ final class ExpertServer {
 
     final after = await runtime.store.tasks();
     final result = after.firstWhere((t) => t.id == id);
-    return _json(request, 200, _task(result, _childCounts(after)));
+    // Auch nach dem Patch echte Blocker-Zahlen, nicht die Nullwerte: Eine
+    // Aufgabe, die schon vorher wartete, darf das nach einer Titeländerung
+    // nicht verschweigen — dieselbe Zusage wie bei childCount/doneCount.
+    final graph = TaskLinkGraph.from(
+      tasks: after,
+      links: await runtime.taskLinks(),
+    );
+    return _json(request, 200, _task(result, _childCounts(after), graph));
+  }
+
+  /// Die Detailansicht: eine Aufgabe mit allem, was um sie herum hängt.
+  ///
+  /// Bewusst getrennt von `/api/tasks`: Dort würde derselbe Umfang für
+  /// jede Zeile bedeuten, den ganzen Beziehungsgraphen mitzuschicken, nur
+  /// weil eine Aufgabe ihn gerade braucht.
+  Future<void> _taskDetail(
+    HttpRequest request,
+    AxiomRuntime runtime,
+    String id,
+  ) async {
+    final tasks = await runtime.store.tasks();
+    final byId = {for (final t in tasks) t.id: t};
+    final task = byId[id];
+    if (task == null) {
+      return _json(request, 404, {'error': 'Aufgabe nicht gefunden: $id'});
+    }
+
+    final graph = TaskLinkGraph.from(tasks: tasks, links: await runtime.taskLinks());
+    final events = await runtime.store.query();
+
+    return _json(request, 200, {
+      ..._task(task, _childCounts(tasks), graph),
+      'parents': _parentChain(task, byId),
+      'children': [
+        for (final child in tasks)
+          if (child.parentId == id)
+            {
+              'id': child.id,
+              'title': child.title,
+              'state': child.state.name,
+              'activationEnergy': child.activationEnergy,
+            },
+      ],
+      // Was diese Aufgabe aufhält (`blockersOf`) — und was sie selbst
+      // aufhält (`blockedBy`, die Kehrseite trotz des Namens: siehe
+      // TaskLinkGraph). Beide nur mit offenen Gegenstücken, wie im Kern.
+      'blockedBy': [
+        for (final blockerId in graph.blockersOf(id))
+          if (byId[blockerId] case final blocker?) _linkedTask(blocker),
+      ],
+      'blocks': [
+        for (final blockedId in graph.blockedBy(id))
+          if (byId[blockedId] case final blocked?) _linkedTask(blocked),
+      ],
+      // Neueste zuerst, und nur was diese Aufgabe betrifft — der Strom
+      // selbst bleibt unangetastet, hier wird nur gelesen und gefiltert.
+      'events': events.reversed
+          .where((e) => _mentionsTask(e, id))
+          .take(500)
+          .map(_event)
+          .toList(),
+    });
+  }
+
+  /// Trägt ein: `blockerId` muss erledigt (oder verworfen) sein, bevor
+  /// [blockedId] weitergeht.
+  Future<void> _linkBlocker(
+    HttpRequest request,
+    AxiomRuntime runtime,
+    String blockedId,
+  ) async {
+    final body = await _body(request);
+    final blockerId = _requiredText(body, 'blockerId', max: 64);
+
+    // Der trivialste Zyklus: eine Aufgabe, die sich selbst aufhält. Den
+    // Kern erst die Pfadsuche machen zu lassen, nur um denselben Befund in
+    // einem Schritt zurückzubekommen, wäre eine Anfrage für nichts.
+    if (blockerId == blockedId) {
+      return _json(request, 400, {
+        'error': 'Eine Aufgabe kann nicht sich selbst aufhalten',
+      });
+    }
+
+    final tasks = await runtime.store.tasks();
+    if (!tasks.any((t) => t.id == blockedId)) {
+      return _json(request, 404, {'error': 'Aufgabe nicht gefunden: $blockedId'});
+    }
+    if (!tasks.any((t) => t.id == blockerId)) {
+      return _json(request, 404, {'error': 'Aufgabe nicht gefunden: $blockerId'});
+    }
+
+    try {
+      await runtime.linkBlocker(blockerId: blockerId, blockedId: blockedId);
+    } on TaskLinkCycleError catch (e) {
+      // Der Pfad ist der eigentliche Nutzen dieses Fehlers: Er zeigt, wo
+      // sich der Kreis schließt, statt nur „geht nicht" zu sagen — und das
+      // ist in diesem Projekt der teuerste Fehlermodus.
+      return _json(request, 409, {
+        'error': 'Diese Verknüpfung würde einen Kreis schließen',
+        'path': e.path,
+      });
+    }
+    onChanged();
+    return _json(request, 200, {'ok': true});
+  }
+
+  /// Löst eine Blocker-Beziehung. Gibt es sie nicht, ist das ein Fehler,
+  /// kein stilles Nichtstun — sonst glaubt der Aufrufer, etwas sei
+  /// geschehen, das nie stattfand.
+  Future<void> _unlinkBlocker(
+    HttpRequest request,
+    AxiomRuntime runtime,
+    String blockedId,
+    String blockerId,
+  ) async {
+    final links = await runtime.taskLinks();
+    final exists = links
+        .any((l) => l.blockerId == blockerId && l.blockedId == blockedId);
+    if (!exists) {
+      return _json(request, 404, {'error': 'Diese Beziehung gibt es nicht'});
+    }
+    await runtime.unlinkBlocker(blockerId: blockerId, blockedId: blockedId);
+    onChanged();
+    return _json(request, 200, {'ok': true});
   }
 
   Future<void> _putRule(
@@ -1328,10 +1479,10 @@ final class ExpertServer {
       // erst das Laufende, sonst der Vorschlag.
       'running': [
         for (final task in snapshot.tasks)
-          if (task.state == TaskState.active) _task(task, counts),
+          if (task.state == TaskState.active) _task(task, counts, snapshot.links),
       ],
       'startable': [
-        for (final task in snapshot.startable) _task(task, counts),
+        for (final task in snapshot.startable) _task(task, counts, snapshot.links),
       ],
       'atomize': snapshot.atomizeCandidates
           .map((c) => {
@@ -1605,9 +1756,15 @@ final class ExpertServer {
   /// [counts] aus [_childCounts]. Fehlt es, sind die Zahlen 0 — nie `null`:
   /// Ein Feld, das mal da ist und mal nicht, muss im Browser jedes Mal
   /// geprüft werden.
+  ///
+  /// [graph] aus `TaskLinkGraph.from(...)` (axiom_core). Fehlt er (kein
+  /// Aufruf hat ihn gebraucht), gelten dieselben Nullwerte — die meisten
+  /// Aufrufstellen dieser Methode zeigen gar keine Blocker-Zahlen an und
+  /// sollen dafür keine zusätzliche Abfrage bezahlen.
   Map<String, Object?> _task(
     Task task, [
     Map<String, ({int total, int done})> counts = const {},
+    TaskLinkGraph? graph,
   ]) =>
       {
         'id': task.id,
@@ -1624,7 +1781,59 @@ final class ExpertServer {
         'place': task.place,
         'childCount': counts[task.id]?.total ?? 0,
         'doneCount': counts[task.id]?.done ?? 0,
+        // Ob noch ein offener Blocker aufhaelt, und wie viele Beziehungen in
+        // beide Richtungen bestehen — nur die Zahl, nicht die Liste. Die
+        // Uebersicht soll nicht den ganzen Beziehungsgraphen laden; wer mehr
+        // braucht, ruft /api/tasks/:id.
+        'waiting': graph?.isWaiting(task.id) ?? false,
+        'blockedByCount': graph?.blockersOf(task.id).length ?? 0,
+        'blocksCount': graph?.blockedBy(task.id).length ?? 0,
       };
+
+  /// Kette der Elternaufgaben nach oben, nächster zuerst.
+  ///
+  /// `seen` schützt vor einer Endlosschleife: Strukturell sollte `parentId`
+  /// nie einen Kreis bilden, aber diese Kette entsteht aus Werten, die
+  /// letztlich aus dem Netz kamen — und eine Anfrage, die nie mehr
+  /// antwortet, ist teurer als eine Kette, die einmal zu früh abbricht.
+  static List<Map<String, Object?>> _parentChain(
+    Task task,
+    Map<String, Task> byId,
+  ) {
+    final chain = <Map<String, Object?>>[];
+    final seen = <String>{task.id};
+    var current = task.parentId;
+    while (current != null && seen.add(current)) {
+      final parent = byId[current];
+      if (parent == null) break;
+      chain.add({'id': parent.id, 'title': parent.title});
+      current = parent.parentId;
+    }
+    return chain;
+  }
+
+  /// Kurzfassung einer verknüpften Aufgabe — für `blockedBy` und `blocks`.
+  static Map<String, Object?> _linkedTask(Task task) => {
+        'id': task.id,
+        'title': task.title,
+        'state': task.state.name,
+        'done': task.state == TaskState.done,
+      };
+
+  /// Ob ein Ereignis diese Aufgabe betrifft — am Wert erkannt, nicht an
+  /// einem festen Feldnamen.
+  ///
+  /// Bisherige Ereignisse tragen die ID mal als `task_id`, mal als
+  /// `parent_id`, mal in einer Liste `child_ids`. Eine feste Feldliste hier
+  /// müsste bei jeder neuen Ereignisart mitwachsen — und genau das wird
+  /// vergessen. Der Wert entscheidet, nicht der Feldname.
+  static bool _mentionsTask(Event event, String taskId) {
+    for (final value in event.payload.values) {
+      if (value == taskId) return true;
+      if (value is List && value.contains(taskId)) return true;
+    }
+    return false;
+  }
 
   Map<String, Object?> _event(Event event) => {
         'id': event.id,

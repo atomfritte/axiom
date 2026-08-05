@@ -274,8 +274,8 @@ const Map<String, String> kEnglish = {
           'period in between — and asks you your own questions.',
   'Ein Vorfall wartet auf Einordnung': 'One incident is waiting for review',
   'Eine Aufgabe gehört woanders hin.': 'One task belongs somewhere else.',
-  'Eine Geräteroutine kann das auch: Broadcast de.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.':
-      'A device routine can do this too: broadcast de.axiom.PLACE with the extra “place”. No location permission.',
+  'Eine Geräteroutine kann das auch: Broadcast de.atomfritte.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.':
+      'A device routine can do this too: broadcast de.atomfritte.axiom.PLACE with the extra “place”. No location permission.',
   'Eine Handlung': 'One action',
   'Einen Moment.': 'One moment.',
   'Eingang': 'Inbox',
@@ -586,11 +586,11 @@ const Map<String, String> kEnglish = {
   'Reizhunger': 'Stimulation hunger',
   'Rest nach dem Anlauf': 'Time left after the run-up',
   'Review abschließen': 'Finish review',
-  'Routinen → Dann → Anderes → Broadcast senden → de.axiom.PLACE, Zusatz „place" = Büro. Ein leerer Zusatz setzt den Ort zurück.':
-      'Routines → Then → Other → Send broadcast → de.axiom.PLACE, extra “place” = Büro. An empty extra clears the place.',
-  'Routinen → Wenn → Anderes → Broadcast empfangen → axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER':
-      'Routines → If → Other → Receive broadcast → axiom.FOCUS_START, '
-          'axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER',
+  'Routinen → Dann → Anderes → Broadcast senden → de.atomfritte.axiom.PLACE, Zusatz „place" = Büro. Ein leerer Zusatz setzt den Ort zurück.':
+      'Routines → Then → Other → Send broadcast → de.atomfritte.axiom.PLACE, extra “place” = Büro. An empty extra clears the place.',
+  'Routinen → Wenn → Anderes → Broadcast empfangen → de.atomfritte.axiom.FOCUS_START, de.atomfritte.axiom.FOCUS_END, de.atomfritte.axiom.WINDDOWN, de.atomfritte.axiom.L3_ENTER':
+      'Routines → If → Other → Receive broadcast → de.atomfritte.axiom.FOCUS_START, '
+          'de.atomfritte.axiom.FOCUS_END, de.atomfritte.axiom.WINDDOWN, de.atomfritte.axiom.L3_ENTER',
   'Ruhezeit': 'quiet hours',
   'Ruhig gerade.': 'Quiet right now.',
   'S-Pen': 'S Pen',
@@ -1587,4 +1587,24 @@ const Map<String, String> kEnglish = {
       'The permission request would not open: {0}',
   'Health Connect ist installiert, öffnet aber keinen Freigabedialog ({0}). In den Systemeinstellungen unter Health Connect lässt sich AXIOM dort von Hand freigeben.':
       'Health Connect is installed but opens no permission dialog ({0}). In the system settings under Health Connect, AXIOM can be granted access by hand.',
+
+  // ── Blocker: „A blockiert B" ──────────────────────────────────────────
+  //
+  // „Wartet", nicht „blockiert": Der Zustand `blocked` heißt in AXIOM
+  // zerlegt. Im Englischen dieselbe Trennung — „waiting" gegen „split".
+  'Wartet · {0}': 'Waiting · {0}',
+  'Diese Aufgaben hängen an einer anderen. Sie kommen zurück, sobald ihr letzter Blocker erledigt ist.':
+      'These tasks hang on another one. They come back as soon as their last blocker is done.',
+  'wartet auf: {0}': 'waiting for: {0}',
+  'wartet auf: {0} und {1}': 'waiting for: {0} and {1}',
+  'wartet auf: {0} und {1} weitere': 'waiting for: {0} and {1} more',
+  'eine andere Aufgabe': 'another task',
+  'HÄLT {0} AUF · HEBEL ×{1}': 'HOLDS UP {0} · LEVERAGE ×{1}',
+  'Was anderes aufhält, zählt mehr: Wert × (1 + 0,35 × log2(1 + aufgehaltene)). Drei aufgehaltene heben den Wert um 70 %, nicht um 200 %.':
+      'What holds up other work counts for more: value × (1 + 0.35 × log2(1 + held up)). Three held up raise the value by 70 %, not by 200 %.',
+  'ALLES WARTET': 'EVERYTHING IS WAITING',
+  'Alles Offene hängt an etwas anderem.': 'Everything open hangs on something else.',
+  'Jede offene Aufgabe wartet auf einen Blocker, der selbst noch aussteht. Die Aufgabenliste zeigt, worauf.':
+      'Every open task waits on a blocker that is itself still open. The task list shows on what.',
+  'Ansehen, was wartet': 'See what is waiting',
 };

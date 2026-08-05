@@ -55,6 +55,8 @@ Regeln:
 | `task_completed` | `task_id`, `duration_min` | user | M2 |
 | `task_abandoned` | `task_id`, `reason` | user | M2 |
 | `task_split` | `parent_id`, `child_ids[]` | user | M2 (Atomizer) |
+| `task_linked` | `blocker_id`, `blocked_id` | user | M2 (Blocker) |
+| `task_unlinked` | `blocker_id`, `blocked_id` | user | M2 (Blocker) |
 | `place_entered` | `place` (leer = keiner mehr) | user/device | M2 |
 | `focus_start` | `anchor_task_id?`, `planned_min` | user | M4 |
 | `focus_end` | `actual_min`, `on_anchor bool`, `exit` (planned/interrupted/lost) | user/rule | M4 |
@@ -149,6 +151,7 @@ class Task {
   final Duration? estimate;     //        optional, notorisch unzuverlässig
   final String? parentId;       //        Atomizer-Hierarchie
   final TaskState state;        //        inbox|ready|active|blocked|done|dropped
+                                //        `blocked` = zerlegt, NICHT „wartet" (§4.2)
   final List<String> contexts;  //        @home @phone @errand @deepwork
   final String? breadcrumb;     //        Wiedereinstiegsnotiz                [D11]
   final String? place;          //        frei vergebener Ortsname            [D2]
@@ -158,7 +161,7 @@ class Task {
 **`place` ist ein Name, keine Koordinate.** Kein GPS, kein Geofence, keine
 Standortberechtigung. Der aktuelle Ort ist die Projektion des letzten
 `place_entered`-Events; gesetzt wird er in der App oder von einer
-Geräteroutine über den Broadcast `de.axiom.PLACE`. Ein Geofence beantwortet
+Geräteroutine über den Broadcast `de.atomfritte.axiom.PLACE`. Ein Geofence beantwortet
 „wo bin ich", die Frage der Aufgabe ist aber „was geht hier" — und der
 Gegenwert eines Kreises mit 200 m Radius wiegt `ACCESS_BACKGROUND_LOCATION`
 und ein Bewegungsprofil in einer Datenbank mit Gesundheitsdaten nicht auf.
@@ -171,13 +174,14 @@ Nutzer nie eingeschaltet hat, wäre der schlimmere Fehler [D9].
 
 ```
 1. FILTER    startbar ⟺ activationEnergy ≤ capacity/10  ∧  state ∈ {ready}
-                       ∧  Kontext erfüllt  ∧  nicht blockiert
+                       ∧  Kontext erfüllt  ∧  nicht wartend
                        ∧  (place = null ∨ aktueller Ort = null ∨ gleich)
 
-2. SCORE     urgency = stakes × decayPressure(decayAt, now)
-             pull    = salience
-             cost    = activationEnergy
-             score   = (0.6 × urgency + 0.4 × pull) / cost
+2. SCORE     urgency  = stakes × decayPressure(decayAt, now)
+             pull     = salience
+             cost     = activationEnergy
+             leverage = 1 + 0.35 × log2(1 + freigeräumt)
+             score    = (0.6 × urgency + 0.4 × pull) × leverage / cost
 
 3. ESCALATE  Ist eine Aufgabe mit stakes ≥ 8 durch FILTER gefallen
              und decayAt < 72 h:
@@ -191,6 +195,32 @@ Nutzer nie eingeschaltet hat, wäre der schlimmere Fehler [D9].
 Schritt 3 ist der entscheidende. Der übliche Fehlermodus — wichtige Aufgabe steht wochenlang oben,
 erzeugt bei jedem Blick Schuld, wird nie gestartet — wird hier strukturell ausgeschlossen: Was nicht
 startbar ist, wird **zerlegt**, nicht angemahnt.
+
+### 4.2 Blocker: A blockiert B
+
+Genau **eine** Beziehungsart. Kein „hängt zusammen mit", kein „Duplikat von", kein „folgt auf" —
+jede weitere Art kostet Pflege ohne Gegenwert und ist Meta-Work-Treibstoff (D3).
+
+```dart
+class TaskLink {
+  final String blockerId;   // steht im Weg
+  final String blockedId;   // wartet deshalb
+}
+```
+
+- **„Wartet" ist kein Zustand, sondern eine Rechnung.** `TaskState.blocked` heißt in AXIOM
+  *zerlegt* (durch Teilschritte vertreten). Eine Aufgabe mit mindestens einem **offenen** Blocker
+  **wartet** — abgeleitet aus den Beziehungen, nie gespeichert. Deshalb wird sie in dem Moment
+  wieder startbar, in dem der letzte Blocker erledigt oder verworfen ist, ohne dass irgendwo etwas
+  nachgezogen werden muss.
+- **Wartende Aufgaben werden nicht vorgeschlagen.** Ein Vorschlag, den man nicht ausführen kann,
+  ist keiner (G1).
+- **Ein Blocker bekommt Vorrang.** `leverage` misst, wie viele offene Aufgaben frei werden, wenn
+  diese fertig ist — **transitiv**, nicht nur direkt. Logarithmisch, damit eine lange Kette die
+  Auswahl nicht überfährt: 1 freigeräumte Aufgabe → ×1.35, 3 → ×1.70, 7 → ×2.05.
+- **Zyklen sind ein Fehler, kein Sonderfall.** Eine Beziehung, die einen Kreis schlösse, wird beim
+  Anlegen abgelehnt (`TaskLinkCycleError` mit dem Pfad, an dem er sich schließt). A blockiert B
+  blockiert A hieße: beide warten für immer, und nichts sagt warum.
 
 ---
 
@@ -240,6 +270,8 @@ state_snapshots(id TEXT PK, at INTEGER, vector TEXT)
 tasks(id TEXT PK, title TEXT, ae INTEGER, salience INTEGER, stakes INTEGER,
       decay_at INTEGER, state TEXT, parent_id TEXT, contexts TEXT,
       breadcrumb TEXT, place TEXT)
+task_links(blocker_id TEXT, blocked_id TEXT, PRIMARY KEY (blocker_id, blocked_id))
+  -- blocker_id blockiert blocked_id. Projektion aus task_linked/task_unlinked.
 
 -- Audit: das Gedächtnis des Regelwerks
 decisions(id TEXT PK, at INTEGER, rule_id TEXT, action TEXT,

@@ -436,7 +436,7 @@ void main() {
         File('android/app/src/main/$path').readAsStringSync();
 
     test('kein START_STICKY — ein Port geht nicht von selbst wieder auf', () {
-      final source = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
+      final source = android('kotlin/de/atomfritte/axiom/ExpertService.kt');
       expect(source, contains('START_NOT_STICKY'));
       expect(source, isNot(contains('return START_STICKY')));
     });
@@ -444,7 +444,7 @@ void main() {
     test('kein Autostart beim Hochfahren', () {
       // BootReceiver stellt Alarme wieder her. Einen Server wiederherzustellen
       // waere etwas voellig anderes.
-      expect(android('kotlin/de/axiom/axiom_app/BootReceiver.kt'),
+      expect(android('kotlin/de/atomfritte/axiom/BootReceiver.kt'),
           isNot(contains('Expert')));
     });
 
@@ -1144,6 +1144,224 @@ ${english ? '''  rationale_en: >
       expect(source, contains('data-tab="help"'));
       expect(source, contains("case 'h':"));
       expect(source, contains("['h','Hilfe']"));
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Blocker-Beziehungen: genau eine Art — A blockiert B. Der Kern prüft den
+  // Zyklus (`ensureAcyclic`), dieser Server reicht ihn nur durch. Was hier
+  // steht, ist deshalb nicht die Graphlogik selbst, sondern das, was ein
+  // Netzzugriff daraus macht: Existenz, Selbstbezug, Sitzung, schlanke
+  // Übersicht.
+  // ──────────────────────────────────────────────────────────────────────
+
+  group('Blocker-Beziehungen zwischen Aufgaben', () {
+    Future<Map<String, Object?>> makeTask(String cookie, String title) async =>
+        json(await call('POST', '/api/tasks', cookie: cookie,
+            body: {'title': title}));
+
+    Future<HttpClientResponse> link(
+      String? cookie,
+      String blockedId,
+      String blockerId,
+    ) =>
+        call('POST', '/api/tasks/$blockedId/blockers',
+            cookie: cookie, body: {'blockerId': blockerId});
+
+    test('ohne Sitzung kommt niemand an eine Blocker-Route', () async {
+      // Dieselbe Zentralstelle wie überall: `_authorised` sitzt vor dem
+      // Verteiler, nicht vor jeder Route einzeln — aber genau deshalb muss
+      // hier stehen, dass keine der drei neuen Routen daran vorbeigeht.
+      expect((await link(null, 'a', 'b')).statusCode, 401);
+      expect((await call('DELETE', '/api/tasks/a/blockers/b')).statusCode, 401);
+      expect((await call('GET', '/api/tasks/a')).statusCode, 401);
+    });
+
+    test('eine Beziehung auf sich selbst wird abgelehnt', () async {
+      final cookie = await login(server.status.pin!);
+      final a = await makeTask(cookie, 'Antrag stellen');
+
+      final res = await link(cookie, a['id']! as String, a['id']! as String);
+      expect(res.statusCode, 400);
+      expect(await h.store.taskLinks(), isEmpty,
+          reason: 'Abgelehnt heißt: nichts gespeichert');
+    });
+
+    test('eine fehlende Aufgabe gibt 404 — auf beiden Seiten', () async {
+      final cookie = await login(server.status.pin!);
+      final a = await makeTask(cookie, 'Antrag stellen');
+
+      final missingBlocker =
+          await link(cookie, a['id']! as String, 'gibtesnicht');
+      expect(missingBlocker.statusCode, 404);
+
+      final missingBlocked =
+          await link(cookie, 'gibtesnicht', a['id']! as String);
+      expect(missingBlocked.statusCode, 404);
+      expect(await h.store.taskLinks(), isEmpty);
+    });
+
+    test('ein Zyklus wird abgelehnt und nennt den Pfad', () async {
+      // A blockiert B, B blockiert C — C soll jetzt A blockieren und damit
+      // den Kreis schließen. Alle drei würden dauerhaft aufeinander warten,
+      // und genau deshalb ist ein „geht nicht" ohne Grund hier der
+      // teuerste Fehlermodus.
+      final cookie = await login(server.status.pin!);
+      final a = await makeTask(cookie, 'A');
+      final b = await makeTask(cookie, 'B');
+      final c = await makeTask(cookie, 'C');
+
+      expect((await link(cookie, b['id']! as String, a['id']! as String))
+          .statusCode, 200);
+      expect((await link(cookie, c['id']! as String, b['id']! as String))
+          .statusCode, 200);
+
+      final res = await link(cookie, a['id']! as String, c['id']! as String);
+      expect(res.statusCode, 409);
+      final body = await json(res);
+      expect(body['error'], isNotEmpty);
+      final path = (body['path']! as List).cast<String>();
+      // Der Pfad ist der eigentliche Nutzen dieses Fehlers: Er muss
+      // tatsächlich zeigen, wo sich der Kreis schließt — nicht nur
+      // irgendeine Liste sein.
+      expect(path.first, path.last,
+          reason: 'ein Kreis beginnt und endet an derselben Aufgabe');
+      expect(path, containsAll([a['id'], b['id'], c['id']]));
+
+      // Und die versuchte Kante wurde nicht trotzdem gespeichert.
+      final links = await h.store.taskLinks();
+      expect(links.length, 2, reason: 'nur die beiden gültigen Kanten');
+    });
+
+    test('eine gelöste Beziehung lässt sich wieder trennen', () async {
+      final cookie = await login(server.status.pin!);
+      final a = await makeTask(cookie, 'A');
+      final b = await makeTask(cookie, 'B');
+      await link(cookie, b['id']! as String, a['id']! as String);
+
+      final res = await call(
+          'DELETE', '/api/tasks/${b['id']}/blockers/${a['id']}',
+          cookie: cookie);
+      expect(res.statusCode, 200);
+      expect(await h.store.taskLinks(), isEmpty);
+      expect(changes, greaterThan(0));
+    });
+
+    test('eine Beziehung, die es nicht gibt, kann man nicht lösen', () async {
+      // Kein stilles Nichtstun: Sonst glaubt der Aufrufer, es sei etwas
+      // geschehen, das nie stattfand.
+      final cookie = await login(server.status.pin!);
+      final a = await makeTask(cookie, 'A');
+      final b = await makeTask(cookie, 'B');
+
+      final res = await call(
+          'DELETE', '/api/tasks/${b['id']}/blockers/${a['id']}',
+          cookie: cookie);
+      expect(res.statusCode, 404);
+    });
+
+    test('eine unbekannte Aufgabe in der Detailansicht gibt 404', () async {
+      final cookie = await login(server.status.pin!);
+      final res = await call('GET', '/api/tasks/gibtesnicht', cookie: cookie);
+      expect(res.statusCode, 404);
+    });
+
+    test('/api/tasks/:id liefert Eltern, Kinder und beide Richtungen',
+        () async {
+      final cookie = await login(server.status.pin!);
+
+      // Eltern und Kinder aus einer Zerlegung.
+      final parent = await makeTask(cookie, 'Steuererklärung');
+      final split = await json(await call(
+          'POST', '/api/tasks/${parent['id']}/atomize',
+          cookie: cookie,
+          body: {
+            'steps': [
+              {'title': 'Ordner auf den Tisch legen', 'energy': 1},
+            ],
+          }));
+      final child =
+          (split['children']! as List).first as Map<String, Object?>;
+
+      // Blocker-Beziehung zwischen zwei eigenständigen Aufgaben.
+      final blocker = await makeTask(cookie, 'Unterlagen anfordern');
+      final waiting = await makeTask(cookie, 'Antrag einreichen');
+      await link(cookie, waiting['id']! as String, blocker['id']! as String);
+
+      final parentDetail = await json(
+          await call('GET', '/api/tasks/${parent['id']}', cookie: cookie));
+      expect(parentDetail['parents'], isEmpty);
+      expect((parentDetail['children']! as List).single, {
+        'id': child['id'],
+        'title': child['title'],
+        'state': child['state'],
+        'activationEnergy': child['activationEnergy'],
+      });
+      expect(parentDetail['blockedBy'], isEmpty);
+      expect(parentDetail['blocks'], isEmpty);
+      expect(parentDetail['waiting'], isFalse);
+      expect(parentDetail['events'], isNotEmpty,
+          reason: 'mindestens die eigene Erzeugung und die Zerlegung');
+
+      final childDetail = await json(
+          await call('GET', '/api/tasks/${child['id']}', cookie: cookie));
+      expect(childDetail['parents'], [
+        {'id': parent['id'], 'title': parent['title']},
+      ]);
+      expect(childDetail['children'], isEmpty);
+
+      final waitingDetail = await json(
+          await call('GET', '/api/tasks/${waiting['id']}', cookie: cookie));
+      expect(waitingDetail['waiting'], isTrue);
+      expect((waitingDetail['blockedBy']! as List).single, {
+        'id': blocker['id'],
+        'title': blocker['title'],
+        'state': blocker['state'],
+        'done': false,
+      });
+      expect(waitingDetail['blocks'], isEmpty);
+
+      final blockerDetail = await json(
+          await call('GET', '/api/tasks/${blocker['id']}', cookie: cookie));
+      expect(blockerDetail['waiting'], isFalse);
+      expect((blockerDetail['blocks']! as List).single, {
+        'id': waiting['id'],
+        'title': waiting['title'],
+        'state': waiting['state'],
+        'done': false,
+      });
+      expect(blockerDetail['blockedBy'], isEmpty);
+    });
+
+    test('/api/tasks bleibt schlank — Zahlen statt Listen', () async {
+      final cookie = await login(server.status.pin!);
+      final blocker = await makeTask(cookie, 'Unterlagen anfordern');
+      final waiting = await makeTask(cookie, 'Antrag einreichen');
+      await link(cookie, waiting['id']! as String, blocker['id']! as String);
+
+      final tasks = (await json(await call('GET', '/api/tasks', cookie: cookie)))
+          ['tasks']! as List;
+      final waitingRow = tasks.firstWhere(
+          (t) => (t as Map)['id'] == waiting['id']) as Map<String, Object?>;
+      final blockerRow = tasks.firstWhere(
+          (t) => (t as Map)['id'] == blocker['id']) as Map<String, Object?>;
+
+      expect(waitingRow['waiting'], isTrue);
+      expect(waitingRow['blockedByCount'], 1);
+      expect(waitingRow['blocksCount'], 0);
+      expect(blockerRow['waiting'], isFalse);
+      expect(blockerRow['blockedByCount'], 0);
+      expect(blockerRow['blocksCount'], 1);
+
+      // Und keine der beiden trägt die vollen Listen mit sich herum — die
+      // Übersicht soll nicht den ganzen Graphen laden.
+      for (final row in [waitingRow, blockerRow]) {
+        expect(row.containsKey('blockedBy'), isFalse);
+        expect(row.containsKey('blocks'), isFalse);
+        expect(row.containsKey('parents'), isFalse);
+        expect(row.containsKey('children'), isFalse);
+        expect(row.containsKey('events'), isFalse);
+      }
     });
   });
 }

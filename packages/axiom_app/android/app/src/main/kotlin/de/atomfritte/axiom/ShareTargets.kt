@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.content.Context
 import android.content.Intent
@@ -23,7 +23,7 @@ import androidx.core.graphics.drawable.IconCompat
  */
 object ShareTargets {
 
-    private const val CATEGORY = "de.axiom.category.CAPTURE"
+    private const val CATEGORY = "de.atomfritte.axiom.category.CAPTURE"
     private const val ID = "capture_direct"
 
     fun publish(context: Context) {
@@ -35,7 +35,7 @@ object ShareTargets {
             .setLongLived(true)
             .setIntent(
                 Intent(context, MainActivity::class.java)
-                    .setAction("de.axiom.CAPTURE")
+                    .setAction("de.atomfritte.axiom.CAPTURE")
             )
             .build()
 

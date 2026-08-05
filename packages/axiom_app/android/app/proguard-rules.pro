@@ -12,21 +12,21 @@
 # Health Connect ruft die Permission-Rationale-Activity ueber einen Intent
 # auf, den das System aufloest — kein Aufrufer im eigenen Code.
 -keep class androidx.health.connect.client.** { *; }
--keep class de.axiom.axiom_app.HealthBridge { *; }
+-keep class de.atomfritte.axiom.HealthBridge { *; }
 
 # Alles, was aus dem Manifest heraus instanziiert wird: Activities, Services,
 # Receiver, TileService, Widget-Provider. R8 findet die Referenz im XML nicht.
--keep class de.axiom.axiom_app.MainActivity { *; }
--keep class de.axiom.axiom_app.CreateNoteActivity { *; }
--keep class de.axiom.axiom_app.PresenceService { *; }
--keep class de.axiom.axiom_app.LiveSlotService { *; }
--keep class de.axiom.axiom_app.ExpertService { *; }
--keep class de.axiom.axiom_app.CaptureTileService { *; }
--keep class de.axiom.axiom_app.AxiomWidgetProvider { *; }
--keep class de.axiom.axiom_app.AlarmReceiver { *; }
--keep class de.axiom.axiom_app.BootReceiver { *; }
--keep class de.axiom.axiom_app.QuickCaptureReceiver { *; }
--keep class de.axiom.axiom_app.PlaceReceiver { *; }
+-keep class de.atomfritte.axiom.MainActivity { *; }
+-keep class de.atomfritte.axiom.CreateNoteActivity { *; }
+-keep class de.atomfritte.axiom.PresenceService { *; }
+-keep class de.atomfritte.axiom.LiveSlotService { *; }
+-keep class de.atomfritte.axiom.ExpertService { *; }
+-keep class de.atomfritte.axiom.CaptureTileService { *; }
+-keep class de.atomfritte.axiom.AxiomWidgetProvider { *; }
+-keep class de.atomfritte.axiom.AlarmReceiver { *; }
+-keep class de.atomfritte.axiom.BootReceiver { *; }
+-keep class de.atomfritte.axiom.QuickCaptureReceiver { *; }
+-keep class de.atomfritte.axiom.PlaceReceiver { *; }
 
 # sqlite3 laedt seine native Bibliothek ueber einen festen Klassennamen.
 -keep class org.sqlite.** { *; }

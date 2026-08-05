@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.Activity
 import android.content.Intent
@@ -31,7 +31,7 @@ class CreateNoteActivity : Activity() {
 
         startActivity(
             Intent(this, MainActivity::class.java)
-                .setAction("de.axiom.CAPTURE")
+                .setAction("de.atomfritte.axiom.CAPTURE")
                 .apply { if (!prefill.isNullOrBlank()) putExtra(Intent.EXTRA_TEXT, prefill) }
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         )

@@ -10,9 +10,9 @@
 
     <capability android:name="actions.intent.CREATE_NOTE">
         <intent
-            android:action="de.axiom.CAPTURE"
-            android:targetPackage="de.axiom.axiom_app"
-            android:targetClass="de.axiom.axiom_app.MainActivity">
+            android:action="de.atomfritte.axiom.CAPTURE"
+            android:targetPackage="de.atomfritte.axiom"
+            android:targetClass="de.atomfritte.axiom.MainActivity">
             <parameter
                 android:name="noteDigitalDocument.text"
                 android:key="text" />
@@ -26,9 +26,9 @@
       dem langlebigen Shortcut, den ShareTargets zur Laufzeit anmeldet —
       statische Shortcuts taugen dafuer nicht.
     -->
-    <share-target android:targetClass="de.axiom.axiom_app.MainActivity">
+    <share-target android:targetClass="de.atomfritte.axiom.MainActivity">
         <data android:mimeType="text/plain" />
-        <category android:name="de.axiom.category.CAPTURE" />
+        <category android:name="de.atomfritte.axiom.category.CAPTURE" />
     </share-target>
 
     <shortcut
@@ -38,9 +38,9 @@
         android:shortcutShortLabel="@string/shortcut_capture_short"
         android:shortcutLongLabel="@string/shortcut_capture_long">
         <intent
-            android:action="de.axiom.CAPTURE"
-            android:targetPackage="de.axiom.axiom_app"
-            android:targetClass="de.axiom.axiom_app.MainActivity" />
+            android:action="de.atomfritte.axiom.CAPTURE"
+            android:targetPackage="de.atomfritte.axiom"
+            android:targetClass="de.atomfritte.axiom.MainActivity" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 
@@ -51,9 +51,9 @@
         android:shortcutShortLabel="@string/shortcut_checkin_short"
         android:shortcutLongLabel="@string/shortcut_checkin_long">
         <intent
-            android:action="de.axiom.CHECKIN"
-            android:targetPackage="de.axiom.axiom_app"
-            android:targetClass="de.axiom.axiom_app.MainActivity" />
+            android:action="de.atomfritte.axiom.CHECKIN"
+            android:targetPackage="de.atomfritte.axiom"
+            android:targetClass="de.atomfritte.axiom.MainActivity" />
     </shortcut>
 
     <shortcut
@@ -63,8 +63,8 @@
         android:shortcutShortLabel="@string/shortcut_focus_short"
         android:shortcutLongLabel="@string/shortcut_focus_long">
         <intent
-            android:action="de.axiom.FOCUS"
-            android:targetPackage="de.axiom.axiom_app"
-            android:targetClass="de.axiom.axiom_app.MainActivity" />
+            android:action="de.atomfritte.axiom.FOCUS"
+            android:targetPackage="de.atomfritte.axiom"
+            android:targetClass="de.atomfritte.axiom.MainActivity" />
     </shortcut>
 </shortcuts>

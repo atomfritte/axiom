@@ -323,7 +323,7 @@ void main() {
     /// Schlüssel → Ressourcenname aus `AxiomTexts.FALLBACK`.
     Map<String, String> kotlinFallback() => {
           for (final m in RegExp(r'"([\w.]+)" to R\.string\.(\w+)')
-              .allMatches(android('kotlin/de/axiom/axiom_app/AxiomTexts.kt')))
+              .allMatches(android('kotlin/de/atomfritte/axiom/AxiomTexts.kt')))
             m.group(1)!: m.group(2)!,
         };
 
@@ -437,7 +437,7 @@ void main() {
         expect(looksLikeUserText(bad), isTrue, reason: bad);
       }
       for (final fine in [
-        'de.axiom.CAPTURE',
+        'de.atomfritte.axiom.CAPTURE',
         'axiom_nudge',
         'presence.capture',
         'headline',

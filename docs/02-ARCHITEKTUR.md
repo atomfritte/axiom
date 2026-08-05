@@ -170,7 +170,7 @@ hier hardwareseitig lösbar.
 | Plugin-System / Skripting-Layer | Direkter Meta-Work-Treibstoff (D3). YAML-Regeln sind die Erweiterungsgrenze |
 | Multi-User, Rollen, Rechte | Kein Anwendungsfall |
 | Web-Frontend | Kein Anwendungsfall, zusätzliche Angriffsfläche für Gesundheitsdaten |
-| GPS, Geofences, Standortberechtigung | Ein Geofence beantwortet „wo bin ich", die Frage ist aber „was geht hier". Er kostet `ACCESS_BACKGROUND_LOCATION`, verlangt Play Services oder einen dauerhaft messenden Dienst und legt in einer Datenbank mit Gesundheitsdaten ein Bewegungsprofil an. Ortsgebundene Aufgaben laufen stattdessen über einen frei vergebenen Namen (`Task.place`), gesetzt in der App oder per Broadcast `de.axiom.PLACE` aus einer Geräteroutine |
+| GPS, Geofences, Standortberechtigung | Ein Geofence beantwortet „wo bin ich", die Frage ist aber „was geht hier". Er kostet `ACCESS_BACKGROUND_LOCATION`, verlangt Play Services oder einen dauerhaft messenden Dienst und legt in einer Datenbank mit Gesundheitsdaten ein Bewegungsprofil an. Ortsgebundene Aufgaben laufen stattdessen über einen frei vergebenen Namen (`Task.place`), gesetzt in der App oder per Broadcast `de.atomfritte.axiom.PLACE` aus einer Geräteroutine |
 
 Diese Liste ist Teil der Architektur. Ein hochkompensierter Systemizer wird beim Bauen genau diese
 Erweiterungen attraktiv finden — deshalb stehen sie hier explizit als abgelehnt.

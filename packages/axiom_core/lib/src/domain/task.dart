@@ -5,8 +5,13 @@
 /// wichtig ist — sondern den Kaltstart zu schaffen. [D2]
 library;
 
+import 'dart:math' as math;
+
 import 'package:meta/meta.dart';
 
+/// `blocked` heisst hier **zerlegt**: Die Aufgabe ist durch ihre Teilschritte
+/// vertreten, nicht stillgelegt. Eine Aufgabe, die auf einen Blocker wartet,
+/// bekommt bewusst *keinen* eigenen Zustand — siehe `task_link.dart`.
 enum TaskState { inbox, ready, active, blocked, done, dropped }
 
 @immutable
@@ -220,19 +225,72 @@ Duration taskRunway(Task task) =>
 double hoursOf(Duration duration) =>
     (duration.inMinutes / 60 * 10).roundToDouble() / 10;
 
+/// Steht die Aufgabe noch aus?
+///
+/// „Offen" schliesst `blocked` ein: Eine zerlegte Aufgabe ist nicht erledigt,
+/// sondern von ihren eigenen Schritten vertreten. Die Antwort haengt an genau
+/// dieser Stelle, weil drei Mechaniken sie brauchen — Zerlegung, Blocker und
+/// Ortsbindung — und „offen" nicht dreimal etwas anderes heissen darf.
+bool isTaskOpen(Task task) => switch (task.state) {
+      TaskState.inbox ||
+      TaskState.ready ||
+      TaskState.active ||
+      TaskState.blocked =>
+        true,
+      TaskState.done || TaskState.dropped => false,
+    };
+
+/// Gewicht des Hebels im Auswahl-Score. Siehe [taskLeverage].
+const double kLeverageWeight = 0.35;
+
+/// Hebel einer Aufgabe: Wie viel mehr ist sie wert, weil andere an ihr haengen?
+///
+///     hebel = 1 + 0.35 x log2(1 + freigeraeumt)
+///
+/// [unblocks] ist die Zahl der offenen Aufgaben, die frei werden, wenn diese
+/// fertig ist — transitiv gemessen, nicht geraten (`TaskLinkGraph.unblocks`).
+///
+/// **Warum logarithmisch und nicht linear.** Etwas freizuraeumen, das drei
+/// andere Dinge festhaelt, hat Hebel — aber es ist nicht dreimal so wichtig
+/// wie alles andere. Linear waere eine Kette von zehn Aufgaben ein
+/// Elfachfaktor und wuerde die gesamte Auswahl ueberfahren; danach entscheidet
+/// nicht mehr der Zustand, sondern wer die laengste Kette gebaut hat — und
+/// Ketten bauen ist Meta-Work [D3]. Jede **Verdopplung** der freigeraeumten
+/// Menge kostet deshalb denselben Zuschlag:
+///
+///     0 frei -> x1.00     1 frei -> x1.35     3 frei -> x1.70
+///     7 frei -> x2.05    15 frei -> x2.40
+///
+/// Zahlenbeispiel. „Ordner holen" (stakes 3, salience 3, ae 1, keine Frist)
+/// kommt ohne Hebel auf (0.6 x 1.5 + 0.4 x 3) / 1 = 2.10. Haelt sie drei
+/// offene Aufgaben auf, sind es 2.10 x 1.70 = 3.57 — sie zieht damit an einer
+/// gleich teuren Aufgabe mit stakes 5 und salience 4 vorbei (Score 3.10),
+/// aber nicht an allem: Dieselbe Aufgabe mit ae 2 bleibt bei 1.79 und damit
+/// hinter jeder billigen Handlung.
+double taskLeverage(int unblocks) => unblocks <= 0
+    ? 1.0
+    : 1 + kLeverageWeight * (math.log(1 + unblocks) / math.ln2);
+
 /// Auswahl-Score. Siehe docs/03-DATENMODELL.md §4.1.
 ///
 ///   urgency = stakes x decayPressure
 ///   pull    = salience
-///   score   = (0.6 x urgency + 0.4 x pull) / activationEnergy
+///   hebel   = 1 + 0.35 x log2(1 + freigeraeumt)
+///   score   = (0.6 x urgency + 0.4 x pull) x hebel / activationEnergy
 ///
 /// Die Division durch die Aktivierungsenergie ist der Kern: Eine wichtige,
 /// aber unstartbare Aufgabe gewinnt nicht — sie wird stattdessen zerlegt
 /// (siehe `needsAtomizing`).
-double taskScore(Task task, DateTime now) {
+///
+/// Der Hebel steht im Zaehler, nicht im Nenner: Er erhoeht den **Wert** des
+/// Ergebnisses, er senkt nicht die Kosten des Starts. Eine Aufgabe wird nicht
+/// leichter anzufangen, nur weil etwas an ihr haengt [D2].
+double taskScore(Task task, DateTime now, {int unblocks = 0}) {
   final urgency = task.stakes * _decayPressure(task.decayAt, now);
   final pull = task.salience.toDouble();
-  return (0.6 * urgency + 0.4 * pull) / task.activationEnergy;
+  return (0.6 * urgency + 0.4 * pull) *
+      taskLeverage(unblocks) /
+      task.activationEnergy;
 }
 
 /// 0.5 (kein Termin) bis 2.0 (ueberfaellig).

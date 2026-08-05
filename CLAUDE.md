@@ -147,7 +147,7 @@ dart run tools/bin/check_layering.dart .          # Architekturgrenzen
 dart run tools/bin/sync_rules.dart
 
 # Baseline auswerten (nach 14 Tagen). Schreibt nichts, schlaegt nur vor.
-adb exec-out run-as de.axiom.axiom_app cat files/axiom.db > axiom.db
+adb exec-out run-as de.atomfritte.axiom cat files/axiom.db > axiom.db
 dart run tools/bin/calibrate.dart axiom.db
 
 # Starten

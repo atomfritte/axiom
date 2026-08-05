@@ -93,11 +93,11 @@ void main() {
         (tester) async {
       await pumpPhone(tester, h.wrap(const ChannelsScreen()));
       await tester.dragUntilVisible(
-        find.textContaining('axiom.FOCUS_START'),
+        find.textContaining('de.atomfritte.axiom.FOCUS_START'),
         find.byType(ListView),
         const Offset(0, -250),
       );
-      expect(find.textContaining('axiom.WINDDOWN'), findsOneWidget);
+      expect(find.textContaining('de.atomfritte.axiom.WINDDOWN'), findsOneWidget);
     });
   });
 

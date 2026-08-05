@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -29,8 +29,8 @@ class ExpertService : Service() {
         const val CHANNEL = "axiom_expert"
         const val NOTIFICATION_ID = 4713
 
-        const val ACTION_START = "de.axiom.EXPERT_START"
-        const val ACTION_STOP = "de.axiom.EXPERT_STOP"
+        const val ACTION_START = "de.atomfritte.axiom.EXPERT_START"
+        const val ACTION_STOP = "de.atomfritte.axiom.EXPERT_STOP"
 
         private const val PREFS = "axiom_expert"
 

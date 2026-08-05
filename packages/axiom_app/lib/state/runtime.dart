@@ -19,6 +19,14 @@ final class AxiomSnapshot {
   /// Die Regel hinter [decision].
   final Rule? decisionRule;
   final List<Task> tasks;
+
+  /// Die Blocker-Beziehungen dieses Zyklus, einmal ausgewertet.
+  ///
+  /// Bewusst getrennt von [Task]: Ein Listenfeld an der Aufgabe muesste jede
+  /// Abfrage mitladen, und der Graph waere dann n-mal zusammengesetzt statt
+  /// einmal.
+  final TaskLinkGraph links;
+
   /// Verbrauchtes Meta-Work-Budget heute (M12).
   final Duration metaUsedToday;
   /// Warum Regeln nicht gefeuert haben — fuer den Systeminspektor.
@@ -46,7 +54,7 @@ final class AxiomSnapshot {
   /// Der gerade gesetzte Ort, oder null.
   ///
   /// Kein Geofence und keine Standortberechtigung — ein Name, den der Nutzer
-  /// setzt oder eine Geraeteroutine schickt (`de.axiom.PLACE`). [D2]
+  /// setzt oder eine Geraeteroutine schickt (`de.atomfritte.axiom.PLACE`). [D2]
   final String? place;
 
   /// Orte, die in diesem Bestand vorkommen — aus den Aufgaben und aus dem,
@@ -68,6 +76,7 @@ final class AxiomSnapshot {
     required this.breakdown,
     required this.tasks,
     required this.metaUsedToday,
+    this.links = TaskLinkGraph.empty,
     this.decision,
     this.decisionRule,
     this.skipped = const [],
@@ -97,13 +106,16 @@ final class AxiomSnapshot {
   /// Und am gesetzten Ort: Eine Aufgabe, die woanders hingehoert, ist hier
   /// nicht startbar — sie vorzuschlagen hiesse, eine Handlung anzubieten, die
   /// nicht geht (G1). Ohne gesetzten Ort aendert sich nichts.
+  /// Und nicht wartend: Eine Aufgabe mit offenem Blocker ist nicht startbar.
+  /// Ein Vorschlag, den man nicht ausfuehren kann, ist keiner (G1).
   List<Task> get startable {
     final cap = regime.maxSuggestedEnergy;
     final ready = tasks
         .where((t) => t.isStartable(state.capacity, atPlace: place))
         .where((t) => cap == null || t.activationEnergy <= cap)
+        .where((t) => !isWaiting(t.id))
         .toList()
-      ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
+      ..sort((a, b) => scoreOf(b).compareTo(scoreOf(a)));
     return ready;
   }
 
@@ -114,7 +126,32 @@ final class AxiomSnapshot {
   List<Task> get elsewhere => tasks
       .where((t) => t.state == TaskState.ready && !t.isHere(place))
       .toList()
-    ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
+    ..sort((a, b) => scoreOf(b).compareTo(scoreOf(a)));
+
+  /// Offene Aufgaben, die auf einen Blocker warten.
+  ///
+  /// „Wartet" ist kein Zustand in [TaskState] — dort heisst `blocked` bereits
+  /// „zerlegt". Es wird gerechnet, und deshalb loest sich das Warten von
+  /// selbst, sobald der letzte Blocker erledigt ist.
+  List<Task> get waiting => tasks
+      .where((t) => t.state == TaskState.ready && isWaiting(t.id))
+      .toList()
+    ..sort((a, b) => scoreOf(b).compareTo(scoreOf(a)));
+
+  /// Die **offenen** Blocker einer Aufgabe. Leer heisst: nichts haelt sie auf.
+  List<String> blockersOf(String taskId) => links.blockersOf(taskId);
+
+  /// Die offenen Aufgaben, die diese Aufgabe aufhaelt.
+  List<String> blockedBy(String taskId) => links.blockedBy(taskId);
+
+  bool isWaiting(String taskId) => links.isWaiting(taskId);
+
+  /// Der Auswahl-Score dieser Aufgabe, samt Hebel.
+  ///
+  /// Eine Stelle, nicht drei: Die Aufgabenliste sortiert nach derselben
+  /// Formel wie die Auswahl — „dieselbe Formel, kein zweiter Massstab".
+  double scoreOf(Task task) =>
+      taskScore(task, at, unblocks: links.unblocks(task.id));
   /// Laeuft gerade ein Fokusblock?
   bool get isFocusing => focus != null;
   List<Task> get inbox =>
@@ -234,6 +271,10 @@ final class AxiomRuntime {
     final signals = await _aggregator.aggregate();
     final derived = _deriver.derive(signals, clock.nowUtc());
     final tasks = await store.tasks();
+    final links = TaskLinkGraph.from(
+      tasks: tasks,
+      links: await store.taskLinks(),
+    );
     final metaUsed = await store.usageToday(clock.nowLocal());
     final runtimeContext = await _buildRuntimeContext(tasks: tasks);
     final ctx = StateEvalContext(
@@ -303,11 +344,13 @@ final class AxiomRuntime {
       decision: resolved.winner,
       decisionRule: rule,
       tasks: tasks,
+      links: links,
       metaUsedToday: metaUsed,
       skipped: result.skipped,
       anchors: await upcomingAnchors(),
       nextStep: nextStep,
-      atomizeCandidates: await atomizeCandidates(derived.vector.capacity),
+      atomizeCandidates:
+          await atomizeCandidates(derived.vector.capacity, links: links),
       focus: focus,
       focusVerdict: focusVerdict,
       sensationBudget: budget,
@@ -572,17 +615,92 @@ final class AxiomRuntime {
     if (focus == null || focus.anchorTaskId != task.id) return;
     await endFocus(focus, exit: exit);
   }
+  // ── Blocker (M2) ──────────────────────────────────────────────────────
+  //
+  // Genau eine Beziehungsart: A blockiert B. Kein „hängt zusammen mit", kein
+  // „Duplikat von", kein „folgt auf" — ein Beziehungsgeflecht zu pflegen ist
+  // befriedigender als die Arbeit, für die es gebaut wurde [D3].
+
+  /// Alle Beziehungen, roh. Für den Editor am großen Bildschirm.
+  Future<List<TaskLink>> taskLinks() => store.taskLinks();
+
+  /// Legt „[blockerId] blockiert [blockedId]" an.
+  ///
+  /// Wirft [TaskLinkCycleError], wenn dadurch ein Kreis entstünde — mit dem
+  /// Weg, an dem er sich schließt. Fail-Fast wie überall im Kern: Ein Kreis
+  /// legt die Auswahl still lahm, und ein stiller Ausfall ist teurer als ein
+  /// lauter (CLAUDE.md).
+  ///
+  /// Eine Beziehung, die es schon gibt, ist kein Fehler und kein Ereignis.
+  Future<void> linkBlocker({
+    required String blockerId,
+    required String blockedId,
+  }) async {
+    // Beide Aufgaben müssen es geben. Eine Kante ins Leere ließe sich
+    // anlegen, wäre nie sichtbar und hielte nie etwas auf — ein stummer
+    // Fehlschlag, und genau die sind hier verboten.
+    final ids = (await store.tasks()).map((t) => t.id).toSet();
+    for (final id in [blockerId, blockedId]) {
+      if (!ids.contains(id)) {
+        throw ArgumentError.value(id, 'taskId', 'Diese Aufgabe gibt es nicht');
+      }
+    }
+
+    final existing = await store.taskLinks();
+    if (existing.any((l) =>
+        l.blockerId == blockerId && l.blockedId == blockedId)) {
+      return;
+    }
+    ensureAcyclic(
+      existing: existing,
+      blockerId: blockerId,
+      blockedId: blockedId,
+    );
+
+    await store.addTaskLink(blockerId, blockedId);
+    await record(EventType.taskLinked, payload: {
+      'blocker_id': blockerId,
+      'blocked_id': blockedId,
+    });
+  }
+
+  /// Löst die Beziehung wieder. Gab es sie nicht, passiert nichts.
+  Future<void> unlinkBlocker({
+    required String blockerId,
+    required String blockedId,
+  }) async {
+    if (!await store.removeTaskLink(blockerId, blockedId)) return;
+    await record(EventType.taskUnlinked, payload: {
+      'blocker_id': blockerId,
+      'blocked_id': blockedId,
+    });
+  }
+
   // ── Zerlegen (M2) ─────────────────────────────────────────────────────
   static const _atomizer = Atomizer();
   /// Aufgaben, die zerlegt werden sollten. Die Oberfläche zeigt immer nur
   /// die erste — eine Liste von Zerlegungsaufträgen wäre selbst eine Hürde.
-  Future<List<AtomizeCandidate>> atomizeCandidates(int capacity) async =>
-      _atomizer.candidates(
-        tasks: await store.tasks(),
-        capacity: capacity,
-        now: clock.nowLocal(),
-        createdAt: await store.taskCreationTimes(),
-      );
+  ///
+  /// Wartende Aufgaben fallen heraus: Sie zu zerlegen löst nichts, weil der
+  /// Blocker auch die Teilschritte aufhält. Angeboten wird stattdessen, was
+  /// die Kette aufhält — und das ist der Blocker selbst.
+  Future<List<AtomizeCandidate>> atomizeCandidates(
+    int capacity, {
+    TaskLinkGraph? links,
+  }) async {
+    final tasks = await store.tasks();
+    final graph = links ??
+        TaskLinkGraph.from(tasks: tasks, links: await store.taskLinks());
+    return _atomizer
+        .candidates(
+          tasks: tasks,
+          capacity: capacity,
+          now: clock.nowLocal(),
+          createdAt: await store.taskCreationTimes(),
+        )
+        .where((c) => !graph.isWaiting(c.task.id))
+        .toList();
+  }
   /// Der Zerlegungsauftrag für eine bestimmte Aufgabe — auf Zuruf.
   ///
   /// Für den Weg, den der Nutzer selbst wählt: Jede offene Aufgabe lässt

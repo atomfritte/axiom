@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -27,7 +27,7 @@ class CaptureTileService : TileService() {
 
     override fun onClick() {
         val intent = Intent(this, MainActivity::class.java)
-            .setAction("de.axiom.CAPTURE")
+            .setAction("de.atomfritte.axiom.CAPTURE")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

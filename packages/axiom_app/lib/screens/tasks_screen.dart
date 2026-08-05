@@ -56,26 +56,65 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final capacity = snapshot.state.capacity;
-    final at = snapshot.at;
     final place = snapshot.place;
 
     List<Task> sorted(bool Function(Task) test) => snapshot.tasks
         .where(test)
         .toList()
-      ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
+      ..sort((a, b) => snapshot.scoreOf(b).compareTo(snapshot.scoreOf(a)));
+
+    /// Wartet die Aufgabe auf einen offenen Blocker?
+    ///
+    /// Steht vor allen anderen Gründen: Warten ist die härteste Bedingung.
+    /// Eine Aufgabe, die wartet und außerdem am falschen Ort liegt, gehört
+    /// einmal in die Liste, nicht zweimal.
+    bool waits(Task t) => snapshot.isWaiting(t.id);
 
     final running = sorted((t) => t.state == TaskState.active);
     final reachable = sorted((t) =>
-        t.state == TaskState.ready && t.isStartable(capacity, atPlace: place));
+        t.state == TaskState.ready &&
+        !waits(t) &&
+        t.isStartable(capacity, atPlace: place));
+    final waiting = snapshot.waiting;
     // Eigener Abschnitt statt „nicht in Reichweite": Der Grund ist ein
     // anderer, und die Begründung darunter wäre schlicht falsch — die
     // Startenergie hat damit nichts zu tun. Die Menge kommt aus dem
     // Snapshot, damit „woanders" nur einmal definiert ist.
-    final elsewhere = snapshot.elsewhere;
+    final elsewhere = snapshot.elsewhere.where((t) => !waits(t)).toList();
     final outOfReach = sorted((t) =>
         t.state == TaskState.ready &&
+        !waits(t) &&
         t.isHere(place) &&
         !t.isStartable(capacity));
+
+    /// Titel einer Aufgabe zu ihrer ID — für „wartet auf: …".
+    ///
+    /// Eine ID im Klartext wäre eine Begründung, die niemand liest [G2].
+    String titleOf(String id) {
+      for (final task in snapshot.tasks) {
+        if (task.id == id) return task.title;
+      }
+      return context.t('eine andere Aufgabe');
+    }
+
+    /// Worauf diese Aufgabe wartet. Eine Tatsache, kein Vorwurf.
+    ///
+    /// Bei mehreren Blockern steht der erste mit Namen da und der Rest als
+    /// Zahl: Drei Titel nebeneinander wären wieder eine Liste zur Auswahl,
+    /// und zu tun ist hier ohnehin nichts (G1).
+    String waitingReason(Task task) {
+      final blockers = snapshot.blockersOf(task.id).map(titleOf).toList();
+      if (blockers.isEmpty) return '';
+      if (blockers.length == 1) {
+        return context.t('wartet auf: {0}', [blockers.first]);
+      }
+      if (blockers.length == 2) {
+        return context.t('wartet auf: {0} und {1}', blockers);
+      }
+      return context.t(
+          'wartet auf: {0} und {1} weitere', [blockers.first, blockers.length - 1]);
+    }
+
     // Zerlegte Aufgaben standen hier bisher nirgends. Damit war die
     // Klammer nach dem Zerlegen unsichtbar: nicht auffindbar, nicht
     // abschließbar, nicht weiter zerlegbar — und wer seinen Bestand nicht
@@ -104,18 +143,61 @@ class _Body extends ConsumerWidget {
           context.t('Die Reihenfolge ist die der Auswahl — dieselbe Formel, kein zweiter Maßstab. Sie lässt sich hier nicht umstellen.'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        // Der Hebel steht nur da, wenn er wirkt. Eine Formel, die immer
+        // sichtbar ist, wird nicht gelesen — und sie ist genau dann
+        // interessant, wenn sie die Reihenfolge verändert (G2).
+        if (snapshot.tasks.any((t) => snapshot.links.unblocks(t.id) > 0)) ...[
+          const SizedBox(height: Space.sm),
+          Text(
+            context.t('Was anderes aufhält, zählt mehr: Wert × (1 + 0,35 × log2(1 + aufgehaltene)). Drei aufgehaltene heben den Wert um 70 %, nicht um 200 %.'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
         const SizedBox(height: Space.xl),
 
         if (running.isNotEmpty) ...[
           SectionLabel(context.t('Läuft')),
-          for (final task in running) _Row(task: task, capacity: capacity),
+          for (final task in running)
+            _Row(
+              task: task,
+              capacity: capacity,
+              holdsUp: snapshot.links.unblocks(task.id),
+            ),
           const SizedBox(height: Space.xl),
         ],
 
         if (reachable.isNotEmpty) ...[
           SectionLabel(context.t('In Reichweite · {0}', [reachable.length])),
           for (final task in reachable)
-            _Row(task: task, capacity: capacity, place: place),
+            _Row(
+              task: task,
+              capacity: capacity,
+              place: place,
+              holdsUp: snapshot.links.unblocks(task.id),
+            ),
+          const SizedBox(height: Space.xl),
+        ],
+
+        // Wartet — nicht „blockiert": `blocked` heißt in AXIOM zerlegt.
+        // Dasselbe Wort für zweierlei wäre der teuerste Namensfehler, den
+        // dieses Modell machen kann.
+        if (waiting.isNotEmpty) ...[
+          SectionLabel(context.t('Wartet · {0}', [waiting.length])),
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.sm),
+            child: Text(
+              context.t('Diese Aufgaben hängen an einer anderen. Sie kommen zurück, sobald ihr letzter Blocker erledigt ist.'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          for (final task in waiting)
+            _Row(
+              task: task,
+              capacity: capacity,
+              place: place,
+              waitingFor: waitingReason(task),
+              holdsUp: snapshot.links.unblocks(task.id),
+            ),
           const SizedBox(height: Space.xl),
         ],
 
@@ -129,7 +211,12 @@ class _Body extends ConsumerWidget {
             ),
           ),
           for (final task in elsewhere)
-            _Row(task: task, capacity: capacity, place: place),
+            _Row(
+              task: task,
+              capacity: capacity,
+              place: place,
+              holdsUp: snapshot.links.unblocks(task.id),
+            ),
           const SizedBox(height: Space.xl),
         ],
 
@@ -148,7 +235,12 @@ class _Body extends ConsumerWidget {
             ),
           ),
           for (final task in outOfReach)
-            _Row(task: task, capacity: capacity, place: place),
+            _Row(
+              task: task,
+              capacity: capacity,
+              place: place,
+              holdsUp: snapshot.links.unblocks(task.id),
+            ),
           const SizedBox(height: Space.xl),
         ],
 
@@ -193,11 +285,19 @@ class _Row extends ConsumerWidget {
   /// Offene Teilschritte — nur bei zerlegten Aufgaben gesetzt.
   final int openSteps;
 
+  /// „wartet auf: Ordner holen". Leer heisst: nichts haelt sie auf.
+  final String waitingFor;
+
+  /// Wie viele offene Aufgaben diese hier aufhaelt — transitiv gezaehlt.
+  final int holdsUp;
+
   const _Row({
     required this.task,
     required this.capacity,
     this.place,
     this.openSteps = 0,
+    this.waitingFor = '',
+    this.holdsUp = 0,
   });
 
   @override
@@ -207,7 +307,9 @@ class _Row extends ConsumerWidget {
     final running = task.state == TaskState.active;
     final done = task.state == TaskState.done;
     final split = task.state == TaskState.blocked;
-    final reachable = task.isStartable(capacity, atPlace: place);
+    final waits = waitingFor.isNotEmpty;
+    final reachable =
+        !waits && task.isStartable(capacity, atPlace: place);
     final here = task.isHere(place);
     // Der Anlauf steht nur da, wenn er nicht mehr passt. Eine Zahl, die immer
     // da ist, wird nicht gelesen — und die Formel ist genau dann interessant,
@@ -301,8 +403,32 @@ class _Row extends ConsumerWidget {
                               style: monoStyle(context,
                                   size: 10.5, color: p.info),
                             ),
+                          // Der Hebel, sichtbar an der Aufgabe, die ihn hat:
+                          // Zahl und Faktor stehen nebeneinander, damit die
+                          // Formel nachrechenbar bleibt (G2).
+                          if (holdsUp > 0 && !done)
+                            Text(
+                              context.t('HÄLT {0} AUF · HEBEL ×{1}', [
+                                holdsUp,
+                                taskLeverage(holdsUp).toStringAsFixed(2),
+                              ]),
+                              style: monoStyle(context,
+                                  size: 10.5, color: p.signal),
+                            ),
                         ],
                       ),
+                      // Kein Vorwurf, eine Tatsache: Hier steht, was fehlt,
+                      // nicht was versäumt wurde [R7].
+                      if (waits) ...[
+                        const SizedBox(height: Space.xs),
+                        Text(
+                          waitingFor,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: p.info),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -326,10 +452,15 @@ class _Row extends ConsumerWidget {
                         child: Text(context.t('Zurücklegen')),
                       ),
                     ),
-                  ] else if (split) ...[
-                    // Kein „Anfangen": Die Aufgabe ist durch ihre Schritte
-                    // vertreten, und sie neben ihnen zur Wahl zu stellen
-                    // wäre genau die Doppelung, die das Zerlegen auflöst.
+                  ] else if (split || waits) ...[
+                    // Kein „Anfangen" — aus zwei verschiedenen Gründen, die
+                    // dieselbe Folge haben: Eine zerlegte Aufgabe ist durch
+                    // ihre Schritte vertreten, eine wartende hängt an einem
+                    // offenen Blocker. In beiden Fällen wäre der Knopf ein
+                    // Angebot, das ins Leere führt (G1).
+                    //
+                    // „Erledigt" bleibt: Dass etwas auf anderem Weg erledigt
+                    // wurde, muss sich immer eintragen lassen.
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => _act(ref, (r) => r.completeTask(task)),

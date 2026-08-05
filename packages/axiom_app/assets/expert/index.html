@@ -159,38 +159,125 @@ p{color:var(--dim);font-size:.9rem}
 .tabs button:hover{color:var(--ink)}
 .tabs .count{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-left:.3rem}
 
-/* Die Einrückung ist die Eltern-Kind-Kette. Sie wächst in rem und damit mit
-   der Textgröße mit; die Tiefe wird beim Zeichnen gedeckelt, sonst bliebe bei
-   2,4-facher Schrift für den Titel nichts mehr übrig. */
+/* Bestandszeile für Eingang und Regelwerk. Dort steht Fließtext, und
+   Fließtext braucht kein Raster. Die Aufgabenliste hat deshalb ihre eigene
+   Form (`.rows` weiter unten): Dort fluchten Spalten. */
 .item{display:grid;grid-template-columns:3px minmax(0,1fr) auto;gap:.85rem;align-items:start;
-  padding:.8rem 0;padding-left:calc(var(--depth,0) * 1.1rem);border-bottom:1px solid var(--rule)}
+  padding:.8rem 0;border-bottom:1px solid var(--rule)}
 .item:last-child{border-bottom:0}
 .item .bar{width:3px;align-self:stretch;border-radius:2px;background:var(--rule);min-height:2.1rem}
-/* Dringlichkeit als Rampe — der Abstand zu decayAt, sonst nichts. Keine
-   Ampel: Es gibt hier kein Gut und kein Schlecht, nur nah und fern (R7).
-   Ohne Frist und jenseits von drei Tagen bleibt der Strich neutral. */
-.item[data-due=over] .bar{background:var(--caution)}
-.item[data-due=day] .bar{background:var(--signal)}
-.item[data-due=days] .bar{background:color-mix(in srgb,var(--signal) 45%,var(--rule))}
 .item .title{font-size:.94rem;overflow-wrap:anywhere}
-.item.run .title{color:var(--calm)}
-.item.done .title{color:var(--faint);text-decoration:line-through}
 .meta{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.2rem}
 .meta span{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint)}
-.meta .due{color:var(--dim)}
-.item[data-due=over] .meta .due{color:var(--caution)}
 .acts{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end}
 .acts .btn{padding:.32rem .58rem;font-size:.77rem}
 
-/* ── Board ─────────────────────────────────────────────────────────────
-   Dieselben Aufgaben, nach Zustand gestapelt statt nach Rang gereiht. Die
-   Liste beantwortet „was zuerst"; das Board beantwortet „wie viel wovon" —
-   die Bestandsfrage, für die man sonst scrollt.
+/* ── Gruppen ───────────────────────────────────────────────────────────
+   Ein Band, kein Strich. Der Bestand zerfällt in wenige Gruppen, und welche
+   das ist, soll man im Vorbeigehen sehen statt lesen müssen — dafür ist die
+   Fläche eines Bandes da und die eines Hairlines nicht.
 
-   Farbe trägt hier genau zwei Messungen und sonst nichts: der Gruppenkopf
-   die Gruppe, die Karte den Abstand zur Frist. Keine Ampel. Grün gut und
-   rot schlecht wäre ein Urteil über eine Aufgabe, und ein Urteil, das man
-   beim Draufsehen mitliest, erzeugt Vermeidung statt Handlung (R7).
+   Farbe trägt genau zwei Messungen und sonst nichts: das Band die Gruppe,
+   die Fristpille den Abstand zum Zeitpunkt. Keine Ampel. Grün gut und rot
+   schlecht wäre ein Urteil über eine Aufgabe, und ein Urteil, das man beim
+   Draufsehen mitliest, erzeugt Vermeidung statt Handlung (R7). „Nicht in
+   Reichweite" bekommt deshalb die leiseste Farbe der Palette, nicht die
+   lauteste — die Aufgabe ist nicht schlecht, sie ist heute zu schwer. */
+.groups{display:grid;gap:1rem;overflow-x:auto}
+.group{min-width:0;border-radius:0 5px 5px 0;
+  border-left:3px solid color-mix(in srgb,var(--group,var(--rule)) 70%,var(--rule));
+  background:color-mix(in srgb,var(--group,var(--rule)) 5%,transparent)}
+.gband{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;
+  padding:.55rem .75rem;border-radius:0 5px 0 0;
+  background:color-mix(in srgb,var(--group,var(--rule)) 20%,var(--panel))}
+.gband:hover{background:color-mix(in srgb,var(--group,var(--rule)) 30%,var(--panel))}
+.gband .gname{font-size:.85rem;font-weight:500;overflow-wrap:anywhere}
+.gband .gcount{margin-left:auto;flex:none;font-size:.7rem;color:var(--ink);border-radius:999px;
+  padding:.05rem .5rem;background:color-mix(in srgb,var(--group,var(--rule)) 38%,var(--panel))}
+/* Dreieck aus Rändern statt Schriftzeichen: Es dreht sich, wächst in rem
+   mit der Textgröße mit und setzt keine Schrift voraus, die es enthält. */
+.caret{flex:none;width:0;height:0;border:.3rem solid transparent;
+  border-left-color:currentColor;transition:transform .12s}
+.gband[aria-expanded=true] .caret{transform:rotate(90deg)}
+.gadd{display:block;width:100%;text-align:left;padding:.5rem .75rem;font-size:.8rem;
+  color:color-mix(in srgb,var(--group,var(--ink)) 70%,var(--ink))}
+.gadd:hover{background:color-mix(in srgb,var(--group,var(--rule)) 14%,transparent)}
+.empty{color:var(--faint);font-size:.78rem;padding:.5rem .75rem;grid-column:1/-1}
+
+/* ── Aufgabenliste ─────────────────────────────────────────────────────
+   Alle Zeilen einer Gruppe teilen sich ein Raster, damit die Werte
+   senkrecht fluchten: Man scannt dann eine Spalte, statt jede Zeile einzeln
+   zu lesen. Keine festen Spaltenbreiten — feste Breiten sind das, was bei
+   2,4-facher Schrift überläuft. Reicht der Platz nicht, scrollt die Gruppe
+   waagerecht in ihrem eigenen Kasten, so wie eine breite Tabelle in der
+   Hilfe. */
+.rows{display:grid;grid-template-columns:minmax(7rem,1fr) auto auto;padding:0 .75rem}
+.trow{display:grid;grid-column:1/-1;grid-template-columns:subgrid;gap:.85rem;
+  align-items:start;padding:.75rem 0;border-bottom:1px solid var(--rule)}
+.trow:last-child{border-bottom:0}
+.trow:hover{background:color-mix(in srgb,var(--raised) 70%,transparent)}
+.trow .title{font-size:.94rem;overflow-wrap:anywhere}
+.trow.run .title{color:var(--calm)}
+.trow.done .title{color:var(--faint);text-decoration:line-through}
+/* Der Titel führt in die Detailansicht — der Ort, an dem eine Aufgabe
+   vollständig existiert. Deshalb ist er ein Knopf und sieht auch so aus. */
+.tlink{display:block;width:100%;text-align:left;padding:0;overflow-wrap:anywhere}
+.tlink:hover{color:var(--signal)}
+.kin{display:block;font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint);
+  overflow-wrap:anywhere;margin-top:.15rem}
+.cells{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;min-width:0}
+.cell{font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint);white-space:nowrap}
+.pill{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.04em;white-space:nowrap;
+  padding:.22rem .5rem;border-radius:999px;color:var(--dim);
+  background:color-mix(in srgb,var(--rule) 55%,transparent)}
+.pill.ae{background:color-mix(in srgb,var(--info) 16%,transparent);color:var(--info)}
+/* Dieselbe Rampe wie früher am Strich, jetzt in der Pille: der Abstand zu
+   decayAt, sonst nichts. Ohne Frist und jenseits von drei Tagen bleibt sie
+   neutral, und an etwas Erledigtem steht sie gar nicht — „überfällig" an
+   etwas, das getan ist, wäre ein Vorwurf für nichts. */
+.pill.due[data-due=days]{background:color-mix(in srgb,var(--signal) 14%,transparent)}
+.pill.due[data-due=day]{background:color-mix(in srgb,var(--signal) 26%,transparent);color:var(--signal)}
+.pill.due[data-due=over]{background:color-mix(in srgb,var(--caution) 24%,transparent);color:var(--caution)}
+@media(max-width:760px){.rows{grid-template-columns:minmax(0,1fr)}.trow{gap:.4rem}}
+
+/* ── Klammern als Leiste über dem Bestand ──────────────────────────────
+   Eine zerlegte Aufgabe ist keine Spalte. „In Reichweite" misst die
+   Kapazität von heute; „zerlegt" ist eine bauliche Tatsache. Zwei Achsen in
+   einer Reihe zu stapeln hieße, dieselbe Aufgabe zweimal zu zeigen oder
+   einmal falsch einzuordnen. Die Klammern stehen deshalb über dem Bestand
+   und filtern ihn, statt in ihm zu stehen.
+
+   Die Wahl hängt bewusst nicht am Browser-Speicher: Ein Filter, der nach
+   dem Schließen des Fensters noch greift, versteckt Aufgaben, ohne dass zu
+   sehen ist, warum. */
+.brackets{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem}
+.crumb{display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;width:100%}
+.crumb .sep{color:var(--faint);font-size:.8rem}
+.brk{display:inline-flex;align-items:center;gap:.4rem;max-width:100%;text-align:left;
+  padding:.34rem .62rem;border-radius:999px;font-size:.8rem;overflow-wrap:anywhere;
+  border:1px solid var(--rule);background:var(--raised);color:var(--dim)}
+.brk:hover{color:var(--ink);border-color:var(--dim)}
+.brk[aria-pressed=true]{border-color:var(--signal);color:var(--signal);
+  background:color-mix(in srgb,var(--signal) 12%,var(--raised))}
+.brk .num{font-family:PlexMono,monospace;font-size:.7rem;color:var(--faint)}
+.brk[aria-pressed=true] .num{color:var(--signal)}
+/* Die gewählte Klammer selbst — mit ihren eigenen Handlungen. An sie kam
+   man vorher nicht heran: Sie stand als Karte zwischen ihren Schritten
+   oder gar nicht. */
+.bhead{border:1px solid var(--rule);border-left:3px solid var(--signal);border-radius:5px;
+  background:var(--raised);padding:.75rem .9rem;margin:0 0 1rem;display:grid;gap:.5rem}
+.bhead .title{font-size:1rem;font-weight:500}
+.bhead .acts{justify-content:flex-start}
+
+/* ── Board ─────────────────────────────────────────────────────────────
+   Dieselben Gruppen, nebeneinander statt untereinander. Die Liste
+   beantwortet „was zuerst", das Board „wie viel wovon" — die Bestandsfrage,
+   für die man sonst scrollt.
+
+   Kein Ziehen zwischen den Spalten: Eine Spalte ist hier eine Messung und
+   kein Ablagefach. Etwas hineinzuziehen hieße, die Kapazität von heute von
+   Hand zu übergehen — also genau die Zahl, wegen der das Board überhaupt
+   sortiert.
 
    Schmal untereinander, breit nebeneinander und waagerecht scrollbar. Die
    Spaltenbreite steht in rem und wächst mit der Schrift mit: Bei 2,4-facher
@@ -199,32 +286,22 @@ p{color:var(--dim);font-size:.9rem}
 @media(min-width:720px){
   .board{flex-direction:row;align-items:flex-start;overflow-x:auto;
     padding-bottom:.7rem;scroll-snap-type:x proximity}
-  .col{flex:0 0 17rem;scroll-snap-align:start}
+  .board .group{flex:0 0 17rem;scroll-snap-align:start}
+  .board .group.shut{flex:0 0 auto}
 }
 .board.flat{display:block}
-.col{min-width:0;display:flex;flex-direction:column;gap:.5rem}
-.ghead{display:flex;align-items:baseline;gap:.5rem;padding-bottom:.35rem;
-  border-bottom:3px solid var(--group,var(--rule))}
-.ghead .gname{font-size:.82rem;overflow-wrap:anywhere}
-.ghead .gcount{margin-left:auto;flex:none;font-size:.72rem;color:var(--dim);
-  border:1px solid var(--rule);border-radius:999px;padding:.02rem .45rem}
-.col .empty{color:var(--faint);font-size:.78rem;padding:.15rem 0}
+.cards{display:flex;flex-direction:column;gap:.5rem;padding:.5rem}
 
-/* Dieselbe Rampe wie in der Liste, nur an der Kante statt am Strich:
-   Abstand zu decayAt, sonst nichts. Ohne Frist und jenseits von drei Tagen
-   bleibt die Kante neutral. */
+/* Dieselbe Rampe wie in der Liste, nur an der Kante statt in der Pille. */
 .card{background:var(--raised);border:1px solid var(--rule);
-  border-left:3px solid var(--rule);border-radius:5px;padding:.5rem .6rem}
+  border-left:3px solid var(--rule);border-radius:5px;padding:.55rem .65rem}
 .card[data-due=over]{border-left-color:var(--caution)}
 .card[data-due=day]{border-left-color:var(--signal)}
 .card[data-due=days]{border-left-color:color-mix(in srgb,var(--signal) 45%,var(--rule))}
-.card .kin{display:block;font-family:PlexMono,monospace;font-size:.63rem;
-  color:var(--faint);overflow-wrap:anywhere;margin-bottom:.15rem}
-.card .title{font-size:.86rem;line-height:1.35;overflow-wrap:anywhere}
+.card .title{font-size:.86rem;line-height:1.35}
+.card.run .title{color:var(--calm)}
 .card.done .title{color:var(--faint);text-decoration:line-through}
-.card .meta{gap:.45rem;margin-top:.3rem}
-.card .meta span{font-size:.64rem}
-.card[data-due=over] .meta .due{color:var(--caution)}
+.card .cells{margin-top:.35rem}
 .card .acts{justify-content:flex-start;margin-top:.45rem}
 .card .acts .btn{padding:.26rem .5rem;font-size:.72rem}
 
@@ -342,8 +419,34 @@ textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;li
 
 dialog{border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);
   padding:1.4rem;width:min(34rem,calc(100vw - 2rem));max-height:86vh;overflow:auto}
+/* Die Detailansicht trägt mehr als ein Regler-Blatt: Baum, Blocker,
+   Ereignisstrom. Sie bekommt deshalb Breite, aber keine eigene Fläche —
+   eine zweite Seite wäre ein zweiter Ort mit eigenem Zustand. */
+dialog.wide{width:min(46rem,calc(100vw - 2rem))}
 dialog::backdrop{background:color-mix(in srgb,var(--base) 72%,transparent);backdrop-filter:blur(3px)}
 dialog h2{margin-bottom:.9rem}
+
+/* ── Detailansicht ──────────────────────────────────────────────────── */
+.sheet{display:grid;gap:1.15rem}
+.sheet .sec{margin:0 0 .45rem}
+.tree{display:grid;gap:.22rem}
+.tree .node{display:flex;gap:.5rem;align-items:baseline;width:100%;text-align:left;
+  font-size:.85rem;color:var(--dim);padding:.32rem .5rem;border-radius:3px;
+  border-left:2px solid var(--rule);overflow-wrap:anywhere}
+.tree .node:hover{color:var(--ink);background:var(--raised)}
+.tree .node.done{color:var(--faint);text-decoration:line-through}
+.tree .node .cell{margin-left:auto;flex:none}
+.tree .node .tlink{width:auto;font-size:.85rem}
+.tree .drop{margin-left:auto;flex:none;padding:.32rem .5rem;font-size:.72rem;color:var(--faint)}
+.tree .drop:hover{color:var(--caution)}
+.picks{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.5rem}
+.picks .btn{padding:.3rem .55rem;font-size:.78rem}
+/* Der Kreis wird gezeigt, nicht bloß abgelehnt: „Geht nicht" ohne Grund
+   ist in diesem System der teuerste Fehlermodus. */
+.cycle{margin-top:.6rem;border:1px solid color-mix(in srgb,var(--caution) 55%,var(--rule));
+  border-radius:5px;padding:.6rem .7rem}
+.cycle .path{font-family:PlexMono,monospace;font-size:.78rem;color:var(--caution);
+  margin-top:.35rem;overflow-wrap:anywhere}
 kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
   border-radius:3px;padding:.05rem .32rem;color:var(--dim)}
 .keys{display:grid;gap:.4rem}
@@ -572,6 +675,9 @@ async function startPush(){
 }
 function showGate(){
   clearInterval(pushPoll);
+  // Ein offenes Blatt liegt über allem, auch über der Anmeldung. Es
+  // stehenzulassen hieße, die Freigabe hinter einem Dialog zu verstecken.
+  if($('#dlg').open) $('#dlg').close();
   $('#gate').classList.remove('hide');$('#app').classList.add('hide');
   $('#pin').value='';
   startPush();
@@ -792,9 +898,17 @@ function paintTaskCount(){
 
 /* ── Aufgaben ────────────────────────────────────────────────────────
    Ein Baum, keine Liste. `parentId` legt der Atomizer beim Zerlegen an —
-   damit ist die Kette Eltern → Kind schon da, sie war nur nie zu sehen.
-   Das IST die Projektfunktion: Ein eigener Projekt-Typ wäre eine zweite
-   Ordnungsachse und damit Meta-Work-Treibstoff (D3).
+   damit ist die Kette Eltern → Kind schon da. Das IST die Projektfunktion:
+   Ein eigener Projekt-Typ wäre eine zweite Ordnungsachse und damit
+   Meta-Work-Treibstoff (D3).
+
+   Sichtbar wird der Baum an drei Stellen, und an jeder für etwas anderes:
+   in der Klammerleiste über dem Bestand (worauf filtere ich), in der
+   Herkunftszeile an der Aufgabe (wozu gehört das hier) und vollständig in
+   der Detailansicht (Kette nach oben, Schritte darunter). Die Einrückung in
+   der Liste war ein vierter Anlauf auf dieselbe Sache und hat dabei die
+   Rangfolge verbogen: Eine Klammer musste dorthin rücken, wo ihr bester
+   Schritt stand, damit der Schritt nicht mit ihr ans Ende rutschte.
 
    Die Reihenfolge ist die der Auswahl und nicht verstellbar. Drei Filter,
    sonst keine — jeder weitere ist eine Entscheidung vor der Arbeit statt
@@ -811,20 +925,45 @@ function setTPref(key,value){
     value===true?'1':value===false?'0':String(value));
 }
 
+/* Die gewählte Klammer steht bewusst NICHT im Browser-Speicher, anders als
+   die drei Filter darüber. Ein Ausschnitt, der das Schließen des Fensters
+   überlebt, versteckt beim nächsten Öffnen Aufgaben, ohne dass zu sehen
+   wäre, warum — und dann sucht man den Fehler im Bestand statt in der
+   Leiste. Für eingeklappte Gruppen gilt derselbe Satz. */
+let bracket=null;
+const shut={};
+function chooseBracket(id){bracket=id||null;redrawTasks()}
+
 function viewTasks(){
   const frag=document.createDocumentFragment();
-  const list=el('div',{id:'tasklist'});
-  frag.append(taskFilters(),list);
-  fillTasks(list);
+  const bar=el('div',{id:'brackets'}),head=el('div',{id:'bhead'});
+  const list=el('div',{id:'tasklist',class:'groups'});
+  frag.append(taskFilters(),bar,head,list);
+  const m=taskModel();
+  fillBrackets(bar,m);fillHead(head,m);fillTasks(list,m);
   return frag;
 }
-/* Nur die Liste beziehungsweise das Board neu zeichnen, nicht die Zeile
+
+function viewBoard(){
+  const frag=document.createDocumentFragment();
+  const bar=el('div',{id:'brackets'}),head=el('div',{id:'bhead'});
+  const box=el('div',{id:'board',class:'board'});
+  frag.append(taskFilters(),bar,head,box);
+  const m=taskModel();
+  fillBrackets(bar,m);fillHead(head,m);fillBoard(box,m);
+  return frag;
+}
+
+/* Nur Leiste, Kopfzeile und Bestand neu zeichnen, nicht die Filterzeile
    darüber: Sonst verliert das Suchfeld beim zweiten Buchstaben den Fokus. */
 function redrawTasks(){
+  const m=taskModel();
+  const bar=$('#brackets');if(bar) fillBrackets(bar,m);
+  const head=$('#bhead');if(head) fillHead(head,m);
   const list=$('#tasklist');
-  if(list){fillTasks(list);return}
+  if(list){fillTasks(list,m);return}
   const board=$('#board');
-  if(board) fillBoard(board);
+  if(board) fillBoard(board,m);
 }
 
 function taskFilters(){
@@ -854,19 +993,52 @@ function taskModel(){
   const overdue=t=>!!t.decayAt&&new Date(t.decayAt).getTime()<Date.now();
 
   const byId=new Map(tasks.map(t=>[t.id,t]));
-  const kids=new Map(),roots=[];
+  const kids=new Map();
   for(const t of tasks){
+    // Ein Elternteil, das nicht im Bestand steht, ist keins: Sonst hinge ein
+    // Schritt an einer Klammer, die niemand sehen kann.
     const parent=t.parentId&&t.parentId!==t.id&&byId.has(t.parentId)?t.parentId:null;
-    if(parent){
-      if(!kids.has(parent)) kids.set(parent,[]);
-      kids.get(parent).push(t);
-    }else roots.push(t);
+    if(!parent) continue;
+    if(!kids.has(parent)) kids.set(parent,[]);
+    kids.get(parent).push(t);
   }
+  // Eine Klammer, die es nicht mehr gibt, filterte sonst alles weg — und
+  // zwar stumm, weil auch ihre Leiste verschwunden wäre.
+  if(bracket&&!byId.has(bracket)) bracket=null;
 
   const q=tprefs.q.trim().toLowerCase();
+  const parentOf=t=>
+    t.parentId&&t.parentId!==t.id?(byId.get(t.parentId)||null):null;
+  const open=t=>t.state!=='done'&&t.state!=='dropped';
+  const openKids=t=>(kids.get(t.id)||[]).filter(open);
+  // Eine Klammer ist eine Aufgabe mit offenen Schritten. Ist der letzte
+  // abgearbeitet, ist sie keine mehr und steht wieder als Zeile im Bestand
+  // — dort, wo sie erledigt werden kann.
+  const isBracket=t=>open(t)&&openKids(t).length>0;
+  /* „Wartet" kommt vom Server (`waiting`, `blockedByCount`). Solange er die
+     Felder nicht liefert, bleibt der Zustand `blocked` die einzige Quelle —
+     geraten wird nichts. */
+  const waiting=t=>t.waiting===true||(t.blockedByCount||0)>0||t.state==='blocked';
+  // Gedeckelt, weil eine im Kreis zeigende Kette sonst hier hängenbliebe.
+  const chainOf=t=>{
+    const out=[];let p=parentOf(t),guard=0;
+    while(p&&guard++<24){out.unshift(p);p=parentOf(p)}
+    return out;
+  };
+  // Der Ausschnitt reicht über alle Ebenen: Zerlegen geht beliebig tief,
+  // und ein Filter, der nur eine Ebene tief greift, versteckte genau die
+  // Schritte, für die man ihn gesetzt hat.
+  const inScope=t=>{
+    if(!bracket) return true;
+    let p=parentOf(t),guard=0;
+    while(p&&guard++<24){if(p.id===bracket) return true;p=parentOf(p)}
+    return false;
+  };
+
   const hits=t=>{
     if(t.state==='dropped') return false;
     if(t.state==='done'&&!tprefs.done) return false;
+    if(!inScope(t)) return false;
     if(q&&!String(t.title||'').toLowerCase().includes(q)) return false;
     if(tprefs.reach&&!(inReach(t)&&t.state!=='done')) return false;
     if(tprefs.overdue&&!overdue(t)) return false;
@@ -880,63 +1052,165 @@ function taskModel(){
   const total=t=>t.childCount===undefined?(kids.get(t.id)||[]).length:t.childCount;
   const doneKids=t=>t.doneCount===undefined
     ?(kids.get(t.id)||[]).filter(c=>c.state==='done').length:t.doneCount;
-  const parentOf=t=>
-    t.parentId&&t.parentId!==t.id?(byId.get(t.parentId)||null):null;
-  return {cap,inReach,overdue,kids,roots,hits,rank,total,doneKids,parentOf};
+  return {cap,inReach,overdue,byId,kids,hits,rank,total,doneKids,parentOf,
+    open,openKids,isBracket,waiting,chainOf,inScope};
 }
 
-function fillTasks(box){
-  const m=taskModel();
-  /* Ein Treffer zieht seine Eltern mit. Ohne die Kette stünde ein Schritt
-     ohne das, wozu er gehört — und genau das soll der Baum zeigen. */
-  const keep=new Set(),seen=new Set();
-  const mark=t=>{
-    if(seen.has(t.id)) return false;
-    seen.add(t.id);
-    let below=false;
-    for(const c of m.kids.get(t.id)||[]) if(mark(c)) below=true;
-    const ok=m.hits(t)||below;
-    if(ok) keep.add(t.id);
-    return ok;
-  };
-  m.roots.forEach(mark);
+/* ── Gruppen ─────────────────────────────────────────────────────────
+   Eine Achse, nicht zwei. „In Reichweite" und „Nicht in Reichweite" sind
+   Aussagen über die Kapazität von heute; „läuft" und „wartet" darüber, ob
+   überhaupt angefangen werden kann. „Zerlegt" stand hier einmal daneben und
+   war der Fehler: Das ist eine bauliche Tatsache, keine Position auf dieser
+   Achse — und eine Aufgabe stand dann entweder zweimal da oder einmal
+   falsch. Die zerlegten Aufgaben stehen jetzt als Klammern über dem Board.
 
-  /* Ein Elternteil rückt dorthin, wo sein bester Schritt steht: Sonst
-     rutschte die zerlegte Aufgabe ans Ende und ihr startbarer erster
-     Schritt mit ihr. */
-  const best=new Map();
-  const bestOf=t=>{
-    if(best.has(t.id)) return best.get(t.id);
-    best.set(t.id,m.rank(t));
-    let r=m.rank(t);
-    for(const c of m.kids.get(t.id)||[]) r=Math.min(r,bestOf(c));
-    best.set(t.id,r);
-    return r;
-  };
-  const order=(a,b)=>bestOf(a)-bestOf(b)||a.activationEnergy-b.activationEnergy
+   Jede Aufgabe steht in genau einer Gruppe, entschieden in dieser
+   Reihenfolge: Was läuft, läuft. Was auf etwas anderes wartet, wartet. Über
+   den Rest entscheidet die Kapazität. */
+const GROUPS=[
+  {key:'run',label:'Läuft',color:'var(--calm)'},
+  {key:'reach',label:'In Reichweite',color:'var(--signal)'},
+  {key:'far',label:'Nicht in Reichweite',color:'var(--rule)'},
+  // Erscheint erst, wenn etwas wartet. Eine dauerhaft leere Spalte ist
+  // Fläche ohne Aussage — und der Server liefert `waiting` gerade erst.
+  {key:'wait',label:'Wartet',color:'var(--info)',onlyIfFull:true},
+  // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
+  // Gruppe erscheint nur, wenn derselbe Filter sie auch sonst zeigt.
+  {key:'done',label:'Erledigt',color:'var(--faint)'}];
+
+function groupOf(t,m){
+  if(t.state==='done') return 'done';
+  if(t.state==='active') return 'run';
+  if(m.waiting(t)) return 'wait';
+  return (t.state==='ready'&&m.inReach(t))?'reach':'far';
+}
+
+function groupedTasks(m){
+  const map=new Map(GROUPS.map(g=>[g.key,[]]));
+  let shown=0;
+  for(const t of tasks){
+    // Klammern stehen in der Leiste, nicht im Bestand: Sonst stünde die
+    // zerlegte Aufgabe neben ihren eigenen Schritten zur Wahl, und genau
+    // diese Doppelung löst das Zerlegen ja auf.
+    if(!m.hits(t)||m.isBracket(t)) continue;
+    map.get(groupOf(t,m)).push(t);
+    shown++;
+  }
+  // Dieselbe Rangfolge wie überall: erst was läuft, dann was in Reichweite
+  // ist, bei Gleichstand der leichtere Anfang. Keine zweite Ordnung.
+  const order=(a,b)=>m.rank(a)-m.rank(b)||a.activationEnergy-b.activationEnergy
     ||String(a.title).localeCompare(String(b.title),'de');
+  for(const list of map.values()) list.sort(order);
+  return {map,shown};
+}
+/* Im Board bleibt eine leere Gruppe stehen: „In Reichweite: 0" ist dort die
+   Antwort auf die Frage, wegen der man hinsieht. In der Liste wäre sie ein
+   Band ohne Inhalt, an dem man vorbeiscrollt — eine Liste zeigt, was da
+   ist. */
+function visibleGroups(map,asColumns){
+  return GROUPS.filter(g=>{
+    const count=map.get(g.key).length;
+    if(g.key==='done') return tprefs.done&&(asColumns||count>0);
+    if(g.onlyIfFull) return count>0;
+    return asColumns||count>0;
+  });
+}
 
-  const out=document.createDocumentFragment();
-  const drawn=new Set();
-  const emit=(t,depth)=>{
-    if(!keep.has(t.id)||drawn.has(t.id)) return;
-    drawn.add(t.id);
-    out.append(taskRow(t,m,depth));
-    for(const c of (m.kids.get(t.id)||[]).slice().sort(order)) emit(c,depth+1);
-  };
-  for(const t of m.roots.slice().sort(order)) emit(t,0);
+function groupBlock(g,list,m,asColumn){
+  const open=!shut[g.key];
+  const band=el('button',{class:'gband','aria-expanded':open?'true':'false',
+    onclick:()=>{shut[g.key]=open;redrawTasks()}},
+    el('span',{class:'caret'}),
+    el('span',{class:'gname'},g.label),
+    el('span',{class:'gcount mono'},String(list.length)));
+  const body=!open?null:asColumn
+    ?el('div',{class:'cards'},list.length?list.map(t=>boardCard(t,m)):el('p',{class:'empty'},'—'))
+    :el('div',{class:'rows'},list.length?list.map(t=>taskRow(t,m)):el('p',{class:'empty'},'—'));
+  return el('div',{class:'group'+(open?'':' shut'),role:'group',
+    'aria-label':g.label+': '+list.length,style:'--group:'+g.color},
+    band,body,
+    open?el('button',{class:'gadd',onclick:()=>taskDialog()},'+ Aufgabe'):null);
+}
 
-  if(!tasks.length) out.append(emptyStock());
-  else if(!keep.size) out.append(...noMatch());
-  put(box,out);
+/* ── Klammerleiste ───────────────────────────────────────────────────
+   Gezeigt wird, was offene Schritte hat. Eine abgearbeitete Klammer
+   verschwindet von selbst — sonst wächst die Leiste zu und wird selbst zur
+   Pflege (D3). Der Fortschritt steht daneben, weil „2/5" die Frage
+   beantwortet, für die man sonst hineinklickt. */
+function bracketsIn(m){
+  return tasks.filter(t=>m.isBracket(t)&&m.inScope(t))
+    .sort((a,b)=>String(a.title).localeCompare(String(b.title),'de'));
+}
+function bracketChip(t,m,pressed){
+  return el('button',{class:'brk','aria-pressed':pressed?'true':'false',
+    onclick:()=>chooseBracket(t.id)},
+    t.title,el('span',{class:'num'},m.doneKids(t)+'/'+m.total(t)));
+}
+function fillBrackets(box,m){
+  const list=bracketsIn(m);
+  const chosen=bracket?m.byId.get(bracket):null;
+  // Ohne Klammern keine Leiste: eine Zeile, die immer „Alles" sagt, sagt
+  // nichts.
+  if(!list.length&&!chosen){put(box);return}
+  const kids=[];
+  if(chosen){
+    // Brotkrumen statt einer Ebene: Zerlegen geht beliebig tief, und wer
+    // drei Ebenen unten steht, muss zurückfinden, ohne zurückzuraten.
+    const path=[...m.chainOf(chosen),chosen];
+    kids.push(el('div',{class:'crumb'},
+      el('button',{class:'brk',onclick:()=>chooseBracket(null)},'Alles'),
+      path.map((p,i)=>[el('span',{class:'sep'},'›'),
+        bracketChip(p,m,i===path.length-1)])));
+  }else{
+    kids.push(el('button',{class:'brk','aria-pressed':'true',
+      onclick:()=>chooseBracket(null)},'Alles'));
+  }
+  for(const t of list) kids.push(bracketChip(t,m,false));
+  put(box,el('div',{class:'brackets'},kids));
+}
+
+/* Die gewählte Klammer bekommt eine eigene Kopfzeile mit ihren eigenen
+   Handlungen. Vorher war sie der eine Punkt, an den man nicht herankam:
+   Als Karte stand sie zwischen ihren Schritten, gefiltert stand sie
+   nirgends. */
+function fillHead(box,m){
+  const t=bracket?m.byId.get(bracket):null;
+  if(!t){put(box);return}
+  put(box,el('div',{class:'bhead'},
+    el('div',{class:'eyebrow'},'GEWÄHLTE KLAMMER'),
+    el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
+    el('div',{class:'cells'},cellsOf(t,m),
+      el('span',{class:'cell'},'SCHRITTE '+m.doneKids(t)+' VON '+m.total(t))),
+    el('div',{class:'acts'},taskActions(t,m),
+      el('button',{class:'btn quiet',onclick:()=>taskSheet(t.id)},'Details'))));
+}
+
+function fillTasks(box,m){
+  m=m||taskModel();
+  if(!tasks.length){put(box,emptyStock());return}
+  const {map,shown}=groupedTasks(m);
+  if(!shown){put(box,noMatch());return}
+  put(box,visibleGroups(map,false).map(g=>groupBlock(g,map.get(g.key),m,false)));
+}
+
+function fillBoard(box,m){
+  m=m||taskModel();
+  const {map,shown}=groupedTasks(m);
+  box.classList.toggle('flat',!tasks.length||!shown);
+  if(!tasks.length){put(box,emptyStock());return}
+  if(!shown){put(box,noMatch());return}
+  put(box,visibleGroups(map,true).map(g=>groupBlock(g,map.get(g.key),m,true)));
 }
 
 const emptyStock=()=>el('p',{},
   'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.');
-const noMatch=()=>[el('p',{},'Nichts passt zu dieser Auswahl.'),
+const noMatch=()=>[
+  el('p',{},bracket
+    ?'In dieser Klammer ist gerade nichts offen.'
+    :'Nichts passt zu dieser Auswahl.'),
   el('div',{class:'row'},el('button',{class:'btn quiet',onclick:()=>{
     setTPref('q','');setTPref('reach',false);setTPref('overdue',false);setTPref('done',false);
-    render();
+    bracket=null;render();
   }},'Filter zurücksetzen'))];
 
 /* Vier Stufen, abgeleitet aus einem Abstand — nicht aus einer Meinung über
@@ -948,147 +1222,247 @@ function dueRamp(t){
   return hours<0?'over':hours<24?'day':hours<72?'days':null;
 }
 const expires=t=>!!t.decayAt&&t.state!=='done'&&t.state!=='dropped';
-/* Aus demselben Grund steht an etwas Erledigtem keine Frist mehr:
-   „ÜBERFÄLLIG" an etwas, das getan ist, wäre ein Vorwurf für nichts (R7). */
-const dueChip=t=>expires(t)?el('span',{class:'due'},dueLabel(t.decayAt)):null;
+
+/* Die Werte einer Aufgabe, in immer derselben Reihenfolge und in immer
+   derselben Form — daran hängt, dass die Spalten senkrecht fluchten. Gefüllt
+   ist nur, was eine Messung trägt: Startenergie und Frist. Der Rest bleibt
+   Beschriftung. */
+function cellsOf(t,m){
+  return [
+    el('span',{class:'pill ae'},'START '+t.activationEnergy+'/10'),
+    el('span',{class:'cell'},'SOG '+t.salience),
+    el('span',{class:'cell'},'FOLGEN '+t.stakes),
+    /* Aus demselben Grund steht an etwas Erledigtem keine Frist mehr:
+       „ÜBERFÄLLIG" an etwas, das getan ist, wäre ein Vorwurf für nichts. */
+    expires(t)?el('span',{class:'pill due','data-due':dueRamp(t)},dueLabel(t.decayAt)):null,
+    t.place?el('span',{class:'cell'},'ORT '+String(t.place).toUpperCase()):null,
+    m.waiting(t)?el('span',{class:'cell'},
+      t.blockedByCount?('WARTET AUF '+t.blockedByCount):'WARTET'):null];
+}
 
 /* Welche Handlungen offenstehen, hängt am Zustand und sonst nichts —
-   dieselbe Liste in Liste und Board, sonst böte dieselbe Aufgabe je nach
-   Reiter etwas anderes an. Und dieselbe Liste wie auf dem Telefon
-   (tasks_screen.dart), sonst kann man im Browser etwas nicht, was dort
-   geht — der teuerste Unterschied, weil man ihn für einen Fehler hält.
+   dieselbe Liste in Liste, Board und Detailansicht, sonst böte dieselbe
+   Aufgabe je nach Ort etwas anderes an. Und dieselbe Liste wie auf dem
+   Telefon (tasks_screen.dart), sonst kann man im Browser etwas nicht, was
+   dort geht — der teuerste Unterschied, weil man ihn für einen Fehler hält.
 
    Zerlegen hängt an jeder offenen Zeile, auf jeder Ebene: auch an einem
    Teilschritt, der sich als immer noch zu groß herausstellt, und auch an
-   einer Aufgabe, die schon zerlegt ist — dann kommen Schritte hinzu. Die
+   einer Klammer, die schon Schritte hat — dann kommen welche hinzu. Die
    Hürde liegt am Anfang, und wo sie liegt, weiß nur der Nutzer [D2].
 
-   Nur „Anfangen" fehlt der zerlegten Aufgabe: Sie ist durch ihre Schritte
-   vertreten, und sie neben ihnen zur Wahl zu stellen wäre genau die
-   Doppelung, die das Zerlegen auflöst. */
-function taskActions(t){
+   Nur „Anfangen" fehlt der Klammer: Sie ist durch ihre Schritte vertreten,
+   und sie neben ihnen zur Wahl zu stellen wäre genau die Doppelung, die das
+   Zerlegen auflöst. */
+function taskActions(t,m,after){
   if(t.state==='done'||t.state==='dropped') return [];
+  const go=fn=>()=>{if(after) after();fn()};
   const split=el('button',{class:'btn quiet',
-    onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen');
+    onclick:go(()=>atomizeDialog({taskId:t.id,title:t.title}))},'Zerlegen');
+  const complete=el('button',{class:'btn',onclick:go(()=>act(t.id,'complete'))},'Erledigt');
   if(t.state==='active') return [
-    el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
-    el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen'),split];
-  if(t.state==='blocked') return [
-    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),split];
+    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'complete'))},'Erledigt'),
+    el('button',{class:'btn',onclick:go(()=>act(t.id,'release'))},'Zurücklegen'),split];
+  if(t.state==='blocked'||(m&&m.isBracket(t))) return [complete,split];
   return [
-    el('button',{class:'btn primary',onclick:()=>act(t.id,'start')},'Anfangen'),
-    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),split];
+    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'start'))},'Anfangen'),
+    complete,split];
 }
 
-function taskRow(t,m,depth){
-  const cls=['item'];
+function taskRow(t,m){
+  const cls=['trow'];
   if(t.state==='active') cls.push('run');
   if(t.state==='done') cls.push('done');
-  const total=m.total(t);
-  return el('div',{class:cls.join(' '),'data-due':dueRamp(t),
-    style:'--depth:'+Math.min(depth,6)},
-    el('span',{class:'bar'}),
-    el('div',{},el('div',{class:'title'},t.title),
-      el('div',{class:'meta'},
-        el('span',{},'START '+t.activationEnergy+'/10'),
-        el('span',{},'SOG '+t.salience),
-        el('span',{},'FOLGEN '+t.stakes),
-        dueChip(t),
-        total?el('span',{},'TEILSCHRITTE '+m.doneKids(t)+' VON '+total):null,
-        t.state==='ready'&&!m.inReach(t)?el('span',{},'NICHT IN REICHWEITE'):null)),
-    el('div',{class:'acts'},taskActions(t)));
-}
-
-/* ── Board ───────────────────────────────────────────────────────────
-   Spalten sind Zustände, keine Wertungen: „Nicht in Reichweite" heißt, dass
-   die Aufgabe heute mehr Anlauf braucht als da ist — nicht, dass mit ihr
-   oder mit jemandem etwas nicht stimmt (R7). Deshalb trägt der Kopf die
-   Farbe der Gruppe und die Karte nur den Abstand zur Frist; eine rot
-   markierte Aufgabe wäre ein Vorwurf, den man beim Draufsehen mitliest.
-
-   Jede Aufgabe steht in genau einer Spalte, entschieden in dieser
-   Reihenfolge: Was läuft, läuft. Was Teilschritte hat, ist zerlegt — die
-   Schritte selbst stehen daneben, jeder für sich. Über den Rest entscheidet
-   die Kapazität von heute. */
-const BOARD_GROUPS=[
-  {key:'reach',label:'In Reichweite',color:'var(--signal)'},
-  {key:'run',label:'Läuft',color:'var(--calm)'},
-  {key:'split',label:'Zerlegt',color:'var(--info)'},
-  {key:'far',label:'Nicht in Reichweite',color:'var(--rule)'},
-  // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
-  // Spalte erscheint nur, wenn derselbe Filter sie auch in der Liste zeigt.
-  {key:'done',label:'Erledigt',color:'var(--faint)'}];
-
-function boardGroup(t,m){
-  if(t.state==='done') return 'done';
-  if(t.state==='active') return 'run';
-  if(m.total(t)>0) return 'split';
-  return (t.state==='ready'&&m.inReach(t))?'reach':'far';
-}
-
-function viewBoard(){
-  const frag=document.createDocumentFragment();
-  const box=el('div',{id:'board',class:'board'});
-  frag.append(taskFilters(),box);
-  fillBoard(box);
-  return frag;
-}
-
-function fillBoard(box){
-  const m=taskModel();
-  const columns=new Map(BOARD_GROUPS.map(g=>[g.key,[]]));
-  let shown=0;
-  for(const t of tasks){
-    if(!m.hits(t)) continue;
-    columns.get(boardGroup(t,m)).push(t);
-    shown++;
-  }
-  // Ohne den Baum entscheidet dieselbe Rangfolge wie in der Liste: erst
-  // was läuft, dann was in Reichweite ist, bei Gleichstand der leichtere
-  // Anfang. Keine zweite Ordnung — die Reihung gehört der Auswahl.
-  const order=(a,b)=>m.rank(a)-m.rank(b)||a.activationEnergy-b.activationEnergy
-    ||String(a.title).localeCompare(String(b.title),'de');
-
-  box.classList.toggle('flat',!tasks.length||!shown);
-  if(!tasks.length){put(box,emptyStock());return}
-  if(!shown){put(box,noMatch());return}
-
-  const out=document.createDocumentFragment();
-  for(const g of BOARD_GROUPS){
-    if(g.key==='done'&&!tprefs.done) continue;
-    const list=columns.get(g.key);
-    out.append(el('div',{class:'col',role:'group',style:'--group:'+g.color,
-      'aria-label':g.label+': '+list.length},
-      el('div',{class:'ghead'},
-        el('span',{class:'gname'},g.label),
-        el('span',{class:'gcount mono'},String(list.length))),
-      list.length
-        ?list.sort(order).map(t=>boardCard(t,m))
-        :el('p',{class:'empty'},'—')));
-  }
-  put(box,out);
+  const parent=m.parentOf(t);
+  return el('div',{class:cls.join(' ')},
+    el('div',{},
+      el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
+      /* Der Bezug bleibt erkennbar, ohne den Baum nachzubauen: Ohne diese
+         Zeile stünde ein Schritt da, ohne dass zu sehen wäre, wozu er
+         gehört. */
+      parent?el('span',{class:'kin'},'Teilschritt von '+parent.title):null),
+    el('div',{class:'cells'},cellsOf(t,m)),
+    el('div',{class:'acts'},taskActions(t,m)));
 }
 
 function boardCard(t,m){
   const cls=['card'];
+  if(t.state==='active') cls.push('run');
   if(t.state==='done') cls.push('done');
-  const parent=m.parentOf(t),total=m.total(t);
-  /* Der Bezug bleibt erkennbar, ohne den Baum nachzubauen: Die Liste zeigt
-     ihn als Einrückung, hier genügt ein Satz. Ohne ihn stünde ein Schritt
-     auf einer Karte, ohne dass zu sehen wäre, wozu er gehört. */
-  const kin=[];
-  if(parent) kin.push('Teilschritt von '+parent.title);
-  if(total) kin.push('Teilschritte '+m.doneKids(t)+' von '+total);
-  const acts=taskActions(t);
+  const parent=m.parentOf(t);
+  const acts=taskActions(t,m);
   return el('div',{class:cls.join(' '),'data-due':dueRamp(t)},
-    kin.length?el('span',{class:'kin'},kin.join(' · ')):null,
-    el('div',{class:'title'},t.title),
-    el('div',{class:'meta'},
-      el('span',{},'START '+t.activationEnergy+'/10'),
-      el('span',{},'SOG '+t.salience),
-      el('span',{},'FOLGEN '+t.stakes),
-      dueChip(t)),
+    parent?el('span',{class:'kin'},'Teilschritt von '+parent.title):null,
+    el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
+    el('div',{class:'cells'},cellsOf(t,m)),
     acts.length?el('div',{class:'acts'},acts):null);
+}
+
+/* ── Detailansicht ───────────────────────────────────────────────────
+   Der Ort, an dem eine Aufgabe vollständig existiert: alle Felder, der Baum
+   in beide Richtungen, die Blocker in beide Richtungen, der Ereignisstrom
+   und sämtliche Handlungen. Liste und Board zeigen Bestand; hier steht der
+   Zusammenhang.
+
+   Sie geht sofort auf, mit dem, was ohnehin geladen ist, und ergänzt sich,
+   sobald der Server geantwortet hat. Kennt er die Route nicht, bleibt
+   stehen, was da ist, und darüber ein Satz, was fehlt — eine Ansicht, die
+   bei einem 404 gar nicht erst aufgeht, ist die schlechtere Hälfte von
+   beidem. */
+let detailId=null,detailFull=null,detailError=null,detailNote=null;
+$('#dlg').addEventListener('close',()=>{
+  detailId=null;detailFull=null;detailError=null;detailNote=null;
+});
+
+async function taskSheet(id,keepNote){
+  detailId=id;detailFull=null;detailError=null;
+  if(!keepNote) detailNote=null;
+  paintDetail();
+  try{
+    const full=await api('/api/tasks/'+encodeURIComponent(id));
+    if(detailId!==id) return;
+    detailFull=full;
+  }catch(e){
+    if(detailId!==id) return;
+    detailError=e.message;
+  }
+  paintDetail();
+}
+
+function paintDetail(){
+  const id=detailId;
+  if(!id) return;
+  const m=taskModel();
+  const local=m.byId.get(id);
+  if(!local&&!detailFull){
+    sheet('Aufgabe',el('p',{},'Diese Aufgabe steht nicht mehr im Bestand.'),
+      [],'Schließen',{wide:true,focus:false});
+    return;
+  }
+  const t=Object.assign({},local||{},detailFull||{});
+  const close=()=>$('#dlg').close();
+  const body=el('div',{class:'sheet'},
+    el('div',{class:'cells'},cellsOf(t,m),
+      el('span',{class:'cell'},m.inReach(t)?'IN REICHWEITE':'NICHT IN REICHWEITE')),
+    detailError?el('p',{class:'why'},
+      'Blocker und Ereignisstrom liefert dieser Server nicht — was hier steht, kommt aus dem Bestand.',
+      el('span',{class:'mono',style:'display:block;font-size:.78rem;margin-top:.3rem'},detailError)):null,
+    treeSection(t,m),
+    blockerSection(t,m),
+    eventSection());
+  sheet(t.title||'Aufgabe',body,taskActions(t,m,close),'Schließen',
+    {wide:true,focus:false});
+}
+
+/* Kette nach oben, Schritte darunter. Beide Richtungen anklickbar: Wer eine
+   Aufgabe offen hat, will von hier aus weiter und nicht zurück in die Liste
+   und wieder hinein. */
+function treeSection(t,m){
+  const parents=(detailFull&&detailFull.parents)||m.chainOf(t);
+  const children=(detailFull&&detailFull.children)||m.kids.get(t.id)||[];
+  if(!parents.length&&!children.length) return null;
+  return section('Baum',
+    parents.length?el('div',{class:'crumb'},
+      parents.map((p,i)=>[i?el('span',{class:'sep'},'›'):null,
+        el('button',{class:'brk',onclick:()=>taskSheet(p.id)},p.title)])):null,
+    children.length?el('div',{class:'tree'},
+      children.map(c=>el('button',{class:'node'+(c.state==='done'?' done':''),
+        onclick:()=>taskSheet(c.id)},
+        c.title,
+        c.activationEnergy?el('span',{class:'cell'},'START '+c.activationEnergy+'/10'):null))):null,
+    children.length?null:el('p',{class:'faint'},'Keine Schritte. Zerlegen legt welche an.'));
+}
+
+/* Blocker in beide Richtungen: „wartet auf" ist die Frage, warum hier nichts
+   geht; „hält auf" die Frage, warum es woanders nicht geht. Nur die zweite
+   erklärt, weshalb eine kleine Aufgabe vorgezogen gehört. */
+function blockerSection(t,m){
+  if(!detailFull) return null;
+  const before=detailFull.blockedBy||[],after=detailFull.blocks||[];
+  const known=new Set([...before,...after].map(x=>x.id));
+  const line=(x,drop)=>el('div',{class:'node'+(x.done||x.state==='done'?' done':'')},
+    el('button',{class:'tlink',onclick:()=>taskSheet(x.id)},x.title),
+    drop?el('button',{class:'drop',title:'Blocker entfernen',
+      onclick:()=>dropBlocker(t.id,x.id)},'Entfernen'):null);
+  return section('Blocker',
+    el('div',{class:'eyebrow'},'WARTET AUF'),
+    before.length?el('div',{class:'tree'},before.map(x=>line(x,true)))
+      :el('p',{class:'faint'},'Nichts.'),
+    el('div',{class:'eyebrow',style:'margin-top:.6rem'},'HÄLT AUF'),
+    after.length?el('div',{class:'tree'},after.map(x=>line(x,false)))
+      :el('p',{class:'faint'},'Nichts.'),
+    blockerPicker(t.id,known),
+    cycleBox(m));
+}
+
+function blockerPicker(id,known){
+  const out=el('div',{class:'picks'});
+  const input=el('input',{type:'search',placeholder:'Wartet auf … (Aufgabe suchen)',
+    'aria-label':'Blocker suchen'});
+  const fill=()=>{
+    const q=input.value.trim().toLowerCase();
+    const list=tasks.filter(x=>x.id!==id&&x.state!=='done'&&x.state!=='dropped'
+      &&!known.has(x.id)&&(!q||String(x.title||'').toLowerCase().includes(q)))
+      .slice(0,8);
+    put(out,list.length
+      ?list.map(x=>el('button',{class:'btn',onclick:()=>addBlocker(id,x.id)},x.title))
+      :el('p',{class:'faint'},'Nichts gefunden.'));
+  };
+  input.addEventListener('input',fill);
+  fill();
+  return el('div',{style:'margin-top:.7rem'},input,out);
+}
+
+async function addBlocker(id,blockerId){
+  try{
+    await api('/api/tasks/'+encodeURIComponent(id)+'/blockers',
+      {method:'POST',body:JSON.stringify({blockerId})});
+    detailNote=null;
+    await reload();
+    await taskSheet(id);
+  }catch(e){
+    const path=e.data&&Array.isArray(e.data.path)?e.data.path:null;
+    detailNote=(path&&path.length)?{path}:{text:e.message};
+    paintDetail();
+  }
+}
+async function dropBlocker(id,blockerId){
+  try{
+    await api('/api/tasks/'+encodeURIComponent(id)+'/blockers/'+encodeURIComponent(blockerId),
+      {method:'DELETE'});
+    detailNote=null;
+    await reload();
+    await taskSheet(id);
+  }catch(e){detailNote={text:e.message};paintDetail()}
+}
+
+/* Der Kreis wird gezeigt, nicht bloß abgelehnt. „Geht nicht" ohne Grund ist
+   in diesem System der teuerste Fehlermodus: Man probiert es dreimal und
+   hält danach das Werkzeug für kaputt. */
+function cycleBox(m){
+  if(!detailNote) return null;
+  if(!detailNote.path) return el('div',{class:'cycle'},el('p',{},detailNote.text));
+  return el('div',{class:'cycle'},
+    el('p',{},'Das schlösse einen Kreis. Jede dieser Aufgaben wartete am Ende auf sich selbst, und dann gibt es keine, mit der angefangen werden kann.'),
+    el('p',{class:'path'},detailNote.path.map(p=>{
+      if(p&&typeof p==='object') return String(p.title||p.id||'');
+      const t=m.byId.get(p);
+      return t?t.title:String(p);
+    }).join(' → ')));
+}
+
+function eventSection(){
+  if(!detailFull) return null;
+  const events=detailFull.events||[];
+  return section('Ereignisse',
+    events.length?events.slice(0,60).map(e=>el('div',{class:'ev'},
+      el('span',{class:'t'},new Date(e.at).toLocaleString('de',
+        {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
+      el('span',{class:'k'},e.type),
+      el('span',{class:'p',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))))
+      :el('p',{class:'faint'},'Noch nichts geschehen.'),
+    el('p',{class:'faint',style:'margin-top:.4rem'},
+      'Nur lesend. Eine Korrektur ist ein neues Ereignis.'));
 }
 
 function viewInbox(){
@@ -1489,15 +1863,23 @@ function mdLink(target,label){
 }
 /* ── Hilfe: Darsteller — Ende ─────────────────────────────────────── */
 
-/* ── Blätter ─────────────────────────────────────────────────────── */
-function sheet(title,body,actions,closeLabel){
+/* ── Blätter ─────────────────────────────────────────────────────────
+   `showModal` wirft, wenn das Blatt schon offen ist. Die Detailansicht
+   zeichnet sich aber neu, sobald der Server geantwortet hat — deshalb wird
+   nur geöffnet, was noch zu ist, und der Fokus nur gesetzt, wo ein Blatt
+   zum Ausfüllen da ist. In einer Ansicht mit Suchfeld spränge der Cursor
+   sonst bei jeder Antwort dorthin zurück. */
+function sheet(title,body,actions,closeLabel,opts){
   const d=$('#dlg');
+  d.className=(opts&&opts.wide)?'wide':'';
   put(d,el('h2',{},title),body,
     el('div',{class:'row'},...actions,
       el('button',{class:'btn quiet',onclick:()=>d.close()},closeLabel||'Abbrechen')));
-  d.showModal();
-  const first=d.querySelector('input,textarea');
-  if(first) setTimeout(()=>first.focus(),30);
+  if(!d.open) d.showModal();
+  if(!opts||opts.focus!==false){
+    const first=d.querySelector('input,textarea');
+    if(first) setTimeout(()=>first.focus(),30);
+  }
   return d;
 }
 function dial(label,hint,low,high,value,min=1,max=5){

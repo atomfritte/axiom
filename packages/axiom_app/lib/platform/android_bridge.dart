@@ -47,18 +47,18 @@ final class PlatformOutcome {
 /// Benachrichtigung stumm auf der Übersicht landet — funktionierend genug,
 /// um nicht aufzufallen.
 abstract final class AxiomRoute {
-  static const capture = 'de.axiom.CAPTURE';
-  static const checkin = 'de.axiom.CHECKIN';
-  static const focus = 'de.axiom.FOCUS';
-  static const sensation = 'de.axiom.SENSATION';
-  static const anchors = 'de.axiom.ANCHORS';
-  static const review = 'de.axiom.REVIEW';
-  static const body = 'de.axiom.BODY';
-  static const inbox = 'de.axiom.INBOX';
+  static const capture = 'de.atomfritte.axiom.CAPTURE';
+  static const checkin = 'de.atomfritte.axiom.CHECKIN';
+  static const focus = 'de.atomfritte.axiom.FOCUS';
+  static const sensation = 'de.atomfritte.axiom.SENSATION';
+  static const anchors = 'de.atomfritte.axiom.ANCHORS';
+  static const review = 'de.atomfritte.axiom.REVIEW';
+  static const body = 'de.atomfritte.axiom.BODY';
+  static const inbox = 'de.atomfritte.axiom.INBOX';
 }
 
 abstract final class AndroidBridge {
-  static const _channel = MethodChannel('de.axiom/system');
+  static const _channel = MethodChannel('de.atomfritte.axiom/system');
 
   // ── Texte der Systemseite ─────────────────────────────────────────────
 
@@ -460,10 +460,10 @@ abstract final class AndroidBridge {
   static Future<void> broadcast(String action) =>
       _invoke('broadcast', {'action': action});
 
-  static Future<void> focusStart() => broadcast('axiom.FOCUS_START');
-  static Future<void> focusEnd() => broadcast('axiom.FOCUS_END');
-  static Future<void> windDown() => broadcast('axiom.WINDDOWN');
-  static Future<void> enterMaintenanceMode() => broadcast('axiom.L3_ENTER');
+  static Future<void> focusStart() => broadcast('de.atomfritte.axiom.FOCUS_START');
+  static Future<void> focusEnd() => broadcast('de.atomfritte.axiom.FOCUS_END');
+  static Future<void> windDown() => broadcast('de.atomfritte.axiom.WINDDOWN');
+  static Future<void> enterMaintenanceMode() => broadcast('de.atomfritte.axiom.L3_ENTER');
 
   // ── S-Pen / Samsung Notes ─────────────────────────────────────────────
 
@@ -496,7 +496,7 @@ abstract final class AndroidBridge {
 
   // ── Ort (D2) ──────────────────────────────────────────────────────────
 
-  /// Ortswechsel, die eine Geräteroutine über `de.axiom.PLACE` geschickt hat.
+  /// Ortswechsel, die eine Geräteroutine über `de.atomfritte.axiom.PLACE` geschickt hat.
   ///
   /// Der Empfänger läuft auch, wenn die App nicht läuft; er kann aber nicht
   /// an die verschlüsselte Datenbank. Deshalb dieselbe Ablage wie bei den

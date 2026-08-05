@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -43,8 +43,8 @@ class LiveSlotService : Service() {
         const val CHANNEL = "axiom_live"
         const val NOTIFICATION_ID = 4712
 
-        const val ACTION_START = "de.axiom.LIVE_START"
-        const val ACTION_STOP = "de.axiom.LIVE_STOP"
+        const val ACTION_START = "de.atomfritte.axiom.LIVE_START"
+        const val ACTION_STOP = "de.atomfritte.axiom.LIVE_STOP"
 
         private const val PREFS = "axiom_live"
 
@@ -200,7 +200,7 @@ class LiveSlotService : Service() {
         val stop = PendingIntent.getActivity(
             this, 3,
             Intent(this, MainActivity::class.java)
-                .setAction(if (kind == "focus") "de.axiom.FOCUS" else "de.axiom.SENSATION")
+                .setAction(if (kind == "focus") "de.atomfritte.axiom.FOCUS" else "de.atomfritte.axiom.SENSATION")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

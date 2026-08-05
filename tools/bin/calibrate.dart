@@ -26,9 +26,9 @@ void main(List<String> args) {
     stderr.writeln('Aufruf: dart run tools/bin/calibrate.dart <axiom.db>');
     stderr.writeln('');
     stderr.writeln('Die Datenbank liegt auf dem Gerät unter');
-    stderr.writeln('  /data/data/de.axiom.axiom_app/files/axiom.db');
+    stderr.writeln('  /data/data/de.atomfritte.axiom/files/axiom.db');
     stderr.writeln('Holen mit:');
-    stderr.writeln('  adb exec-out run-as de.axiom.axiom_app '
+    stderr.writeln('  adb exec-out run-as de.atomfritte.axiom '
         'cat files/axiom.db > axiom.db');
     exit(2);
   }

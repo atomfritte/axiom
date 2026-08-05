@@ -35,7 +35,7 @@ class IntentHandler extends ConsumerStatefulWidget {
 
 class _IntentHandlerState extends ConsumerState<IntentHandler>
     with WidgetsBindingObserver {
-  static const _channel = MethodChannel('de.axiom/system');
+  static const _channel = MethodChannel('de.atomfritte.axiom/system');
   bool _handling = false;
 
   @override
@@ -102,7 +102,7 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       }
       if (stored > 0) await AndroidBridge.ackPendingMemos(stored);
 
-      // Ortswechsel aus Geräteroutinen (`de.axiom.PLACE`).
+      // Ortswechsel aus Geräteroutinen (`de.atomfritte.axiom.PLACE`).
       //
       // Mit dem Zeitstempel des Empfangs, nicht dem von jetzt: Der Wechsel
       // ist passiert, als die Routine ausgelöst hat. Mit der aktuellen Zeit
@@ -146,7 +146,7 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
           await _open(const ReviewScreen());
         case AxiomRoute.inbox:
           await _open(const InboxScreen());
-        case 'de.axiom.EXPERT_STOP':
+        case 'de.atomfritte.axiom.EXPERT_STOP':
           // Der Knopf auf der Benachrichtigung. Er oeffnet die App, weil der
           // Server im App-Prozess laeuft — ihn von aussen zu beenden hiesse,
           // den Prozess zu beenden, und das waere ein Absturz, kein Stopp.

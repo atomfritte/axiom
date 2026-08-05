@@ -220,7 +220,7 @@ werden alle drei getrennt geprüft und angezeigt.
 Sind sie erfüllt, meldet sich die Hauptansicht von selbst. Der Ablauf dann:
 
 ```bash
-adb exec-out run-as de.axiom.axiom_app cat files/axiom.db > axiom.db
+adb exec-out run-as de.atomfritte.axiom cat files/axiom.db > axiom.db
 dart run tools/bin/calibrate.dart axiom.db      # schreibt nichts, schlägt vor
 # Vorschläge im Wochen-Review prüfen, dann in rules/core/weights.yaml
 # eintragen und dort calibration.status auf calibrated setzen:

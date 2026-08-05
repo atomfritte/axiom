@@ -193,7 +193,7 @@ class _ReadyCard extends StatelessWidget {
   const _ReadyCard({required this.compact});
 
   static const _command =
-      'adb exec-out run-as de.axiom.axiom_app cat files/axiom.db > axiom.db\n'
+      'adb exec-out run-as de.atomfritte.axiom cat files/axiom.db > axiom.db\n'
       'dart run tools/bin/calibrate.dart axiom.db';
 
   @override

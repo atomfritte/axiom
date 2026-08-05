@@ -30,6 +30,17 @@ enum EventType {
   taskAbandoned,
   taskSplit,
 
+  /// „A blockiert B" wurde angelegt. Payload: `blocker_id`, `blocked_id`.
+  ///
+  /// Append-only wie alles: Eine Beziehung ist ein Ereignis, kein Feld, das
+  /// ueberschrieben wird. Ohne diese beiden Typen ueberlebte eine Beziehung
+  /// keinen Wiederaufbau der Projektionen — und genau das ist die Zusage,
+  /// die dieses System traegt (docs/03-DATENMODELL.md §6).
+  taskLinked,
+
+  /// Die Beziehung wurde wieder geloest. Gleiche Payload.
+  taskUnlinked,
+
   /// Ortswechsel. `payload['place']` traegt den Namen; fehlt er oder ist er
   /// leer, heisst das „kein Ort mehr gesetzt".
   ///

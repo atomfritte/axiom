@@ -230,6 +230,57 @@ void main() {
       final task = (await store.tasks()).firstWhere((t) => t.id == 'r1');
       expect(task.state, TaskState.ready);
     });
+
+    test('eine Blocker-Beziehung überlebt den Wiederaufbau', () async {
+      // Ohne die beiden Ereignistypen im Rebuild kaeme die wartende Aufgabe
+      // als startbar zurueck und wuerde vorgeschlagen, obwohl sie nicht
+      // geht. Ein Wiederaufbau, der den Zustand veraendert, ist die teuerste
+      // Art von Fehler in einem System, dessen Projektionen aus dem
+      // Ereignisstrom entstehen.
+      await store.append(evt(EventType.taskLinked,
+          payload: {'blocker_id': 'a', 'blocked_id': 'b'}));
+      await store.append(evt(EventType.taskLinked,
+          payload: {'blocker_id': 'a', 'blocked_id': 'c'}));
+
+      await store.rebuildProjections();
+      expect(
+        (await store.taskLinks()).map((l) => '${l.blockerId}>${l.blockedId}'),
+        ['a>b', 'a>c'],
+      );
+    });
+
+    test('eine gelöste Beziehung bleibt gelöst', () async {
+      // Append-only heisst: Das Loesen ist ein eigenes Ereignis, kein
+      // geloeschtes. Wuerde der Rebuild nur `task_linked` lesen, kaeme jede
+      // je geloeste Beziehung wieder zurueck.
+      await store.append(evt(EventType.taskLinked,
+          payload: {'blocker_id': 'a', 'blocked_id': 'b'}));
+      await store.append(evt(EventType.taskUnlinked,
+          payload: {'blocker_id': 'a', 'blocked_id': 'b'}));
+
+      await store.rebuildProjections();
+      expect(await store.taskLinks(), isEmpty);
+    });
+  });
+
+  group('Blocker-Beziehungen', () {
+    test('legt an, liest zurueck und loest wieder', () async {
+      await store.addTaskLink('a', 'b');
+      expect((await store.taskLinks()).single,
+          const TaskLink(blockerId: 'a', blockedId: 'b'));
+
+      expect(await store.removeTaskLink('a', 'b'), isTrue);
+      expect(await store.taskLinks(), isEmpty);
+      // Zweimal loesen ist kein Fehler — meldet aber, dass nichts geschah,
+      // damit der Aufrufer kein Ereignis fuer nichts schreibt.
+      expect(await store.removeTaskLink('a', 'b'), isFalse);
+    });
+
+    test('dieselbe Beziehung zweimal bleibt eine', () async {
+      await store.addTaskLink('a', 'b');
+      await store.addTaskLink('a', 'b');
+      expect(await store.taskLinks(), hasLength(1));
+    });
   });
 
   group('Freigegebene Browser', () {

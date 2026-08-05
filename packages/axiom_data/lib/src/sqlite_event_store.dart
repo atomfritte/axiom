@@ -28,7 +28,11 @@ import 'package:sqlite3/sqlite3.dart';
 /// v7: `tasks.place` — Ortsbindung als frei vergebener Name. Der aktuelle
 ///     Ort selbst braucht keine Spalte: Er ist die Projektion des letzten
 ///     `place_entered`-Events.
-const int kSchemaVersion = 8;
+/// v8: `trusted_browsers` — von Hand freigegebene Browser, als Hash.
+/// v9: `task_links` — „A blockiert B". Eigene Tabelle statt Spalte in
+///     `tasks`: Die Beziehung gehoert keiner der beiden Aufgaben, und ein
+///     Listenfeld muesste jede Abfrage mitladen.
+const int kSchemaVersion = 9;
 
 final class SqliteEventStore implements EventStore {
   final Database _db;
@@ -345,6 +349,28 @@ final class SqliteEventStore implements EventStore {
       ''');
     }
 
+    // Blocker-Beziehungen. Eigener Block, wie jede Version davor.
+    //
+    // **Warum ohne Fremdschluessel.** `PRAGMA foreign_keys` steht auf ON, und
+    // eine Fremdschluesselbedingung waere hier zwar formal richtig, wuerde
+    // aber den Wiederaufbau aus dem Ereignisstrom brechen: Dort kommen die
+    // Kanten in Ereignisreihenfolge, und beim selektiven Neuaufbau einzelner
+    // Projektionen steht `tasks` nicht zwangslaeufig schon. Der Graph
+    // uebergeht Verweise ins Leere ohnehin (`TaskLinkGraph.from`) — eine
+    // Aufgabe wegen einer verwaisten Kante fuer immer warten zu lassen waere
+    // der schlimmere Fehler [D9].
+    if (current < 9) {
+      _db.execute('''
+        CREATE TABLE IF NOT EXISTS task_links (
+          blocker_id TEXT NOT NULL,
+          blocked_id TEXT NOT NULL,
+          PRIMARY KEY (blocker_id, blocked_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_links_blocked
+          ON task_links(blocked_id);
+      ''');
+    }
+
     _db.execute('PRAGMA user_version = $kSchemaVersion;');
   }
 
@@ -554,6 +580,45 @@ final class SqliteEventStore implements EventStore {
   Future<void> deleteTask(String id) async {
     _db.execute('DELETE FROM tasks WHERE id = ?', [id]);
   }
+
+  // ── Blocker-Beziehungen ───────────────────────────────────────────────
+  //
+  // Projektion wie `tasks`: Die Wahrheit steht im Ereignisstrom
+  // (`task_linked` / `task_unlinked`), diese Tabelle ist nur die schnelle
+  // Sicht darauf und wird von `rebuildProjections` vollstaendig neu gebaut.
+
+  /// Legt „[blockerId] blockiert [blockedId]" an. Doppelt schadet nicht.
+  ///
+  /// Die Kreispruefung liegt bewusst nicht hier, sondern im Kern
+  /// (`ensureAcyclic`): Sie ist eine reine Funktion und muss ohne Datenbank
+  /// testbar bleiben.
+  Future<void> addTaskLink(String blockerId, String blockedId) async {
+    _db.execute(
+      'INSERT INTO task_links (blocker_id, blocked_id) VALUES (?, ?) '
+      'ON CONFLICT(blocker_id, blocked_id) DO NOTHING',
+      [blockerId, blockedId],
+    );
+  }
+
+  /// Loest die Beziehung. Gibt zurueck, ob es sie ueberhaupt gab — der
+  /// Aufrufer schreibt sonst ein Ereignis fuer nichts.
+  Future<bool> removeTaskLink(String blockerId, String blockedId) async {
+    _db.execute(
+      'DELETE FROM task_links WHERE blocker_id = ? AND blocked_id = ?',
+      [blockerId, blockedId],
+    );
+    return _db.updatedRows > 0;
+  }
+
+  /// Alle Beziehungen, stabil sortiert.
+  Future<List<TaskLink>> taskLinks() async => _db
+      .select('SELECT blocker_id, blocked_id FROM task_links '
+          'ORDER BY blocker_id, blocked_id')
+      .map((r) => TaskLink(
+            blockerId: r['blocker_id'] as String,
+            blockedId: r['blocked_id'] as String,
+          ))
+      .toList();
 
   /// Anlagezeitpunkt je Aufgabe — der Atomizer braucht ihn, um liegen
   /// gebliebene Aufgaben zu erkennen.
@@ -784,6 +849,7 @@ final class SqliteEventStore implements EventStore {
   /// Muss denselben Zustand erzeugen — siehe Rebuild-Test.
   Future<void> rebuildProjections() async {
     _db.execute('DELETE FROM tasks');
+    _db.execute('DELETE FROM task_links');
     final events = await query(types: {
       EventType.taskCreated,
       EventType.taskStarted,
@@ -792,9 +858,27 @@ final class SqliteEventStore implements EventStore {
       // Ohne das kommt eine zerlegte Aufgabe als startbar zurueck, obwohl
       // ihre Teilschritte offen sind — und steht dann doppelt zur Wahl.
       EventType.taskSplit,
+      // Ohne die beiden ueberlebt eine Blocker-Beziehung keinen
+      // Wiederaufbau: Die wartende Aufgabe kaeme als startbar zurueck und
+      // wuerde vorgeschlagen, obwohl sie nicht geht.
+      EventType.taskLinked,
+      EventType.taskUnlinked,
     });
     final byId = <String, Task>{};
     for (final e in events) {
+      // Beziehungen tragen `blocker_id`/`blocked_id` statt `task_id` — die
+      // Waechterzeile weiter unten haette sie sonst stumm verworfen.
+      if (e.type == EventType.taskLinked || e.type == EventType.taskUnlinked) {
+        final blocker = e.payload['blocker_id'] as String?;
+        final blocked = e.payload['blocked_id'] as String?;
+        if (blocker == null || blocked == null) continue;
+        if (e.type == EventType.taskLinked) {
+          await addTaskLink(blocker, blocked);
+        } else {
+          await removeTaskLink(blocker, blocked);
+        }
+        continue;
+      }
       // taskSplit traegt kein `task_id`, sondern `parent_id` — die
       // Waechterzeile darunter haette es sonst stumm verworfen.
       if (e.type == EventType.taskSplit) {

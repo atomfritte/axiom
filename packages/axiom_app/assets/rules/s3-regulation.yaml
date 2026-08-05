@@ -151,7 +151,7 @@
       - not: { active_slot: { eq: focus } }
   then:
     action: notify
-    params: { ritual: winddown, broadcast: "axiom.WINDDOWN" }
+    params: { ritual: winddown, broadcast: "de.atomfritte.axiom.WINDDOWN" }
   priority: 70
   severity: nudge
   cooldown: { minutes: 720, max_per_day: 1 }

@@ -9,7 +9,7 @@
 /// nicht weiß, ob der Baumarkt offen hat.
 ///
 /// Stattdessen: ein Name. Gesetzt mit zwei Tipps hier, oder von einer
-/// Samsung-Routine über den Broadcast `de.axiom.PLACE` — „WLAN Büro
+/// Samsung-Routine über den Broadcast `de.atomfritte.axiom.PLACE` — „WLAN Büro
 /// verbunden" ist genauer als jeder Kreis und kostet keine Berechtigung. [D2]
 library;
 
@@ -123,7 +123,7 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
             ),
             const SizedBox(height: Space.md),
             Text(
-              context.t('Eine Geräteroutine kann das auch: Broadcast de.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.'),
+              context.t('Eine Geräteroutine kann das auch: Broadcast de.atomfritte.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.'),
               style: monoStyle(context, size: 11, color: p.inkFaint),
             ),
           ],

@@ -1,4 +1,4 @@
-package de.axiom.axiom_app
+package de.atomfritte.axiom
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -93,7 +93,7 @@ class AxiomWidgetProvider : AppWidgetProvider() {
                     PendingIntent.getActivity(
                         context, 1,
                         Intent(context, MainActivity::class.java)
-                            .setAction("de.axiom.CAPTURE")
+                            .setAction("de.atomfritte.axiom.CAPTURE")
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
