@@ -823,7 +823,16 @@ class _LeafCard extends StatelessWidget {
             _meaning(context,
                 RuleVocabulary.numeric(leaf.variable)?.meaning ?? ''),
             const SizedBox(height: Space.sm),
-            _OpAndNumber(leaf: leaf, onChanged: onChanged, max: 100),
+            // Grenzen aus dem Wortschatz statt fest 0..100: Sonst liesse sich
+            // „Stunden bis zur Frist" nicht ueber 100 stellen und „Rest nach
+            // dem Anlauf" gar nicht unter null — also genau dort nicht, wo
+            // die Variable etwas aussagt.
+            _OpAndNumber(
+              leaf: leaf,
+              onChanged: onChanged,
+              max: RuleVocabulary.numeric(leaf.variable)?.max.toInt() ?? 100,
+              min: RuleVocabulary.numeric(leaf.variable)?.min.toInt() ?? 0,
+            ),
           ],
         LeafKind.choice => [
             _Dropdown<String>(
@@ -872,6 +881,32 @@ class _LeafCard extends StatelessWidget {
                   ),
               ],
             ),
+            // Der Ort hat keine feste Werteliste — sie entsteht im Gebrauch.
+            // Ohne dieses Feld liesse sich im Editor nur „kein Ort" prüfen,
+            // und die Variable wäre ein Angebot, das nicht einlöst, was es
+            // verspricht.
+            if (RuleVocabulary.symbolic(leaf.variable)!.freeform) ...[
+              const SizedBox(height: Space.sm),
+              TextFormField(
+                key: ValueKey('freeform-${leaf.variable}'),
+                initialValue:
+                    RuleVocabulary.symbolic(leaf.variable)!
+                            .values
+                            .containsKey(leaf.symbol)
+                        ? ''
+                        : leaf.symbol,
+                decoration: InputDecoration(
+                  isDense: true,
+                  labelText: context.t('oder ein eigener Wert'),
+                ),
+                onChanged: (value) {
+                  final trimmed = value.trim();
+                  if (trimmed.isEmpty) return;
+                  leaf.symbol = trimmed;
+                  onChanged();
+                },
+              ),
+            ],
           ],
         LeafKind.timeRange => [
             Row(
@@ -939,11 +974,13 @@ class _OpAndNumber extends StatelessWidget {
   final DraftLeaf leaf;
   final VoidCallback onChanged;
   final int max;
+  final int min;
 
   const _OpAndNumber({
     required this.leaf,
     required this.onChanged,
     required this.max,
+    this.min = 0,
   });
 
   @override
@@ -966,6 +1003,7 @@ class _OpAndNumber extends StatelessWidget {
           _NumberField(
             value: leaf.number.toInt(),
             max: max,
+            min: min,
             onChanged: (value) {
               leaf.number = value;
               onChanged();
@@ -1015,12 +1053,17 @@ class _Dropdown<T> extends StatelessWidget {
 class _NumberField extends StatelessWidget {
   final int value;
   final int max;
+
+  /// Untergrenze. Negativ bei Variablen, die unter null gehen duerfen —
+  /// „Rest nach dem Anlauf" ist genau dann interessant, wenn er es tut.
+  final int min;
   final ValueChanged<int> onChanged;
 
   const _NumberField({
     required this.value,
     required this.max,
     required this.onChanged,
+    this.min = 0,
   });
 
   @override
@@ -1059,8 +1102,8 @@ class _NumberField extends StatelessWidget {
           ? 5
           : 1;
 
-  int _up() => (value + _stepSize).clamp(0, max);
-  int _down() => (value - _stepSize).clamp(0, max);
+  int _up() => (value + _stepSize).clamp(min, max);
+  int _down() => (value - _stepSize).clamp(min, max);
 }
 
 class _Step extends StatelessWidget {

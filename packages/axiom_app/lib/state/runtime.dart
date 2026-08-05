@@ -42,6 +42,20 @@ final class AxiomSnapshot {
   final LoadRegime regime;
   /// Soll auf professionelle Abklaerung hingewiesen werden? (R10)
   final bool suggestsReferral;
+
+  /// Der gerade gesetzte Ort, oder null.
+  ///
+  /// Kein Geofence und keine Standortberechtigung — ein Name, den der Nutzer
+  /// setzt oder eine Geraeteroutine schickt (`de.axiom.PLACE`). [D2]
+  final String? place;
+
+  /// Orte, die in diesem Bestand vorkommen — aus den Aufgaben und aus dem,
+  /// was schon einmal gesetzt war. Die Liste ergibt sich aus dem Gebrauch;
+  /// eine Ortsverwaltung gibt es bewusst nicht (D3).
+  final List<String> knownPlaces;
+
+  /// Die Aufgabe mit dem knappsten Vorlauf, samt Frist und Anlauf. [D4]
+  final ({Task task, Duration untilDue, Duration runway})? deadlinePressure;
   /// Zeitpunkt dieser Auswertung, lokal.
   ///
   /// Alles Zeitabhaengige rechnet hiergegen, nicht gegen `DateTime.now()`:
@@ -71,20 +85,36 @@ final class AxiomSnapshot {
       description: 'Die Kompensationslast liegt im gewohnten Bereich.',
     ),
     this.suggestsReferral = false,
+    this.place,
+    this.knownPlaces = const [],
+    this.deadlinePressure,
   });
   /// Aufgaben, die bei aktueller Kapazitaet startbar sind.
   ///
   /// Im Erhaltungsmodus zusaetzlich nach oben gedeckelt: Was jetzt
   /// vorgeschlagen wird, muss auch bei knapper Reserve tragbar sein (M9).
+  ///
+  /// Und am gesetzten Ort: Eine Aufgabe, die woanders hingehoert, ist hier
+  /// nicht startbar — sie vorzuschlagen hiesse, eine Handlung anzubieten, die
+  /// nicht geht (G1). Ohne gesetzten Ort aendert sich nichts.
   List<Task> get startable {
     final cap = regime.maxSuggestedEnergy;
     final ready = tasks
-        .where((t) => t.isStartable(state.capacity))
+        .where((t) => t.isStartable(state.capacity, atPlace: place))
         .where((t) => cap == null || t.activationEnergy <= cap)
         .toList()
       ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
     return ready;
   }
+
+  /// Offene Aufgaben, die nur der Ort zurueckhaelt.
+  ///
+  /// Sie verschwinden nicht — sie stehen mit ihrem Ort da. Ein Bestand, aus
+  /// dem etwas unbemerkt herausfaellt, wird nicht mehr geglaubt [D9].
+  List<Task> get elsewhere => tasks
+      .where((t) => t.state == TaskState.ready && !t.isHere(place))
+      .toList()
+    ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
   /// Laeuft gerade ein Fokusblock?
   bool get isFocusing => focus != null;
   List<Task> get inbox =>
@@ -205,7 +235,7 @@ final class AxiomRuntime {
     final derived = _deriver.derive(signals, clock.nowUtc());
     final tasks = await store.tasks();
     final metaUsed = await store.usageToday(clock.nowLocal());
-    final runtimeContext = await _buildRuntimeContext();
+    final runtimeContext = await _buildRuntimeContext(tasks: tasks);
     final ctx = StateEvalContext(
       state: derived.vector,
       clock: clock,
@@ -289,6 +319,9 @@ final class AxiomRuntime {
       activeIntercept: await store.activeRun(now),
       regime: regime,
       suggestsReferral: shouldSuggestReferral(regime.level),
+      place: runtimeContext.place,
+      knownPlaces: await knownPlaces(),
+      deadlinePressure: tightestDeadline(tasks, now),
     );
   }
   /// Zeit seit der letzten Koerper-Quittierung, fuer den Focus Governor.
@@ -296,7 +329,7 @@ final class AxiomRuntime {
     final minutes = ctx.minutesSinceByEvent['body_prompt'];
     return minutes == null ? null : Duration(minutes: minutes);
   }
-  Future<RuntimeContext> _buildRuntimeContext() async {
+  Future<RuntimeContext> _buildRuntimeContext({List<Task>? tasks}) async {
     final now = clock.nowUtc();
     final dayStart = DateTime(
       clock.nowLocal().year,
@@ -319,6 +352,8 @@ final class AxiomRuntime {
         (focusEnd == null || focusEnd.at.isBefore(focusStart.at));
     final slotRunning = slotEvent != null &&
         now.difference(slotEvent.at) < const Duration(minutes: 45);
+    final pressure =
+        tightestDeadline(tasks ?? await store.tasks(), clock.nowLocal());
     return RuntimeContext(
       activeSlot: focusRunning
           ? 'focus'
@@ -331,7 +366,72 @@ final class AxiomRuntime {
       // Meta-Work-Budget aufgebraucht ist — und G4 bliebe eine
       // Absichtserklaerung (CLAUDE.md nennt es das wichtigste Gesetz).
       metaMinutesToday: (await store.usageToday(clock.nowLocal())).inMinutes,
+      place: await currentPlace(),
+      hoursToDeadline: pressure == null
+          ? kNoDeadlineHours
+          : hoursOf(pressure.untilDue),
+      deadlineSlackHours: pressure == null
+          ? kNoDeadlineHours
+          : hoursOf(pressure.untilDue - pressure.runway),
     );
+  }
+
+  // ── Ort (M2) ──────────────────────────────────────────────────────────
+  //
+  // Kein GPS, kein Geofence, keine Standortberechtigung. Der Ort ist ein
+  // Name, den der Nutzer setzt oder eine Geraeteroutine schickt. Was er
+  // beantwortet, ist nicht „wo bin ich", sondern „was geht hier" — und das
+  // steht in keiner Koordinate. [D2]
+
+  /// Der zuletzt gesetzte Ort. Null heisst „keiner".
+  ///
+  /// **Ohne Verfallszeit, mit Absicht.** Ein Ort, der um Mitternacht von
+  /// selbst verfaellt, waere nach einer WLAN-Routine, die ueber Nacht nicht
+  /// neu ausloest, morgens einfach weg. Ein Ort, der bleibt, ist dagegen
+  /// jederzeit sichtbar — die Hauptansicht zeigt ihn, solange er gesetzt ist,
+  /// und zwei Tipps setzen ihn zurueck. Sichtbar und stehengeblieben ist
+  /// besser als unsichtbar und schlau.
+  Future<String?> currentPlace() async {
+    final last = await store.last(EventType.placeEntered);
+    final value = (last?.payload['place'] as String?)?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  /// Setzt den Ort. `null` oder leer heisst: keiner mehr.
+  ///
+  /// Append-only wie alles: Der Wechsel ist ein Ereignis, kein ueberschriebenes
+  /// Feld. Damit laesst sich spaeter auswerten, wo tatsaechlich gearbeitet
+  /// wurde — und ob die Ortsbindung ueberhaupt etwas bringt.
+  Future<void> setPlace(String? place, {EventSource source = EventSource.user}) {
+    final value = place?.trim() ?? '';
+    return record(
+      EventType.placeEntered,
+      source: source,
+      payload: {'place': value},
+    );
+  }
+
+  /// Orte, die vorkommen — aus den Aufgaben und aus dem Verlauf.
+  ///
+  /// Absteigend nach Aktualitaet: Der zuletzt gesetzte Ort steht vorn und ist
+  /// damit im zweiten Tipp erreichbar.
+  Future<List<String>> knownPlaces() async {
+    final ordered = <String>[];
+    void add(String? value) {
+      final name = value?.trim();
+      if (name == null || name.isEmpty) return;
+      if (ordered.any((p) => samePlace(p, name))) return;
+      ordered.add(name);
+    }
+
+    final history = await store.query(types: {EventType.placeEntered});
+    for (final event in history.reversed) {
+      add(event.payload['place'] as String?);
+    }
+    for (final task in await store.tasks()) {
+      if (isTaskOpen(task)) add(task.place);
+    }
+    return ordered;
   }
   /// Erzeugt die Begruendung: Regeltext plus die konkreten Zustandswerte,
   /// die sie ausgeloest haben. Ohne die Zahlen bleibt es eine Behauptung.
@@ -366,8 +466,10 @@ final class AxiomRuntime {
     required int stakes,
     DateTime? decayAt,
     String? parentId,
+    String? place,
     TaskState state = TaskState.ready,
   }) async {
+    final trimmedPlace = place?.trim();
     final task = Task(
       id: newUlid(clock.nowUtc()),
       title: title,
@@ -376,6 +478,7 @@ final class AxiomRuntime {
       stakes: stakes,
       decayAt: decayAt,
       parentId: parentId,
+      place: trimmedPlace == null || trimmedPlace.isEmpty ? null : trimmedPlace,
       state: state,
     );
     await store.upsertTask(task);
@@ -388,6 +491,9 @@ final class AxiomRuntime {
       'state': state.name,
       if (decayAt != null) 'decay_at': decayAt.toUtc().toIso8601String(),
       'parent_id': ?parentId,
+      // Ohne diesen Eintrag ueberlebt der Ort keinen Wiederaufbau aus dem
+      // Ereignisstrom — und die Aufgabe kaeme ortsungebunden zurueck.
+      'place': ?task.place,
     });
     return task;
   }
@@ -532,6 +638,7 @@ final class AxiomRuntime {
         'parent_id': parent.id,
         if (child.decayAt != null)
           'decay_at': child.decayAt!.toUtc().toIso8601String(),
+        'place': ?child.place,
       });
     }
     // Lief die Aufgabe gerade, endet damit auch ihr Fokusfenster: Die

@@ -19,6 +19,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
+import 'place_sheet.dart';
 
 class InboxScreen extends ConsumerWidget {
   const InboxScreen({super.key});
@@ -256,6 +257,10 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
   /// Weg dorthin, obwohl die Aufgabe hier entsteht.
   DateTime? _decayAt;
 
+  /// Wo die Aufgabe hingehört. Leer ist der Normalfall: Eine Ortsbindung ist
+  /// eine Einschränkung, keine Eigenschaft, die jede Aufgabe braucht. [D2]
+  String? _place;
+
   @override
   void dispose() {
     _title.dispose();
@@ -274,7 +279,11 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
       salience: 5,
       stakes: _stakes,
       decayAt: _decayAt,
+      place: _place,
     );
+    // Zweiter Eintrag mit dem Bezug zur Erfassung. Er ueberschreibt beim
+    // Wiederaufbau den ersten — deshalb muss hier jedes Feld noch einmal
+    // stehen, sonst faellt es beim naechsten Rebuild lautlos weg.
     await runtime.record(EventType.taskCreated, payload: {
       'task_id': task.id,
       'from_capture': widget.captureId,
@@ -283,6 +292,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
       'salience': 5,
       'stakes': _stakes,
       'decay_at': ?_decayAt?.toIso8601String(),
+      'place': ?task.place,
       'state': TaskState.ready.name,
     });
     await HapticFeedback.mediumImpact();
@@ -334,6 +344,13 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
             _Deadline(
               value: _decayAt,
               onChanged: (v) => setState(() => _decayAt = v),
+            ),
+            const SizedBox(height: Space.xl),
+            PlaceChips(
+              value: _place,
+              known: ref.watch(snapshotProvider).value?.knownPlaces ??
+                  const [],
+              onChanged: (v) => setState(() => _place = v),
             ),
             const SizedBox(height: Space.xl),
             FilledButton(

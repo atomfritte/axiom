@@ -15,6 +15,7 @@ import 'package:meta/meta.dart';
 
 import 'condition.dart';
 import 'rule.dart';
+import 'task.dart';
 
 /// Eine Zahl, gegen die eine Regel vergleichen kann.
 @immutable
@@ -52,11 +53,19 @@ final class SymbolicVariable {
   /// Wert -> Beschriftung. Die Werte sind das, was der EvalContext liefert.
   final Map<String, String> values;
 
+  /// Duerfen daneben auch selbst vergebene Werte stehen?
+  ///
+  /// Genau ein Fall braucht das: der Ort. Seine Auspraegungen entstehen erst
+  /// im Gebrauch — eine feste Liste haette entweder geraten oder eine
+  /// Verwaltungsoberflaeche verlangt, und beides waere falsch. [D2]
+  final bool freeform;
+
   const SymbolicVariable({
     required this.id,
     required this.label,
     required this.meaning,
     required this.values,
+    this.freeform = false,
   });
 }
 
@@ -160,6 +169,23 @@ abstract final class RuleVocabulary {
       meaning: 'Verbrauchte Konzentrationszeit seit heute früh.',
       highIsTense: true,
     ),
+    NumericVariable(
+      id: 'hours_to_deadline',
+      label: 'Stunden bis zur Frist',
+      meaning: 'Bis zur Frist der am knappsten dastehenden Aufgabe. Ohne '
+          'Frist steht hier 9999 — eine Zahl, die keine Regel unterschreitet.',
+      max: 168,
+      highIsTense: false,
+    ),
+    NumericVariable(
+      id: 'deadline_slack_hours',
+      label: 'Rest nach dem Anlauf',
+      meaning: 'Stunden bis zur Frist minus dem Anlauf, den die Aufgabe '
+          'braucht. Wird der Wert negativ, ist der Moment vorbei, in dem '
+          'Anfangen noch gereicht hätte.',
+      min: -168,
+      max: 168,
+    ),
   ];
 
   static const List<SymbolicVariable> symbolics = [
@@ -183,6 +209,16 @@ abstract final class RuleVocabulary {
         'sensation': 'Reiz-Slot',
         'none': 'nichts',
       },
+    ),
+    SymbolicVariable(
+      id: 'place',
+      label: 'Ort',
+      meaning: 'Wo du gerade bist — ein Name, den du selbst vergibst oder '
+          'eine Geräteroutine setzt. Keine Koordinaten, keine Berechtigung.',
+      // Die Liste ist offen: Hier steht nur der Fall „gar keiner gesetzt".
+      // Alles andere entsteht im Gebrauch.
+      values: {kNoPlace: 'kein Ort'},
+      freeform: true,
     ),
     SymbolicVariable(
       id: 'weekday',

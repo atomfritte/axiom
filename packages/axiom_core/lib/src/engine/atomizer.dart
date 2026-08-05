@@ -163,6 +163,11 @@ final class Atomizer {
       // Zerlegte Aufgaben nicht erneut anbieten, solange Schritte offen
       // sind: Sonst steht die Klammer neben ihren eigenen Teilen.
       if (hasOpenSteps(tasks, task.id)) continue;
+      // Bewusst ohne `atPlace`: Der Ort entscheidet, was man *tun* kann,
+      // nicht, was man *planen* kann. Den ersten Schritt einer
+      // Baumarkt-Aufgabe aufzuschreiben geht am Schreibtisch — und wenn hier
+      // gerade nichts startbar ist, ist genau das die nuetzlichste Handlung.
+      // Unterdrueckt wird der Ort deshalb nur in der Auswahl (`isStartable`).
       if (task.isStartable(capacity)) continue;
 
       result.add(AtomizeCandidate(
@@ -264,6 +269,10 @@ final class Atomizer {
         decayAt: i == 0 ? parent.decayAt : null,
         parentId: parent.id,
         contexts: parent.contexts,
+        // Ein Teilschritt einer Baumarkt-Aufgabe ist auch im Baumarkt. Ohne
+        // das Erben faellt die Ortsbindung beim Zerlegen lautlos weg — und
+        // die Schritte wuerden ueberall vorgeschlagen. [D2]
+        place: parent.place,
         state: TaskState.ready,
       ));
     }

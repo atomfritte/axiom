@@ -218,3 +218,47 @@
   severity: nudge
   cooldown: { minutes: 360, max_per_day: 2, backoff: exponential }
   enabled: true
+
+# ── M2/M3 Fristdruck ────────────────────────────────────────────────────
+
+- id: R-140
+  title: "Die Frist ist näher als der Anlauf"
+  title_en: "The deadline is closer than the run-up"
+  deficit: D4
+  rationale: >
+    Zeitliche Distanz wird bei diesem Profil systematisch unterschätzt: Eine
+    Frist "morgen" fühlt sich weit an, solange sie nicht in Stunden dasteht.
+    Diese Regel vergleicht keine Wichtigkeit, sondern zwei Zahlen — die
+    Stunden bis zur Frist und den Anlauf, den die Aufgabe braucht
+    (Kaltstart plus Bearbeitung). Wird der Anlauf größer als die
+    verbleibende Zeit, ist der Moment, in dem Anfangen noch gereicht hätte,
+    bereits vorbei. Genau dieser Moment ist von innen nicht sichtbar. Die
+    Regel meldet ihn einmal, nennt beide Zahlen und urteilt nicht: Was
+    daraus folgt — anfangen, zerlegen, die Frist verschieben oder sie
+    verstreichen lassen — entscheidet niemand außer dem Nutzer.
+  rationale_en: >
+    Temporal distance is systematically underestimated in this profile: a
+    deadline "tomorrow" feels far away as long as it is not stated in hours.
+    This rule compares no importance, only two numbers — the hours left
+    until the deadline and the run-up the task needs (cold start plus work).
+    Once the run-up grows larger than the time left, the moment in which
+    starting would still have been enough has already passed. That moment is
+    invisible from the inside. The rule reports it once, names both numbers
+    and passes no judgement: what follows from it — starting, splitting,
+    moving the deadline or letting it pass — is nobody's decision but the
+    user's.
+  when:
+    all:
+      # Der Rest, wenn man den Anlauf abzieht. Null oder darunter heißt:
+      # Die Zeit reicht rechnerisch nicht mehr.
+      - deadline_slack_hours: { lte: 0 }
+      # Eine abgelaufene Frist ist keine Frist mehr, sondern ein Zustand.
+      # Ohne diese Zeile meldete sich die Regel bis zum Aufräumen täglich.
+      - hours_to_deadline: { gt: 0 }
+  then:
+    action: log_only          # SHADOW: sieben Tage stumm, dann auswerten
+    params: { hint: deadline_pressure }
+  priority: 75
+  severity: info
+  cooldown: { minutes: 720, max_per_day: 2 }
+  enabled: true

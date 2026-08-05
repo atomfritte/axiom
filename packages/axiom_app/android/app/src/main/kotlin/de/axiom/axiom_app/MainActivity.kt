@@ -208,6 +208,15 @@ class MainActivity : FlutterActivity() {
                         MemoInbox.ack(this, call.argument<Int>("count") ?: 0)
                     )
 
+                    // Ortswechsel, die eine Geraeteroutine geschickt hat.
+                    // Dasselbe Zweischrittmuster: lesen, speichern lassen,
+                    // dann erst loeschen.
+                    "peekPendingPlaces" -> result.success(PlaceInbox.peek(this))
+
+                    "ackPendingPlaces" -> result.success(
+                        PlaceInbox.ack(this, call.argument<Int>("count") ?: 0)
+                    )
+
                     // Dauerhafte Anzeige im Benachrichtigungsbereich.
                     "presenceStart" -> result.success(
                         PresenceService.start(

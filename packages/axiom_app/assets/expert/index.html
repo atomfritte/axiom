@@ -7,7 +7,7 @@
   Wer beide nebeneinander offen hat, soll keinen Bruch sehen.
 
   Was hinzukommt, ist das, was ein Schreibtisch hergibt und eine Hand nicht:
-  Listen NEBEN der Handlung statt statt ihrer, Tastenkürzel, Rohdaten.
+  Bestand NEBEN der Handlung statt an ihrer Stelle, Tastenkürzel, Rohdaten.
 
   Was nicht hinzukommt, ist eine zweite Art zu entscheiden. Oben links steht
   genau eine Handlung, so wie auf dem Telefon (G1). Die Liste daneben ist
@@ -34,37 +34,43 @@
 @font-face{font-family:PlexMono;src:url(/font/mono-500.ttf);font-weight:500;font-display:swap}
 
 /* ── Paletten ──────────────────────────────────────────────────────────
-   Wortgleich aus lib/design/tokens.dart, nicht nachempfunden. */
+   Wortgleich aus lib/design/tokens.dart, nicht nachempfunden.
+
+   Eine einzige Rolle steht dort nicht: die Schrift auf der Signalfläche.
+   Sie ist deshalb keine eigene Farbe, sondern die Seitenfarbe — in den
+   dunklen Fassungen der größtmögliche Abstand zum Bernstein, in den hellen
+   das Weiß der Frontplatte. So bleibt jeder Wert in dieser Datei einer aus
+   tokens.dart, und ein siebter Farbwert kann nicht daneben altern. */
 :root,[data-scheme=instrument][data-mode=dark]{
   --base:#0E1113;--panel:#171B1E;--raised:#1F2529;--rule:#2A3237;
   --ink:#ECEAE4;--dim:#9BA4AB;--faint:#7A848B;
   --signal:#E8A33D;--deep:#B8761F;--calm:#7FA88A;--caution:#C4653A;--info:#6E90A4;
-  --on-signal:#1A1206}
+  --on-signal:var(--base)}
 [data-scheme=instrument][data-mode=light]{
   --base:#F2F1ED;--panel:#FFFFFF;--raised:#FAF9F6;--rule:#CFCCC4;
   --ink:#15181B;--dim:#4A545B;--faint:#6E767C;
   --signal:#9A6510;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
-  --on-signal:#FFFFFF}
+  --on-signal:var(--panel)}
 [data-scheme=contrast][data-mode=dark]{
   --base:#0A0C0E;--panel:#15191C;--raised:#1E2428;--rule:#3D474D;
   --ink:#F5F3EE;--dim:#C2C9CE;--faint:#9BA5AC;
   --signal:#FFBB55;--deep:#D08A28;--calm:#9CC7A6;--caution:#E08356;--info:#8FB3C7;
-  --on-signal:#140E04}
+  --on-signal:var(--base)}
 [data-scheme=contrast][data-mode=light]{
   --base:#FAFAF8;--panel:#FFFFFF;--raised:#F2F1ED;--rule:#B4B0A7;
   --ink:#0D1012;--dim:#3B4248;--faint:#5C666D;
   --signal:#7A4E08;--deep:#5C3A05;--calm:#2E5239;--caution:#7C3316;--info:#2B4757;
-  --on-signal:#FFFFFF}
+  --on-signal:var(--panel)}
 [data-scheme=muted][data-mode=dark]{
   --base:#12100D;--panel:#1A1714;--raised:#221E1A;--rule:#332C26;
   --ink:#E0D8CC;--dim:#A3988A;--faint:#7D7264;
   --signal:#D79A55;--deep:#A87433;--calm:#8FA98C;--caution:#BE7A55;--info:#8B9AA0;
-  --on-signal:#17110A}
+  --on-signal:var(--base)}
 [data-scheme=muted][data-mode=light]{
   --base:#F4F0E7;--panel:#FBF8F1;--raised:#FFFDF8;--rule:#D5CDBE;
   --ink:#221E19;--dim:#57503F;--faint:#7A7263;
   --signal:#8A5A16;--deep:#6B450F;--calm:#44634A;--caution:#8C4A26;--info:#3F5A66;
-  --on-signal:#FFFFFF}
+  --on-signal:var(--panel)}
 
 /* Vier Stufen wie in der App — kein stufenloser Regler. Ein Regler ist
    eine Entscheidung mit unendlich vielen Antworten (G1). */
@@ -105,6 +111,10 @@ header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.85r
 main{max-width:1560px;margin:0 auto;padding:1.25rem;display:grid;gap:1.25rem}
 @media(min-width:1080px){main{grid-template-columns:minmax(340px,26rem) 1fr;align-items:start}
   .rail{position:sticky;top:4.6rem}}
+/* Ohne min-width:0 bemisst ein Grid-Feld sich am breitesten Inhalt statt am
+   Platz. Eine waagerecht scrollende Spalte darin schöbe sonst die ganze
+   Seite auseinander, statt selbst zu scrollen. */
+.stack{min-width:0}
 .rail{display:grid;gap:1rem;align-content:start}
 .panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:1.1rem}
 .panel.accent{border-color:color-mix(in srgb,var(--signal) 55%,var(--rule))}
@@ -171,6 +181,52 @@ p{color:var(--dim);font-size:.9rem}
 .item[data-due=over] .meta .due{color:var(--caution)}
 .acts{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end}
 .acts .btn{padding:.32rem .58rem;font-size:.77rem}
+
+/* ── Board ─────────────────────────────────────────────────────────────
+   Dieselben Aufgaben, nach Zustand gestapelt statt nach Rang gereiht. Die
+   Liste beantwortet „was zuerst"; das Board beantwortet „wie viel wovon" —
+   die Bestandsfrage, für die man sonst scrollt.
+
+   Farbe trägt hier genau zwei Messungen und sonst nichts: der Gruppenkopf
+   die Gruppe, die Karte den Abstand zur Frist. Keine Ampel. Grün gut und
+   rot schlecht wäre ein Urteil über eine Aufgabe, und ein Urteil, das man
+   beim Draufsehen mitliest, erzeugt Vermeidung statt Handlung (R7).
+
+   Schmal untereinander, breit nebeneinander und waagerecht scrollbar. Die
+   Spaltenbreite steht in rem und wächst mit der Schrift mit: Bei 2,4-facher
+   Größe wird die Spalte breiter, statt den Text abzuschneiden. */
+.board{display:flex;flex-direction:column;gap:.9rem}
+@media(min-width:720px){
+  .board{flex-direction:row;align-items:flex-start;overflow-x:auto;
+    padding-bottom:.7rem;scroll-snap-type:x proximity}
+  .col{flex:0 0 17rem;scroll-snap-align:start}
+}
+.board.flat{display:block}
+.col{min-width:0;display:flex;flex-direction:column;gap:.5rem}
+.ghead{display:flex;align-items:baseline;gap:.5rem;padding-bottom:.35rem;
+  border-bottom:3px solid var(--group,var(--rule))}
+.ghead .gname{font-size:.82rem;overflow-wrap:anywhere}
+.ghead .gcount{margin-left:auto;flex:none;font-size:.72rem;color:var(--dim);
+  border:1px solid var(--rule);border-radius:999px;padding:.02rem .45rem}
+.col .empty{color:var(--faint);font-size:.78rem;padding:.15rem 0}
+
+/* Dieselbe Rampe wie in der Liste, nur an der Kante statt am Strich:
+   Abstand zu decayAt, sonst nichts. Ohne Frist und jenseits von drei Tagen
+   bleibt die Kante neutral. */
+.card{background:var(--raised);border:1px solid var(--rule);
+  border-left:3px solid var(--rule);border-radius:5px;padding:.5rem .6rem}
+.card[data-due=over]{border-left-color:var(--caution)}
+.card[data-due=day]{border-left-color:var(--signal)}
+.card[data-due=days]{border-left-color:color-mix(in srgb,var(--signal) 45%,var(--rule))}
+.card .kin{display:block;font-family:PlexMono,monospace;font-size:.63rem;
+  color:var(--faint);overflow-wrap:anywhere;margin-bottom:.15rem}
+.card .title{font-size:.86rem;line-height:1.35;overflow-wrap:anywhere}
+.card.done .title{color:var(--faint);text-decoration:line-through}
+.card .meta{gap:.45rem;margin-top:.3rem}
+.card .meta span{font-size:.64rem}
+.card[data-due=over] .meta .due{color:var(--caution)}
+.card .acts{justify-content:flex-start;margin-top:.45rem}
+.card .acts .btn{padding:.26rem .5rem;font-size:.72rem}
 
 /* ── Filterzeile und Umschalter ───────────────────────────────────────
    Drei Filter, kein Baukasten. Jeder weitere wäre eine Entscheidung mehr
@@ -335,9 +391,10 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
       </section>
     </div>
 
-    <div>
+    <div class="stack">
       <div class="tabs" role="tablist" id="tabs">
         <button role="tab" data-tab="tasks" aria-selected="true">Aufgaben<span class="count" id="c-tasks"></span></button>
+        <button role="tab" data-tab="board" aria-selected="false">Board</button>
         <button role="tab" data-tab="inbox" aria-selected="false">Eingang<span class="count" id="c-inbox"></span></button>
         <button role="tab" data-tab="state" aria-selected="false">Zustand</button>
         <button role="tab" data-tab="rules" aria-selected="false">Regelwerk<span class="count" id="c-rules"></span></button>
@@ -410,10 +467,13 @@ function applyPrefs(){
   r.dataset.scheme=prefs.scheme;
   r.dataset.mode=prefs.mode==='auto'?(darkQ.matches?'dark':'light'):prefs.mode;
   r.dataset.size=prefs.size;
-  for(const key of ['mode','scheme','size'])
-    document.querySelectorAll('[data-'+key+']').forEach(b=>{
-      if(b.tagName==='BUTTON') b.setAttribute('aria-pressed',b.dataset[key]===prefs[key]);
-    });
+  // Nur die Schalter in der Kopfzeile: `[data-mode]` träfe sonst auch das
+  // Wurzelelement, das dieselben Namen als Zustand trägt.
+  document.querySelectorAll('header .seg button').forEach(b=>{
+    for(const key of ['mode','scheme','size'])
+      if(b.dataset[key]!==undefined)
+        b.setAttribute('aria-pressed',b.dataset[key]===prefs[key]?'true':'false');
+  });
 }
 darkQ.addEventListener('change',()=>{if(prefs.mode==='auto')applyPrefs()});
 document.querySelectorAll('header .seg button').forEach(b=>b.addEventListener('click',()=>{
@@ -489,16 +549,26 @@ $('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 async function enter(){
   clearInterval(pushPoll);
   $('#gate').classList.add('hide');$('#app').classList.remove('hide');
+  markTabs();
   await reload();
 }
 
-/* ── Zustand ─────────────────────────────────────────────────────── */
-let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null,tab='tasks';
+/* ── Zustand ───────────────────────────────────────────────────────
+   Die Reihenfolge ist zugleich die der Zifferntasten 1 … 7 — eine Liste,
+   nicht zwei, sonst zeigt die Taste irgendwann woandershin als der Reiter.
+   Welcher Reiter offen war, hängt am Browser: Wer die Seite acht Stunden
+   offen hat, lädt sie irgendwann neu und will dort weitermachen, wo er war,
+   nicht wieder bei den Aufgaben anfangen. */
+const TABS=['tasks','board','inbox','state','rules','review','events'];
+let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null;
+let tab=TABS.includes(localStorage.getItem('axiom.tab'))
+  ?localStorage.getItem('axiom.tab'):'tasks';
 let ruleIssues=[];
 
 async function refresh(){S=await api('/api/state');paintHeader();paintAction();paintCapline()}
 async function loadSurface(){
-  if(tab==='tasks') tasks=(await api('/api/tasks')).tasks;
+  // Board und Liste zeigen denselben Bestand und holen ihn deshalb gleich.
+  if(tab==='tasks'||tab==='board') tasks=(await api('/api/tasks')).tasks;
   else if(tab==='rules'){
     const data=await api('/api/rules');
     rules=data.rules;
@@ -642,14 +712,26 @@ $('#tabs').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-tab]');
   if(!b) return;
   tab=b.dataset.tab;
-  document.querySelectorAll('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  localStorage.setItem('axiom.tab',tab);
+  markTabs();
   await loadSurface();render();
 });
+function markTabs(){
+  document.querySelectorAll('#tabs button[data-tab]').forEach(b=>
+    b.setAttribute('aria-selected',b.dataset.tab===tab?'true':'false'));
+}
+const VIEWS={tasks:viewTasks,board:viewBoard,inbox:viewInbox,state:viewState,
+  rules:viewRules,review:viewReview,events:viewEvents};
 function render(){
   if(!S) return;
   $('#c-inbox').textContent=S.inboxCount?' '+S.inboxCount:'';
-  put($('#surface'),({tasks:viewTasks,inbox:viewInbox,state:viewState,
-    rules:viewRules,review:viewReview,events:viewEvents})[tab]());
+  paintTaskCount();
+  // Ein unbekannter Name aus dem Speicher darf die Seite nicht leer lassen.
+  put($('#surface'),(VIEWS[tab]||VIEWS.tasks)());
+}
+function paintTaskCount(){
+  $('#c-tasks').textContent=tasks.length
+    ?' '+tasks.filter(t=>t.state==='ready'||t.state==='active').length:'';
 }
 
 /* ── Aufgaben ────────────────────────────────────────────────────────
@@ -680,9 +762,14 @@ function viewTasks(){
   fillTasks(list);
   return frag;
 }
-/* Nur die Liste neu zeichnen, nicht die Zeile darüber: Sonst verliert das
-   Suchfeld beim zweiten Buchstaben den Fokus. */
-function renderTaskList(){const box=$('#tasklist');if(box) fillTasks(box)}
+/* Nur die Liste beziehungsweise das Board neu zeichnen, nicht die Zeile
+   darüber: Sonst verliert das Suchfeld beim zweiten Buchstaben den Fokus. */
+function redrawTasks(){
+  const list=$('#tasklist');
+  if(list){fillTasks(list);return}
+  const board=$('#board');
+  if(board) fillBoard(board);
+}
 
 function taskFilters(){
   const tog=(key,label,title)=>el('button',{class:'tog',title,
@@ -690,18 +777,22 @@ function taskFilters(){
     onclick:e=>{
       setTPref(key,!tprefs[key]);
       e.currentTarget.setAttribute('aria-pressed',tprefs[key]?'true':'false');
-      renderTaskList();
+      redrawTasks();
     }},label);
   return el('div',{class:'filters'},
     el('button',{class:'btn primary',onclick:()=>taskDialog()},'Neue Aufgabe'),
     el('input',{type:'search',value:tprefs.q,placeholder:'Suchen','aria-label':'Aufgaben durchsuchen',
-      oninput:e=>{setTPref('q',e.target.value);renderTaskList()}}),
+      oninput:e=>{setTPref('q',e.target.value);redrawTasks()}}),
     tog('reach','IN REICHWEITE','Nur was unter der Kapazität von heute liegt'),
     tog('overdue','ÜBERFÄLLIG','Nur was seinen Zeitpunkt überschritten hat'),
     tog('done','ERLEDIGTE','Erledigtes mit anzeigen'));
 }
 
-function fillTasks(box){
+/* Ein Modell, zwei Ansichten. Liste und Board fragen dieselben Zahlen und
+   denselben Filter ab — zweimal gefiltert wäre zweimal die Gelegenheit,
+   unterschiedlich zu filtern, und dann zeigte dieselbe Auswahl auf zwei
+   Reitern zwei verschiedene Bestände. */
+function taskModel(){
   const cap=S.values?.capacity?.value??50;
   const inReach=t=>t.activationEnergy<=cap/10;
   const overdue=t=>!!t.decayAt&&new Date(t.decayAt).getTime()<Date.now();
@@ -715,7 +806,6 @@ function fillTasks(box){
       kids.get(parent).push(t);
     }else roots.push(t);
   }
-  $('#c-tasks').textContent=' '+tasks.filter(t=>t.state==='ready'||t.state==='active').length;
 
   const q=tprefs.q.trim().toLowerCase();
   const hits=t=>{
@@ -726,6 +816,21 @@ function fillTasks(box){
     if(tprefs.overdue&&!overdue(t)) return false;
     return true;
   };
+  const rank=t=>t.state==='active'?0:t.state==='ready'?(inReach(t)?1:2)
+    :t.state==='blocked'?3:4;
+  // Gezählt wird auf dem Gerät: Zweimal dieselbe Zählung wäre zweimal die
+  // Gelegenheit, sie unterschiedlich zu machen. Hier wird nur gezählt,
+  // solange der Server die Zahlen nicht mitliefert.
+  const total=t=>t.childCount===undefined?(kids.get(t.id)||[]).length:t.childCount;
+  const doneKids=t=>t.doneCount===undefined
+    ?(kids.get(t.id)||[]).filter(c=>c.state==='done').length:t.doneCount;
+  const parentOf=t=>
+    t.parentId&&t.parentId!==t.id?(byId.get(t.parentId)||null):null;
+  return {cap,inReach,overdue,kids,roots,hits,rank,total,doneKids,parentOf};
+}
+
+function fillTasks(box){
+  const m=taskModel();
   /* Ein Treffer zieht seine Eltern mit. Ohne die Kette stünde ein Schritt
      ohne das, wozu er gehört — und genau das soll der Baum zeigen. */
   const keep=new Set(),seen=new Set();
@@ -733,24 +838,22 @@ function fillTasks(box){
     if(seen.has(t.id)) return false;
     seen.add(t.id);
     let below=false;
-    for(const c of kids.get(t.id)||[]) if(mark(c)) below=true;
-    const ok=hits(t)||below;
+    for(const c of m.kids.get(t.id)||[]) if(mark(c)) below=true;
+    const ok=m.hits(t)||below;
     if(ok) keep.add(t.id);
     return ok;
   };
-  roots.forEach(mark);
+  m.roots.forEach(mark);
 
   /* Ein Elternteil rückt dorthin, wo sein bester Schritt steht: Sonst
      rutschte die zerlegte Aufgabe ans Ende und ihr startbarer erster
      Schritt mit ihr. */
-  const rank=t=>t.state==='active'?0:t.state==='ready'?(inReach(t)?1:2)
-    :t.state==='blocked'?3:4;
   const best=new Map();
   const bestOf=t=>{
     if(best.has(t.id)) return best.get(t.id);
-    best.set(t.id,rank(t));
-    let r=rank(t);
-    for(const c of kids.get(t.id)||[]) r=Math.min(r,bestOf(c));
+    best.set(t.id,m.rank(t));
+    let r=m.rank(t);
+    for(const c of m.kids.get(t.id)||[]) r=Math.min(r,bestOf(c));
     best.set(t.id,r);
     return r;
   };
@@ -762,52 +865,56 @@ function fillTasks(box){
   const emit=(t,depth)=>{
     if(!keep.has(t.id)||drawn.has(t.id)) return;
     drawn.add(t.id);
-    const children=(kids.get(t.id)||[]).slice().sort(order);
-    out.append(taskRow(t,cap,depth,children));
-    for(const c of children) emit(c,depth+1);
+    out.append(taskRow(t,m,depth));
+    for(const c of (m.kids.get(t.id)||[]).slice().sort(order)) emit(c,depth+1);
   };
-  for(const t of roots.slice().sort(order)) emit(t,0);
+  for(const t of m.roots.slice().sort(order)) emit(t,0);
 
-  if(!tasks.length){
-    out.append(el('p',{},'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.'));
-  }else if(!keep.size){
-    out.append(el('p',{},'Nichts passt zu dieser Auswahl.'),
-      el('div',{class:'row'},el('button',{class:'btn quiet',onclick:()=>{
-        setTPref('q','');setTPref('reach',false);setTPref('overdue',false);setTPref('done',false);
-        render();
-      }},'Filter zurücksetzen')));
-  }
+  if(!tasks.length) out.append(emptyStock());
+  else if(!keep.size) out.append(...noMatch());
   put(box,out);
 }
+
+const emptyStock=()=>el('p',{},
+  'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.');
+const noMatch=()=>[el('p',{},'Nichts passt zu dieser Auswahl.'),
+  el('div',{class:'row'},el('button',{class:'btn quiet',onclick:()=>{
+    setTPref('q','');setTPref('reach',false);setTPref('overdue',false);setTPref('done',false);
+    render();
+  }},'Filter zurücksetzen'))];
 
 /* Vier Stufen, abgeleitet aus einem Abstand — nicht aus einer Meinung über
    die Aufgabe. Erledigtes bleibt neutral: Eine Frist, die nicht mehr läuft,
    misst nichts mehr. */
 function dueRamp(t){
-  if(!t.decayAt||t.state==='done'||t.state==='dropped') return null;
+  if(!expires(t)) return null;
   const hours=(new Date(t.decayAt).getTime()-Date.now())/36e5;
   return hours<0?'over':hours<24?'day':hours<72?'days':null;
 }
+const expires=t=>!!t.decayAt&&t.state!=='done'&&t.state!=='dropped';
+/* Aus demselben Grund steht an etwas Erledigtem keine Frist mehr:
+   „ÜBERFÄLLIG" an etwas, das getan ist, wäre ein Vorwurf für nichts (R7). */
+const dueChip=t=>expires(t)?el('span',{class:'due'},dueLabel(t.decayAt)):null;
 
-function taskRow(t,cap,depth,children){
+/* Welche Handlungen offenstehen, hängt am Zustand und sonst nichts —
+   dieselbe Liste in Liste und Board, sonst böte dieselbe Aufgabe je nach
+   Reiter etwas anderes an. */
+function taskActions(t){
+  if(t.state==='active') return [
+    el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
+    el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen')];
+  if(t.state==='ready') return [
+    el('button',{class:'btn primary',onclick:()=>act(t.id,'start')},'Anfangen'),
+    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),
+    el('button',{class:'btn quiet',onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen')];
+  return [];
+}
+
+function taskRow(t,m,depth){
   const cls=['item'];
   if(t.state==='active') cls.push('run');
   if(t.state==='done') cls.push('done');
-  const acts=[];
-  if(t.state==='active'){
-    acts.push(el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
-      el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen'));
-  }else if(t.state==='ready'){
-    acts.push(el('button',{class:'btn primary',onclick:()=>act(t.id,'start')},'Anfangen'),
-      el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),
-      el('button',{class:'btn quiet',onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen'));
-  }
-  // Gezählt wird auf dem Gerät: Zweimal dieselbe Zählung wäre zweimal die
-  // Gelegenheit, sie unterschiedlich zu machen. Die Liste hier zählt nur,
-  // solange der Server die Zahlen nicht mitliefert.
-  const total=t.childCount===undefined?children.length:t.childCount;
-  const doneKids=t.doneCount===undefined
-    ?children.filter(c=>c.state==='done').length:t.doneCount;
+  const total=m.total(t);
   return el('div',{class:cls.join(' '),'data-due':dueRamp(t),
     style:'--depth:'+Math.min(depth,6)},
     el('span',{class:'bar'}),
@@ -816,11 +923,102 @@ function taskRow(t,cap,depth,children){
         el('span',{},'START '+t.activationEnergy+'/10'),
         el('span',{},'SOG '+t.salience),
         el('span',{},'FOLGEN '+t.stakes),
-        t.decayAt?el('span',{class:'due'},dueLabel(t.decayAt)):null,
-        total?el('span',{},'TEILSCHRITTE '+doneKids+' VON '+total):null,
-        t.state==='ready'&&!(t.activationEnergy<=cap/10)
-          ?el('span',{},'NICHT IN REICHWEITE'):null)),
-    el('div',{class:'acts'},acts));
+        dueChip(t),
+        total?el('span',{},'TEILSCHRITTE '+m.doneKids(t)+' VON '+total):null,
+        t.state==='ready'&&!m.inReach(t)?el('span',{},'NICHT IN REICHWEITE'):null)),
+    el('div',{class:'acts'},taskActions(t)));
+}
+
+/* ── Board ───────────────────────────────────────────────────────────
+   Spalten sind Zustände, keine Wertungen: „Nicht in Reichweite" heißt, dass
+   die Aufgabe heute mehr Anlauf braucht als da ist — nicht, dass mit ihr
+   oder mit jemandem etwas nicht stimmt (R7). Deshalb trägt der Kopf die
+   Farbe der Gruppe und die Karte nur den Abstand zur Frist; eine rot
+   markierte Aufgabe wäre ein Vorwurf, den man beim Draufsehen mitliest.
+
+   Jede Aufgabe steht in genau einer Spalte, entschieden in dieser
+   Reihenfolge: Was läuft, läuft. Was Teilschritte hat, ist zerlegt — die
+   Schritte selbst stehen daneben, jeder für sich. Über den Rest entscheidet
+   die Kapazität von heute. */
+const BOARD_GROUPS=[
+  {key:'reach',label:'In Reichweite',color:'var(--signal)'},
+  {key:'run',label:'Läuft',color:'var(--calm)'},
+  {key:'split',label:'Zerlegt',color:'var(--info)'},
+  {key:'far',label:'Nicht in Reichweite',color:'var(--rule)'},
+  // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
+  // Spalte erscheint nur, wenn derselbe Filter sie auch in der Liste zeigt.
+  {key:'done',label:'Erledigt',color:'var(--faint)'}];
+
+function boardGroup(t,m){
+  if(t.state==='done') return 'done';
+  if(t.state==='active') return 'run';
+  if(m.total(t)>0) return 'split';
+  return (t.state==='ready'&&m.inReach(t))?'reach':'far';
+}
+
+function viewBoard(){
+  const frag=document.createDocumentFragment();
+  const box=el('div',{id:'board',class:'board'});
+  frag.append(taskFilters(),box);
+  fillBoard(box);
+  return frag;
+}
+
+function fillBoard(box){
+  const m=taskModel();
+  const columns=new Map(BOARD_GROUPS.map(g=>[g.key,[]]));
+  let shown=0;
+  for(const t of tasks){
+    if(!m.hits(t)) continue;
+    columns.get(boardGroup(t,m)).push(t);
+    shown++;
+  }
+  // Ohne den Baum entscheidet dieselbe Rangfolge wie in der Liste: erst
+  // was läuft, dann was in Reichweite ist, bei Gleichstand der leichtere
+  // Anfang. Keine zweite Ordnung — die Reihung gehört der Auswahl.
+  const order=(a,b)=>m.rank(a)-m.rank(b)||a.activationEnergy-b.activationEnergy
+    ||String(a.title).localeCompare(String(b.title),'de');
+
+  box.classList.toggle('flat',!tasks.length||!shown);
+  if(!tasks.length){put(box,emptyStock());return}
+  if(!shown){put(box,noMatch());return}
+
+  const out=document.createDocumentFragment();
+  for(const g of BOARD_GROUPS){
+    if(g.key==='done'&&!tprefs.done) continue;
+    const list=columns.get(g.key);
+    out.append(el('div',{class:'col',role:'group',style:'--group:'+g.color,
+      'aria-label':g.label+': '+list.length},
+      el('div',{class:'ghead'},
+        el('span',{class:'gname'},g.label),
+        el('span',{class:'gcount mono'},String(list.length))),
+      list.length
+        ?list.sort(order).map(t=>boardCard(t,m))
+        :el('p',{class:'empty'},'—')));
+  }
+  put(box,out);
+}
+
+function boardCard(t,m){
+  const cls=['card'];
+  if(t.state==='done') cls.push('done');
+  const parent=m.parentOf(t),total=m.total(t);
+  /* Der Bezug bleibt erkennbar, ohne den Baum nachzubauen: Die Liste zeigt
+     ihn als Einrückung, hier genügt ein Satz. Ohne ihn stünde ein Schritt
+     auf einer Karte, ohne dass zu sehen wäre, wozu er gehört. */
+  const kin=[];
+  if(parent) kin.push('Teilschritt von '+parent.title);
+  if(total) kin.push('Teilschritte '+m.doneKids(t)+' von '+total);
+  const acts=taskActions(t);
+  return el('div',{class:cls.join(' '),'data-due':dueRamp(t)},
+    kin.length?el('span',{class:'kin'},kin.join(' · ')):null,
+    el('div',{class:'title'},t.title),
+    el('div',{class:'meta'},
+      el('span',{},'START '+t.activationEnergy+'/10'),
+      el('span',{},'SOG '+t.salience),
+      el('span',{},'FOLGEN '+t.stakes),
+      dueChip(t)),
+    acts.length?el('div',{class:'acts'},acts):null);
 }
 
 function viewInbox(){
@@ -953,11 +1151,11 @@ function viewEvents(){
 }
 
 /* ── Blätter ─────────────────────────────────────────────────────── */
-function sheet(title,body,actions){
+function sheet(title,body,actions,closeLabel){
   const d=$('#dlg');
   put(d,el('h2',{},title),body,
     el('div',{class:'row'},...actions,
-      el('button',{class:'btn quiet',onclick:()=>d.close()},'Abbrechen')));
+      el('button',{class:'btn quiet',onclick:()=>d.close()},closeLabel||'Abbrechen')));
   d.showModal();
   const first=d.querySelector('input,textarea');
   if(first) setTimeout(()=>first.focus(),30);
@@ -1886,10 +2084,10 @@ function plainScalar(text){
 
 function helpDialog(){
   const keys=[['n','Erfassen'],['c','Check-in'],['f','Fokus starten oder beenden'],
-    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],['1 … 6','Reiter wechseln'],
-    ['r','Neu laden'],['?','Diese Übersicht'],['Esc','Schließen']];
+    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],
+    ['1 … '+TABS.length,'Reiter wechseln'],['r','Neu laden'],['?','Diese Übersicht'],['Esc','Schließen']];
   sheet('Tastenkürzel',el('div',{class:'keys'},
-    ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[]);
+    ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[],'Schließen');
 }
 $('#help-btn').addEventListener('click',helpDialog);
 
@@ -1906,9 +2104,11 @@ $('#stop-btn').addEventListener('click',async()=>{
 addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey) return;
   if($('#dlg').open) return;
-  const tabs=['tasks','inbox','state','rules','review','events'];
-  if(e.key>='1'&&e.key<='6'){
-    const b=document.querySelector('#tabs button[data-tab="'+tabs[Number(e.key)-1]+'"]');
+  // Die Zifferntasten kommen aus TABS, nicht aus einer zweiten Liste: Sonst
+  // zeigt die Taste irgendwann woandershin als der Reiter daneben.
+  if(e.key>='1'&&e.key<='9'){
+    const name=TABS[Number(e.key)-1];
+    const b=name&&document.querySelector('#tabs button[data-tab="'+name+'"]');
     if(b) b.click();
     return;
   }
@@ -1933,14 +2133,35 @@ setInterval(()=>{
   if(!chip) return;
   chip.textContent=Math.floor((Date.now()-new Date(S.focus.startedAt))/60000)+'/'+S.focus.plannedMinutes+' min';
 },1000);
-setInterval(()=>{
-  if(!$('#app').classList.contains('hide')&&!$('#dlg').open) refresh().catch(()=>{});
+
+/* Der Bestand wird mitgeholt, nicht nur der Zustand: Wer die Seite acht
+   Stunden offen hat, sähe sonst neben aktuellen Messwerten eine Liste von
+   heute früh — und das ist die schlechtere Hälfte von beidem.
+
+   Nicht nachgeladen wird, solange ein Blatt offen ist, im Regeleditor
+   gearbeitet wird oder der Cursor in einem Feld steht. Ein Neuzeichnen
+   unter den Händen kostet mehr als eine Zahl, die eine Minute alt ist. */
+setInterval(async()=>{
+  if($('#app').classList.contains('hide')||$('#dlg').open||editor) return;
+  const focused=document.activeElement;
+  if(focused&&focused.matches&&focused.matches('input,textarea,select')) return;
+  try{
+    await refresh();
+    // Nicht unter dem Zeiger: Wer gerade auf eine Karte zielt, träfe sonst
+    // die, die eine Sekunde später an ihre Stelle gerückt ist. Die Zahlen
+    // oben bleiben trotzdem frisch.
+    if((tab==='tasks'||tab==='board')&&!$('#surface').matches(':hover')){
+      tasks=(await api('/api/tasks')).tasks;
+      paintTaskCount();redrawTasks();
+    }
+  }catch(e){}
 },20000);
 
 /* Schon angemeldet? Dann direkt hinein, sonst die Freigabe anbieten. */
 api('/api/state').then(async data=>{
   S=data;
   $('#gate').classList.add('hide');$('#app').classList.remove('hide');
+  markTabs();
   paintHeader();paintAction();paintCapline();
   await loadSurface();render();
 }).catch(()=>showGate());

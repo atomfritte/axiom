@@ -77,6 +77,9 @@ Deinstallation).
 | `minutes_since(event_type)` | int | EventStore |
 | `count_today(event_type)` | int | EventStore |
 | `active_slot` | enum | laufender Slot (focus/sensation/none) |
+| `place` | frei | aktueller Ort. `none`, solange keiner gesetzt ist — ein Name, keine Koordinate |
+| `hours_to_deadline` | h | bis zur Frist der am knappsten dastehenden Aufgabe; `9999` ohne Frist |
+| `deadline_slack_hours` | h | dasselbe minus dem Anlauf der Aufgabe. Negativ = die Zeit reicht rechnerisch nicht mehr |
 | `next_anchor_in` | min | M3 Time Anchor |
 | `task_available(ae_max)` | bool | M2 Task Kernel |
 | `streak_days(x)` | int | nur für Auswertung — **nie für Verlustmechanik** (Anti-Ziel) |
@@ -103,6 +106,16 @@ when:
     - all:
         - sleep_debt: { gte: 70 }
         - capacity:   { lt: 25 }
+
+# Nur im Büro                                                      [D2]
+when:
+  place: { eq: "Büro" }
+
+# Die Frist rückt näher, als der Anlauf braucht                    [D4]
+when:
+  all:
+    - deadline_slack_hours: { lte: 0 }
+    - hours_to_deadline:    { gt: 0 }     # abgelaufen ist keine Frist mehr
 ```
 
 ---

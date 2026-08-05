@@ -50,11 +50,12 @@ Regeln:
 |---|---|---|---|
 | `capture` | `text`, `via` (spen/tile/widget/share), `attachments?` | user | M1 |
 | `checkin` | `energy 1..5`, `focus 1..5`, `mood 1..5`, `stim_need 1..5` | user | M0 |
-| `task_created` | `task_id`, `title`, `ae`, `salience`, `stakes`, `decay_at?` | user | M2 |
+| `task_created` | `task_id`, `title`, `ae`, `salience`, `stakes`, `decay_at?`, `place?` | user | M2 |
 | `task_started` | `task_id` | user | M2 |
 | `task_completed` | `task_id`, `duration_min` | user | M2 |
 | `task_abandoned` | `task_id`, `reason` | user | M2 |
 | `task_split` | `parent_id`, `child_ids[]` | user | M2 (Atomizer) |
+| `place_entered` | `place` (leer = keiner mehr) | user/device | M2 |
 | `focus_start` | `anchor_task_id?`, `planned_min` | user | M4 |
 | `focus_end` | `actual_min`, `on_anchor bool`, `exit` (planned/interrupted/lost) | user/rule | M4 |
 | `sensation_slot` | `channel`, `intensity 1..5`, `duration_min`, `planned bool` | user | M5 |
@@ -150,14 +151,28 @@ class Task {
   final TaskState state;        //        inbox|ready|active|blocked|done|dropped
   final List<String> contexts;  //        @home @phone @errand @deepwork
   final String? breadcrumb;     //        Wiedereinstiegsnotiz                [D11]
+  final String? place;          //        frei vergebener Ortsname            [D2]
 }
 ```
+
+**`place` ist ein Name, keine Koordinate.** Kein GPS, kein Geofence, keine
+Standortberechtigung. Der aktuelle Ort ist die Projektion des letzten
+`place_entered`-Events; gesetzt wird er in der App oder von einer
+Geräteroutine über den Broadcast `de.axiom.PLACE`. Ein Geofence beantwortet
+„wo bin ich", die Frage der Aufgabe ist aber „was geht hier" — und der
+Gegenwert eines Kreises mit 200 m Radius wiegt `ACCESS_BACKGROUND_LOCATION`
+und ein Bewegungsprofil in einer Datenbank mit Gesundheitsdaten nicht auf.
+
+Ohne gesetzten Ort wird **nichts** unterdrückt: Ortsgebundene Aufgaben
+erscheinen dann mit ihrem Ort als Hinweis. Etwas zu verstecken, das der
+Nutzer nie eingeschaltet hat, wäre der schlimmere Fehler [D9].
 
 ### 4.1 Auswahlalgorithmus
 
 ```
 1. FILTER    startbar ⟺ activationEnergy ≤ capacity/10  ∧  state ∈ {ready}
                        ∧  Kontext erfüllt  ∧  nicht blockiert
+                       ∧  (place = null ∨ aktueller Ort = null ∨ gleich)
 
 2. SCORE     urgency = stakes × decayPressure(decayAt, now)
              pull    = salience
@@ -223,7 +238,8 @@ events(id TEXT PK, at INTEGER, type TEXT, source TEXT, payload TEXT)
 -- Projektionen: jederzeit verwerf- und neuberechenbar
 state_snapshots(id TEXT PK, at INTEGER, vector TEXT)
 tasks(id TEXT PK, title TEXT, ae INTEGER, salience INTEGER, stakes INTEGER,
-      decay_at INTEGER, state TEXT, parent_id TEXT, contexts TEXT, breadcrumb TEXT)
+      decay_at INTEGER, state TEXT, parent_id TEXT, contexts TEXT,
+      breadcrumb TEXT, place TEXT)
 
 -- Audit: das Gedächtnis des Regelwerks
 decisions(id TEXT PK, at INTEGER, rule_id TEXT, action TEXT,

@@ -239,6 +239,34 @@
             android:exported="false"
             android:enabled="true" />
 
+        <!--
+          Nimmt den aktuellen Ort von einer Geräteroutine entgegen — das
+          Gegenstück zu den ausgehenden Broadcasts.
+
+          Damit setzt eine Samsung-Routine „WLAN Büro verbunden" den Ort,
+          ohne dass AXIOM eine Standortberechtigung braucht. Kein GPS, kein
+          Geofence, kein ACCESS_BACKGROUND_LOCATION und kein dauerhaft
+          messender Dienst — ein verbundenes WLAN ist ohnehin genauer als
+          ein Kreis mit 200 m Radius.
+
+          exported MUSS true sein: Die Routinen-App ist ein anderer Prozess.
+
+          Bewusst OHNE android:permission. Das prüft den Sender, und Samsungs
+          Routinen halten keine selbst definierte Berechtigung von AXIOM —
+          der Broadcast käme stumm nie an. Der Empfänger gibt nichts heraus,
+          liest nichts und kann nichts auslösen außer einer Ortsangabe; ein
+          falsch gesetzter Ort steht sichtbar in der Hauptansicht und ist in
+          zwei Tipps zurückgesetzt.
+        -->
+        <receiver
+            android:name=".PlaceReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="de.axiom.PLACE" />
+            </intent-filter>
+        </receiver>
+
         <!-- Stellt Alarme nach Neustart und Update wieder her. -->
         <receiver
             android:name=".BootReceiver"

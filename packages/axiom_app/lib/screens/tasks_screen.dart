@@ -57,6 +57,7 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final capacity = snapshot.state.capacity;
     final at = snapshot.at;
+    final place = snapshot.place;
 
     List<Task> sorted(bool Function(Task) test) => snapshot.tasks
         .where(test)
@@ -64,10 +65,17 @@ class _Body extends ConsumerWidget {
       ..sort((a, b) => taskScore(b, at).compareTo(taskScore(a, at)));
 
     final running = sorted((t) => t.state == TaskState.active);
-    final reachable =
-        sorted((t) => t.state == TaskState.ready && t.isStartable(capacity));
-    final outOfReach =
-        sorted((t) => t.state == TaskState.ready && !t.isStartable(capacity));
+    final reachable = sorted((t) =>
+        t.state == TaskState.ready && t.isStartable(capacity, atPlace: place));
+    // Eigener Abschnitt statt „nicht in Reichweite": Der Grund ist ein
+    // anderer, und die Begründung darunter wäre schlicht falsch — die
+    // Startenergie hat damit nichts zu tun. Die Menge kommt aus dem
+    // Snapshot, damit „woanders" nur einmal definiert ist.
+    final elsewhere = snapshot.elsewhere;
+    final outOfReach = sorted((t) =>
+        t.state == TaskState.ready &&
+        t.isHere(place) &&
+        !t.isStartable(capacity));
     // Zerlegte Aufgaben standen hier bisher nirgends. Damit war die
     // Klammer nach dem Zerlegen unsichtbar: nicht auffindbar, nicht
     // abschließbar, nicht weiter zerlegbar — und wer seinen Bestand nicht
@@ -106,7 +114,22 @@ class _Body extends ConsumerWidget {
 
         if (reachable.isNotEmpty) ...[
           SectionLabel(context.t('In Reichweite · {0}', [reachable.length])),
-          for (final task in reachable) _Row(task: task, capacity: capacity),
+          for (final task in reachable)
+            _Row(task: task, capacity: capacity, place: place),
+          const SizedBox(height: Space.xl),
+        ],
+
+        if (elsewhere.isNotEmpty) ...[
+          SectionLabel(context.t('Anderswo · {0}', [elsewhere.length])),
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.sm),
+            child: Text(
+              context.t('Gehört zu einem anderen Ort als „{0}". Sie kommen zurück, sobald der Ort passt oder keiner gesetzt ist.', [place ?? '']),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          for (final task in elsewhere)
+            _Row(task: task, capacity: capacity, place: place),
           const SizedBox(height: Space.xl),
         ],
 
@@ -124,7 +147,8 @@ class _Body extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-          for (final task in outOfReach) _Row(task: task, capacity: capacity),
+          for (final task in outOfReach)
+            _Row(task: task, capacity: capacity, place: place),
           const SizedBox(height: Space.xl),
         ],
 
@@ -140,14 +164,19 @@ class _Body extends ConsumerWidget {
             ),
           ),
           for (final task in split)
-            _Row(task: task, capacity: capacity, openSteps: openSteps(task)),
+            _Row(
+              task: task,
+              capacity: capacity,
+              place: place,
+              openSteps: openSteps(task),
+            ),
           const SizedBox(height: Space.xl),
         ],
 
         if (done.isNotEmpty) ...[
           SectionLabel(context.t('Erledigt · {0}', [done.length])),
           for (final task in done.take(20))
-            _Row(task: task, capacity: capacity),
+            _Row(task: task, capacity: capacity, place: place),
         ],
       ],
     );
@@ -158,12 +187,16 @@ class _Row extends ConsumerWidget {
   final Task task;
   final int capacity;
 
+  /// Der gerade gesetzte Ort. Null heisst: keiner, dann bindet nichts.
+  final String? place;
+
   /// Offene Teilschritte — nur bei zerlegten Aufgaben gesetzt.
   final int openSteps;
 
   const _Row({
     required this.task,
     required this.capacity,
+    this.place,
     this.openSteps = 0,
   });
 
@@ -174,7 +207,16 @@ class _Row extends ConsumerWidget {
     final running = task.state == TaskState.active;
     final done = task.state == TaskState.done;
     final split = task.state == TaskState.blocked;
-    final reachable = task.isStartable(capacity);
+    final reachable = task.isStartable(capacity, atPlace: place);
+    final here = task.isHere(place);
+    // Der Anlauf steht nur da, wenn er nicht mehr passt. Eine Zahl, die immer
+    // da ist, wird nicht gelesen — und die Formel ist genau dann interessant,
+    // wenn sie etwas aussagt (G2).
+    final runway = task.decayAt == null || done
+        ? null
+        : taskRunway(task) > task.decayAt!.difference(now)
+            ? taskRunway(task)
+            : null;
 
     final accent = switch (true) {
       _ when running => p.calm,
@@ -238,6 +280,20 @@ class _Row extends ConsumerWidget {
                                   color: task.decayAt!.isBefore(now)
                                       ? p.caution
                                       : p.inkFaint),
+                            ),
+                          if (runway != null)
+                            Text(
+                              context.t('ANLAUF {0} H',
+                                  [hoursOf(runway).toStringAsFixed(1)]),
+                              style: monoStyle(context,
+                                  size: 10.5, color: p.caution),
+                            ),
+                          if (task.place != null)
+                            Text(
+                              task.place!.toUpperCase(),
+                              style: monoStyle(context,
+                                  size: 10.5,
+                                  color: here ? p.inkFaint : p.info),
                             ),
                           if (split)
                             Text(

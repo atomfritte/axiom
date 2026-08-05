@@ -260,6 +260,30 @@ void main() {
             reason: '$key weicht ab');
       }
     });
+
+    test('keine Farbe, die der Kern nicht kennt', () {
+      // Die Gegenrichtung des Tests darüber — und die wichtigere.
+      //
+      // Oben wird geprüft, dass die Palette ankommt. Hier, dass nichts
+      // dazukommt: `--on-signal` stand in drei dunklen Schemata als siebte
+      // Farbe, die in tokens.dart nirgends steht. Eine Farbe, die nur an
+      // einer Stelle existiert, altert dort still weiter — und zwei
+      // Oberflächen, die dasselbe Instrument sein wollen, sehen nach einem
+      // halben Jahr verschieden aus, ohne dass jemand etwas geändert hätte.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      final tokens = File('lib/design/tokens.dart').readAsStringSync();
+      final known = RegExp(r'Color\(0xFF([0-9A-Fa-f]{6})\)')
+          .allMatches(tokens)
+          .map((m) => m.group(1)!.toUpperCase())
+          .toSet();
+      final used = RegExp(r'#([0-9A-Fa-f]{6})')
+          .allMatches(page)
+          .map((m) => m.group(1)!.toUpperCase())
+          .toSet();
+      expect(used.difference(known), isEmpty,
+          reason: 'Diese Farben stehen nur in der Weboberfläche. Entweder '
+              'gehören sie in tokens.dart, oder sie sind überflüssig.');
+    });
   });
 
   group('Freigabe per Zahlenabgleich', () {

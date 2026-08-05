@@ -459,6 +459,35 @@ abstract final class AndroidBridge {
   static Future<bool> ackPendingMemos(int count) =>
       _invoke('ackPendingMemos', {'count': count});
 
+  // ── Ort (D2) ──────────────────────────────────────────────────────────
+
+  /// Ortswechsel, die eine Geräteroutine über `de.axiom.PLACE` geschickt hat.
+  ///
+  /// Der Empfänger läuft auch, wenn die App nicht läuft; er kann aber nicht
+  /// an die verschlüsselte Datenbank. Deshalb dieselbe Ablage wie bei den
+  /// Notizen: Er legt ab, die App holt beim nächsten Blick ab — mit dem
+  /// Zeitstempel des Empfangs, damit das Ereignis an der richtigen Stelle im
+  /// Strom landet.
+  ///
+  /// Jeder Eintrag: `{'place': String, 'at': int}`. Leerer `place` heißt
+  /// „kein Ort mehr gesetzt".
+  static Future<List<Map<String, Object?>>> peekPendingPlaces() async {
+    if (!isSupported) return const [];
+    try {
+      final result = await _channel
+          .invokeListMethod<Map<Object?, Object?>>('peekPendingPlaces')
+          .timeout(_timeout);
+      return (result ?? const [])
+          .map((row) => row.map((k, v) => MapEntry(k.toString(), v)))
+          .toList();
+    } on Object {
+      return const [];
+    }
+  }
+
+  static Future<bool> ackPendingPlaces(int count) =>
+      _invoke('ackPendingPlaces', {'count': count});
+
   // ── Intern ────────────────────────────────────────────────────────────
 
   /// Wie [_invoke], aber mit dem Grund des Scheiterns.

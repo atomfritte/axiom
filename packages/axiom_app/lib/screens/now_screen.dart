@@ -28,6 +28,7 @@ import 'signal_screen.dart';
 import 'capture_sheet.dart';
 import 'checkin_sheet.dart';
 import 'inbox_screen.dart';
+import 'place_sheet.dart';
 import 'review_screen.dart';
 import 'system_screen.dart';
 import 'tasks_screen.dart';
@@ -87,6 +88,19 @@ class NowScreen extends ConsumerWidget {
                     const SizedBox(height: Space.lg),
                     _RunningStrip(task: task),
                   ],
+                // Steht direkt über der Handlung, weil er sie mitbestimmt:
+                // Was hier vorgeschlagen wird, hängt am gesetzten Ort. Ein
+                // Filter, den man nicht sieht, wirkt wie ein Fehler (G2).
+                //
+                // Erscheint nur, wenn es etwas zu sehen gibt — solange keine
+                // Aufgabe einen Ort trägt und keiner gesetzt ist, ist die
+                // Zeile eine Einstellung ohne Wirkung, und die gehört nicht
+                // auf den Hauptbildschirm (D3).
+                if (snap.place != null ||
+                    snap.tasks.any((t) => t.place != null && isTaskOpen(t))) ...[
+                  const SizedBox(height: Space.lg),
+                  _PlaceStrip(snapshot: snap),
+                ],
                 const SizedBox(height: Space.xl),
                 _PrimaryAction(snapshot: snap),
                 if (inbox.isNotEmpty) ...[
@@ -475,6 +489,14 @@ class _TaskCard extends ConsumerWidget {
                   label: _until(context, task.decayAt!, ref.watch(nowProvider)),
                   color: p.info,
                 ),
+              // Ohne gesetzten Ort wird eine ortsgebundene Aufgabe nicht
+              // unterdrückt — sie steht mit ihrem Ort da. Etwas zu
+              // verstecken, das der Nutzer nie eingeschaltet hat, wäre der
+              // schlimmere Fehler [D9].
+              if (task.place != null) ...[
+                const SizedBox(width: Space.sm),
+                _Chip(label: task.place!.toUpperCase(), color: p.inkDim),
+              ],
             ],
           ),
           const SizedBox(height: Space.xl),
@@ -756,6 +778,69 @@ class _FocusStrip extends ConsumerWidget {
                   size: 13,
                   weight: FontWeight.w600,
                   color: urgent ? p.signal : p.inkDim)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Der gesetzte Ort — eine Zeile, ein Tipp.
+///
+/// Kein eigener Bildschirm und keine Ortsverwaltung: Der Ort ist ein
+/// Schalter, kein Datensatz. Ein Tipp öffnet die Auswahl, ein zweiter setzt
+/// ihn — „kein Ort" steht dort immer an erster Stelle, und der zuletzt
+/// gesetzte gleich darunter.
+class _PlaceStrip extends ConsumerWidget {
+  final AxiomSnapshot snapshot;
+  const _PlaceStrip({required this.snapshot});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    final place = snapshot.place;
+    final elsewhere = snapshot.elsewhere.length;
+
+    return Panel(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg, vertical: Space.md),
+      onTap: () => showPlaceSheet(
+        context,
+        current: place,
+        known: snapshot.knownPlaces,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            place == null ? Icons.place_outlined : Icons.place,
+            size: 18,
+            color: place == null ? p.inkDim : p.signal,
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(place ?? context.t('Kein Ort'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge),
+                Text(
+                  // Zustandsbeschreibung, keine Bewertung: Was der Filter
+                  // gerade tut, steht da — nicht, was man tun sollte [R7].
+                  place == null
+                      ? context.t('Alles steht zur Auswahl.')
+                      : elsewhere == 0
+                          ? context.t('Nichts liegt woanders.')
+                          : elsewhere == 1
+                              ? context.t('Eine Aufgabe gehört woanders hin.')
+                              : context.t('{0} Aufgaben gehören woanders hin.',
+                                  [elsewhere]),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
         ],
       ),
     );

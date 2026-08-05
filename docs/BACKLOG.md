@@ -24,6 +24,19 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
 
 ## Aufgenommen
 
+### Geofences für ortsgebundene Aufgaben
+- **Defizit:** D2 — aber ohne Geofence gelöst
+- **Frühestens:** nicht vorgesehen (siehe `docs/02-ARCHITEKTUR.md §8`)
+- **Warum nicht jetzt:** Ein Geofence beantwortet „wo bin ich", die eigentliche Frage ist aber
+  „was geht hier". Er kostet `ACCESS_BACKGROUND_LOCATION` — die eingriffstiefste Berechtigung,
+  die Android kennt —, verlangt entweder Play Services (nutzt dieses Projekt nicht) oder einen
+  dauerhaft messenden Dienst, und legt in einer Datenbank mit Gesundheitsdaten ein
+  Bewegungsprofil an. Der Gegenwert wäre ein Kreis mit 200 m Radius, der nicht weiß, ob der
+  Baumarkt offen hat. Gebaut wurde stattdessen `Task.place` als frei vergebener Name, gesetzt in
+  zwei Tipps oder von einer Geräteroutine über `de.axiom.PLACE` — „WLAN Büro verbunden" ist
+  genauer als jeder Kreis und kostet keine Berechtigung.
+- **Notiert:** 2026-08-05
+
 ### Kalender-Zweiweg-Sync
 - **Defizit:** D4
 - **Frühestens:** S3
@@ -75,6 +88,7 @@ bereits getroffen ist, bevor der Reiz kommt.
 | Punkte/Badges ohne reale Konsequenz | Habituiert binnen Tagen und entwertet den Mechanismus dauerhaft |
 | Social, Sharing, Leaderboards | Trifft Rejection Sensitivity frontal (D10) |
 | Veröffentlichung im Play Store | Anderes Projekt. Ändert alle Datenschutzannahmen |
+| Echte Geofences (GPS-Radius um einen Ort, Auslösung beim Betreten) | Ein Geofence beantwortet „wo bin ich", die Frage ist aber „was geht hier". Er kostet `ACCESS_BACKGROUND_LOCATION` — die eingriffstiefste Berechtigung, die Android kennt —, verlangt entweder Play Services (nutzt dieses Projekt nicht) oder einen dauerhaft messenden Dienst, und legt in einer Datenbank mit Gesundheitsdaten ein Bewegungsprofil an. Der Gegenwert ist ein Kreis, der nicht weiß, ob der Baumarkt offen hat. **Gebaut wurde stattdessen:** Orte als Kontext, vom Nutzer gesetzt oder von einer Samsung-Routine per Broadcast (`de.axiom.PLACE`). „WLAN Büro verbunden" ist genauer als jeder Radius, kostet keine Berechtigung und kann kein Profil hinterlassen. Wird das nach einigen Wochen nachweislich benutzt und ist das Setzen von Hand die Hürde, ist ein eigenes ADR fällig — vorher nicht |
 | Projekte als eigener Typ (Projekt → Aufgabe → Teilschritt, mit eigener Ansicht, Farbe, Fortschritt) | Es gibt die Mechanik schon: `parentId`. Eine zerlegte Aufgabe **ist** ein Projekt, ihre Teilschritte sind seine Aufgaben, und die Kette darf beliebig tief werden. Ein zweiter Typ daneben wäre eine zweite Ordnungsachse — und die will gepflegt werden: Wohin gehört das hier? Brauche ich ein neues Projekt? Ist das noch dasselbe? Genau diese Fragen sind Meta-Work-Treibstoff (D3), und sie kommen ohne eine einzige erledigte Aufgabe aus. Statt dessen: die vorhandene Kette sichtbar machen (Baum, Fortschritt „2 von 5") |
 | Statusfarben nach Monday-Vorbild (grün erledigt, rot kritisch, gelb in Arbeit) | Mondays Farben sind **Noten**: grün gut, rot schlecht. R7 sagt, Zustandswerte sind Messwerte und keine Noten — eine rote Aufgabe wäre ein Vorwurf, den man beim Draufsehen mitliest. Übernommen wird die Idee, nicht die Umsetzung: Eine Farbrampe für **Dringlichkeit**, abgeleitet aus dem Abstand zu `decayAt`, ist eine Messung. Überfällig ist eine Tatsache, kein Urteil |
 | Sortier- und Filterbaukasten, speicherbare Ansichten | Eine Ansicht zu bauen ist befriedigender als sie zu benutzen (D3). Es bleibt bei drei festen Filtern — Suche, Reichweite, überfällig — und einer Reihenfolge, die nicht verstellbar ist: derselben, nach der das System auswählt. Zwei Reihenfolgen wären zwei Wahrheiten |

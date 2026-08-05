@@ -412,6 +412,82 @@ void main() {
           contains('Timer.periodic'));
     });
 
+    test('der Ort kommt ohne Standortberechtigung aus', () {
+      // Der Kern der Entscheidung gegen einen Geofence: Er kostet
+      // ACCESS_BACKGROUND_LOCATION — die eingriffstiefste Berechtigung, die
+      // Android kennt — und legt in einer Datenbank mit Gesundheitsdaten ein
+      // Bewegungsprofil an. Der Gegenwert waere ein Kreis mit 200 m Radius.
+      //
+      // XML-Kommentare entfernen: Sie nennen genau die Berechtigungen, die
+      // im Markup nicht vorkommen duerfen — sie begruenden ja, warum.
+      final manifest = android('AndroidManifest.xml')
+          .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+      expect(manifest, isNot(contains('ACCESS_FINE_LOCATION')));
+      expect(manifest, isNot(contains('ACCESS_COARSE_LOCATION')));
+      expect(manifest, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
+    });
+
+    test('der Ortsempfänger ist exportiert und hört auf genau eine Aktion',
+        () {
+      // exported MUSS true sein: Die Routinen-App ist ein anderer Prozess.
+      // Mit false kaeme der Broadcast stumm nie an — der haeufigste
+      // Fehlermodus dieser Schnittstelle.
+      final manifest = android('AndroidManifest.xml');
+      final receiver =
+          manifest.substring(manifest.indexOf('.PlaceReceiver'));
+      final block = receiver.substring(0, receiver.indexOf('</receiver>'));
+      expect(block, contains('android:exported="true"'));
+      expect(block, contains('de.axiom.PLACE'));
+
+      // Und ohne android:permission. Das prueft den *Sender*, und Samsungs
+      // Routinen halten keine selbst definierte Berechtigung von AXIOM —
+      // mit ihr waere die Funktion tot statt sicher.
+      expect(block, isNot(contains('android:permission')));
+    });
+
+    test('der Ortsempfänger setzt einen Ort und tut sonst nichts', () {
+      // Ein exportierter Empfaenger ist eine offene Tuer. Sie ist genau so
+      // weit auf, wie sie sein muss: Er nimmt einen Namen entgegen, kuerzt
+      // ihn und legt ihn ab. Kein Datenbankzugriff, keine Rueckgabe, kein
+      // Start von irgendetwas.
+      final source =
+          code(android('kotlin/de/axiom/axiom_app/PlaceReceiver.kt'));
+      expect(source, contains('if (intent.action != ACTION) return'),
+          reason: 'Ein exportierter Empfaenger bekommt auch alles, was per '
+              'Komponentennamen direkt an ihn geht');
+      expect(source, contains('take(MAX_LENGTH)'));
+      for (final forbidden in [
+        'startActivity',
+        'startService',
+        'sendBroadcast',
+        'SQLite',
+        'setResult',
+      ]) {
+        expect(source, isNot(contains(forbidden)), reason: forbidden);
+      }
+    });
+
+    test('ein empfangener Ort geht nicht verloren, wenn die App nicht läuft',
+        () {
+      // Dasselbe Zweischrittmuster wie bei den Notizen: erst lesen, dann
+      // speichern lassen, dann erst loeschen. Wer in einem Zug liest und
+      // leert, verliert den Eintrag, sobald das Speichern danach scheitert.
+      final inbox = android('kotlin/de/axiom/axiom_app/PlaceReceiver.kt');
+      expect(inbox, contains('fun peek'));
+      expect(inbox, contains('fun ack'));
+      expect(inbox, contains('.commit()'),
+          reason: 'apply() schreibt im Hintergrund — der Prozess eines '
+              'Empfaengers darf vorher beendet werden');
+
+      final handler =
+          code(File('lib/platform/intent_handler.dart').readAsStringSync());
+      expect(handler, contains('peekPendingPlaces'));
+      expect(handler, contains('ackPendingPlaces'));
+      // Mit dem Zeitstempel des Empfangs, nicht dem von jetzt: Sonst stuende
+      // der Wechsel im Ereignisstrom an der falschen Stelle.
+      expect(handler, contains('fromMillisecondsSinceEpoch'));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

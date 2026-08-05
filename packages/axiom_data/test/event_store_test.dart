@@ -135,6 +135,45 @@ void main() {
       );
     });
 
+    test('der Ort ueberlebt einen Wiederaufbau', () async {
+      // Ohne `place` im Ereignis kaeme die Aufgabe ortsungebunden zurueck —
+      // und wuerde ueberall vorgeschlagen. Ein Wiederaufbau, der den Zustand
+      // veraendert, ist die teuerste Art von Fehler in einem System, dessen
+      // Projektionen aus dem Ereignisstrom entstehen.
+      await store.append(evt(EventType.taskCreated, payload: {
+        'task_id': 't3',
+        'title': 'Dichtungsring kaufen',
+        'ae': 3,
+        'salience': 4,
+        'stakes': 6,
+        'state': 'ready',
+        'place': 'Baumarkt',
+      }));
+
+      await store.rebuildProjections();
+      final rebuilt = (await store.tasks()).single;
+      expect(rebuilt.place, 'Baumarkt');
+      expect(rebuilt.isStartable(100, atPlace: 'Büro'), isFalse);
+      expect(rebuilt.isStartable(100), isTrue,
+          reason: 'Ohne gesetzten Ort wird nichts unterdrueckt');
+    });
+
+    test('der Ort ueberlebt auch einen Zustandswechsel in der Projektion',
+        () async {
+      await store.upsertTask(const Task(
+        id: 't4',
+        title: 'Regal aufbauen',
+        activationEnergy: 4,
+        salience: 5,
+        stakes: 5,
+        place: 'Zuhause',
+        state: TaskState.ready,
+      ));
+      final loaded = (await store.tasks()).single;
+      await store.upsertTask(loaded.copyWith(state: TaskState.active));
+      expect((await store.tasks()).single.place, 'Zuhause');
+    });
+
     test('eine Zerlegung überlebt den Wiederaufbau', () async {
       // Der teuerste Datenverlust, den es hier gab: Teilschritte standen
       // nur in der Projektion, nie im Ereignisstrom. Ein Wiederaufbau —
@@ -363,6 +402,33 @@ void _schemaGuard() {
       expect(tables, contains('rule_overrides'),
           reason: 'Sonst bricht der Regeleditor auf genau den Geräten, auf '
               'denen AXIOM schon lief');
+      store.close();
+    });
+
+    test('eine Bestandsdatenbank bekommt die Ortsspalte nachgereicht',
+        () async {
+      // Derselbe Fall eine Version weiter: Wer AXIOM schon benutzt, hat
+      // `tasks` ohne `place`. Ohne Nachreichen bricht jedes Speichern einer
+      // Aufgabe — und zwar erst auf dem Geraet.
+      final path = '${dir.path}/ohne_ort.db';
+      final clock = FakeClock(DateTime(2026));
+      SqliteEventStore.open(path, clock: clock).close();
+      sqlite3.open(path)
+        ..execute('ALTER TABLE tasks DROP COLUMN place;')
+        ..execute('PRAGMA user_version = 6;')
+        ..dispose();
+
+      final store = SqliteEventStore.open(path, clock: clock);
+      await store.upsertTask(const Task(
+        id: 'alt',
+        title: 'Aus einer aelteren Fassung',
+        activationEnergy: 3,
+        salience: 5,
+        stakes: 5,
+        place: 'Büro',
+        state: TaskState.ready,
+      ));
+      expect((await store.tasks()).single.place, 'Büro');
       store.close();
     });
 

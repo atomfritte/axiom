@@ -26,6 +26,7 @@
 -keep class de.axiom.axiom_app.AlarmReceiver { *; }
 -keep class de.axiom.axiom_app.BootReceiver { *; }
 -keep class de.axiom.axiom_app.QuickCaptureReceiver { *; }
+-keep class de.axiom.axiom_app.PlaceReceiver { *; }
 
 # sqlite3 laedt seine native Bibliothek ueber einen festen Klassennamen.
 -keep class org.sqlite.** { *; }

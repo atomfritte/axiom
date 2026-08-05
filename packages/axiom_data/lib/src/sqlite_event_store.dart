@@ -24,7 +24,11 @@ import 'package:sqlite3/sqlite3.dart';
 /// v5: `post_mortems`, `med_entries` — Stufe 4. Vorfaelle selbst liegen
 ///     als Events, die Nachbetrachtung braucht eine eigene Tabelle, weil
 ///     sie spaeter entsteht und ergaenzt wird.
-const int kSchemaVersion = 6;
+/// v6: `rule_overrides` — im Geraet bearbeitete Regeln.
+/// v7: `tasks.place` — Ortsbindung als frei vergebener Name. Der aktuelle
+///     Ort selbst braucht keine Spalte: Er ist die Projektion des letzten
+///     `place_entered`-Events.
+const int kSchemaVersion = 7;
 
 final class SqliteEventStore implements EventStore {
   final Database _db;
@@ -301,6 +305,21 @@ final class SqliteEventStore implements EventStore {
       ''');
     }
 
+    // Ortsbindung. Eigener Block, wie jede Version davor.
+    //
+    // `ALTER TABLE` statt Neuanlage: Eine Bestandsdatenbank hat `tasks`
+    // laengst, und die Spaltenpruefung davor ist noetig, weil ein frisch
+    // erstelltes Schema den Block ebenfalls durchlaeuft (current = 0).
+    if (current < 7) {
+      final columns = _db
+          .select('PRAGMA table_info(tasks);')
+          .map((r) => r['name'] as String)
+          .toSet();
+      if (!columns.contains('place')) {
+        _db.execute('ALTER TABLE tasks ADD COLUMN place TEXT;');
+      }
+    }
+
     _db.execute('PRAGMA user_version = $kSchemaVersion;');
   }
 
@@ -388,13 +407,13 @@ final class SqliteEventStore implements EventStore {
   Future<void> upsertTask(Task task) async {
     _db.execute(
       'INSERT INTO tasks (id, title, ae, salience, stakes, decay_at, state, '
-      'parent_id, contexts, breadcrumb, created_at) '
-      'VALUES (?,?,?,?,?,?,?,?,?,?,?) '
+      'parent_id, contexts, breadcrumb, place, created_at) '
+      'VALUES (?,?,?,?,?,?,?,?,?,?,?,?) '
       'ON CONFLICT(id) DO UPDATE SET title=excluded.title, ae=excluded.ae, '
       'salience=excluded.salience, stakes=excluded.stakes, '
       'decay_at=excluded.decay_at, state=excluded.state, '
       'parent_id=excluded.parent_id, contexts=excluded.contexts, '
-      'breadcrumb=excluded.breadcrumb',
+      'breadcrumb=excluded.breadcrumb, place=excluded.place',
       [
         task.id,
         task.title,
@@ -406,6 +425,7 @@ final class SqliteEventStore implements EventStore {
         task.parentId,
         task.contexts.join(','),
         task.breadcrumb,
+        task.place,
         _clock.nowUtc().millisecondsSinceEpoch,
       ],
     );
@@ -434,6 +454,7 @@ final class SqliteEventStore implements EventStore {
         parentId: r['parent_id'] as String?,
         contexts: contexts.isEmpty ? const [] : contexts.split(','),
         breadcrumb: r['breadcrumb'] as String?,
+        place: r['place'] as String?,
       );
     }).toList();
   }
@@ -712,6 +733,12 @@ final class SqliteEventStore implements EventStore {
             // Zugehoerigkeit: Sie stehen dann als lose Aufgaben da, und die
             // Elternaufgabe wirkt unerledigt ohne erkennbaren Grund.
             parentId: e.payload['parent_id'] as String?,
+            // Ohne das ueberlebt die Ortsbindung keinen Wiederaufbau: Die
+            // Aufgabe kaeme ortsungebunden zurueck und wuerde ueberall
+            // vorgeschlagen. Ein Wiederaufbau, der den Zustand veraendert,
+            // ist die teuerste Art von Fehler in einem System, dessen
+            // Projektionen aus dem Ereignisstrom entstehen.
+            place: e.payload['place'] as String?,
           );
         case EventType.taskStarted:
           byId[id] = byId[id]?.copyWith(state: TaskState.active) ?? byId[id]!;

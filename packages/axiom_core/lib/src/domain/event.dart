@@ -30,6 +30,15 @@ enum EventType {
   taskAbandoned,
   taskSplit,
 
+  /// Ortswechsel. `payload['place']` traegt den Namen; fehlt er oder ist er
+  /// leer, heisst das „kein Ort mehr gesetzt".
+  ///
+  /// Der aktuelle Ort ist damit ein abgeleiteter Zustand und kein Feld, das
+  /// ueberschrieben wird — wie alles hier. Quelle ist entweder der Nutzer
+  /// (`EventSource.user`) oder eine Geraeteroutine (`EventSource.device`),
+  /// und im Ereignisstrom bleibt unterscheidbar, welches von beidem.
+  placeEntered,
+
   // M4 Focus Governor
   focusStart,
   focusEnd,

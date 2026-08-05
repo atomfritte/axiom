@@ -24,6 +24,7 @@ const Map<String, String> kEnglish = {
   ', zeigt die Begruendung': ', shows the reasoning',
   'AKTIVIERUNGSENERGIE': 'ACTIVATION ENERGY',
   'ANKER ÄNDERN': 'EDIT ANCHOR',
+  'ANLAUF {0} H': 'RUN-UP {0} H',
   'AUF': 'ON',
   'AUSLÖSEN': 'TRIGGER',
   'AXIOM': 'AXIOM',
@@ -55,6 +56,7 @@ const Map<String, String> kEnglish = {
           'of estimates. That is the point where the output becomes reliable.',
   'Ab jetzt runterfahren. Was offen ist, ist morgen noch offen.':
       'Wind down from here. What is open will still be open tomorrow.',
+  'Abbrechen': 'Cancel',
   'Abbrechen, ohne Notiz': 'Stop without a note',
   'Abend.': 'Evening.',
   'Abendgrenze': 'Evening cutoff',
@@ -69,7 +71,10 @@ const Map<String, String> kEnglish = {
       'Everything open needs more of a run-up than today has. That is a '
           'measurement, not a verdict. Splitting a task into smaller steps '
           'helps more than trying harder.',
+  'Alles steht zur Auswahl.': 'Everything is available.',
   'Als Nächstes: {0} um {1}.': 'Next: {0} at {1}.',
+  'Anderer Ort': 'Another place',
+  'Anderswo · {0}': 'Elsewhere · {0}',
   'Anfangen': 'Start',
   'Anzeige': 'Display',
   'Anker': 'Anchor',
@@ -106,6 +111,7 @@ const Map<String, String> kEnglish = {
   'BASELINE TAG {0}': 'BASELINE DAY {0}',
   'BASELINE VOLLSTÄNDIG': 'BASELINE COMPLETE',
   'Baseline vollständig': 'Baseline complete',
+  'Baumarkt, Büro, Zuhause …': 'Hardware store, office, home …',
   'Bedingung': 'Condition',
   'Bedingung trifft nicht zu': 'condition does not hold',
   'Befehl kopiert.': 'Command copied.',
@@ -118,6 +124,8 @@ const Map<String, String> kEnglish = {
   'Bis dahin laufen die Regeln auf geschätzten Gewichten. Sie können danebenliegen — betroffene Regeln sind unten mit UNGEEICHT markiert.':
       'Until then the rules run on estimated weights. They can be off — the '
           'rules affected are marked UNCALIBRATED below.',
+  'Bis zur Frist der am knappsten dastehenden Aufgabe. Ohne Frist steht hier 9999 — eine Zahl, die keine Regel unterschreitet.':
+      'Until the deadline of the task with the least room. Without a deadline it reads 9999 — a number no rule goes below.',
   'Bixby: Routinen → Meine Routinen → Aktion hinzufügen → App öffnen → AXIOM. Dort lässt sich auch ein Sprachbefehl hinterlegen.':
       'Bixby: Routines → My routines → Add action → Open app → AXIOM. A voice '
           'command can be stored there too.',
@@ -164,6 +172,8 @@ const Map<String, String> kEnglish = {
   'Der Nutzen liegt nicht im Aufschreiben, sondern im Muster: Was regelmäßig trifft, lässt sich vorbereiten.':
       'The value is not in writing it down but in the pattern: what hits '
           'regularly can be prepared for.',
+  'Der Ort entscheidet, was hier vorgeschlagen wird. Ohne Ort steht alles zur Auswahl — es wird nichts ausgeblendet, was du nicht selbst eingeschaltet hast.':
+      'The place decides what gets suggested here. Without a place everything is available — nothing is hidden that you did not switch on yourself.',
   'Der Rest, grob — kommt später dran': 'The rest, roughly — for later',
   'Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.':
       'What makes this different: it does not ask what you want to do — it '
@@ -262,6 +272,9 @@ const Map<String, String> kEnglish = {
           'want the next day. Instead of blocking it, AXIOM puts a waiting '
           'period in between — and asks you your own questions.',
   'Ein Vorfall wartet auf Einordnung': 'One incident is waiting for review',
+  'Eine Aufgabe gehört woanders hin.': 'One task belongs somewhere else.',
+  'Eine Geräteroutine kann das auch: Broadcast de.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.':
+      'A device routine can do this too: broadcast de.axiom.PLACE with the extra “place”. No location permission.',
   'Eine Handlung': 'One action',
   'Einen Moment.': 'One moment.',
   'Eingang': 'Inbox',
@@ -328,6 +341,9 @@ const Map<String, String> kEnglish = {
   'Gab es Erhaltungsmodus-Tage? Was ging voraus?':
       'Were there maintenance-mode days? What came before them?',
   'Gedeckt.': 'Covered.',
+  'Geht das nur an einem Ort?': 'Does this only work in one place?',
+  'Gehört zu einem anderen Ort als „{0}". Sie kommen zurück, sobald der Ort passt oder keiner gesetzt ist.':
+      'Belongs to a place other than “{0}”. They come back as soon as the place matches, or as soon as none is set.',
   'Geld, Schlaf, Gesundheit oder Beziehung. Wird nicht verboten — nur nicht von selbst vorgeschlagen.':
       'Money, sleep, health or relationships. Not forbidden — just not '
           'suggested on its own.',
@@ -406,6 +422,7 @@ const Map<String, String> kEnglish = {
       'Capacity line. Capacity {0} out of 100. {1} of {2} tasks can be started '
           'now.',
   'Kapazität': 'Capacity',
+  'Kein Ort': 'No place',
   'Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du unten erfassen.':
       'No suggestion means nothing is needed right now. Whatever comes to '
           'mind, you can capture it below.',
@@ -482,6 +499,7 @@ const Map<String, String> kEnglish = {
   'Nichts einsortiert. Der Eingang läuft voll, und ein voller Eingang wird irgendwann gar nicht mehr geöffnet.':
       'Nothing sorted. The inbox fills up, and a full inbox eventually stops '
           'being opened at all.',
+  'Nichts liegt woanders.': 'Nothing is filed elsewhere.',
   'Nichts startbar gerade. Ein Fokusblock ohne Ziel lässt sich später nicht bewerten — dann lieber ohne.':
       'Nothing startable right now. A focus block without a target cannot be '
           'assessed later — better to run it without one.',
@@ -508,10 +526,13 @@ const Map<String, String> kEnglish = {
       'Noted. This rule will speak up less often.',
   'Notiz wartet': 'note waiting',
   'Notizen warten': 'notes waiting',
+  'Nur nötig, wenn die Aufgabe woanders nicht geht. Kein Standortzugriff — nur ein Name.':
+      'Only needed if the task does not work elsewhere. No location access — just a name.',
   'Nächste Woche: höchstens drei Vorhaben.': 'Next week: three plans at most.',
   'Nächte': 'nights',
   'ODER EINE DIESER FORMEN': 'OR ONE OF THESE SHAPES',
   'ODER EINE VORLAGE': 'OR A TEMPLATE',
+  'ORT': 'PLACE',
   'Offen · {0}': 'Open · {0}',
   'Oft ein anderer als der gefühlte.':
       'Often a different one than it felt like.',
@@ -523,6 +544,9 @@ const Map<String, String> kEnglish = {
   'Ohne mindestens eine Frage kein Trigger. Sie ist der Vertrag.':
       'No trigger without at least one question. The question is the contract.',
   'Ordner auf den Tisch legen': 'Put the folder on the table',
+  'Ort': 'Place',
+  'Ort über eine Routine': 'Place via a routine',
+  'Ort …': 'Place …',
   'Passt nicht': 'Does not fit',
   'Pfad kopiert.': 'Path copied.',
   'Pfad zur .axiom-Datei': 'Path to the .axiom file',
@@ -559,7 +583,10 @@ const Map<String, String> kEnglish = {
   'Reizbedarf': 'Stimulation need',
   'Reizbedarf geplant gedeckt': 'Stimulation need covered as planned',
   'Reizhunger': 'Stimulation hunger',
+  'Rest nach dem Anlauf': 'Time left after the run-up',
   'Review abschließen': 'Finish review',
+  'Routinen → Dann → Anderes → Broadcast senden → de.axiom.PLACE, Zusatz „place" = Büro. Ein leerer Zusatz setzt den Ort zurück.':
+      'Routines → Then → Other → Send broadcast → de.axiom.PLACE, extra “place” = Büro. An empty extra clears the place.',
   'Routinen → Wenn → Anderes → Broadcast empfangen → axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER':
       'Routines → If → Other → Receive broadcast → axiom.FOCUS_START, '
           'axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER',
@@ -590,6 +617,7 @@ const Map<String, String> kEnglish = {
   'Seit {0} min vertieft, ohne gesetztes Ziel. Ist das noch das, was du wolltest?':
       'Deep in it for {0} min with no target set. Is this still what you '
           'wanted?',
+  'Setzen': 'Set',
   'So viel niedriger fällt ein Vorfall bei dir im Rückblick aus. Kein Trost — ein Erfahrungswert, den du beim nächsten Mal einkalkulieren kannst.':
       'That is how much lower an incident reads for you in hindsight. Not '
           'reassurance — a figure you can factor in next time.',
@@ -610,6 +638,9 @@ const Map<String, String> kEnglish = {
   'Steht.': 'Done.',
   'Stimmung': 'Mood',
   'Stufe {0}': 'Level {0}',
+  'Stunden bis zur Frist': 'Hours to the deadline',
+  'Stunden bis zur Frist minus dem Anlauf, den die Aufgabe braucht. Wird der Wert negativ, ist der Moment vorbei, in dem Anfangen noch gereicht hätte.':
+      'Hours until the deadline minus the run-up the task needs. Once it turns negative, the moment when starting would still have been enough has passed.',
   'Stärkster einzelner Modulator der Kapazität.':
       'Single strongest modulator of capacity.',
   'System': 'System',
@@ -631,6 +662,8 @@ const Map<String, String> kEnglish = {
   'Trigger speichern': 'Save trigger',
   'Trigger · {0}': 'Triggers · {0}',
   'UND DANN? (OPTIONAL)': 'AND THEN? (OPTIONAL)',
+  'Umgekehrte Richtung: Eine Routine sagt AXIOM, wo du bist. „WLAN Büro verbunden" ist genauer als jeder Kreis auf der Karte — und kostet keine Standortberechtigung.':
+      'The other direction: a routine tells AXIOM where you are. “Office Wi-Fi connected” is more precise than any circle on a map — and costs no location permission.',
   'Ungedeckter Bedarf sucht sich den schnellsten Kanal.':
       'Uncovered need finds the fastest channel.',
   'Ungeeicht': 'Uncalibrated',
@@ -772,8 +805,10 @@ const Map<String, String> kEnglish = {
   'globales Tageslimit erreicht': 'global daily limit reached',
   'große Hürde': 'high barrier',
   'in {0} min': 'in {0} min',
+  'kein Ort': 'no place',
   'keine Daten': 'no data',
   'lief nebenbei': 'ran alongside',
+  'oder ein eigener Wert': 'or a value of your own',
   'ständig nachgehalten': 'tracked constantly',
   'vollständig': 'complete',
   'von {0} min': 'of {0} min',
@@ -782,6 +817,7 @@ const Map<String, String> kEnglish = {
   '{0}  ({1}{2})': '{0}  ({1}{2})',
   '{0} %': '{0} %',
   '{0} %  ({1} gesamt)': '{0} %  ({1} total)',
+  '{0} Aufgaben gehören woanders hin.': '{0} tasks belong somewhere else.',
   '{0} Nächte · {1} Tage Schritte übernommen':
       '{0} nights · {1} days of steps taken in',
   '{0} Stufe {1} von 5': '{0} level {1} of 5',
@@ -833,6 +869,7 @@ const Map<String, String> kEnglish = {
           'back, not tuned — switch modules off, delete rules.',
   'Übernehmen': 'Take it on',
   'Überspringen': 'Skip',
+  'überall': 'anywhere',
   '„Mache ich" wird frei, wenn die Wartezeit um ist.':
       '“Doing it” unlocks once the waiting period is over.',
 

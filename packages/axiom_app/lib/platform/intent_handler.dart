@@ -7,6 +7,7 @@ library;
 
 import 'dart:async';
 
+import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +101,28 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
         stored++;
       }
       if (stored > 0) await AndroidBridge.ackPendingMemos(stored);
+
+      // Ortswechsel aus Geräteroutinen (`de.axiom.PLACE`).
+      //
+      // Mit dem Zeitstempel des Empfangs, nicht dem von jetzt: Der Wechsel
+      // ist passiert, als die Routine ausgelöst hat. Mit der aktuellen Zeit
+      // abgelegt stünde er im Ereignisstrom an der falschen Stelle, und jede
+      // spätere Auswertung „wo wurde eigentlich gearbeitet" wäre falsch.
+      final places = await AndroidBridge.peekPendingPlaces();
+      var seen = 0;
+      for (final entry in places) {
+        final at = entry['at'];
+        await runtime.recordAt(
+          at is int
+              ? DateTime.fromMillisecondsSinceEpoch(at)
+              : runtime.clock.nowUtc(),
+          EventType.placeEntered,
+          source: EventSource.device,
+          payload: {'place': (entry['place'] as String?)?.trim() ?? ''},
+        );
+        seen++;
+      }
+      if (seen > 0) await AndroidBridge.ackPendingPlaces(seen);
 
       final action = await _invokeString('launchAction');
       if (!mounted) return;

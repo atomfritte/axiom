@@ -1396,6 +1396,9 @@ final class ExpertServer {
         'decayAt': task.decayAt?.toIso8601String(),
         'parentId': task.parentId,
         'breadcrumb': task.breadcrumb,
+        // Nur lesend: Der Ort wird am Geraet gesetzt, wo man auch tatsaechlich
+        // ist. Ein Ortsschalter am Rechner waere eine Angabe ins Blaue.
+        'place': task.place,
         'childCount': counts[task.id]?.total ?? 0,
         'doneCount': counts[task.id]?.done ?? 0,
       };

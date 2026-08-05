@@ -181,6 +181,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
             ready: false,
             hint: context.t('Routinen → Wenn → Anderes → Broadcast empfangen → axiom.FOCUS_START, axiom.FOCUS_END, axiom.WINDDOWN, axiom.L3_ENTER'),
           ),
+          _ChannelCard(
+            icon: Icons.place_outlined,
+            title: context.t('Ort über eine Routine'),
+            body: context.t('Umgekehrte Richtung: Eine Routine sagt AXIOM, wo du bist. „WLAN Büro verbunden" ist genauer als jeder Kreis auf der Karte — und kostet keine Standortberechtigung.'),
+            ready: false,
+            hint: context.t('Routinen → Dann → Anderes → Broadcast senden → de.axiom.PLACE, Zusatz „place" = Büro. Ein leerer Zusatz setzt den Ort zurück.'),
+          ),
 
           const SizedBox(height: Space.xl),
           Text(
