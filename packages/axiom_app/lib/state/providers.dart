@@ -172,21 +172,10 @@ void refreshAxiom(WidgetRef ref) =>
 final inboxProvider = FutureProvider<List<Event>>((ref) async {
   ref.watch(refreshTickProvider);
   final runtime = await ref.watch(runtimeProvider.future);
-  final captures = await runtime.store.query(types: {EventType.capture});
-  final triaged = await runtime.store.query(types: {EventType.taskCreated});
-  final done = triaged
-      .map((e) => e.payload['from_capture'] as String?)
-      .whereType<String>()
-      .toSet();
-  final dismissed = (await runtime.store.query(types: {EventType.taskAbandoned}))
-      .map((e) => e.payload['from_capture'] as String?)
-      .whereType<String>()
-      .toSet();
-  return captures
-      .where((e) => !done.contains(e.id) && !dismissed.contains(e.id))
-      .toList()
-      .reversed
-      .toList();
+  // Die Definition von „unsortiert" steht in der Laufzeit, nicht hier: Der
+  // Server braucht dieselbe, und zwei Fassungen davon waren schon einmal
+  // eine zu viel.
+  return runtime.unsortedCaptures();
 });
 
 /// Aktuelle lokale Zeit — immer ueber den Clock-Port.

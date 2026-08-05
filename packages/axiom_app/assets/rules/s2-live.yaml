@@ -181,3 +181,47 @@
   severity: info
   cooldown: { minutes: 1440, max_per_day: 1, backoff: exponential }
   enabled: true
+
+# ── Der Eingang meldet sich selbst ──────────────────────────────────────
+#
+# Bis hierher war der Eingang eine Holschuld: Man musste daran denken, dort
+# nachzusehen. Genau das ist die Stelle, an der ein System für dieses Profil
+# aufhört zu tragen — was nicht sichtbar ist, ist nicht da [D9], und eine
+# Notiz, die drei Wochen liegt, entwertet den ganzen Erfassungskanal. Wer
+# einmal erlebt hat, dass Erfasstes versandet, erfasst nicht mehr.
+#
+# Gemessen wird deshalb das ALTER, nicht die Anzahl. Zehn Notizen von heute
+# Vormittag sind ein normaler Vormittag. Eine von vor drei Tagen ist ein
+# Befund.
+
+- id: R-150
+  title: "Etwas liegt seit Tagen im Eingang"
+  title_en: "Something has been in the inbox for days"
+  deficit: D9
+  rationale: >
+    Erfassen ist der billigste Teil des Systems und der einzige, der im
+    Impuls funktioniert. Er trägt aber nur, solange Erfasstes auch wieder
+    auftaucht. Bleibt eine Notiz tagelang unbeantwortet, war die Erfassung
+    umsonst — und beim nächsten Einfall greift man wieder zum Zettel. Diese
+    Regel holt den Eingang aktiv nach vorn, statt darauf zu warten, dass
+    jemand nachsieht. Sie meldet sich einmal am Tag und nur, wenn wirklich
+    etwas alt ist.
+  rationale_en: >
+    Capturing is the cheapest part of the system and the only part that
+    works on impulse. But it only holds as long as what was captured
+    resurfaces. If a note stays unanswered for days, the capture was
+    wasted — and the next thought goes back onto a paper scrap. This rule
+    brings the inbox forward instead of waiting to be visited. It speaks up
+    once a day, and only when something is genuinely old.
+  when:
+    all:
+      - inbox_oldest_hours: { gte: 72 }
+      - time_between: ["09:00", "20:00"]
+      - meta_minutes_today: { lt: 12 }
+  then:
+    action: log_only          # SHADOW: sieben Tage stumm, dann auswerten
+    params: { hint: inbox }
+  priority: 35
+  severity: info
+  cooldown: { minutes: 1440, max_per_day: 1, backoff: exponential }
+  enabled: true

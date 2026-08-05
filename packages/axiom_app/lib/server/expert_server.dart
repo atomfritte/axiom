@@ -594,9 +594,26 @@ final class ExpertServer {
           salience: _clamp(body['salience'], 1, 10, 3),
           stakes: _clamp(body['stakes'], 1, 10, 3),
           decayAt: _date(body, 'decayAt'),
+          // Kommt die Aufgabe aus einer Notiz, verschwindet die Notiz damit
+          // aus dem Eingang. Ohne diesen Bezug blieb sie dort stehen.
+          fromCapture: _optionalText(body, 'fromCapture'),
         );
         onChanged();
         return _json(request, 200, _task(task));
+
+      // Eine Notiz beantworten, ohne eine Aufgabe daraus zu machen.
+      //
+      // Ohne diesen Weg gaebe es nur einen: alles zur Aufgabe machen. Dann
+      // sammelt sich im Bestand, was nie eine Aufgabe war — ein Gedanke, eine
+      // Adresse, ein Einfall. Verworfen heisst nicht geloescht: Das Ereignis
+      // bleibt, nur der Eingang ist beantwortet.
+      case ('POST', ['api', 'inbox', final id, 'dismiss']):
+        await runtime.record(EventType.taskAbandoned, payload: {
+          'from_capture': id,
+          'reason': 'dismissed',
+        });
+        onChanged();
+        return _json(request, 200, {'ok': true});
 
       case ('PATCH', ['api', 'tasks', final id]):
         return _patchTask(request, runtime, id);
@@ -817,7 +834,10 @@ final class ExpertServer {
 
       // ── Eingang ──────────────────────────────────────────────────────
       case ('GET', ['api', 'inbox']):
-        final notes = await runtime.store.query(types: {EventType.capture});
+        // Nur, was noch offen ist. Vorher standen hier die letzten hundert
+        // Erfassungen — sortierte blieben stehen, und nach zwei Wochen war
+        // nicht mehr zu erkennen, was beantwortet war und was nicht.
+        final notes = await runtime.unsortedCaptures();
         final all = await runtime.store.tasks();
         final inboxCounts = _childCounts(all);
         final inboxGraph = TaskLinkGraph.from(
@@ -830,7 +850,7 @@ final class ExpertServer {
               _task(task, inboxCounts, inboxGraph),
         ];
         return _json(request, 200, {
-          'notes': notes.reversed
+          'notes': notes
               .take(100)
               .map((e) => {
                     'id': e.id,
@@ -2053,6 +2073,17 @@ final class ExpertServer {
   /// abgelehnt. Der Grund steht dabei: Eine Aufgabe ohne Titel steht in
   /// jeder Liste und ist in keiner wiederzuerkennen, und ein stumm auf
   /// „" gesetzter Titel löscht den vorhandenen.
+  /// Ein Textfeld, das fehlen darf. Leer zaehlt als nicht angegeben.
+  ///
+  /// Ohne den Trim-Schritt kaeme ein Feld mit einem Leerzeichen als Bezug
+  /// durch und zeigte auf eine Erfassung, die es nicht gibt.
+  static String? _optionalText(Map<String, Object?> body, String field) {
+    final value = body[field];
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
   static String _requiredText(
     Map<String, Object?> body,
     String field, {

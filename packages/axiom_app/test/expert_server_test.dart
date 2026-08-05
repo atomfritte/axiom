@@ -762,6 +762,75 @@ ${english ? '''  rationale_en: >
       expect((await json(res))['events'], isNotEmpty);
     });
 
+    group('Der Eingang leert sich wieder', () {
+      // Der Fehler, der diese Gruppe ausgeloest hat: Der Server lieferte
+      // schlicht die letzten hundert Erfassungen. Man sortierte eine Notiz,
+      // sie blieb stehen — und nach zwei Wochen war nicht mehr zu erkennen,
+      // was beantwortet war. Ein Eingang, der nie leer wird, ist kein
+      // Eingang, sondern ein Archiv, das man nicht mehr ansieht [D9].
+
+      Future<List<Object?>> notes(String cookie) async =>
+          ((await json(await call('GET', '/api/inbox', cookie: cookie)))
+              ['notes'] as List)
+              .cast<Object?>();
+
+      String idOf(Object? note) => (note! as Map)['id'] as String;
+
+      test('eine uebernommene Notiz verschwindet', () async {
+        final cookie = await login(server.status.pin!);
+        await h.runtime.capture('Steuerunterlagen sortieren');
+        final before = await notes(cookie);
+        expect(before, hasLength(1));
+
+        final res = await call('POST', '/api/tasks', cookie: cookie, body: {
+          'title': 'Steuerunterlagen sortieren',
+          'activationEnergy': 5,
+          'salience': 5,
+          'stakes': 5,
+          'fromCapture': idOf(before.single),
+        });
+        expect(res.statusCode, 200);
+
+        expect(await notes(cookie), isEmpty,
+            reason: 'Die Notiz ist beantwortet — sie gehoert nicht mehr dahin');
+        expect((await h.store.tasks()).map((t) => t.title),
+            contains('Steuerunterlagen sortieren'));
+      });
+
+      test('eine verworfene Notiz verschwindet auch', () async {
+        // Ohne diesen Weg gaebe es nur einen: alles zur Aufgabe machen.
+        // Dann sammelt sich im Bestand, was nie eine Aufgabe war.
+        final cookie = await login(server.status.pin!);
+        await h.runtime.capture('Adresse von der Werkstatt');
+        final before = await notes(cookie);
+
+        final res = await call('POST',
+            '/api/inbox/${idOf(before.single)}/dismiss', cookie: cookie);
+        expect(res.statusCode, 200);
+
+        expect(await notes(cookie), isEmpty);
+        expect(await h.store.tasks(), isEmpty,
+            reason: 'Verworfen heisst: keine Aufgabe daraus');
+      });
+
+      test('ohne Bezug bleibt die Notiz stehen', () async {
+        // Die Gegenprobe. Eine Aufgabe, die zufaellig denselben Text hat,
+        // beantwortet die Notiz nicht — sonst raeumte ein gleichlautender
+        // Titel etwas weg, das niemand angesehen hat.
+        final cookie = await login(server.status.pin!);
+        await h.runtime.capture('Steuerunterlagen sortieren');
+
+        await call('POST', '/api/tasks', cookie: cookie, body: {
+          'title': 'Steuerunterlagen sortieren',
+          'activationEnergy': 5,
+          'salience': 5,
+          'stakes': 5,
+        });
+
+        expect(await notes(cookie), hasLength(1));
+      });
+    });
+
     test('ein Fokus auf eine unbekannte Aufgabe wird abgelehnt', () async {
       // Er zählte sonst Zeit auf einen Anker, den keine Auswertung
       // wiederfindet.

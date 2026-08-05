@@ -1624,4 +1624,13 @@ const Map<String, String> kEnglish = {
       'The file sits in plain text. There is no keystore on the desktop to put a key in — a key file next to the database would be a prop. What is here is as protected as your user account.',
   'Am {0} musste die Datenbank neu angelegt werden — der Schlüssel passte nicht mehr zur vorhandenen Datei. Der bisherige Bestand ist damit entfallen.':
       'On {0} the database had to be created anew — the key no longer matched the existing file. Everything held until then is gone.',
+  // Vierte Palette und der Wortschatz zum Eingang.
+  'Werkbank': 'Workbench',
+  'seit {0} Tagen': '{0} days old',
+  'Notizen im Eingang': 'Notes in the inbox',
+  'Älteste Notiz im Eingang': 'Oldest note in the inbox',
+  'Erfasst, aber noch nicht beantwortet. Weder Aufgabe noch verworfen.':
+      'Captured but not answered yet. Neither a task nor dropped.',
+  'Stunden seit der ältesten unbeantworteten Erfassung. Die aussagekräftigere der beiden Zahlen: Zehn Notizen von heute sind harmlos, eine von vor drei Wochen heißt, dass niemand mehr hinsieht.':
+      'Hours since the oldest unanswered capture. The more telling of the two numbers: ten notes from today are harmless, one from three weeks ago means nobody is looking any more.',
 };

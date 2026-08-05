@@ -27,6 +27,7 @@ class InboxScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final inbox = ref.watch(inboxProvider);
+    final now = ref.watch(nowProvider);
     final tasks = ref.watch(snapshotProvider).value?.tasks ?? const [];
     final open = tasks.where((t) => t.state == TaskState.ready).toList();
 
@@ -47,6 +48,7 @@ class InboxScreen extends ConsumerWidget {
                 for (final note in notes)
                   _NoteCard(
                     note: note,
+                    now: now,
                     onTriage: () => _triage(context, ref, note),
                     onDismiss: () async {
                       final runtime = await ref.read(runtimeProvider.future);
@@ -94,11 +96,19 @@ class _EmptyInbox extends StatelessWidget {
 
 class _NoteCard extends StatelessWidget {
   final Event note;
+
+  /// Jetzt — durchgereicht, nicht selbst geholt.
+  ///
+  /// `DateTime.now()` in der Oberflaeche rechnet an der Engine vorbei: Im
+  /// Test steht die Uhr auf einem festen Wert, und eine Karte, die sich ihre
+  /// eigene Zeit nimmt, zeigt dort ein Alter, das es im Zyklus nicht gibt.
+  final DateTime now;
   final VoidCallback onTriage;
   final VoidCallback onDismiss;
 
   const _NoteCard({
     required this.note,
+    required this.now,
     required this.onTriage,
     required this.onDismiss,
   });
@@ -107,6 +117,8 @@ class _NoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     final at = note.at.toLocal();
+    final age = now.difference(note.at);
+    final ageDays = age.inHours >= 72 ? age.inDays : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.md),
       child: Dismissible(
@@ -145,11 +157,34 @@ class _NoteCard extends StatelessWidget {
                   spacing: Space.md,
                   runSpacing: Space.xs,
                   children: [
-                    Text(
-                      '${at.day}.${at.month}. '
-                      '${at.hour.toString().padLeft(2, "0")}:'
-                      '${at.minute.toString().padLeft(2, "0")}',
-                      style: monoStyle(context, size: 11, color: p.inkFaint),
+                    // `Wrap`, nicht `Row`: Bei 360 px und 2,4-facher Schrift
+                    // passen Datum und Alter nicht mehr nebeneinander, und
+                    // ein `Row` laeuft dann ueber statt umzubrechen.
+                    Wrap(
+                      spacing: Space.sm,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          '${at.day}.${at.month}. '
+                          '${at.hour.toString().padLeft(2, "0")}:'
+                          '${at.minute.toString().padLeft(2, "0")}',
+                          style:
+                              monoStyle(context, size: 11, color: p.inkFaint),
+                        ),
+                        // Das Alter, sobald es eines ist.
+                        //
+                        // Ein Datum beantwortet die Frage nicht: „3.8." rechnet
+                        // niemand im Kopf in „seit vier Tagen" um, und genau
+                        // diese Zahl ist der Befund. Dieselbe Schwelle wie
+                        // R-150, damit Anzeige und Regel nicht Verschiedenes
+                        // „alt" nennen.
+                        if (ageDays != null)
+                          Text(
+                            context.t('seit {0} Tagen', [ageDays]),
+                            style: monoStyle(context,
+                                size: 11, color: p.caution),
+                          ),
+                      ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -271,7 +306,7 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
     if (_saving) return;
     setState(() => _saving = true);
     final runtime = await ref.read(runtimeProvider.future);
-    final task = await runtime.createTask(
+    await runtime.createTask(
       title: _title.text.trim(),
       activationEnergy: _ae,
       // Salienz wird nicht abgefragt — sie ist im Erfassungsmoment nicht
@@ -280,21 +315,12 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
       stakes: _stakes,
       decayAt: _decayAt,
       place: _place,
+      // Der Bezug zur Notiz geht in *dasselbe* Event. Vorher stand hier ein
+      // zweites `taskCreated`, das beim Wiederaufbau das erste ueberschrieb
+      // — jedes Feld musste doppelt gepflegt werden, und ein vergessenes
+      // fiel stumm heraus.
+      fromCapture: widget.captureId,
     );
-    // Zweiter Eintrag mit dem Bezug zur Erfassung. Er ueberschreibt beim
-    // Wiederaufbau den ersten — deshalb muss hier jedes Feld noch einmal
-    // stehen, sonst faellt es beim naechsten Rebuild lautlos weg.
-    await runtime.record(EventType.taskCreated, payload: {
-      'task_id': task.id,
-      'from_capture': widget.captureId,
-      'title': task.title,
-      'ae': _ae,
-      'salience': 5,
-      'stakes': _stakes,
-      'decay_at': ?_decayAt?.toIso8601String(),
-      'place': ?task.place,
-      'state': TaskState.ready.name,
-    });
     await HapticFeedback.mediumImpact();
     refreshAxiom(ref);
     if (mounted) Navigator.of(context).pop();

@@ -34,6 +34,28 @@ final class RuntimeContext {
   /// Geräteroutine. [D2]
   final String? place;
 
+  /// Wie viele Erfassungen noch unbeantwortet im Eingang liegen.
+  ///
+  /// Gehört wie [metaMinutesToday] hierher: Eine Notiz ist kein Zustand des
+  /// Nutzers, sondern ein Posten in der App.
+  final int inboxCount;
+
+  /// Alter der ältesten unbeantworteten Erfassung, in Stunden.
+  ///
+  /// Die wichtigere der beiden Zahlen. Zehn Notizen von heute Vormittag sind
+  /// harmlos — eine von vor drei Wochen ist der Beleg dafür, dass der Eingang
+  /// nicht mehr angesehen wird. Genau davor soll eine Regel warnen können,
+  /// und zwar bevor der Bestand unüberschaubar wird. [D9]
+  ///
+  /// Ohne Notiz **0**, nicht [kNoDeadlineHours] — und das ist der Punkt.
+  ///
+  /// Bei Fristen heißt „keine" unendlich weit weg, also eine große Zahl.
+  /// Hier kehrt sich das um: „keine Notiz" heißt kein Alter, also null. Mit
+  /// der großen Zahl hätte jede Regel der Form `gte: 72` gefeuert, wenn der
+  /// Eingang **leer** ist — genau dann, wenn es nichts zu tun gibt. Der
+  /// Test zu R-150 hält das fest.
+  final num inboxOldestHours;
+
   /// Stunden bis zur Frist der am knappsten dastehenden offenen Aufgabe.
   ///
   /// Ohne Frist [kNoDeadlineHours] — nie null, sonst wirft die Bedingung.
@@ -49,6 +71,8 @@ final class RuntimeContext {
     this.minutesSinceByEvent = const {},
     this.countTodayByEvent = const {},
     this.metaMinutesToday = 0,
+    this.inboxCount = 0,
+    this.inboxOldestHours = 0,
     this.place,
     this.hoursToDeadline = kNoDeadlineHours,
     this.deadlineSlackHours = kNoDeadlineHours,
@@ -69,6 +93,8 @@ final class StateEvalContext implements EvalContext {
   @override
   num? numeric(String variable) => switch (variable) {
         'meta_minutes_today' => runtime.metaMinutesToday,
+        'inbox_count' => runtime.inboxCount,
+        'inbox_oldest_hours' => runtime.inboxOldestHours,
         'hours_to_deadline' => runtime.hoursToDeadline,
         'deadline_slack_hours' => runtime.deadlineSlackHours,
         _ => state.numeric(variable),

@@ -184,6 +184,57 @@ final class AxiomPalette {
     info: Color(0xFF3F5A66),
   );
 
+  // ── Werkbank ──────────────────────────────────────────────────────────
+  //
+  // Die drei Schemata darueber sind Varianten desselben Bernsteins: ein
+  // Messgeraet im Halbdunkel, entworfen fuer ein Telefon in der Hand, nachts,
+  // einhaendig. Auf einem 27-Zoll-Monitor in einem hellen Raum kippt genau
+  // das — die warme Toenung liegt dann als Braunschleier ueber der ganzen
+  // Flaeche, und Bernstein auf Anthrazit hat bei Tageslicht zu wenig
+  // Trennschaerfe fuer eine Tabelle mit dreissig Zeilen.
+  //
+  // Werkbank ist die Antwort darauf: weisse Flaechen, ein blaues Signal,
+  // Luft. Es ist derselbe Grund, aus dem es `contrast` und `muted` gibt —
+  // eine Umgebung, in der das Vorgabeschema nicht funktioniert.
+  //
+  // **Was nicht uebernommen wird:** Farbe als Note. Gruen-gut/rot-schlecht
+  // ist der Kern des Vorbilds und faellt hier unter R7 — ein Zustandswert
+  // ist ein Messwert. `calm` und `caution` behalten deshalb ihre Rollen aus
+  // dem Kopfkommentar: ruhig und Aufmerksamkeit, nie Lob und nie Vorwurf.
+
+  static const lightWorkbench = AxiomPalette(
+    base: Color(0xFFF5F6FA),
+    panel: Color(0xFFFFFFFF),
+    panelRaised: Color(0xFFF0F2F8),
+    rule: Color(0xFFDDE1EC),
+    ink: Color(0xFF20232C),
+    inkDim: Color(0xFF565E72),
+    inkFaint: Color(0xFF868DA1),
+    signal: Color(0xFF0F62D6),
+    signalDeep: Color(0xFF0A48A0),
+    calm: Color(0xFF157F4F),
+    // Kupfer, nicht Rot. Das Vorbild benutzt hier #E2445C — und genau das
+    // ist die eine Farbe, die dieses Projekt nicht fuehrt (Kopfkommentar,
+    // Punkt 1). Aufmerksamkeit ja, Vorwurf nein.
+    caution: Color(0xFFA9500F),
+    info: Color(0xFF6A3FBF),
+  );
+
+  static const darkWorkbench = AxiomPalette(
+    base: Color(0xFF12141B),
+    panel: Color(0xFF1A1D26),
+    panelRaised: Color(0xFF232733),
+    rule: Color(0xFF313648),
+    ink: Color(0xFFECEEF5),
+    inkDim: Color(0xFFA0A7BB),
+    inkFaint: Color(0xFF7A8196),
+    signal: Color(0xFF5A9BFF),
+    signalDeep: Color(0xFF3570D4),
+    calm: Color(0xFF3FC98D),
+    caution: Color(0xFFE08C4A),
+    info: Color(0xFFA98BFF),
+  );
+
   /// Farbe fuer eine Load-Stufe. Bewusst ohne Rot — siehe Kopfkommentar.
   Color forLoadLevel(int level) => switch (level) {
         0 => calm,
@@ -203,10 +254,15 @@ final class AxiomPalette {
 ///    Schrift. Ein Text, der nicht gelesen wird, wirkt nicht.
 ///  * [muted] existiert fuer den Abend. Ein grelles Interface um 23 Uhr
 ///    arbeitet gegen das Sleep Gate (D8).
+///  * [workbench] existiert fuer den grossen Bildschirm bei Tageslicht. Die
+///    drei anderen sind Varianten desselben Bernsteins — auf einem Monitor
+///    in einem hellen Raum liegt der als Braunschleier ueber allem, und fuer
+///    eine Tabelle mit dreissig Zeilen fehlt ihm die Trennschaerfe.
 enum AxiomScheme {
   instrument('Instrument'),
   contrast('Kontrast'),
-  muted('Gedämpft');
+  muted('Gedämpft'),
+  workbench('Werkbank');
 
   const AxiomScheme(this.label);
 
@@ -222,6 +278,8 @@ enum AxiomScheme {
         dark ? AxiomPalette.darkContrast : AxiomPalette.lightContrast,
       AxiomScheme.muted =>
         dark ? AxiomPalette.darkMuted : AxiomPalette.lightMuted,
+      AxiomScheme.workbench =>
+        dark ? AxiomPalette.darkWorkbench : AxiomPalette.lightWorkbench,
     };
   }
 

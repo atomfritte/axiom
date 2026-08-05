@@ -45,7 +45,7 @@
    dunklen Fassungen der größtmögliche Abstand zum Bernstein, in den hellen
    das Weiß der Frontplatte. So bleibt jeder Wert in dieser Datei einer aus
    tokens.dart, und ein siebter Farbwert kann nicht daneben altern. */
-:root,[data-scheme=instrument][data-mode=dark]{
+[data-scheme=instrument][data-mode=dark]{
   --base:#0E1113;--panel:#171B1E;--raised:#1F2529;--rule:#2A3237;
   --ink:#ECEAE4;--dim:#9BA4AB;--faint:#7A848B;
   --signal:#E8A33D;--deep:#B8761F;--calm:#7FA88A;--caution:#C4653A;--info:#6E90A4;
@@ -55,6 +55,21 @@
   --ink:#15181B;--dim:#4A545B;--faint:#6E767C;
   --signal:#9A6510;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
   --on-signal:var(--panel)}
+/* Werkbank — die Vorgabe dieser Oberflaeche.
+   Auf dem Telefon bleibt Instrument die Vorgabe; dort ist das Geraet
+   nachts in der Hand. Hier ist es ein Monitor in einem hellen Raum, und
+   der Bernstein liegt darauf als Braunschleier. */
+:root,[data-scheme=workbench][data-mode=light],
+[data-scheme=workbench]{
+  --base:#F5F6FA;--panel:#FFFFFF;--raised:#F0F2F8;--rule:#DDE1EC;
+  --ink:#20232C;--dim:#565E72;--faint:#868DA1;
+  --signal:#0F62D6;--deep:#0A48A0;--calm:#157F4F;--caution:#A9500F;--info:#6A3FBF;
+  --on-signal:var(--panel)}
+[data-scheme=workbench][data-mode=dark]{
+  --base:#12141B;--panel:#1A1D26;--raised:#232733;--rule:#313648;
+  --ink:#ECEEF5;--dim:#A0A7BB;--faint:#7A8196;
+  --signal:#5A9BFF;--deep:#3570D4;--calm:#3FC98D;--caution:#E08C4A;--info:#A98BFF;
+  --on-signal:var(--base)}
 [data-scheme=contrast][data-mode=dark]{
   --base:#0A0C0E;--panel:#15191C;--raised:#1E2428;--rule:#3D474D;
   --ink:#F5F3EE;--dim:#C2C9CE;--faint:#9BA5AC;
@@ -421,7 +436,12 @@ textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;li
   text-decoration:underline;text-underline-offset:2px}
 .md .lnk:hover{color:var(--deep)}
 
-dialog{border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);
+/* `margin:auto` steht hier, weil es der Reset genommen hat.
+   Ein <dialog> mit showModal() zentriert der Browser ueber genau dieses
+   margin aus seinem eigenen Stylesheet — und `*{margin:0}` weiter oben
+   setzt es zurueck. Folge: Jedes Blatt klebte links oben in der Ecke. */
+dialog{margin:auto;border:1px solid var(--rule);border-radius:10px;
+  background:var(--panel);color:var(--ink);box-shadow:0 18px 48px rgba(0,0,0,.28);
   padding:1.4rem;width:min(34rem,calc(100vw - 2rem));max-height:86vh;overflow:auto}
 /* Die Detailansicht trägt mehr als ein Regler-Blatt: Baum, Blocker,
    Ereignisstrom. Sie bekommt deshalb Breite, aber keine eigene Fläche —
@@ -521,7 +541,7 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
       <button data-mode="auto" data-t="AUTO">AUTO</button><button data-mode="dark" data-t="DUNKEL">DUNKEL</button><button data-mode="light" data-t="HELL">HELL</button>
     </div>
     <div class="seg" role="group" data-t-label="Farbschema" aria-label="Farbschema">
-      <button data-scheme="instrument" data-t="INSTRUMENT">INSTRUMENT</button><button data-scheme="contrast" data-t="KONTRAST">KONTRAST</button><button data-scheme="muted" data-t="GEDÄMPFT">GEDÄMPFT</button>
+      <button data-scheme="workbench" data-t="WERKBANK">WERKBANK</button><button data-scheme="instrument" data-t="INSTRUMENT">INSTRUMENT</button><button data-scheme="contrast" data-t="KONTRAST">KONTRAST</button><button data-scheme="muted" data-t="GEDÄMPFT">GEDÄMPFT</button>
     </div>
     <div class="seg" role="group" data-t-label="Textgröße" aria-label="Textgröße">
       <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
@@ -556,8 +576,8 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
 
     <div class="stack">
       <div class="tabs" role="tablist" id="tabs">
-        <button role="tab" data-tab="tasks" aria-selected="true"><span data-t="Aufgaben">Aufgaben</span><span class="count" id="c-tasks"></span></button>
-        <button role="tab" data-tab="board" aria-selected="false"><span data-t="Board">Board</span></button>
+        <button role="tab" data-tab="board" aria-selected="true"><span data-t="Board">Board</span></button>
+        <button role="tab" data-tab="tasks" aria-selected="false"><span data-t="Aufgaben">Aufgaben</span><span class="count" id="c-tasks"></span></button>
         <button role="tab" data-tab="inbox" aria-selected="false"><span data-t="Eingang">Eingang</span><span class="count" id="c-inbox"></span></button>
         <button role="tab" data-tab="state" aria-selected="false"><span data-t="Zustand">Zustand</span></button>
         <button role="tab" data-tab="rules" aria-selected="false"><span data-t="Regelwerk">Regelwerk</span><span class="count" id="c-rules"></span></button>
@@ -630,6 +650,7 @@ const EN={
 "DUNKEL":"DARK",
 "HELL":"LIGHT",
 "Farbschema":"Colour scheme",
+"WERKBANK":"WORKBENCH",
 "INSTRUMENT":"INSTRUMENT",
 "KONTRAST":"CONTRAST",
 "GEDÄMPFT":"MUTED",
@@ -750,7 +771,12 @@ const EN={
 "Nur was seinen Zeitpunkt überschritten hat":"Only what is past its time",
 "Aufgaben durchsuchen":"Search tasks",
 "Suchen":"Search",
-"Sortieren":"Sort",
+"Als Aufgabe":"As a task",
+"seit {0} Tagen":"{0} days old",
+"Mit Werten":"With values",
+"Keine Aufgabe":"Not a task",
+"Übernommen.":"Adopted.",
+"Aus dem Eingang genommen.":"Taken out of the inbox.",
 "Details":"Details",
 "Bearbeiten":"Edit",
 "Diese Aufgabe steht nicht mehr im Bestand.":"This task is no longer in the stock.",
@@ -979,7 +1005,7 @@ async function api(path,opts={}){
    dieses Bildschirms, nicht des Nutzers. Der Monitor im Büro verlangt
    etwas anderes als das Telefon in der Hand. */
 const prefs={mode:localStorage.getItem('axiom.mode')||'auto',
-  scheme:localStorage.getItem('axiom.scheme')||'instrument',
+  scheme:localStorage.getItem('axiom.scheme')||'workbench',
   size:localStorage.getItem('axiom.size')||'m'};
 const darkQ=matchMedia('(prefers-color-scheme: dark)');
 function applyPrefs(){
@@ -1086,7 +1112,7 @@ async function enter(){
    Welcher Reiter offen war, hängt am Browser: Wer die Seite acht Stunden
    offen hat, lädt sie irgendwann neu und will dort weitermachen, wo er war,
    nicht wieder bei den Aufgaben anfangen. */
-const TABS=['tasks','board','inbox','state','rules','review','events','help'];
+const TABS=['board','tasks','inbox','state','rules','review','events','help'];
 let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null;
 /* Voreingestellt das Board: Es beantwortet „wie viel wovon", und das ist
    die Frage, mit der man an einen Bildschirm mit Platz geht. Die Liste
@@ -1857,11 +1883,52 @@ function viewInbox(){
       el('div',{},el('div',{class:'title'},n.text||''),
         el('div',{class:'meta'},
           el('span',{},new Date(n.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
-          el('span',{},String(n.via||'').toUpperCase()))),
+          el('span',{},String(n.via||'').toUpperCase()),
+          noteAge(n))),
       el('div',{class:'acts'},
-        el('button',{class:'btn primary',onclick:()=>taskDialog(n.text)},tr('Sortieren')))));
+        // Ein Tipp, nicht drei Regler.
+        //
+        // „Sortieren" fragt Startenergie, Sog und Folgen ab — drei
+        // Entscheidungen pro Notiz, und genau deshalb blieb der Eingang
+        // liegen. Der Regelfall ist jetzt: uebernehmen, mit Mittelwerten,
+        // sofort startbar. Die Zahlen stehen an der Aufgabe und lassen sich
+        // dort jederzeit aendern; falsch geschaetzt ist besser als
+        // unentschieden liegengeblieben (G1).
+        el('button',{class:'btn primary',onclick:()=>adoptNote(n)},tr('Als Aufgabe')),
+        el('button',{class:'btn',onclick:()=>taskDialog(n.text,n.id)},tr('Mit Werten')),
+        el('button',{class:'btn quiet',onclick:()=>dismissNote(n)},tr('Keine Aufgabe')))));
   }
   return frag;
+}
+
+/* Wie lange die Notiz schon liegt — und ab drei Tagen sichtbar.
+   Das Datum allein beantwortet die Frage nicht: „03.08." rechnet niemand
+   im Kopf in „seit vier Tagen" um, und genau diese Zahl ist der Befund.
+   Dieselbe Schwelle wie R-150, damit die Anzeige und die Regel nicht
+   verschiedene Dinge „alt" nennen. */
+function noteAge(n){
+  const hours=(Date.now()-new Date(n.at).getTime())/3600000;
+  if(hours<72) return null;
+  const days=Math.floor(hours/24);
+  return el('span',{style:'color:var(--caution)'},tr('seit {0} Tagen',[days]));
+}
+
+/* Notiz zu Aufgabe, ohne Rueckfrage. Mittelwerte, weil im Erfassungsmoment
+   ohnehin niemand ehrlich schaetzt — dieselbe Begruendung, aus der der
+   Eingang der App die Salienz nicht abfragt. */
+async function adoptNote(n){
+  await api('/api/tasks',{method:'POST',body:JSON.stringify({
+    title:n.text,activationEnergy:5,salience:5,stakes:5,fromCapture:n.id})});
+  toast(tr('Übernommen.'));
+  await reload();
+}
+
+/* Beantwortet, ohne Aufgabe zu werden. Das Ereignis bleibt — verworfen ist
+   nicht geloescht. */
+async function dismissNote(n){
+  await api('/api/inbox/'+encodeURIComponent(n.id)+'/dismiss',{method:'POST'});
+  toast(tr('Aus dem Eingang genommen.'));
+  await reload();
 }
 
 function viewState(){
@@ -2318,7 +2385,7 @@ function endFocusDialog(){
     }},tr('Beenden'))]);
 }
 
-function taskDialog(prefill){
+function taskDialog(prefill,fromCapture){
   const title=el('textarea',{placeholder:tr('Was ist zu tun?')});
   if(prefill) title.value=prefill;
   const ae=dial(tr('Wie schwer fällt der Start?'),tr('Nicht wie lang es dauert. Nur der Anfang.'),'sofort',tr('große Hürde'),5,1,10);
@@ -2333,7 +2400,10 @@ function taskDialog(prefill){
       if(!text){toast(tr('Ohne Titel geht es nicht.'));return}
       await api('/api/tasks',{method:'POST',body:JSON.stringify({
         title:text,activationEnergy:ae.value(),stakes:st.value(),salience:sa.value(),
-        decayAt:due.value?new Date(due.value).toISOString():null})});
+        decayAt:due.value?new Date(due.value).toISOString():null,
+        // Ohne diesen Bezug bliebe die Notiz im Eingang stehen, obwohl aus
+        // ihr laengst eine Aufgabe geworden ist.
+        fromCapture:fromCapture||null})});
       $('#dlg').close();toast(tr('Angelegt.'));await reload();
     }},tr('Anlegen'))]);
 }

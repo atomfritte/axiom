@@ -397,6 +397,7 @@ final class AxiomRuntime {
         now.difference(slotEvent.at) < const Duration(minutes: 45);
     final pressure =
         tightestDeadline(tasks ?? await store.tasks(), clock.nowLocal());
+    final unsorted = await unsortedCaptures();
     return RuntimeContext(
       activeSlot: focusRunning
           ? 'focus'
@@ -409,6 +410,13 @@ final class AxiomRuntime {
       // Meta-Work-Budget aufgebraucht ist — und G4 bliebe eine
       // Absichtserklaerung (CLAUDE.md nennt es das wichtigste Gesetz).
       metaMinutesToday: (await store.usageToday(clock.nowLocal())).inMinutes,
+      inboxCount: unsorted.length,
+      // Die Liste kommt neueste-zuerst, die aelteste steht also hinten.
+      // Leerer Eingang heisst 0 Stunden, nicht „unendlich weit weg" — sonst
+      // feuerte jede Alters-Regel ausgerechnet dann, wenn nichts da ist.
+      inboxOldestHours: unsorted.isEmpty
+          ? 0
+          : hoursOf(clock.nowUtc().difference(unsorted.last.at)),
       place: await currentPlace(),
       hoursToDeadline: pressure == null
           ? kNoDeadlineHours
@@ -502,6 +510,32 @@ final class AxiomRuntime {
     );
   }
   // ── Aufgaben ──────────────────────────────────────────────────────────
+  /// Erfassungen, aus denen noch nichts geworden ist — neueste zuerst.
+  ///
+  /// **Warum das hier steht und nicht zweimal daneben.** Die Antwort auf
+  /// „was liegt noch im Eingang" stand an zwei Stellen: einmal im Provider
+  /// der App, einmal gar nicht im Server — der zeigte schlicht die letzten
+  /// hundert Erfassungen. Im Browser verschwand eine Notiz deshalb nie.
+  /// Man sortierte sie, sie blieb stehen, und nach zwei Wochen war nicht
+  /// mehr zu erkennen, was erledigt war und was nicht. Genau der Zustand,
+  /// den ein Eingang verhindern soll.
+  ///
+  /// Erledigt heisst: Es gibt ein `taskCreated` oder ein `taskAbandoned`,
+  /// das auf diese Erfassung zeigt (`from_capture`). Beides zaehlt — eine
+  /// verworfene Notiz ist genauso beantwortet wie eine uebernommene.
+  Future<List<Event>> unsortedCaptures() async {
+    final captures = await store.query(types: {EventType.capture});
+    final answered = <String>{};
+    for (final type in {EventType.taskCreated, EventType.taskAbandoned}) {
+      for (final event in await store.query(types: {type})) {
+        final from = event.payload['from_capture'];
+        if (from is String) answered.add(from);
+      }
+    }
+    return captures.where((e) => !answered.contains(e.id)).toList().reversed
+        .toList();
+  }
+
   Future<Task> createTask({
     required String title,
     required int activationEnergy,
@@ -511,6 +545,7 @@ final class AxiomRuntime {
     String? parentId,
     String? place,
     TaskState state = TaskState.ready,
+    String? fromCapture,
   }) async {
     final trimmedPlace = place?.trim();
     final task = Task(
@@ -537,6 +572,16 @@ final class AxiomRuntime {
       // Ohne diesen Eintrag ueberlebt der Ort keinen Wiederaufbau aus dem
       // Ereignisstrom — und die Aufgabe kaeme ortsungebunden zurueck.
       'place': ?task.place,
+      // Welche Notiz hier aufgegangen ist. Daran — und nur daran — erkennt
+      // [unsortedCaptures], dass sie erledigt ist.
+      //
+      // Frueher schrieb der Eingang dafuer ein *zweites* `taskCreated` mit
+      // demselben `task_id`. Das funktionierte, hatte aber eine Falle: Beim
+      // Wiederaufbau ueberschrieb der zweite Eintrag den ersten, also musste
+      // dort jedes Feld noch einmal stehen — und ein neues Feld an der
+      // Aufgabe fiel beim naechsten Rebuild lautlos weg, wenn jemand diese
+      // zweite Stelle uebersah.
+      'from_capture': ?fromCapture,
     });
     return task;
   }

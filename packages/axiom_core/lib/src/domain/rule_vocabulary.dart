@@ -133,6 +133,22 @@ abstract final class RuleVocabulary {
       highIsTense: true,
     ),
     NumericVariable(
+      id: 'inbox_count',
+      label: 'Notizen im Eingang',
+      meaning: 'Erfasst, aber noch nicht beantwortet. Weder Aufgabe noch '
+          'verworfen.',
+      highIsTense: true,
+    ),
+    NumericVariable(
+      id: 'inbox_oldest_hours',
+      label: 'Älteste Notiz im Eingang',
+      meaning: 'Stunden seit der ältesten unbeantworteten Erfassung. Die '
+          'aussagekräftigere der beiden Zahlen: Zehn Notizen von heute sind '
+          'harmlos, eine von vor drei Wochen heißt, dass niemand mehr '
+          'hinsieht.',
+      highIsTense: true,
+    ),
+    NumericVariable(
       id: 'capacity',
       label: 'Kapazität',
       meaning: 'Wie viel exekutive Reserve heute da ist. Hoch heißt: es geht '
