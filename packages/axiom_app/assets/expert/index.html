@@ -480,19 +480,19 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
     </div>
 
     <div id="gate-push">
-      <p class="faint">Auf dem Telefon erscheint gleich eine Zahl. Stimmt sie mit der hier überein, gibst du dort frei — sonst nicht.</p>
+      <p class="faint" data-t="Auf dem Telefon erscheint gleich eine Zahl. Stimmt sie mit der hier überein, gibst du dort frei — sonst nicht.">Auf dem Telefon erscheint gleich eine Zahl. Stimmt sie mit der hier überein, gibst du dort frei — sonst nicht.</p>
       <div id="match">··</div>
       <p id="push-msg" class="faint" style="min-height:1.2rem;text-align:center"></p>
-      <button class="btn quiet" id="use-pin" style="width:100%">Stattdessen PIN eingeben</button>
+      <button class="btn quiet" id="use-pin" style="width:100%" data-t="Stattdessen PIN eingeben">Stattdessen PIN eingeben</button>
     </div>
 
     <div id="gate-pin" class="hide">
-      <p class="faint" style="margin-bottom:.8rem">Die PIN steht in der App. Sie gilt nur für diesen Start.</p>
+      <p class="faint" style="margin-bottom:.8rem" data-t="Die PIN steht in der App. Sie gilt nur für diesen Start.">Die PIN steht in der App. Sie gilt nur für diesen Start.</p>
       <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6"
              placeholder="······" aria-label="PIN">
       <p id="gate-msg" class="faint" style="margin-top:.6rem;min-height:1.2rem"></p>
-      <button class="btn primary" id="gate-go" style="width:100%;margin-top:.4rem">Anmelden</button>
-      <button class="btn quiet" id="use-push" style="width:100%;margin-top:.3rem">Zurück zur Freigabe</button>
+      <button class="btn primary" id="gate-go" style="width:100%;margin-top:.4rem" data-t="Anmelden">Anmelden</button>
+      <button class="btn quiet" id="use-push" style="width:100%;margin-top:.3rem" data-t="Zurück zur Freigabe">Zurück zur Freigabe</button>
     </div>
   </div>
 </div>
@@ -510,24 +510,24 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
          Zahlen von vorhin genauso aus wie eine mit aktuellen — und das ist
          die schlimmste Variante. -->
     <span class="chip" id="link-chip" role="status"
-          title="Verbindung zum Telefon">VERBINDET …</span>
+          data-t-title="Verbindung zum Telefon" title="Verbindung zum Telefon">VERBINDET …</span>
     <div class="spacer"></div>
-    <div class="budget" id="budget" title="Zeit im System heute (G4)">
+    <div class="budget" id="budget" data-t-title="Zeit im System heute (G4)" title="Zeit im System heute (G4)">
       <span class="eyebrow">META</span>
       <span class="track"><span class="fill" id="budget-fill"></span></span>
       <span class="mono" style="font-size:.68rem" id="budget-txt">–</span>
     </div>
-    <div class="seg" role="group" aria-label="Helligkeit">
-      <button data-mode="auto">AUTO</button><button data-mode="dark">DUNKEL</button><button data-mode="light">HELL</button>
+    <div class="seg" role="group" data-t-label="Helligkeit" aria-label="Helligkeit">
+      <button data-mode="auto" data-t="AUTO">AUTO</button><button data-mode="dark" data-t="DUNKEL">DUNKEL</button><button data-mode="light" data-t="HELL">HELL</button>
     </div>
-    <div class="seg" role="group" aria-label="Farbschema">
-      <button data-scheme="instrument">INSTRUMENT</button><button data-scheme="contrast">KONTRAST</button><button data-scheme="muted">GEDÄMPFT</button>
+    <div class="seg" role="group" data-t-label="Farbschema" aria-label="Farbschema">
+      <button data-scheme="instrument" data-t="INSTRUMENT">INSTRUMENT</button><button data-scheme="contrast" data-t="KONTRAST">KONTRAST</button><button data-scheme="muted" data-t="GEDÄMPFT">GEDÄMPFT</button>
     </div>
-    <div class="seg" role="group" aria-label="Textgröße">
+    <div class="seg" role="group" data-t-label="Textgröße" aria-label="Textgröße">
       <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
     </div>
-    <button class="btn quiet" id="keys-btn" title="Tastenkürzel (?)">?</button>
-    <button class="btn quiet" id="stop-btn" title="Server beenden">Beenden</button>
+    <button class="btn quiet" id="keys-btn" data-t-title="Tastenkürzel (?)" title="Tastenkürzel (?)">?</button>
+    <button class="btn quiet" id="stop-btn" data-t-title="Server beenden" title="Server beenden" data-t="Beenden">Beenden</button>
   </header>
 
   <main>
@@ -535,34 +535,35 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
       <section class="panel accent" id="act" aria-live="polite"></section>
 
       <section class="panel">
-        <div class="sec"><span class="eyebrow">Erfassen</span><span class="line"></span><kbd>n</kbd></div>
-        <textarea id="cap-text" placeholder="Was ist dir eingefallen?" aria-label="Erfassen"></textarea>
+        <div class="sec"><span class="eyebrow" data-t="Erfassen">Erfassen</span><span class="line"></span><kbd>n</kbd></div>
+        <textarea id="cap-text" data-t-ph="Was ist dir eingefallen?" placeholder="Was ist dir eingefallen?"
+                  data-t-label="Erfassen" aria-label="Erfassen"></textarea>
         <div class="row">
-          <button class="btn primary grow" id="cap-save">Speichern</button>
-          <button class="btn" id="checkin-btn" title="Check-in (c)">Check-in</button>
+          <button class="btn primary grow" id="cap-save" data-t="Speichern">Speichern</button>
+          <button class="btn" id="checkin-btn" data-t-title="Check-in (c)" title="Check-in (c)" data-t="Check-in">Check-in</button>
         </div>
-        <p class="faint" style="margin-top:.5rem">Ohne Rückfrage, ohne Kategorie. Sortiert wird später.</p>
+        <p class="faint" style="margin-top:.5rem" data-t="Ohne Rückfrage, ohne Kategorie. Sortiert wird später.">Ohne Rückfrage, ohne Kategorie. Sortiert wird später.</p>
       </section>
 
       <section class="panel">
-        <div class="sec"><span class="eyebrow">Aktivierungsenergie</span><span class="line"></span>
+        <div class="sec"><span class="eyebrow" data-t="Aktivierungsenergie">Aktivierungsenergie</span><span class="line"></span>
           <span class="mono" style="font-size:.7rem;color:var(--signal)" id="cap-label">–</span></div>
         <svg class="capline" id="capline" viewBox="0 0 320 76" preserveAspectRatio="none"
-             role="img" aria-label="Kapazitätslinie"></svg>
+             role="img" data-t-label="Kapazitätslinie" aria-label="Kapazitätslinie"></svg>
         <p class="faint" id="cap-note" style="margin-top:.4rem"></p>
       </section>
     </div>
 
     <div class="stack">
       <div class="tabs" role="tablist" id="tabs">
-        <button role="tab" data-tab="tasks" aria-selected="true">Aufgaben<span class="count" id="c-tasks"></span></button>
-        <button role="tab" data-tab="board" aria-selected="false">Board</button>
-        <button role="tab" data-tab="inbox" aria-selected="false">Eingang<span class="count" id="c-inbox"></span></button>
-        <button role="tab" data-tab="state" aria-selected="false">Zustand</button>
-        <button role="tab" data-tab="rules" aria-selected="false">Regelwerk<span class="count" id="c-rules"></span></button>
-        <button role="tab" data-tab="review" aria-selected="false">Review</button>
-        <button role="tab" data-tab="events" aria-selected="false">Ereignisse</button>
-        <button role="tab" data-tab="help" aria-selected="false">Hilfe</button>
+        <button role="tab" data-tab="tasks" aria-selected="true"><span data-t="Aufgaben">Aufgaben</span><span class="count" id="c-tasks"></span></button>
+        <button role="tab" data-tab="board" aria-selected="false"><span data-t="Board">Board</span></button>
+        <button role="tab" data-tab="inbox" aria-selected="false"><span data-t="Eingang">Eingang</span><span class="count" id="c-inbox"></span></button>
+        <button role="tab" data-tab="state" aria-selected="false"><span data-t="Zustand">Zustand</span></button>
+        <button role="tab" data-tab="rules" aria-selected="false"><span data-t="Regelwerk">Regelwerk</span><span class="count" id="c-rules"></span></button>
+        <button role="tab" data-tab="review" aria-selected="false"><span data-t="Review">Review</span></button>
+        <button role="tab" data-tab="events" aria-selected="false"><span data-t="Ereignisse">Ereignisse</span></button>
+        <button role="tab" data-tab="help" aria-selected="false"><span data-t="Hilfe">Hilfe</span></button>
       </div>
       <section class="panel" id="surface"></section>
     </div>
@@ -598,9 +599,365 @@ const fmt=n=>(n===null||n===undefined)?'–':String(n);
    zieht dieselbe Regel fuer alles nach, was direkt ersetzt wird. */
 const put=(node,...kids)=>node.replaceChildren(
   ...kids.flat(Infinity).filter(k=>k!==null&&k!==undefined&&k!==false));
+/* Die englischen Fassungen. Schlüssel ist der deutsche Satz — dieselbe
+   Regel wie in packages/axiom_app/lib/i18n/en.dart, aus demselben Grund:
+   Der Ton entscheidet über die Wirkung, und diese Entscheidung muss dort
+   lesbar sein, wo sie getroffen wird.
+
+   Was hier fehlt, erscheint auf Deutsch. Sichtbar unfertig ist besser als
+   stumm falsch — und `expert_i18n_test.dart` sorgt dafür, dass es gar
+   nicht erst fehlt. */
+const EN={
+"Auf dem Telefon erscheint gleich eine Zahl. Stimmt sie mit der hier überein, gibst du dort frei — sonst nicht.":"A number is about to appear on your phone. If it matches the one here, approve it there — otherwise do not.",
+"Stattdessen PIN eingeben":"Use a PIN instead",
+"Die PIN steht in der App. Sie gilt nur für diesen Start.":"The PIN is shown in the app. It is valid for this run only.",
+"Anmelden":"Sign in",
+"Zurück zur Freigabe":"Back to approval",
+"Auf dem Telefon freigeben, wenn die Zahl stimmt.":"Approve on the phone if the number matches.",
+"Abgelaufen. Erneut versuchen.":"Expired. Try again.",
+"Abgelehnt. Wenn du das nicht warst, hat jemand anders angefragt.":"Declined. If that was not you, someone else asked to sign in.",
+"Stimmt nicht. Nach fünf Versuchen schaltet sich der Server ab.":"Does not match. After five attempts the server shuts down.",
+"Sechs Ziffern.":"Six digits.",
+"Wird geprüft …":"Checking …",
+"Verbindung zum Telefon":"Connection to the phone",
+"VERBUNDEN":"CONNECTED",
+"VERBINDET …":"CONNECTING …",
+"GETRENNT":"DISCONNECTED",
+"SERVER BEENDET":"SERVER STOPPED",
+"Zeit im System heute (G4)":"Time in the system today (G4)",
+"Helligkeit":"Brightness",
+"AUTO":"AUTO",
+"DUNKEL":"DARK",
+"HELL":"LIGHT",
+"Farbschema":"Colour scheme",
+"INSTRUMENT":"INSTRUMENT",
+"KONTRAST":"CONTRAST",
+"GEDÄMPFT":"MUTED",
+"Textgröße":"Text size",
+"Tastenkürzel (?)":"Keyboard shortcuts (?)",
+"Server beenden":"Stop server",
+"Beenden":"Stop",
+"Server beenden? Danach ist diese Seite nicht mehr erreichbar.":"Stop the server? This page will no longer be reachable.",
+"Erfassen":"Capture",
+"Was ist dir eingefallen?":"What came to mind?",
+"Speichern":"Save",
+"Check-in":"Check-in",
+"Check-in (c)":"Check-in (c)",
+"Ohne Rückfrage, ohne Kategorie. Sortiert wird später.":"No follow-up question, no category. Sorting happens later.",
+"Erfasst.":"Captured.",
+"Der Text ist leer.":"The text is empty.",
+"Aktivierungsenergie":"Start energy",
+"Kapazitätslinie":"Capacity line",
+"LEICHT":"EASY",
+"HIER":"HERE",
+"SCHWER":"HARD",
+"KAPAZITÄT":"CAPACITY",
+"KAPAZITÄT {0}":"CAPACITY {0}",
+" — Start {0}/10":" — start {0}/10",
+"{0} startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.":"{0} startable. Anything right of the mark needs more run-up than there is today.",
+"Heute liegt nichts unter der Linie. Zerlegen hilft mehr als Anlauf nehmen.":"Nothing sits below the line today. Breaking things down helps more than taking a run-up.",
+"Aufgaben":"Tasks",
+"Board":"Board",
+"Eingang":"Inbox",
+"Zustand":"State",
+"Regelwerk":"Rulebook",
+"Review":"Review",
+"Ereignisse":"Events",
+"Hilfe":"Help",
+"Reiter wechseln":"Switch tab",
+"JETZT":"NOW",
+"NICHTS ANLIEGEND":"NOTHING PENDING",
+"Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.":"No suggestion means nothing is needed right now. Whatever comes to mind, capture it on the left.",
+"LÄUFT":"RUNNING",
+"Läuft":"Running",
+"Läuft daneben: {0}":"Running alongside: {0}",
+"START {0}/10":"START {0}/10",
+"Anfangen":"Start",
+"Starten":"Start",
+"Start":"Start",
+"Später":"Later",
+"Erledigt":"Done",
+"Zurücklegen":"Put back",
+"Verwerfen":"Drop",
+"Zerlegen":"Break down",
+"ZERLEGEN":"BREAK DOWN",
+"In Schritte zerlegen":"Break into steps",
+"Zerlegen: {0}":"Break down: {0}",
+"Zerlegt.":"Broken down.",
+"Angefangenes erledigen":"Finish what is running",
+"Fokus starten":"Start focus",
+"Fokus beenden":"End focus",
+"Fokus starten oder beenden":"Start or end focus",
+"Fokus":"Focus",
+"FOKUS":"FOCUS",
+"{0} von {1} min":"{0} of {1} min",
+"REGEL AKTIV":"RULE ACTIVE",
+"MIT DEM ZUSTAND VON JETZT":"AGAINST THE STATE AS OF NOW",
+"Neue Aufgabe":"New task",
+"Aufgabe":"Task",
+"Aufgabe anlegen":"Create task",
+"Anlegen":"Create",
+"Angelegt.":"Created.",
+"Titel":"Title",
+"Was ist zu tun?":"What needs doing?",
+"Wie schwer fällt der Start?":"How hard is it to start?",
+"Nicht wie lang es dauert. Nur der Anfang.":"Not how long it takes. Just the start.",
+"gar nicht":"not at all",
+"große Hürde":"big hurdle",
+"Wie sehr zieht es?":"How much does it pull?",
+"Sog, nicht Pflicht.":"Pull, not obligation.",
+"Was kostet es, wenn es liegenbleibt?":"What does it cost if it stays undone?",
+"Folgen, nicht Wichtigkeit.":"Consequences, not importance.",
+"SOG {0}":"PULL {0}",
+"FOLGEN {0}":"STAKES {0}",
+"ORT {0}":"PLACE {0}",
+"IN REICHWEITE":"WITHIN REACH",
+"NICHT IN REICHWEITE":"OUT OF REACH",
+"In Reichweite":"Within reach",
+"Nicht in Reichweite":"Out of reach",
+"ÜBERFÄLLIG":"OVERDUE",
+"IN {0} H":"IN {0} H",
+"IN {0} T":"IN {0} D",
+"WARTET":"WAITING",
+"Wartet":"Waiting",
+"WARTET AUF":"WAITING ON",
+"WARTET AUF {0}":"WAITING ON {0}",
+"HÄLT AUF":"HOLDS UP",
+"Blocker":"Blockers",
+"Blocker suchen":"Search blockers",
+"Blocker entfernen":"Remove blocker",
+"Wartet auf … (Aufgabe suchen)":"Waiting on … (search tasks)",
+"Das schlösse einen Kreis. Jede dieser Aufgaben wartete am Ende auf sich selbst, und dann gibt es keine, mit der angefangen werden kann.":"That would close a loop. Each of these tasks would end up waiting on itself, and then there is none to start with.",
+"Teilschritt von {0}":"Step of {0}",
+"SCHRITTE {0} VON {1}":"STEPS {0} OF {1}",
+"Schritt":"Step",
+"+ Schritt":"+ Step",
+"Erster kleiner Schritt":"First small step",
+"Der erste Schritt muss so klein sein, dass er heute in Reichweite liegt. Alles andere darf größer bleiben.":"The first step has to be small enough to be within reach today. Everything after it may stay bigger.",
+"Mindestens ein Schritt.":"At least one step.",
+"Keine Schritte. Zerlegen legt welche an.":"No steps. Breaking down creates them.",
+"Baum":"Tree",
+"Alles":"All",
+"ALLE":"ALL",
+"Auswahl":"Selection",
+"GEWÄHLTE KLAMMER":"SELECTED BRACKET",
+"In dieser Klammer ist gerade nichts offen.":"Nothing is open in this bracket right now.",
+"Nichts passt zu dieser Auswahl.":"Nothing matches this selection.",
+"Filter zurücksetzen":"Clear filters",
+"Erledigtes mit anzeigen":"Show completed too",
+"ERLEDIGTE":"COMPLETED",
+"Nur was unter der Kapazität von heute liegt":"Only what sits below today's capacity",
+"Nur was seinen Zeitpunkt überschritten hat":"Only what is past its time",
+"Aufgaben durchsuchen":"Search tasks",
+"Suchen":"Search",
+"Sortieren":"Sort",
+"Details":"Details",
+"Bearbeiten":"Edit",
+"Diese Aufgabe steht nicht mehr im Bestand.":"This task is no longer in the stock.",
+"Nichts gefunden.":"Nothing found.",
+"Passt nicht":"No match",
+"+ Aufgabe":"+ Task",
+"Unsortiert · {0}":"Unsorted · {0}",
+"Nichts zu sortieren.":"Nothing to sort.",
+"Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.":"Nothing entered. Whatever you capture on the left lands in the inbox first.",
+"Eingetragen.":"Entered.",
+"Zurückgenommen.":"Taken back.",
+"Verstanden":"Got it",
+"Schließen":"Close",
+"Abbrechen":"Cancel",
+"Zurück":"Back",
+"Übernehmen":"Apply",
+"Neu laden":"Reload",
+"Energie":"Energy",
+"Stimmung":"Mood",
+"Reizbedarf":"Stimulation need",
+"Wie sehr zieht es gerade nach Input?":"How much is it pulling towards input right now?",
+"Vier Regler, ungefähr reicht. Genauigkeit kostet hier mehr, als sie bringt.":"Four sliders, roughly is enough. Precision costs more here than it gives.",
+"Geplante Dauer":"Planned length",
+"Vorschlag aus der Kapazität ({0}): {1} Minuten. Ein kurzes Fenster, das hält, ist mehr wert als ein langes, das reißt.":"Suggested from capacity ({0}): {1} minutes. A short window that holds is worth more than a long one that breaks.",
+"Woche":"Week",
+"Monat":"Month",
+"Quartal":"Quarter",
+"Tag":"Day",
+"Uhrzeit":"Time of day",
+"Ziel":"Target",
+"Ruhig gerade.":"Quiet right now.",
+"Wo genau warst du? Ein Satz reicht.":"Where exactly were you? One sentence is enough.",
+"Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.":"The note is the whole point of stopping: without it, loading the context starts from scratch next time.",
+"Umfang wählen.":"Choose a scope.",
+"LAST":"LOAD",
+"Jeder Wert lässt sich aufklappen. Ohne die Herleitung ist eine Zahl nicht überprüfbar (G2).":"Every value unfolds. Without the derivation a number cannot be checked (G2).",
+"Aufklappen für die Formel":"Unfold for the formula",
+"Gewichte noch geschätzt":"Weights still estimated",
+"UNGEEICHT":"UNCALIBRATED",
+"Nichts.":"Nothing.",
+"REGELWERK ZU":"RULEBOOK CLOSED",
+"Regelwerk heute zu":"Rulebook closed today",
+"{0} von {1} Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.":"{0} of {1} minutes in the system are used up today. Writing rules is closed until tomorrow — capturing, working and looking things up stay open.",
+"Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.":"That is not a punishment, it is the point: building a system is always more stimulating than the work it was built for.",
+"Neue Regel":"New rule",
+"Regeln":"Rules",
+"Keine Regel gefunden.":"No rule found.",
+"Regel als YAML":"Rule as YAML",
+"GEFÜHRT":"GUIDED",
+"SCHATTEN":"SHADOW",
+"SIEBEN TAGE STUMM":"SEVEN DAYS SILENT",
+"NOCH {0} TAGE STUMM":"{0} DAYS SILENT LEFT",
+"GEÄNDERT":"CHANGED",
+"FEHLT NOCH":"STILL MISSING",
+"NICHT GELADEN":"NOT LOADED",
+"Wie sie heißt":"What it is called",
+"Kurz und in deiner Sprache":"Short, and in your own words",
+"Warum es sie gibt":"Why it exists",
+"Pflichtfeld. Jede Ausgabe nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.":"Required. Every output names its rule and this reasoning — without it the recommendation would be an assertion.",
+"Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.":"The reasoning is too short. It appears in the rule inspector and has to still explain, six months from now, why this rule exists.",
+"Der Titel fehlt. Er steht später in der Meldung.":"The title is missing. It appears in the message later.",
+"Ohne Titel geht es nicht.":"It does not work without a title.",
+"Wann sie zutrifft":"When it applies",
+"Was die Regel auslöst":"What sets the rule off",
+"Was dann passiert":"What happens then",
+"Was dort stehen soll":"What it should say",
+"Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.":"This sentence appears in the message later. No blame, no question — a statement.",
+"Was diese Regel verhindern oder auslösen soll":"What this rule should prevent or set off",
+"WORAUF SIE EINZAHLT":"WHAT IT PAYS INTO",
+"Art der Bedingung":"Kind of condition",
+"+ Bedingung":"+ Condition",
+"+ Gruppe":"+ Group",
+"Gruppe entfernen":"Remove group",
+"Entfernen":"Remove",
+"Eine Bedingung ist leer.":"A condition is empty.",
+"Eine Gruppe braucht mindestens eine Bedingung.":"A group needs at least one condition.",
+"Ein Vergleich fehlt.":"A comparison is missing.",
+"Ein Wert fehlt.":"A value is missing.",
+"Eine Zahl fehlt.":"A number is missing.",
+"Der Wenn-Teil fehlt.":"The when part is missing.",
+"Vergleich":"Comparison",
+"größer als":"greater than",
+"kleiner als":"less than",
+"NICHT":"NOT",
+"Zahl":"Number",
+"Seit einem Ereignis":"Since an event",
+"Ein Ereignis, das nie eintrat, gilt als unendlich lange her.":"An event that never happened counts as infinitely long ago.",
+"Anzahl heute":"Count today",
+"mal heute":"times today",
+"Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.":"Across midnight is allowed — 22:00 to 05:00 means the night.",
+"Uhrzeit im Format 22:00 angeben.":"Give the time as 22:00.",
+"Mindestabstand":"Minimum spacing",
+"Ohne Abstand meldet sich die Regel beliebig oft.":"Without spacing the rule speaks up as often as it likes.",
+"Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.":"Without spacing you get a flood of notifications — the most common reason apps like this get deleted again.",
+"ABSTAND VERDOPPELN":"DOUBLE THE SPACING",
+"Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt":"The spacing doubles as long as the rule stays without effect",
+"Höchstens pro Tag":"At most per day",
+"Eine harte Obergrenze zusätzlich zum Abstand.":"A hard ceiling on top of the spacing.",
+"kein Limit":"no limit",
+"höchstens":"at most",
+"EINE VON":"ONE OF",
+"Rang bei Gleichstand":"Rank on a tie",
+"Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.":"If two rules fire at once, the higher rank wins. On a tie the number decides — never chance.",
+"Wie laut":"How loud",
+"Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.":"From the moment you save, the rule runs along and is logged, but says nothing. The rule inspector shows how often it would have fired — then you decide whether it really should.",
+"Ausgeschaltet bleibt die Regel erhalten, wird aber nicht ausgewertet.":"Switched off, the rule is kept but not evaluated.",
+"Gespeichert — läuft sieben Tage stumm mit.":"Saved — runs silently for seven days.",
+"Neue Nummer — Nummern werden nie wiederverwendet.":"New number — numbers are never reused.",
+"Genau diese Form liegt auch in rules/ — der Editor ist keine Einbahnstraße.":"This exact shape also lives in rules/ — the editor is not a one-way street.",
+"Die englischen Fassungen bleiben unverändert erhalten.":"The English versions are kept unchanged.",
+"Änderung zurücknehmen":"Undo change",
+"Die eigene Fassung von {0} entfernen? Danach gilt wieder die mitgelieferte Regel; eine selbst geschriebene verschwindet. Die Nummer wird nicht wiederverwendet.":"Remove your own version of {0}? The shipped rule applies again; a self-written one disappears. The number is not reused.",
+"Erst vervollständigen — der Entwurf ergibt noch kein YAML.":"Complete it first — the draft does not make YAML yet.",
+"So lässt sich die Regel nicht laden. Was fehlt, steht darunter.":"The rule cannot be loaded like this. What is missing is listed below.",
+"Diese Einträge hat der Kern abgelehnt. Sie laufen nicht mit — abgelehnt ist besser als stumm übersprungen.":"The core rejected these entries. They do not run — rejected is better than silently skipped.",
+"Keine Liste abrufbar. Ohne Zuordnung ist eine Regel verdächtig.":"No list available. Without an assignment a rule is suspect.",
+"Der Wortschatz der Engine ist gerade nicht abrufbar. Geführt geht deshalb nicht, der rohe Text schon.":"The engine vocabulary is not available right now. Guided mode is out, the raw text still works.",
+"Ohne den Wortschatz der Engine geht geführt nicht.":"Guided mode needs the engine vocabulary.",
+"Geführt lässt sich diese Regel hier nicht darstellen: {0} Der Text steht unverändert darunter.":"This rule cannot be shown in guided mode: {0} The raw text is below, unchanged.",
+"Unverändert übernommen: {0}":"Carried over unchanged: {0}",
+"Die Vorschau ist gerade nicht erreichbar ({0}). Beim Speichern wird trotzdem geprüft.":"The preview is not reachable right now ({0}). It is still checked on save.",
+"Sie würde jetzt feuern.":"It would fire now.",
+"Sie würde jetzt nicht feuern.":"It would not fire now.",
+"Es scheitert an: {0}":"It fails on: {0}",
+"Der Text lässt sich nicht lesen: {0}":"The text cannot be read: {0}",
+"Die Einrückung passt nicht: {0}":"The indentation does not fit: {0}",
+"Kein Schlüssel: {0}":"No key: {0}",
+"Doppelpunkt fehlt: {0}":"Missing colon: {0}",
+"Klammer nicht geschlossen: {0}":"Bracket not closed: {0}",
+"Unbekannter Vergleich in: {0}":"Unknown comparison in: {0}",
+"{0} (optional)":"{0} (optional)",
+"jetzt: {0}":"now: {0}",
+"Ab wann tut es weh? (optional)":"From when does it hurt? (optional)",
+"Frage an …":"Question for …",
+"Woran?":"On what?",
+"YAML":"YAML",
+"Ereignis":"Event",
+"Nur lesend. Eine Korrektur ist ein neues Ereignis.":"Read only. A correction is a new event.",
+"Nur lesend. Ereignisse werden angehängt, nie überschrieben — eine Korrektur ist ein neues Ereignis.":"Read only. Events are appended, never overwritten — a correction is a new event.",
+"Noch nichts geschehen.":"Nothing has happened yet.",
+"Blocker und Ereignisstrom liefert dieser Server nicht — was hier steht, kommt aus dem Bestand.":"This server does not supply blockers or the event stream — what is shown comes from the stock.",
+"Diese Übersicht":"This overview",
+"Hilfe durchsuchen":"Search help",
+"Sprache der Hilfe":"Help language",
+"DEUTSCH":"GERMAN",
+"ENGLISH":"ENGLISH",
+"Dieses Kapitel gibt es noch nicht auf Englisch. Darunter steht die deutsche Fassung.":"This chapter does not exist in English yet. The German version is below.",
+"Die Hilfe liegt als Text im App-Bündel. Steht dort nichts, zeigt der Server nichts — die Kapitel entstehen unter assets/help/.":"The help lives as text in the app bundle. If nothing is there, the server shows nothing — chapters are written under assets/help/.",
+"Keine Kapitel im Bündel.":"No chapters in the bundle.",
+"Tastenkürzel":"Keyboard shortcuts",
+"Größe":"Size",
+"Der Server antwortet nicht.":"The server is not responding.",
+};
+
+/* ── Sprache ─────────────────────────────────────────────────────────
+   Dieselbe Regel wie in der App: Der deutsche Satz IST der Schlüssel.
+   `tr('Anfangen')` steht im Quelltext, die englische Fassung
+   in EN weiter unten. Sie heißt `tr` und nicht `t` wie in Dart, weil `t`
+   in dieser Datei durchgängig eine Aufgabe ist (`t.title`, `t.state`) —
+   eine gleichnamige Funktion wäre in genau den Bausteinen verdeckt, die
+   am meisten Text erzeugen. Der Grund ist derselbe — der Ton entscheidet über
+   die Wirkung, und diese Entscheidung muss dort lesbar sein, wo sie
+   getroffen wird, nicht hinter einem Bezeichner wie `now.emptyTitle`.
+
+   Werte kommen als `{0}`, nicht als Bruchstücke: `tr('{0} startbar', [n])`
+   statt `n+' startbar'`. Ein zusammengeklebter Satz lässt sich nicht
+   übersetzen, ohne die Wortstellung der einen Sprache zu erzwingen.
+
+   Welche Sprache gilt, sagt das Telefon (`/api/state`) — nicht der
+   Browser. Die Wahl in der App ist eine Entscheidung des Nutzers; die
+   Browsersprache ist die Voreinstellung eines Arbeitsrechners und sagt
+   darüber nichts. Bis die erste Antwort da ist — also auf dem
+   Anmeldebildschirm — gilt der Browser als beste verfügbare Vermutung. */
+let LANG=(navigator.language||'en').toLowerCase().startsWith('de')?'de':'en';
+
+function tr(de,args){
+  const s=LANG==='de'?de:(EN[de]!==undefined?EN[de]:de);
+  return args?s.replace(/\{(\d+)\}/g,(m,i)=>args[i]!==undefined?args[i]:m):s;
+}
+
+/* Setzt die Sprache und zeichnet neu, wenn sie sich geändert hat. */
+function setLanguage(code){
+  const next=code==='de'?'de':'en';
+  if(next===LANG) return false;
+  LANG=next;
+  document.documentElement.lang=next;
+  localise(document);
+  return true;
+}
+
+/* Übersetzt festen Text im Markup.
+
+   Trägt ein Element `data-t`, wird sein Textinhalt ersetzt; `data-t-title`,
+   `data-t-ph` und `data-t-label` tun dasselbe für title, placeholder und
+   aria-label. Der deutsche Satz steht dabei im Attribut und ist damit auch
+   im Markup der Schlüssel — dieselbe Regel wie im Skript. */
+function localise(root){
+  root.querySelectorAll('[data-t]').forEach(n=>{n.textContent=tr(n.dataset.t)});
+  for(const [sel,prop,attr] of [['[data-t-title]','tTitle','title'],
+                                ['[data-t-ph]','tPh','placeholder'],
+                                ['[data-t-label]','tLabel','aria-label']])
+    root.querySelectorAll(sel).forEach(n=>n.setAttribute(attr,tr(n.dataset[prop])));
+}
+
 let toastTimer;
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),3200)}
+function toast(m){const box=$('#toast');box.textContent=m;box.classList.add('on');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('on'),3200)}
 
 async function api(path,opts={}){
   const res=await fetch(path,{credentials:'same-origin',
@@ -660,13 +1017,13 @@ let pushPoll=null;
 async function startPush(){
   clearInterval(pushPoll);
   $('#match').textContent='··';
-  $('#push-msg').textContent='Frage an …';
+  $('#push-msg').textContent=tr('Frage an …');
   try{
     const c=await fetch('/api/auth/request',{method:'POST',credentials:'same-origin'})
       .then(r=>r.json());
     if(c.error){$('#push-msg').textContent=c.error;return}
     $('#match').textContent=c.number;
-    $('#push-msg').textContent='Auf dem Telefon freigeben, wenn die Zahl stimmt.';
+    $('#push-msg').textContent=tr('Auf dem Telefon freigeben, wenn die Zahl stimmt.');
     let waited=0;
     pushPoll=setInterval(async()=>{
       waited+=2;
@@ -675,12 +1032,12 @@ async function startPush(){
       if(r.status!==202||waited>120){
         clearInterval(pushPoll);
         $('#push-msg').textContent=r.status===403
-          ? 'Abgelehnt. Wenn du das nicht warst, hat jemand anders angefragt.'
-          : 'Abgelaufen. Erneut versuchen.';
+          ? tr('Abgelehnt. Wenn du das nicht warst, hat jemand anders angefragt.')
+          : tr('Abgelaufen. Erneut versuchen.');
         $('#match').textContent='··';
       }
     },2000);
-  }catch(e){$('#push-msg').textContent='Der Server antwortet nicht.'}
+  }catch(e){$('#push-msg').textContent=tr('Der Server antwortet nicht.')}
 }
 function showGate(){
   clearInterval(pushPoll);
@@ -703,12 +1060,12 @@ $('#use-push').addEventListener('click',()=>{
 });
 async function login(){
   const pin=$('#pin').value.trim();
-  if(pin.length<4){$('#gate-msg').textContent='Sechs Ziffern.';return}
+  if(pin.length<4){$('#gate-msg').textContent=tr('Sechs Ziffern.');return}
   try{
     await api('/api/login',{method:'POST',body:JSON.stringify({pin})});
     await enter();
   }catch(e){
-    $('#gate-msg').textContent='Stimmt nicht. Nach fünf Versuchen schaltet sich der Server ab.';
+    $('#gate-msg').textContent=tr('Stimmt nicht. Nach fünf Versuchen schaltet sich der Server ab.');
     $('#pin').value='';$('#pin').focus();
   }
 }
@@ -739,7 +1096,14 @@ let tab=TABS.includes(localStorage.getItem('axiom.tab'))
   ?localStorage.getItem('axiom.tab'):'board';
 let ruleIssues=[];
 
-async function refresh(){S=await api('/api/state');paintHeader();paintAction();paintCapline()}
+async function refresh(){
+  S=await api('/api/state');
+  // Die Sprache kommt vom Telefon. Ändert sie sich dort, zieht die Seite
+  // beim nächsten Zustand nach — festen Text übersetzt `localise` sofort,
+  // gezeichneter Inhalt entsteht gleich darunter ohnehin neu.
+  setLanguage(S.language);
+  paintHeader();paintAction();paintCapline();
+}
 async function loadSurface(){
   // Board und Liste zeigen denselben Bestand und holen ihn deshalb gleich.
   if(tab==='tasks'||tab==='board') tasks=(await api('/api/tasks')).tasks;
@@ -760,13 +1124,13 @@ async function reload(){await refresh();await loadSurface();render()}
 function paintHeader(){
   const v=S.values||{};
   put($('#hchips'),
-    el('span',{class:'chip'},'KAPAZITÄT ',el('b',{},fmt(v.capacity?.value))),
-    el('span',{class:'chip'},'LAST ',el('b',{},fmt(v.load_index?.value))),
+    el('span',{class:'chip'},tr('KAPAZITÄT'),' ',el('b',{},fmt(v.capacity?.value))),
+    el('span',{class:'chip'},tr('LAST'),' ',el('b',{},fmt(v.load_index?.value))),
     el('span',{class:S.loadLevel==='L0'?'chip':'chip warn'},S.loadLevel||'–'),
-    S.focus?el('span',{class:'chip on',id:'focus-chip'},'FOKUS ',
+    S.focus?el('span',{class:'chip on',id:'focus-chip'},tr('FOKUS'),' ',
       el('b',{class:'mono'},S.focus.elapsedMinutes+'/'+S.focus.plannedMinutes+' min')):null,
-    S.configLocked?el('span',{class:'chip warn',title:'R-010'},'REGELWERK ZU'):null,
-    S.weightsCalibrated?null:el('span',{class:'chip',title:'Gewichte noch geschätzt'},'UNGEEICHT'));
+    S.configLocked?el('span',{class:'chip warn',title:'R-010'},tr('REGELWERK ZU')):null,
+    S.weightsCalibrated?null:el('span',{class:'chip',title:tr('Gewichte noch geschätzt')},tr('UNGEEICHT')));
   const used=S.metaMinutesToday||0,cap=S.metaBudgetMinutes||12;
   $('#budget-fill').style.width=Math.min(100,(used/cap)*100)+'%';
   $('#budget').classList.toggle('over',used>=cap);
@@ -782,41 +1146,41 @@ function paintAction(){
   const running=(S.running||[])[0],d=S.decision,next=(S.startable||[])[0],split=(S.atomize||[])[0];
 
   if(d){
-    kids.push(el('div',{class:'eyebrow'},'JETZT'),el('h1',{},d.title),
+    kids.push(el('div',{class:'eyebrow'},tr('JETZT')),el('h1',{},d.title),
       el('div',{class:'row',style:'margin:.6rem 0 0'},
         el('span',{class:'stamp'},d.ruleId),
         d.deficit?el('span',{class:'stamp'},d.deficit):null));
     if(d.rationale) kids.push(el('p',{class:'why'},d.rationale));
     kids.push(el('div',{class:'row'},
-      el('button',{class:'btn primary grow',onclick:()=>respond(d.id,'accepted')},'Verstanden'),
-      el('button',{class:'btn',onclick:()=>respond(d.id,'deferred')},'Später'),
-      el('button',{class:'btn quiet',onclick:()=>respond(d.id,'rejected')},'Passt nicht')));
-    if(running) kids.push(el('p',{class:'faint',style:'margin-top:.9rem'},'Läuft daneben: '+running.title));
+      el('button',{class:'btn primary grow',onclick:()=>respond(d.id,'accepted')},tr('Verstanden')),
+      el('button',{class:'btn',onclick:()=>respond(d.id,'deferred')},tr('Später')),
+      el('button',{class:'btn quiet',onclick:()=>respond(d.id,'rejected')},tr('Passt nicht'))));
+    if(running) kids.push(el('p',{class:'faint',style:'margin-top:.9rem'},tr('Läuft daneben: {0}',[running.title])));
   }else if(running){
     box.className='panel calm';
-    kids.push(el('div',{class:'eyebrow'},'LÄUFT'),el('h1',{},running.title));
+    kids.push(el('div',{class:'eyebrow'},tr('LÄUFT')),el('h1',{},running.title));
     if(S.focus) kids.push(el('p',{class:'mono',style:'color:var(--calm);margin-top:.4rem'},
-      S.focus.elapsedMinutes+' von '+S.focus.plannedMinutes+' min'));
+      tr('{0} von {1} min',[S.focus.elapsedMinutes,S.focus.plannedMinutes])));
     kids.push(el('div',{class:'row'},
-      el('button',{class:'btn primary grow',onclick:()=>act(running.id,'complete')},'Erledigt'),
-      el('button',{class:'btn',onclick:()=>act(running.id,'release')},'Zurücklegen')));
+      el('button',{class:'btn primary grow',onclick:()=>act(running.id,'complete')},tr('Erledigt')),
+      el('button',{class:'btn',onclick:()=>act(running.id,'release')},tr('Zurücklegen'))));
   }else if(next){
-    kids.push(el('div',{class:'eyebrow'},'JETZT'),el('h1',{},next.title),
+    kids.push(el('div',{class:'eyebrow'},tr('JETZT')),el('h1',{},next.title),
       el('div',{class:'row',style:'margin:.6rem 0 0'},
-        el('span',{class:'stamp'},'START '+next.activationEnergy+'/10'),
+        el('span',{class:'stamp'},tr('START {0}/10',[next.activationEnergy])),
         next.decayAt?el('span',{class:'stamp'},dueLabel(next.decayAt)):null));
     kids.push(el('div',{class:'row'},
-      el('button',{class:'btn primary grow',onclick:()=>act(next.id,'start')},'Anfangen'),
-      el('button',{class:'btn',onclick:()=>act(next.id,'complete')},'Erledigt')));
+      el('button',{class:'btn primary grow',onclick:()=>act(next.id,'start')},tr('Anfangen')),
+      el('button',{class:'btn',onclick:()=>act(next.id,'complete')},tr('Erledigt'))));
   }else if(split){
-    kids.push(el('div',{class:'eyebrow'},'ZERLEGEN'),el('h1',{},split.title),
+    kids.push(el('div',{class:'eyebrow'},tr('ZERLEGEN')),el('h1',{},split.title),
       el('p',{class:'why'},split.reason),
       el('div',{class:'row'},
-        el('button',{class:'btn primary',onclick:()=>atomizeDialog(split)},'In Schritte zerlegen')));
+        el('button',{class:'btn primary',onclick:()=>atomizeDialog(split)},tr('In Schritte zerlegen'))));
   }else{
     box.className='panel';
-    kids.push(el('div',{class:'eyebrow'},'NICHTS ANLIEGEND'),el('h1',{},'Ruhig gerade.'),
-      el('p',{style:'margin-top:.6rem'},'Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.'));
+    kids.push(el('div',{class:'eyebrow'},tr('NICHTS ANLIEGEND')),el('h1',{},tr('Ruhig gerade.')),
+      el('p',{style:'margin-top:.6rem'},tr('Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.')));
   }
   if(S.nextStep) kids.push(el('p',{class:'faint',style:'margin-top:1rem'},
     S.nextStep.label+' · '+new Date(S.nextStep.at).toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'})+' — '+S.nextStep.anchor));
@@ -825,9 +1189,9 @@ function paintAction(){
 
 function dueLabel(iso){
   const diff=new Date(iso)-new Date();
-  if(diff<0) return 'ÜBERFÄLLIG';
+  if(diff<0) return tr('ÜBERFÄLLIG');
   const h=Math.round(diff/36e5);
-  return h<24?('IN '+h+' H'):('IN '+Math.round(h/24)+' T');
+  return h<24?tr('IN {0} H',[h]):tr('IN {0} T',[Math.round(h/24)]);
 }
 async function respond(id,response){
   try{await api('/api/decisions/'+id,{method:'POST',body:JSON.stringify({response})})}catch(e){}
@@ -848,23 +1212,28 @@ function paintCapline(){
   const open=[...(S.startable||[]),...(S.running||[])];
   const parts=['<line class="axis" x1="'+pad+'" y1="48" x2="'+(W-pad)+'" y2="48"/>',
     '<line class="m" x1="'+mark+'" y1="32" x2="'+mark+'" y2="54"/>',
-    '<text x="'+pad+'" y="66">LEICHT</text>',
-    '<text x="'+mark+'" y="66" text-anchor="middle" style="fill:var(--signal)">HIER</text>',
-    '<text x="'+(W-pad)+'" y="66" text-anchor="end">SCHWER</text>'];
+    // Beschriftung durch tr(): Dieselbe Stelle war in der App schon einmal
+    // fest auf Deutsch, mitten in einer englischen Oberflaeche — sie steckte
+    // in einem CustomPainter, der keinen BuildContext hat. Hier ist es ein
+    // String im SVG, und der faellt genauso durch jede Zaehlung von
+    // Uebersetzungsaufrufen.
+    '<text x="'+pad+'" y="66">'+tr('LEICHT')+'</text>',
+    '<text x="'+mark+'" y="66" text-anchor="middle" style="fill:var(--signal)">'+tr('HIER')+'</text>',
+    '<text x="'+(W-pad)+'" y="66" text-anchor="end">'+tr('SCHWER')+'</text>'];
   const seen={};
   for(const t of open){
     const cx=x(t.activationEnergy), k=Math.round(cx);
     const dy=(seen[k]=(seen[k]||0)+1)-1;
     const cls=t.state==='active'?'dnow':(cx<=mark?'din':'dout');
     parts.push('<circle class="'+cls+'" cx="'+cx+'" cy="'+(36-dy*9)+'" r="4"><title>'+
-      String(t.title).replace(/[<&>]/g,'')+' — Start '+t.activationEnergy+'/10</title></circle>');
+      String(t.title).replace(/[<&>]/g,'')+tr(' — Start {0}/10',[t.activationEnergy])+'</title></circle>');
   }
   $('#capline').innerHTML=parts.join('');
-  $('#cap-label').textContent='KAPAZITÄT '+cap;
+  $('#cap-label').textContent=tr('KAPAZITÄT {0}',[cap]);
   const n=(S.startable||[]).length;
   $('#cap-note').textContent=n
-    ? n+' startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.'
-    : 'Heute liegt nichts unter der Linie. Zerlegen hilft mehr als Anlauf nehmen.';
+    ? tr('{0} startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.',[n])
+    : tr('Heute liegt nichts unter der Linie. Zerlegen hilft mehr als Anlauf nehmen.');
 }
 
 /* ── Erfassen ────────────────────────────────────────────────────── */
@@ -872,7 +1241,7 @@ async function saveCapture(){
   const box=$('#cap-text'), text=box.value.trim();
   if(!text) return;
   box.value='';
-  try{await api('/api/capture',{method:'POST',body:JSON.stringify({text})});toast('Erfasst.')}
+  try{await api('/api/capture',{method:'POST',body:JSON.stringify({text})});toast(tr('Erfasst.'))}
   catch(e){box.value=text;toast(e.message)}
   await reload();
 }
@@ -988,12 +1357,12 @@ function taskFilters(){
       redrawTasks();
     }},label);
   return el('div',{class:'filters'},
-    el('button',{class:'btn primary',onclick:()=>taskDialog()},'Neue Aufgabe'),
-    el('input',{type:'search',value:tprefs.q,placeholder:'Suchen','aria-label':'Aufgaben durchsuchen',
+    el('button',{class:'btn primary',onclick:()=>taskDialog()},tr('Neue Aufgabe')),
+    el('input',{type:'search',value:tprefs.q,placeholder:tr('Suchen'),'aria-label':tr('Aufgaben durchsuchen'),
       oninput:e=>{setTPref('q',e.target.value);redrawTasks()}}),
-    tog('reach','IN REICHWEITE','Nur was unter der Kapazität von heute liegt'),
-    tog('overdue','ÜBERFÄLLIG','Nur was seinen Zeitpunkt überschritten hat'),
-    tog('done','ERLEDIGTE','Erledigtes mit anzeigen'));
+    tog('reach',tr('IN REICHWEITE'),tr('Nur was unter der Kapazität von heute liegt')),
+    tog('overdue',tr('ÜBERFÄLLIG'),tr('Nur was seinen Zeitpunkt überschritten hat')),
+    tog('done',tr('ERLEDIGTE'),tr('Erledigtes mit anzeigen')));
 }
 
 /* Ein Modell, zwei Ansichten. Liste und Board fragen dieselben Zahlen und
@@ -1081,15 +1450,15 @@ function taskModel(){
    Reihenfolge: Was läuft, läuft. Was auf etwas anderes wartet, wartet. Über
    den Rest entscheidet die Kapazität. */
 const GROUPS=[
-  {key:'run',label:'Läuft',color:'var(--calm)'},
-  {key:'reach',label:'In Reichweite',color:'var(--signal)'},
-  {key:'far',label:'Nicht in Reichweite',color:'var(--rule)'},
+  {key:'run',label:tr('Läuft'),color:'var(--calm)'},
+  {key:'reach',label:tr('In Reichweite'),color:'var(--signal)'},
+  {key:'far',label:tr('Nicht in Reichweite'),color:'var(--rule)'},
   // Erscheint erst, wenn etwas wartet. Eine dauerhaft leere Spalte ist
   // Fläche ohne Aussage — und der Server liefert `waiting` gerade erst.
-  {key:'wait',label:'Wartet',color:'var(--info)',onlyIfFull:true},
+  {key:'wait',label:tr('Wartet'),color:'var(--info)',onlyIfFull:true},
   // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
   // Gruppe erscheint nur, wenn derselbe Filter sie auch sonst zeigt.
-  {key:'done',label:'Erledigt',color:'var(--faint)'}];
+  {key:'done',label:tr('Erledigt'),color:'var(--faint)'}];
 
 function groupOf(t,m){
   if(t.state==='done') return 'done';
@@ -1142,7 +1511,7 @@ function groupBlock(g,list,m,asColumn){
   return el('div',{class:'group'+(open?'':' shut'),role:'group',
     'aria-label':g.label+': '+list.length,style:'--group:'+g.color},
     band,body,
-    open?el('button',{class:'gadd',onclick:()=>taskDialog()},'+ Aufgabe'):null);
+    open?el('button',{class:'gadd',onclick:()=>taskDialog()},tr('+ Aufgabe')):null);
 }
 
 /* ── Klammerleiste ───────────────────────────────────────────────────
@@ -1171,12 +1540,12 @@ function fillBrackets(box,m){
     // drei Ebenen unten steht, muss zurückfinden, ohne zurückzuraten.
     const path=[...m.chainOf(chosen),chosen];
     kids.push(el('div',{class:'crumb'},
-      el('button',{class:'brk',onclick:()=>chooseBracket(null)},'Alles'),
+      el('button',{class:'brk',onclick:()=>chooseBracket(null)},tr('Alles')),
       path.map((p,i)=>[el('span',{class:'sep'},'›'),
         bracketChip(p,m,i===path.length-1)])));
   }else{
     kids.push(el('button',{class:'brk','aria-pressed':'true',
-      onclick:()=>chooseBracket(null)},'Alles'));
+      onclick:()=>chooseBracket(null)},tr('Alles')));
   }
   for(const t of list) kids.push(bracketChip(t,m,false));
   put(box,el('div',{class:'brackets'},kids));
@@ -1190,12 +1559,12 @@ function fillHead(box,m){
   const t=bracket?m.byId.get(bracket):null;
   if(!t){put(box);return}
   put(box,el('div',{class:'bhead'},
-    el('div',{class:'eyebrow'},'GEWÄHLTE KLAMMER'),
+    el('div',{class:'eyebrow'},tr('GEWÄHLTE KLAMMER')),
     el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
     el('div',{class:'cells'},cellsOf(t,m),
-      el('span',{class:'cell'},'SCHRITTE '+m.doneKids(t)+' VON '+m.total(t))),
+      el('span',{class:'cell'},tr('SCHRITTE {0} VON {1}',[m.doneKids(t),m.total(t)]))),
     el('div',{class:'acts'},taskActions(t,m),
-      el('button',{class:'btn quiet',onclick:()=>taskSheet(t.id)},'Details'))));
+      el('button',{class:'btn quiet',onclick:()=>taskSheet(t.id)},tr('Details')))));
 }
 
 function fillTasks(box,m){
@@ -1216,15 +1585,15 @@ function fillBoard(box,m){
 }
 
 const emptyStock=()=>el('p',{},
-  'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.');
+  tr('Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.'));
 const noMatch=()=>[
   el('p',{},bracket
-    ?'In dieser Klammer ist gerade nichts offen.'
-    :'Nichts passt zu dieser Auswahl.'),
+    ?tr('In dieser Klammer ist gerade nichts offen.')
+    :tr('Nichts passt zu dieser Auswahl.')),
   el('div',{class:'row'},el('button',{class:'btn quiet',onclick:()=>{
     setTPref('q','');setTPref('reach',false);setTPref('overdue',false);setTPref('done',false);
     bracket=null;render();
-  }},'Filter zurücksetzen'))];
+  }},tr('Filter zurücksetzen')))];
 
 /* Vier Stufen, abgeleitet aus einem Abstand — nicht aus einer Meinung über
    die Aufgabe. Erledigtes bleibt neutral: Eine Frist, die nicht mehr läuft,
@@ -1242,15 +1611,15 @@ const expires=t=>!!t.decayAt&&t.state!=='done'&&t.state!=='dropped';
    Beschriftung. */
 function cellsOf(t,m){
   return [
-    el('span',{class:'pill ae'},'START '+t.activationEnergy+'/10'),
-    el('span',{class:'cell'},'SOG '+t.salience),
-    el('span',{class:'cell'},'FOLGEN '+t.stakes),
+    el('span',{class:'pill ae'},tr('START {0}/10',[t.activationEnergy])),
+    el('span',{class:'cell'},tr('SOG {0}',[t.salience])),
+    el('span',{class:'cell'},tr('FOLGEN {0}',[t.stakes])),
     /* Aus demselben Grund steht an etwas Erledigtem keine Frist mehr:
        „ÜBERFÄLLIG" an etwas, das getan ist, wäre ein Vorwurf für nichts. */
     expires(t)?el('span',{class:'pill due','data-due':dueRamp(t)},dueLabel(t.decayAt)):null,
-    t.place?el('span',{class:'cell'},'ORT '+String(t.place).toUpperCase()):null,
+    t.place?el('span',{class:'cell'},tr('ORT {0}',[String(t.place).toUpperCase()])):null,
     m.waiting(t)?el('span',{class:'cell'},
-      t.blockedByCount?('WARTET AUF '+t.blockedByCount):'WARTET'):null];
+      t.blockedByCount?tr('WARTET AUF {0}',[t.blockedByCount]):tr('WARTET')):null];
 }
 
 /* Welche Handlungen offenstehen, hängt am Zustand und sonst nichts —
@@ -1271,14 +1640,14 @@ function taskActions(t,m,after){
   if(t.state==='done'||t.state==='dropped') return [];
   const go=fn=>()=>{if(after) after();fn()};
   const split=el('button',{class:'btn quiet',
-    onclick:go(()=>atomizeDialog({taskId:t.id,title:t.title}))},'Zerlegen');
-  const complete=el('button',{class:'btn',onclick:go(()=>act(t.id,'complete'))},'Erledigt');
+    onclick:go(()=>atomizeDialog({taskId:t.id,title:t.title}))},tr('Zerlegen'));
+  const complete=el('button',{class:'btn',onclick:go(()=>act(t.id,'complete'))},tr('Erledigt'));
   if(t.state==='active') return [
-    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'complete'))},'Erledigt'),
-    el('button',{class:'btn',onclick:go(()=>act(t.id,'release'))},'Zurücklegen'),split];
+    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'complete'))},tr('Erledigt')),
+    el('button',{class:'btn',onclick:go(()=>act(t.id,'release'))},tr('Zurücklegen')),split];
   if(t.state==='blocked'||(m&&m.isBracket(t))) return [complete,split];
   return [
-    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'start'))},'Anfangen'),
+    el('button',{class:'btn primary',onclick:go(()=>act(t.id,'start'))},tr('Anfangen')),
     complete,split];
 }
 
@@ -1293,7 +1662,7 @@ function taskRow(t,m){
       /* Der Bezug bleibt erkennbar, ohne den Baum nachzubauen: Ohne diese
          Zeile stünde ein Schritt da, ohne dass zu sehen wäre, wozu er
          gehört. */
-      parent?el('span',{class:'kin'},'Teilschritt von '+parent.title):null),
+      parent?el('span',{class:'kin'},tr('Teilschritt von {0}',[parent.title])):null),
     el('div',{class:'cells'},cellsOf(t,m)),
     el('div',{class:'acts'},taskActions(t,m)));
 }
@@ -1305,7 +1674,7 @@ function boardCard(t,m){
   const parent=m.parentOf(t);
   const acts=taskActions(t,m);
   return el('div',{class:cls.join(' '),'data-due':dueRamp(t)},
-    parent?el('span',{class:'kin'},'Teilschritt von '+parent.title):null,
+    parent?el('span',{class:'kin'},tr('Teilschritt von {0}',[parent.title])):null,
     el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
     el('div',{class:'cells'},cellsOf(t,m)),
     acts.length?el('div',{class:'acts'},acts):null);
@@ -1348,22 +1717,22 @@ function paintDetail(){
   const m=taskModel();
   const local=m.byId.get(id);
   if(!local&&!detailFull){
-    sheet('Aufgabe',el('p',{},'Diese Aufgabe steht nicht mehr im Bestand.'),
-      [],'Schließen',{wide:true,focus:false});
+    sheet(tr('Aufgabe'),el('p',{},tr('Diese Aufgabe steht nicht mehr im Bestand.')),
+      [],tr('Schließen'),{wide:true,focus:false});
     return;
   }
   const t=Object.assign({},local||{},detailFull||{});
   const close=()=>$('#dlg').close();
   const body=el('div',{class:'sheet'},
     el('div',{class:'cells'},cellsOf(t,m),
-      el('span',{class:'cell'},m.inReach(t)?'IN REICHWEITE':'NICHT IN REICHWEITE')),
+      el('span',{class:'cell'},m.inReach(t)?tr('IN REICHWEITE'):tr('NICHT IN REICHWEITE'))),
     detailError?el('p',{class:'why'},
-      'Blocker und Ereignisstrom liefert dieser Server nicht — was hier steht, kommt aus dem Bestand.',
+      tr('Blocker und Ereignisstrom liefert dieser Server nicht — was hier steht, kommt aus dem Bestand.'),
       el('span',{class:'mono',style:'display:block;font-size:.78rem;margin-top:.3rem'},detailError)):null,
     treeSection(t,m),
     blockerSection(t,m),
     eventSection());
-  sheet(t.title||'Aufgabe',body,taskActions(t,m,close),'Schließen',
+  sheet(t.title||tr('Aufgabe'),body,taskActions(t,m,close),tr('Schließen'),
     {wide:true,focus:false});
 }
 
@@ -1374,7 +1743,7 @@ function treeSection(t,m){
   const parents=(detailFull&&detailFull.parents)||m.chainOf(t);
   const children=(detailFull&&detailFull.children)||m.kids.get(t.id)||[];
   if(!parents.length&&!children.length) return null;
-  return section('Baum',
+  return section(tr('Baum'),
     parents.length?el('div',{class:'crumb'},
       parents.map((p,i)=>[i?el('span',{class:'sep'},'›'):null,
         el('button',{class:'brk',onclick:()=>taskSheet(p.id)},p.title)])):null,
@@ -1382,8 +1751,8 @@ function treeSection(t,m){
       children.map(c=>el('button',{class:'node'+(c.state==='done'?' done':''),
         onclick:()=>taskSheet(c.id)},
         c.title,
-        c.activationEnergy?el('span',{class:'cell'},'START '+c.activationEnergy+'/10'):null))):null,
-    children.length?null:el('p',{class:'faint'},'Keine Schritte. Zerlegen legt welche an.'));
+        c.activationEnergy?el('span',{class:'cell'},tr('START {0}/10',[c.activationEnergy])):null))):null,
+    children.length?null:el('p',{class:'faint'},tr('Keine Schritte. Zerlegen legt welche an.')));
 }
 
 /* Blocker in beide Richtungen: „wartet auf" ist die Frage, warum hier nichts
@@ -1395,23 +1764,23 @@ function blockerSection(t,m){
   const known=new Set([...before,...after].map(x=>x.id));
   const line=(x,drop)=>el('div',{class:'node'+(x.done||x.state==='done'?' done':'')},
     el('button',{class:'tlink',onclick:()=>taskSheet(x.id)},x.title),
-    drop?el('button',{class:'drop',title:'Blocker entfernen',
-      onclick:()=>dropBlocker(t.id,x.id)},'Entfernen'):null);
-  return section('Blocker',
-    el('div',{class:'eyebrow'},'WARTET AUF'),
+    drop?el('button',{class:'drop',title:tr('Blocker entfernen'),
+      onclick:()=>dropBlocker(t.id,x.id)},tr('Entfernen')):null);
+  return section(tr('Blocker'),
+    el('div',{class:'eyebrow'},tr('WARTET AUF')),
     before.length?el('div',{class:'tree'},before.map(x=>line(x,true)))
-      :el('p',{class:'faint'},'Nichts.'),
-    el('div',{class:'eyebrow',style:'margin-top:.6rem'},'HÄLT AUF'),
+      :el('p',{class:'faint'},tr('Nichts.')),
+    el('div',{class:'eyebrow',style:'margin-top:.6rem'},tr('HÄLT AUF')),
     after.length?el('div',{class:'tree'},after.map(x=>line(x,false)))
-      :el('p',{class:'faint'},'Nichts.'),
+      :el('p',{class:'faint'},tr('Nichts.')),
     blockerPicker(t.id,known),
     cycleBox(m));
 }
 
 function blockerPicker(id,known){
   const out=el('div',{class:'picks'});
-  const input=el('input',{type:'search',placeholder:'Wartet auf … (Aufgabe suchen)',
-    'aria-label':'Blocker suchen'});
+  const input=el('input',{type:'search',placeholder:tr('Wartet auf … (Aufgabe suchen)'),
+    'aria-label':tr('Blocker suchen')});
   const fill=()=>{
     const q=input.value.trim().toLowerCase();
     const list=tasks.filter(x=>x.id!==id&&x.state!=='done'&&x.state!=='dropped'
@@ -1419,7 +1788,7 @@ function blockerPicker(id,known){
       .slice(0,8);
     put(out,list.length
       ?list.map(x=>el('button',{class:'btn',onclick:()=>addBlocker(id,x.id)},x.title))
-      :el('p',{class:'faint'},'Nichts gefunden.'));
+      :el('p',{class:'faint'},tr('Nichts gefunden.')));
   };
   input.addEventListener('input',fill);
   fill();
@@ -1456,7 +1825,7 @@ function cycleBox(m){
   if(!detailNote) return null;
   if(!detailNote.path) return el('div',{class:'cycle'},el('p',{},detailNote.text));
   return el('div',{class:'cycle'},
-    el('p',{},'Das schlösse einen Kreis. Jede dieser Aufgaben wartete am Ende auf sich selbst, und dann gibt es keine, mit der angefangen werden kann.'),
+    el('p',{},tr('Das schlösse einen Kreis. Jede dieser Aufgaben wartete am Ende auf sich selbst, und dann gibt es keine, mit der angefangen werden kann.')),
     el('p',{class:'path'},detailNote.path.map(p=>{
       if(p&&typeof p==='object') return String(p.title||p.id||'');
       const t=m.byId.get(p);
@@ -1467,22 +1836,22 @@ function cycleBox(m){
 function eventSection(){
   if(!detailFull) return null;
   const events=detailFull.events||[];
-  return section('Ereignisse',
+  return section(tr('Ereignisse'),
     events.length?events.slice(0,60).map(e=>el('div',{class:'ev'},
       el('span',{class:'t'},new Date(e.at).toLocaleString('de',
         {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
       el('span',{class:'k'},e.type),
       el('span',{class:'p',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))))
-      :el('p',{class:'faint'},'Noch nichts geschehen.'),
+      :el('p',{class:'faint'},tr('Noch nichts geschehen.')),
     el('p',{class:'faint',style:'margin-top:.4rem'},
-      'Nur lesend. Eine Korrektur ist ein neues Ereignis.'));
+      tr('Nur lesend. Eine Korrektur ist ein neues Ereignis.')));
 }
 
 function viewInbox(){
   const frag=document.createDocumentFragment();
-  if(!inbox.notes.length){frag.append(el('p',{},'Nichts zu sortieren.'));return frag}
+  if(!inbox.notes.length){frag.append(el('p',{},tr('Nichts zu sortieren.')));return frag}
   frag.append(el('div',{class:'sec'},
-    el('span',{class:'eyebrow'},'Unsortiert · '+inbox.notes.length),el('span',{class:'line'})));
+    el('span',{class:'eyebrow'},tr('Unsortiert · {0}',[inbox.notes.length])),el('span',{class:'line'})));
   for(const n of inbox.notes){
     frag.append(el('div',{class:'item'},el('span',{class:'bar'}),
       el('div',{},el('div',{class:'title'},n.text||''),
@@ -1490,7 +1859,7 @@ function viewInbox(){
           el('span',{},new Date(n.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
           el('span',{},String(n.via||'').toUpperCase()))),
       el('div',{class:'acts'},
-        el('button',{class:'btn primary',onclick:()=>taskDialog(n.text)},'Sortieren'))));
+        el('button',{class:'btn primary',onclick:()=>taskDialog(n.text)},tr('Sortieren')))));
   }
   return frag;
 }
@@ -1498,7 +1867,7 @@ function viewInbox(){
 function viewState(){
   const frag=document.createDocumentFragment();
   frag.append(el('p',{style:'margin-bottom:1rem'},
-    'Jeder Wert lässt sich aufklappen. Ohne die Herleitung ist eine Zahl nicht überprüfbar (G2).'));
+    tr('Jeder Wert lässt sich aufklappen. Ohne die Herleitung ist eine Zahl nicht überprüfbar (G2).')));
   for(const [id,v] of Object.entries(S.values||{})){
     const terms=(S.breakdown||{})[id]||[];
     frag.append(el('div',{class:'value'+(terms.length?' can':''),
@@ -1509,12 +1878,12 @@ function viewState(){
       terms.length?el('div',{class:'terms'},...terms.map(t=>el('div',{class:'term'},
         el('b',{},t.label),
         el('span',{},(t.contribution>0?'+':'')+Math.round(t.contribution))))):null,
-      terms.length?el('div',{class:'faint',style:'font-size:.68rem;margin-top:.3rem'},'Aufklappen für die Formel'):null));
+      terms.length?el('div',{class:'faint',style:'font-size:.68rem;margin-top:.3rem'},tr('Aufklappen für die Formel')):null));
   }
   frag.append(el('div',{class:'row'},
     el('button',{class:'btn primary',onclick:checkinDialog},'Check-in'),
-    S.focus?el('button',{class:'btn',onclick:endFocusDialog},'Fokus beenden')
-           :el('button',{class:'btn',onclick:focusDialog},'Fokus starten')));
+    S.focus?el('button',{class:'btn',onclick:endFocusDialog},tr('Fokus beenden'))
+           :el('button',{class:'btn',onclick:focusDialog},tr('Fokus starten'))));
   if(S.regimeDescription) frag.append(el('p',{class:'why',style:'margin-top:1rem'},S.regimeDescription));
   return frag;
 }
@@ -1526,13 +1895,13 @@ function viewRules(){
   if(S.configLocked) frag.append(lockPanel());
   if(ruleIssues.length) frag.append(el('div',{class:'panel',
     style:'margin-bottom:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
-    el('span',{class:'eyebrow'},'NICHT GELADEN'),
+    el('span',{class:'eyebrow'},tr('NICHT GELADEN')),
     el('p',{style:'margin-top:.4rem'},
-      'Diese Einträge hat der Kern abgelehnt. Sie laufen nicht mit — abgelehnt ist besser als stumm übersprungen.'),
+      tr('Diese Einträge hat der Kern abgelehnt. Sie laufen nicht mit — abgelehnt ist besser als stumm übersprungen.')),
     ruleIssues.map(i=>el('p',{class:'mono',style:'font-size:.78rem;margin-top:.3rem'},'· '+i))));
   frag.append(el('div',{class:'filters'},
     el('button',{class:'btn primary',disabled:S.configLocked,
-      onclick:()=>openEditor(null)},'Neue Regel')));
+      onclick:()=>openEditor(null)},tr('Neue Regel'))));
   for(const r of rules){
     frag.append(el('div',{class:'item'},
       el('span',{class:'bar',style:r.shadow?'background:var(--info)':''}),
@@ -1540,15 +1909,15 @@ function viewRules(){
         el('div',{class:'meta'},el('span',{},r.id),
           r.deficit?el('span',{},r.deficit):null,
           el('span',{},String(r.severity||'').toUpperCase()),
-          r.shadow?el('span',{style:'color:var(--info)'},'SCHATTEN'):null,
-          r.shadowDaysLeft?el('span',{style:'color:var(--info)'},'NOCH '+r.shadowDaysLeft+' TAGE STUMM'):null,
-          (r.edited||r.overridden)?el('span',{style:'color:var(--signal)'},'GEÄNDERT'):null),
+          r.shadow?el('span',{style:'color:var(--info)'},tr('SCHATTEN')):null,
+          r.shadowDaysLeft?el('span',{style:'color:var(--info)'},tr('NOCH {0} TAGE STUMM',[r.shadowDaysLeft])):null,
+          (r.edited||r.overridden)?el('span',{style:'color:var(--signal)'},tr('GEÄNDERT')):null),
         // Ohne Begründung wäre die Regel eine Behauptung (G2). Sie steht
         // im YAML, das der Server ohnehin mitliefert.
         el('p',{class:'why',style:'margin-top:.4rem'},rationaleOf(r))),
       el('div',{class:'acts'},
         el('button',{class:'btn',disabled:S.configLocked,
-          onclick:()=>openEditor(r)},'Bearbeiten'))));
+          onclick:()=>openEditor(r)},tr('Bearbeiten')))));
   }
   return frag;
 }
@@ -1558,11 +1927,11 @@ function viewRules(){
 function lockPanel(){
   return el('div',{class:'panel',style:'margin-bottom:1rem;border-color:var(--caution)'},
     el('span',{class:'stamp'},'R-010'),
-    el('h2',{style:'margin:.5rem 0'},'Regelwerk heute zu'),
-    el('p',{},(S.metaMinutesToday||0)+' von '+(S.metaBudgetMinutes||12)+
-      ' Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.'),
+    el('h2',{style:'margin:.5rem 0'},tr('Regelwerk heute zu')),
+    el('p',{},tr('{0} von {1} Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.',
+      [S.metaMinutesToday||0,S.metaBudgetMinutes||12])),
     el('p',{class:'why',style:'margin-top:.7rem'},
-      'Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.'));
+      tr('Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.')));
 }
 
 function rationaleOf(rule){
@@ -1579,15 +1948,15 @@ function viewReview(){
     ...['day','week','month','quarter'].map(sc=>el('button',{
       class:'btn'+(review?.scope===sc?' primary':''),
       onclick:async()=>{review=await api('/api/review?scope='+sc);render()},
-    },({day:'Tag',week:'Woche',month:'Monat',quarter:'Quartal'})[sc]))));
-  if(!review){frag.append(el('p',{},'Umfang wählen.'));return frag}
+    },({day:tr('Tag'),week:tr('Woche'),month:tr('Monat'),quarter:tr('Quartal')})[sc]))));
+  if(!review){frag.append(el('p',{},tr('Umfang wählen.')));return frag}
   for(const m of review.metrics)
     frag.append(el('div',{class:'value'},
       el('div',{class:'head'},el('span',{},m.label),el('span',{class:'num'},m.value)),
       el('p',{class:'faint',style:'margin-top:.25rem'},m.derivation)));
   if(review.verdicts?.length){
     frag.append(el('div',{class:'sec',style:'margin-top:1.2rem'},
-      el('span',{class:'eyebrow'},'Regeln'),el('span',{class:'line'})));
+      el('span',{class:'eyebrow'},tr('Regeln')),el('span',{class:'line'})));
     for(const v of review.verdicts)
       frag.append(el('div',{class:'ev'},el('span',{class:'k'},v.ruleId),
         el('span',{class:'t'},v.verdict),el('span',{class:'p',title:v.reason},v.reason)));
@@ -1598,7 +1967,7 @@ function viewReview(){
 function viewEvents(){
   const frag=document.createDocumentFragment();
   frag.append(el('p',{style:'margin-bottom:.8rem'},
-    'Nur lesend. Ereignisse werden angehängt, nie überschrieben — eine Korrektur ist ein neues Ereignis.'));
+    tr('Nur lesend. Ereignisse werden angehängt, nie überschrieben — eine Korrektur ist ein neues Ereignis.')));
   for(const e of events)
     frag.append(el('div',{class:'ev'},
       el('span',{class:'t'},new Date(e.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
@@ -1708,23 +2077,23 @@ function viewHelp(){
   fillToc(list);fillChapter(chapter);
   return el('div',{class:'help'},
     el('div',{class:'toc'},
-      el('div',{class:'seg',role:'group','aria-label':'Sprache der Hilfe'},
+      el('div',{class:'seg',role:'group','aria-label':tr('Sprache der Hilfe')},
         el('button',{'aria-pressed':helpLang==='de'?'true':'false',
-          onclick:()=>setHelpLang('de')},'DEUTSCH'),
+          onclick:()=>setHelpLang('de')},tr('DEUTSCH')),
         el('button',{'aria-pressed':helpLang==='en'?'true':'false',
-          onclick:()=>setHelpLang('en')},'ENGLISH')),
-      el('input',{type:'search',value:helpQuery,placeholder:'Suchen',
-        'aria-label':'Hilfe durchsuchen',oninput:helpSearchInput}),
+          onclick:()=>setHelpLang('en')},tr('ENGLISH'))),
+      el('input',{type:'search',value:helpQuery,placeholder:tr('Suchen'),
+        'aria-label':tr('Hilfe durchsuchen'),oninput:helpSearchInput}),
       list),
     chapter);
 }
 function fillToc(box){
   if(helpError){put(box,el('p',{class:'faint'},helpError));return}
   if(!helpChapters.length){
-    put(box,el('p',{class:'faint'},'Keine Kapitel im Bündel.'));return;
+    put(box,el('p',{class:'faint'},tr('Keine Kapitel im Bündel.')));return;
   }
   const matches=helpMatches();
-  if(!matches.length){put(box,el('p',{class:'faint'},'Nichts gefunden.'));return}
+  if(!matches.length){put(box,el('p',{class:'faint'},tr('Nichts gefunden.')));return}
   put(box,matches.map(c=>el('button',{class:'ch',
     'aria-current':c.id===helpId?'true':'false',onclick:()=>openChapter(c.id)},
     el('span',{class:'num mono'},c.id),c.title,
@@ -1733,13 +2102,13 @@ function fillToc(box){
 function fillChapter(box){
   if(!helpDoc){
     put(box,el('p',{class:'faint'},
-      'Die Hilfe liegt als Text im App-Bündel. Steht dort nichts, zeigt der Server nichts — die Kapitel entstehen unter assets/help/.'));
+      tr('Die Hilfe liegt als Text im App-Bündel. Steht dort nichts, zeigt der Server nichts — die Kapitel entstehen unter assets/help/.')));
     return;
   }
   if(helpDoc.error){put(box,el('p',{class:'faint'},helpDoc.error));return}
   put(box,
     helpDoc.fallback?el('p',{class:'why'},
-      'Dieses Kapitel gibt es noch nicht auf Englisch. Darunter steht die deutsche Fassung.'):null,
+      tr('Dieses Kapitel gibt es noch nicht auf Englisch. Darunter steht die deutsche Fassung.')):null,
     mdRender(helpDoc.markdown||''));
 }
 
@@ -1887,7 +2256,7 @@ function sheet(title,body,actions,closeLabel,opts){
   d.className=(opts&&opts.wide)?'wide':'';
   put(d,el('h2',{},title),body,
     el('div',{class:'row'},...actions,
-      el('button',{class:'btn quiet',onclick:()=>d.close()},closeLabel||'Abbrechen')));
+      el('button',{class:'btn quiet',onclick:()=>d.close()},closeLabel||tr('Abbrechen'))));
   if(!d.open) d.showModal();
   if(!opts||opts.focus!==false){
     const first=d.querySelector('input,textarea');
@@ -1908,87 +2277,88 @@ function dial(label,hint,low,high,value,min=1,max=5){
 }
 
 function checkinDialog(){
-  const e=dial('Energie',null,'leer','voll',3),f=dial('Fokus',null,'zerstreut','klar',3),
-    m=dial('Stimmung',null,'unten','oben',3),
-    s=dial('Reizbedarf','Wie sehr zieht es gerade nach Input?','ruhig','stark',3);
+  const e=dial(tr('Energie'),null,'leer','voll',3),f=dial(tr('Fokus'),null,'zerstreut','klar',3),
+    m=dial(tr('Stimmung'),null,'unten','oben',3),
+    s=dial(tr('Reizbedarf'),tr('Wie sehr zieht es gerade nach Input?'),'ruhig','stark',3);
   sheet('Check-in',el('div',{},
-    el('p',{style:'margin-bottom:1rem'},'Vier Regler, ungefähr reicht. Genauigkeit kostet hier mehr, als sie bringt.'),
+    el('p',{style:'margin-bottom:1rem'},tr('Vier Regler, ungefähr reicht. Genauigkeit kostet hier mehr, als sie bringt.')),
     e,f,m,s),[
     el('button',{class:'btn primary',onclick:async()=>{
       await api('/api/checkin',{method:'POST',body:JSON.stringify({
         energy:e.value(),focus:f.value(),mood:m.value(),stimNeed:s.value()})});
-      $('#dlg').close();toast('Eingetragen.');await reload();
-    }},'Übernehmen')]);
+      $('#dlg').close();toast(tr('Eingetragen.'));await reload();
+    }},tr('Übernehmen'))]);
 }
 
 function focusDialog(){
   const cap=S.values?.capacity?.value??50;
   const suggested=cap<35?15:cap<70?25:45;
   const running=(S.running||[])[0];
-  const title=el('input',{type:'text',value:running?.title||'',placeholder:'Woran?'});
-  const min=dial('Geplante Dauer','Vorschlag aus der Kapazität ('+cap+'): '+suggested+' Minuten. Ein kurzes Fenster, das hält, ist mehr wert als ein langes, das reißt.',
+  const title=el('input',{type:'text',value:running?.title||'',placeholder:tr('Woran?')});
+  const min=dial(tr('Geplante Dauer'),
+    tr('Vorschlag aus der Kapazität ({0}): {1} Minuten. Ein kurzes Fenster, das hält, ist mehr wert als ein langes, das reißt.',[cap,suggested]),
     '5 min','120 min',suggested,5,120);
-  sheet('Fokus starten',el('div',{},
-    el('div',{class:'field'},el('label',{},'Ziel'),title),min),[
+  sheet(tr('Fokus starten'),el('div',{},
+    el('div',{class:'field'},el('label',{},tr('Ziel')),title),min),[
     el('button',{class:'btn primary',onclick:async()=>{
       await api('/api/focus',{method:'POST',body:JSON.stringify({
         title:title.value.trim(),taskId:running?.id||null,minutes:min.value()})});
       $('#dlg').close();await reload();
-    }},'Starten')]);
+    }},tr('Starten'))]);
 }
 
 function endFocusDialog(){
-  const crumb=el('textarea',{placeholder:'Wo genau warst du? Ein Satz reicht.'});
-  sheet('Fokus beenden',el('div',{},
-    el('p',{style:'margin-bottom:.8rem'},'Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.'),
+  const crumb=el('textarea',{placeholder:tr('Wo genau warst du? Ein Satz reicht.')});
+  sheet(tr('Fokus beenden'),el('div',{},
+    el('p',{style:'margin-bottom:.8rem'},tr('Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.')),
     crumb),[
     el('button',{class:'btn primary',onclick:async()=>{
       await api('/api/focus',{method:'DELETE',body:JSON.stringify({breadcrumb:crumb.value.trim()})});
       $('#dlg').close();await reload();
-    }},'Beenden')]);
+    }},tr('Beenden'))]);
 }
 
 function taskDialog(prefill){
-  const title=el('textarea',{placeholder:'Was ist zu tun?'});
+  const title=el('textarea',{placeholder:tr('Was ist zu tun?')});
   if(prefill) title.value=prefill;
-  const ae=dial('Wie schwer fällt der Start?','Nicht wie lang es dauert. Nur der Anfang.','sofort','große Hürde',5,1,10);
-  const st=dial('Was kostet es, wenn es liegenbleibt?','Folgen, nicht Wichtigkeit.','nichts','viel',5,1,10);
-  const sa=dial('Wie sehr zieht es?','Sog, nicht Pflicht.','gar nicht','stark',5,1,10);
+  const ae=dial(tr('Wie schwer fällt der Start?'),tr('Nicht wie lang es dauert. Nur der Anfang.'),'sofort',tr('große Hürde'),5,1,10);
+  const st=dial(tr('Was kostet es, wenn es liegenbleibt?'),tr('Folgen, nicht Wichtigkeit.'),'nichts','viel',5,1,10);
+  const sa=dial(tr('Wie sehr zieht es?'),tr('Sog, nicht Pflicht.'),tr('gar nicht'),'stark',5,1,10);
   const due=el('input',{type:'datetime-local'});
-  sheet('Aufgabe anlegen',el('div',{},
-    el('div',{class:'field'},el('label',{},'Titel'),title),ae,st,sa,
-    el('div',{class:'field'},el('label',{},'Ab wann tut es weh? (optional)'),due)),[
+  sheet(tr('Aufgabe anlegen'),el('div',{},
+    el('div',{class:'field'},el('label',{},tr('Titel')),title),ae,st,sa,
+    el('div',{class:'field'},el('label',{},tr('Ab wann tut es weh? (optional)')),due)),[
     el('button',{class:'btn primary',onclick:async()=>{
       const text=title.value.trim();
-      if(!text){toast('Ohne Titel geht es nicht.');return}
+      if(!text){toast(tr('Ohne Titel geht es nicht.'));return}
       await api('/api/tasks',{method:'POST',body:JSON.stringify({
         title:text,activationEnergy:ae.value(),stakes:st.value(),salience:sa.value(),
         decayAt:due.value?new Date(due.value).toISOString():null})});
-      $('#dlg').close();toast('Angelegt.');await reload();
-    }},'Anlegen')]);
+      $('#dlg').close();toast(tr('Angelegt.'));await reload();
+    }},tr('Anlegen'))]);
 }
 
 function atomizeDialog(cand){
   const rows=el('div',{});
   const add=(t='',e=2)=>{
     rows.append(el('div',{class:'field',style:'display:flex;gap:.5rem;align-items:end'},
-      el('div',{style:'flex:1'},el('label',{},'Schritt'),
-        el('input',{type:'text',value:t,placeholder:'Erster kleiner Schritt'})),
-      el('div',{},el('label',{},'Start'),
+      el('div',{style:'flex:1'},el('label',{},tr('Schritt')),
+        el('input',{type:'text',value:t,placeholder:tr('Erster kleiner Schritt')})),
+      el('div',{},el('label',{},tr('Start')),
         el('input',{type:'number',min:1,max:10,value:e,style:'width:5rem'}))));
   };
   add();add();
-  sheet('Zerlegen: '+cand.title,el('div',{},
-    el('p',{style:'margin-bottom:.9rem'},'Der erste Schritt muss so klein sein, dass er heute in Reichweite liegt. Alles andere darf größer bleiben.'),
-    rows,el('button',{class:'btn quiet',onclick:()=>add()},'+ Schritt')),[
+  sheet(tr('Zerlegen: {0}',[cand.title]),el('div',{},
+    el('p',{style:'margin-bottom:.9rem'},tr('Der erste Schritt muss so klein sein, dass er heute in Reichweite liegt. Alles andere darf größer bleiben.')),
+    rows,el('button',{class:'btn quiet',onclick:()=>add()},tr('+ Schritt'))),[
     el('button',{class:'btn primary',onclick:async()=>{
       const steps=[...rows.querySelectorAll('.field')].map(f=>({
         title:f.querySelector('input[type=text]').value.trim(),
         energy:Number(f.querySelector('input[type=number]').value)||2})).filter(s=>s.title);
-      if(!steps.length){toast('Mindestens ein Schritt.');return}
+      if(!steps.length){toast(tr('Mindestens ein Schritt.'));return}
       await api('/api/tasks/'+cand.taskId+'/atomize',{method:'POST',body:JSON.stringify({steps})});
-      $('#dlg').close();toast('Zerlegt.');await reload();
-    }},'Übernehmen')]);
+      $('#dlg').close();toast(tr('Zerlegt.'));await reload();
+    }},tr('Übernehmen'))]);
 }
 
 /* ── Regeleditor ─────────────────────────────────────────────────────
@@ -2080,39 +2450,38 @@ function viewEditor(){
   const d=editor;
   refPreview=el('div',{class:'panel'});
   refProblems=el('div',{});
-  refSave=el('button',{class:'btn primary',onclick:saveRule},'Speichern');
+  refSave=el('button',{class:'btn primary',onclick:saveRule},tr('Speichern'));
   const frag=document.createDocumentFragment();
   frag.append(el('div',{class:'filters'},
-    el('button',{class:'btn quiet',onclick:closeEditor},'Zurück'),
+    el('button',{class:'btn quiet',onclick:closeEditor},tr('Zurück')),
     el('span',{class:'stamp'},d.id),
-    d.isNew?el('span',{class:'faint'},'Neue Nummer — Nummern werden nie wiederverwendet.'):null,
+    d.isNew?el('span',{class:'faint'},tr('Neue Nummer — Nummern werden nie wiederverwendet.')):null,
     el('span',{class:'spacer'}),
     el('button',{class:'tog','aria-pressed':d.mode==='guided'?'true':'false',
-      onclick:()=>setMode('guided')},'GEFÜHRT'),
+      onclick:()=>setMode('guided')},tr('GEFÜHRT')),
     el('button',{class:'tog','aria-pressed':d.mode==='yaml'?'true':'false',
-      onclick:()=>setMode('yaml')},'YAML')));
+      onclick:()=>setMode('yaml')},tr('YAML'))));
   if(d.parseError) frag.append(el('p',{class:'why'},
-    'Geführt lässt sich diese Regel hier nicht darstellen: '+d.parseError+
-    ' Der Text steht unverändert darunter.'));
+    tr('Geführt lässt sich diese Regel hier nicht darstellen: {0} Der Text steht unverändert darunter.',[d.parseError])));
   if(vocabError) frag.append(el('p',{class:'why'},
-    'Der Wortschatz der Engine ist gerade nicht abrufbar. Geführt geht deshalb nicht, der rohe Text schon.'));
+    tr('Der Wortschatz der Engine ist gerade nicht abrufbar. Geführt geht deshalb nicht, der rohe Text schon.')));
   frag.append(d.mode==='yaml'?editorYaml():editorGuided());
   frag.append(refPreview,refProblems,shadowPanel(),
     el('div',{class:'row'},refSave,
-      el('button',{class:'btn quiet',onclick:closeEditor},'Verwerfen'),
+      el('button',{class:'btn quiet',onclick:closeEditor},tr('Verwerfen')),
       (!d.isNew&&d.edited)
-        ?el('button',{class:'btn quiet',onclick:resetRule},'Änderung zurücknehmen'):null));
+        ?el('button',{class:'btn quiet',onclick:resetRule},tr('Änderung zurücknehmen')):null));
   refreshVerdict();
   return frag;
 }
 
 function editorYaml(){
   const d=editor;
-  const code=el('textarea',{class:'code',spellcheck:'false','aria-label':'Regel als YAML',
+  const code=el('textarea',{class:'code',spellcheck:'false','aria-label':tr('Regel als YAML'),
     oninput:e=>{d.raw=e.target.value;previewSoon();refreshVerdict()}});
   code.value=d.raw||'';
   return el('div',{class:'ed'},
-    el('p',{class:'hint'},'Genau diese Form liegt auch in rules/ — der Editor ist keine Einbahnstraße.'),
+    el('p',{class:'hint'},tr('Genau diese Form liegt auch in rules/ — der Editor ist keine Einbahnstraße.')),
     code);
 }
 
@@ -2123,35 +2492,35 @@ function editorGuided(){
     // Gedanken, baut ihn, und dann fällt einem ein, wie man ihn nennt und
     // begründet. Die Begründung nach dem Bau zu schreiben ist leichter —
     // man sieht, was man gebaut hat.
-    section('Wie sie heißt',
-      textField(d.title,'Kurz und in deiner Sprache',v=>{d.title=v}),
-      el('p',{class:'hint'},'Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.')),
-    section('Wann sie zutrifft',groupCard(d.root,0,null)),
-    section('Was dann passiert',actionPicker(d)),
-    section('Warum es sie gibt',
+    section(tr('Wie sie heißt'),
+      textField(d.title,tr('Kurz und in deiner Sprache'),v=>{d.title=v}),
+      el('p',{class:'hint'},tr('Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.'))),
+    section(tr('Wann sie zutrifft'),groupCard(d.root,0,null)),
+    section(tr('Was dann passiert'),actionPicker(d)),
+    section(tr('Warum es sie gibt'),
       rationaleField(d),
-      el('p',{class:'hint'},'Pflichtfeld. Jede Ausgabe nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.'),
-      el('div',{class:'eyebrow',style:'margin-top:.5rem'},'WORAUF SIE EINZAHLT'),
+      el('p',{class:'hint'},tr('Pflichtfeld. Jede Ausgabe nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.')),
+      el('div',{class:'eyebrow',style:'margin-top:.5rem'},tr('WORAUF SIE EINZAHLT')),
       deficitPicker(d)),
-    section('Wie laut',
+    section(tr('Wie laut'),
       severityPicker(d),
-      stepper('Mindestabstand',[15,30,60,120,240,480,1440],d.cooldownMinutes,'min',
+      stepper(tr('Mindestabstand'),[15,30,60,120,240,480,1440],d.cooldownMinutes,'min',
         v=>{d.cooldownMinutes=v},
-        'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.'),
-      stepper('Höchstens pro Tag',[0,1,2,3,5,10],d.maxPerDay,'mal',
-        v=>{d.maxPerDay=v},'Eine harte Obergrenze zusätzlich zum Abstand.','kein Limit'),
-      stepper('Rang bei Gleichstand',[10,30,50,70,90],d.priority,'',
+        tr('Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.')),
+      stepper(tr('Höchstens pro Tag'),[0,1,2,3,5,10],d.maxPerDay,'mal',
+        v=>{d.maxPerDay=v},tr('Eine harte Obergrenze zusätzlich zum Abstand.'),tr('kein Limit')),
+      stepper(tr('Rang bei Gleichstand'),[10,30,50,70,90],d.priority,'',
         v=>{d.priority=v},
-        'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.'),
+        tr('Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.')),
       el('div',{class:'pick',style:'margin-top:.6rem'},
         el('button',{class:'tog','aria-pressed':d.enabled?'true':'false',
-          onclick:()=>{d.enabled=!d.enabled;redraw()}},'REGEL AKTIV'),
+          onclick:()=>{d.enabled=!d.enabled;redraw()}},tr('REGEL AKTIV')),
         el('button',{class:'tog','aria-pressed':d.backoff?'true':'false',
-          title:'Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt',
-          onclick:()=>{d.backoff=!d.backoff;redraw()}},'ABSTAND VERDOPPELN')),
-      el('p',{class:'hint'},'Ausgeschaltet bleibt die Regel erhalten, wird aber nicht ausgewertet.')),
+          title:tr('Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt'),
+          onclick:()=>{d.backoff=!d.backoff;redraw()}},tr('ABSTAND VERDOPPELN'))),
+      el('p',{class:'hint'},tr('Ausgeschaltet bleibt die Regel erhalten, wird aber nicht ausgewertet.'))),
     (Object.keys(d.extra.titles).length||Object.keys(d.extra.rationales).length)
-      ?el('p',{class:'hint'},'Die englischen Fassungen bleiben unverändert erhalten.'):null);
+      ?el('p',{class:'hint'},tr('Die englischen Fassungen bleiben unverändert erhalten.')):null);
 }
 
 function textField(value,placeholder,set){
@@ -2160,7 +2529,7 @@ function textField(value,placeholder,set){
 }
 function rationaleField(d){
   const box=el('textarea',{style:'min-height:6.5rem',
-    placeholder:'Was diese Regel verhindern oder auslösen soll',
+    placeholder:tr('Was diese Regel verhindern oder auslösen soll'),
     oninput:e=>{d.rationale=e.target.value;previewSoon();refreshVerdict()}});
   box.value=d.rationale||'';
   return box;
@@ -2194,7 +2563,7 @@ function stepper(label,steps,value,unit,set,meaning,zeroLabel){
 
 function deficitPicker(d){
   const list=(vocab&&vocab.deficits)||[];
-  if(!list.length) return el('p',{class:'hint'},'Keine Liste abrufbar. Ohne Zuordnung ist eine Regel verdächtig.');
+  if(!list.length) return el('p',{class:'hint'},tr('Keine Liste abrufbar. Ohne Zuordnung ist eine Regel verdächtig.'));
   return el('div',{class:'pick'},list.map(x=>el('button',
     {class:'btn'+(d.deficit===x.id?' primary':''),
      onclick:()=>{d.deficit=d.deficit===x.id?null:x.id;redraw()}},
@@ -2213,13 +2582,13 @@ function actionPicker(d){
   const list=(vocab&&vocab.actions)||[];
   const spec=list.find(a=>a.type===d.action);
   const kids=[sel(list.length?list.map(a=>({v:a.type,l:a.label})):[{v:d.action,l:d.action}],
-    d.action,v=>{d.action=v;redraw()},'Was die Regel auslöst')];
+    d.action,v=>{d.action=v;redraw()},tr('Was die Regel auslöst'))];
   if(spec&&spec.meaning) kids.push(el('p',{class:'hint'},spec.meaning));
   // Welche Angaben eine Aktion braucht, sagt die Engine — sonst wäre die
   // Liste hier eine zweite Wahrheit, die still veraltet.
-  const declared=(spec&&spec.params)||(d.action==='notify'?{text:'Was dort stehen soll'}:{});
+  const declared=(spec&&spec.params)||(d.action==='notify'?{text:tr('Was dort stehen soll')}:{});
   for(const [name,label] of Object.entries(declared)){
-    kids.push(el('label',{style:'margin-top:.5rem'},label+' (optional)'),
+    kids.push(el('label',{style:'margin-top:.5rem'},tr('{0} (optional)',[label])),
       textField(d.params[name]===undefined?'':String(d.params[name]),name,v=>{
         const text=v.trim();
         if(!text) delete d.params[name];
@@ -2229,7 +2598,7 @@ function actionPicker(d){
   }
   const rest=Object.keys(d.params).filter(k=>!(k in declared));
   if(rest.length) kids.push(el('p',{class:'hint'},
-    'Unverändert übernommen: '+rest.map(k=>k+': '+scalarYaml(d.params[k])).join(', ')));
+    tr('Unverändert übernommen: {0}',[rest.map(k=>k+': '+scalarYaml(d.params[k])).join(', ')])));
   return kids;
 }
 
@@ -2240,11 +2609,11 @@ function groupCard(g,depth,onRemove){
   const box=el('div',{class:'cond grp'});
   box.append(el('div',{class:'top'},
     el('button',{class:'tog','aria-pressed':g.any?'false':'true',
-      onclick:()=>{g.any=false;redraw()}},'ALLE'),
+      onclick:()=>{g.any=false;redraw()}},tr('ALLE')),
     el('button',{class:'tog','aria-pressed':g.any?'true':'false',
-      onclick:()=>{g.any=true;redraw()}},'EINE VON'),
+      onclick:()=>{g.any=true;redraw()}},tr('EINE VON')),
     notToggle(g),
-    onRemove?el('button',{class:'btn quiet',onclick:onRemove},'Gruppe entfernen'):null));
+    onRemove?el('button',{class:'btn quiet',onclick:onRemove},tr('Gruppe entfernen')):null));
   g.children.forEach((child,i)=>{
     const remove=()=>{g.children.splice(i,1);redraw()};
     box.append(child.t==='group'
@@ -2252,31 +2621,31 @@ function groupCard(g,depth,onRemove){
       :leafCard(child,(depth===0&&g.children.length===1)?null:remove));
   });
   box.append(el('div',{class:'pick'},
-    el('button',{class:'btn quiet',onclick:()=>{g.children.push(newLeaf());redraw()}},'+ Bedingung'),
+    el('button',{class:'btn quiet',onclick:()=>{g.children.push(newLeaf());redraw()}},tr('+ Bedingung')),
     // Verschachtelung bis zur dritten Ebene: Drei sind lesbar, vier sind
     // ein Programm.
     depth<2?el('button',{class:'btn quiet',onclick:()=>{
       g.children.push({t:'group',any:!g.any,negated:false,children:[newLeaf()]});redraw();
-    }},'+ Gruppe'):null));
+    }},tr('+ Gruppe')):null));
   return box;
 }
 function notToggle(node){
   return el('button',{class:'tog','aria-pressed':node.negated?'true':'false',
-    onclick:()=>{node.negated=!node.negated;redraw()}},'NICHT');
+    onclick:()=>{node.negated=!node.negated;redraw()}},tr('NICHT'));
 }
 function leafCard(f,onRemove){
-  const kinds=[{v:'number',l:'Zahl'},{v:'choice',l:'Auswahl'},{v:'time',l:'Uhrzeit'},
-    {v:'since',l:'Seit einem Ereignis'},{v:'count',l:'Anzahl heute'}];
+  const kinds=[{v:'number',l:tr('Zahl')},{v:'choice',l:tr('Auswahl')},{v:'time',l:tr('Uhrzeit')},
+    {v:'since',l:tr('Seit einem Ereignis')},{v:'count',l:tr('Anzahl heute')}];
   const box=el('div',{class:'cond'});
   box.append(el('div',{class:'top'},
-    sel(kinds,f.kind,v=>{switchKind(f,v);redraw()},'Art der Bedingung'),
+    sel(kinds,f.kind,v=>{switchKind(f,v);redraw()},tr('Art der Bedingung')),
     notToggle(f),
-    onRemove?el('button',{class:'btn quiet',onclick:onRemove},'Entfernen'):null));
+    onRemove?el('button',{class:'btn quiet',onclick:onRemove},tr('Entfernen')):null));
   box.append(el('div',{class:'fields'},leafFields(f)));
   const meaning=leafMeaning(f);
   if(meaning) box.append(el('p',{class:'now'},meaning));
   const actual=leafActual(f);
-  if(actual!==null) box.append(el('p',{class:'now'},'jetzt: '+actual));
+  if(actual!==null) box.append(el('p',{class:'now'},tr('jetzt: {0}',[actual])));
   return box;
 }
 function leafFields(f){
@@ -2286,8 +2655,8 @@ function leafFields(f){
     // Grenzen kommen aus dem Wortschatz: geraten läge jede andere Skala daneben.
     const spec=numerics.find(v=>v.id===f.variable)||{};
     return [
-      sel(numerics.map(v=>({v:v.id,l:v.label})),f.variable,v=>{f.variable=v;redraw()},'Größe'),
-      sel(opItems(false),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+      sel(numerics.map(v=>({v:v.id,l:v.label})),f.variable,v=>{f.variable=v;redraw()},tr('Größe')),
+      sel(opItems(false),f.op,v=>{f.op=v;redraw()},tr('Vergleich')),
       numberField(f.number,spec.min===undefined?0:spec.min,
         spec.max===undefined?100:spec.max,v=>{f.number=v})];
   }
@@ -2300,8 +2669,8 @@ function leafFields(f){
         const next=symbolics.find(s=>s.id===v);
         f.symbol=next?(Object.keys(next.values||{})[0]||''):'';
         redraw();
-      },'Größe'),
-      sel(opItems(true),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+      },tr('Größe')),
+      sel(opItems(true),f.op,v=>{f.op=v;redraw()},tr('Vergleich')),
       values.map(([key,label])=>el('button',
         {class:'btn'+(f.symbol===key?' primary':''),
          onclick:()=>{f.symbol=key;redraw()}},label))];
@@ -2310,16 +2679,16 @@ function leafFields(f){
     el('span',{class:'hint'},'von'),timeField(f.from,v=>{f.from=v}),
     el('span',{class:'hint'},'bis'),timeField(f.to,v=>{f.to=v})];
   return [
-    sel(evts.map(v=>({v:v.id,l:v.label})),f.event,v=>{f.event=v;redraw()},'Ereignis'),
-    sel(opItems(false),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+    sel(evts.map(v=>({v:v.id,l:v.label})),f.event,v=>{f.event=v;redraw()},tr('Ereignis')),
+    sel(opItems(false),f.op,v=>{f.op=v;redraw()},tr('Vergleich')),
     numberField(f.number,0,f.kind==='since'?1440:50,v=>{f.number=v}),
-    el('span',{class:'hint'},f.kind==='since'?'Minuten':'mal heute')];
+    el('span',{class:'hint'},f.kind==='since'?'Minuten':tr('mal heute'))];
 }
 /* Welche Operatoren es gibt und wie sie heißen, sagt die Engine. Die Liste
    hier ist nur die Rückfallebene, solange der Wortschatz nicht da ist —
    und zugleich die Menge der Schlüssel, an denen der Leser einen Vergleich
    im YAML erkennt. */
-const OPS={lt:'kleiner als',lte:'höchstens',gte:'mindestens',gt:'größer als',
+const OPS={lt:tr('kleiner als'),lte:tr('höchstens'),gte:'mindestens',gt:tr('größer als'),
   eq:'genau',ne:'nicht'};
 function opItems(symbolic){
   const source=(vocab&&vocab.operators)||{};
@@ -2334,8 +2703,8 @@ function leafMeaning(f){
   const find=(list,id)=>((vocab&&vocab[list])||[]).find(x=>x.id===id);
   if(f.kind==='number') return (find('numerics',f.variable)||{}).meaning||'';
   if(f.kind==='choice') return (find('symbolics',f.variable)||{}).meaning||'';
-  if(f.kind==='time') return 'Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.';
-  if(f.kind==='since') return 'Ein Ereignis, das nie eintrat, gilt als unendlich lange her.';
+  if(f.kind==='time') return tr('Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.');
+  if(f.kind==='since') return tr('Ein Ereignis, das nie eintrat, gilt als unendlich lange her.');
   return '';
 }
 /* Was gerade tatsächlich anliegt — die halbe Miete beim Regelschreiben.
@@ -2380,22 +2749,22 @@ function refreshVerdict(){
 }
 function previewKids(){
   const p=editor.preview;
-  const head=el('span',{class:'eyebrow'},'MIT DEM ZUSTAND VON JETZT');
+  const head=el('span',{class:'eyebrow'},tr('MIT DEM ZUSTAND VON JETZT'));
   if(editor.previewError) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},
-    'Die Vorschau ist gerade nicht erreichbar ('+editor.previewError+'). Beim Speichern wird trotzdem geprüft.')];
-  if(!p) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},'Wird geprüft …')];
+    tr('Die Vorschau ist gerade nicht erreichbar ({0}). Beim Speichern wird trotzdem geprüft.',[editor.previewError]))];
+  if(!p) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},tr('Wird geprüft …'))];
   const kids=[head];
   if(p.ok===false){
     kids.push(el('p',{style:'margin-top:.4rem;color:var(--caution)'},
-      'So lässt sich die Regel nicht laden. Was fehlt, steht darunter.'));
+      tr('So lässt sich die Regel nicht laden. Was fehlt, steht darunter.')));
   }else{
     kids.push(el('h2',{style:'margin:.4rem 0'},
-      p.firesNow?'Sie würde jetzt feuern.':'Sie würde jetzt nicht feuern.'));
+      p.firesNow?tr('Sie würde jetzt feuern.'):tr('Sie würde jetzt nicht feuern.')));
     if(p.explanation) kids.push(el('p',{class:'why'},p.explanation));
     // Der erklärende Satz nennt die scheiternde Stelle bereits. Nur wenn er
     // fehlt, steht sie hier für sich.
     else if(!p.firesNow&&p.failedAt) kids.push(el('p',{class:'mono',style:'font-size:.8rem'},
-      'Es scheitert an: '+p.failedAt));
+      tr('Es scheitert an: {0}',[p.failedAt])));
   }
   for(const w of p.warnings||[]) kids.push(el('p',{class:'faint',style:'margin-top:.4rem'},w));
   return kids;
@@ -2406,7 +2775,7 @@ function problemKids(){
   if(p&&p.ok===false) for(const e of p.errors||[]) if(list.indexOf(e)<0) list.push(e);
   if(!list.length) return [];
   return [el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
-    el('span',{class:'eyebrow'},'FEHLT NOCH'),
+    el('span',{class:'eyebrow'},tr('FEHLT NOCH')),
     list.map(x=>el('p',{style:'margin-top:.4rem'},'· '+x)))];
 }
 /* Dieselben Pflichten wie im Validator, nur früher. `rationale` und
@@ -2415,15 +2784,15 @@ function problemKids(){
 function clientProblems(){
   const d=editor,out=[];
   if(d.mode==='yaml'){
-    if(!String(d.raw||'').trim()) out.push('Der Text ist leer.');
+    if(!String(d.raw||'').trim()) out.push(tr('Der Text ist leer.'));
     return out;
   }
   if(String(d.title||'').trim().length<3)
-    out.push('Der Titel fehlt. Er steht später in der Meldung.');
+    out.push(tr('Der Titel fehlt. Er steht später in der Meldung.'));
   if(String(d.rationale||'').trim().length<40)
-    out.push('Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.');
+    out.push(tr('Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.'));
   if(!(d.cooldownMinutes>=1))
-    out.push('Ohne Abstand meldet sich die Regel beliebig oft.');
+    out.push(tr('Ohne Abstand meldet sich die Regel beliebig oft.'));
   try{condMap(d.root)}catch(e){out.push(e.message)}
   return out;
 }
@@ -2445,13 +2814,13 @@ function setMode(mode){
   if(!d||mode===d.mode) return;
   if(mode==='yaml'){
     const yaml=currentYaml();
-    if(yaml===null){toast('Erst vervollständigen — der Entwurf ergibt noch kein YAML.');return}
+    if(yaml===null){toast(tr('Erst vervollständigen — der Entwurf ergibt noch kein YAML.'));return}
     d.raw=yaml;d.mode='yaml';
   }else{
-    if(vocabError){toast('Ohne den Wortschatz der Engine geht geführt nicht.');return}
+    if(vocabError){toast(tr('Ohne den Wortschatz der Engine geht geführt nicht.'));return}
     let parsed;
     try{parsed=parseRuleDraft(d.raw||'')}
-    catch(e){toast('Der Text lässt sich nicht lesen: '+e.message);return}
+    catch(e){toast(tr('Der Text lässt sich nicht lesen: {0}',[e.message]));return}
     // Die Nummer bleibt, was sie war: IDs werden nicht umgebogen.
     parsed.id=d.id;parsed.isNew=d.isNew;parsed.edited=d.edited;
     parsed.preview=d.preview;parsed.mode='guided';
@@ -2461,9 +2830,9 @@ function setMode(mode){
 }
 function shadowPanel(){
   return el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--info) 50%,var(--rule))'},
-    el('span',{class:'eyebrow'},'SIEBEN TAGE STUMM'),
+    el('span',{class:'eyebrow'},tr('SIEBEN TAGE STUMM')),
     el('p',{style:'margin-top:.5rem'},
-      'Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.'));
+      tr('Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.')));
 }
 async function saveRule(){
   const d=editor,yaml=currentYaml();
@@ -2472,7 +2841,7 @@ async function saveRule(){
     await api('/api/rules/'+encodeURIComponent(d.id),
       {method:'PUT',body:JSON.stringify({yaml})});
     editor=null;
-    toast('Gespeichert — läuft sieben Tage stumm mit.');
+    toast(tr('Gespeichert — läuft sieben Tage stumm mit.'));
     await reload();
   }catch(e){
     const issues=(e.data&&e.data.issues)||[];
@@ -2482,10 +2851,10 @@ async function saveRule(){
 }
 async function resetRule(){
   const d=editor;
-  if(!confirm('Die eigene Fassung von '+d.id+' entfernen? Danach gilt wieder die mitgelieferte Regel; eine selbst geschriebene verschwindet. Die Nummer wird nicht wiederverwendet.')) return;
+  if(!confirm(tr('Die eigene Fassung von {0} entfernen? Danach gilt wieder die mitgelieferte Regel; eine selbst geschriebene verschwindet. Die Nummer wird nicht wiederverwendet.',[d.id]))) return;
   try{
     await api('/api/rules/'+encodeURIComponent(d.id),{method:'DELETE'});
-    editor=null;toast('Zurückgenommen.');await reload();
+    editor=null;toast(tr('Zurückgenommen.'));await reload();
   }catch(e){toast(e.message)}
 }
 
@@ -2518,7 +2887,7 @@ function ruleYaml(d){
 }
 function condMap(n){
   if(n.t==='group'){
-    if(!n.children.length) throw new Error('Eine Gruppe braucht mindestens eine Bedingung.');
+    if(!n.children.length) throw new Error(tr('Eine Gruppe braucht mindestens eine Bedingung.'));
     const built=n.children.map(condMap);
     // Eine Gruppe mit einem Kind ist im YAML unnötig — im Editor bleibt sie
     // trotzdem, damit „eine zweite hinzufügen" ein Klick bleibt.
@@ -2528,15 +2897,15 @@ function condMap(n){
   const number=Number(n.number);
   let inner;
   if(n.kind==='number'||n.kind==='since'||n.kind==='count'){
-    if(!Number.isFinite(number)) throw new Error('Eine Zahl fehlt.');
+    if(!Number.isFinite(number)) throw new Error(tr('Eine Zahl fehlt.'));
   }
   if(n.kind==='number') inner={[n.variable]:{[n.op]:number}};
   else if(n.kind==='choice'){
-    if(!n.symbol) throw new Error('Ein Wert fehlt.');
+    if(!n.symbol) throw new Error(tr('Ein Wert fehlt.'));
     inner={[n.variable]:{[n.op]:n.symbol}};
   }else if(n.kind==='time'){
     if(!/^\d{2}:\d{2}$/.test(String(n.from))||!/^\d{2}:\d{2}$/.test(String(n.to)))
-      throw new Error('Uhrzeit im Format 22:00 angeben.');
+      throw new Error(tr('Uhrzeit im Format 22:00 angeben.'));
     inner={time_between:[n.from,n.to]};
   }else if(n.kind==='since') inner={minutes_since:{event:n.event,[n.op]:Math.round(number)}};
   else inner={count_today:{event:n.event,[n.op]:Math.round(number)}};
@@ -2581,7 +2950,7 @@ function foldedYaml(key,text){
 function parseRuleDraft(text){
   const doc=yamlParse(text);
   const node=Array.isArray(doc)?doc[0]:doc;
-  if(!node||typeof node!=='object') throw new Error('Keine Regel gefunden.');
+  if(!node||typeof node!=='object') throw new Error(tr('Keine Regel gefunden.'));
   const extra={titles:{},rationales:{}};
   for(const key of Object.keys(node)){
     if(key.startsWith('title_')) extra.titles[key.slice(6)]=String(node[key]);
@@ -2605,12 +2974,12 @@ function parseRuleDraft(text){
 /* Der Wurzelknoten ist immer eine Gruppe — auch bei einer einzelnen
    Bedingung. So ist „eine zweite hinzufügen" ein Klick und kein Umbau. */
 function rootNode(when){
-  if(!when||typeof when!=='object') throw new Error('Der Wenn-Teil fehlt.');
+  if(!when||typeof when!=='object') throw new Error(tr('Der Wenn-Teil fehlt.'));
   const node=condNode(when,false);
   return node.t==='group'?node:{t:'group',any:false,negated:false,children:[node]};
 }
 function condNode(map,negated){
-  if(!map||typeof map!=='object') throw new Error('Eine Bedingung ist leer.');
+  if(!map||typeof map!=='object') throw new Error(tr('Eine Bedingung ist leer.'));
   const key=Object.keys(map)[0];
   const value=map[key];
   if(key==='not') return condNode(value,!negated);
@@ -2642,9 +3011,9 @@ function condNode(map,negated){
   return leaf;
 }
 function opOf(value){
-  if(!value||typeof value!=='object') throw new Error('Ein Vergleich fehlt.');
+  if(!value||typeof value!=='object') throw new Error(tr('Ein Vergleich fehlt.'));
   const op=Object.keys(value).find(k=>OPS[k]!==undefined);
-  if(!op) throw new Error('Unbekannter Vergleich in: '+Object.keys(value).join(', '));
+  if(!op) throw new Error(tr('Unbekannter Vergleich in: {0}',[Object.keys(value).join(', ')]));
   return op;
 }
 
@@ -2692,10 +3061,10 @@ function yamlParse(src){
       const line=lines[i];
       if(line.indent<indent) break;
       if(isItem(line)&&line.indent===indent) break;
-      if(line.indent>indent) throw new Error('Die Einrückung passt nicht: '+line.raw.trim());
+      if(line.indent>indent) throw new Error(tr('Die Einrückung passt nicht: {0}',[line.raw.trim()]));
       const text=cutComment(line.raw).trim();
       const m=text.match(/^([^:\s]+)\s*:\s*(.*)$/);
-      if(!m) throw new Error('Kein Schlüssel: '+text);
+      if(!m) throw new Error(tr('Kein Schlüssel: {0}',[text]));
       const key=m[1],rest=m[2].trim();
       i++;
       if(rest===''){
@@ -2755,12 +3124,12 @@ function readValue(s,p){
     p++;
     for(;;){
       p=skipSpace(s,p);
-      if(p>=s.length) throw new Error('Klammer nicht geschlossen: '+s);
+      if(p>=s.length) throw new Error(tr('Klammer nicht geschlossen: {0}',[s]));
       if(s[p]==='}'){p++;break}
       let key;
       [key,p]=readKey(s,p);
       p=skipSpace(s,p);
-      if(s[p]!==':') throw new Error('Doppelpunkt fehlt: '+s);
+      if(s[p]!==':') throw new Error(tr('Doppelpunkt fehlt: {0}',[s]));
       p++;
       let v;
       [v,p]=readValue(s,p);
@@ -2775,7 +3144,7 @@ function readValue(s,p){
     p++;
     for(;;){
       p=skipSpace(s,p);
-      if(p>=s.length) throw new Error('Klammer nicht geschlossen: '+s);
+      if(p>=s.length) throw new Error(tr('Klammer nicht geschlossen: {0}',[s]));
       if(s[p]===']'){p++;break}
       let v;
       [v,p]=readValue(s,p);
@@ -2820,11 +3189,11 @@ function plainScalar(text){
    daneben die Bedienungsanleitung. Zwei Dinge mit demselben Namen sind
    zwei Dinge, die man verwechselt. */
 function keysDialog(){
-  const keys=[['n','Erfassen'],['c','Check-in'],['f','Fokus starten oder beenden'],
-    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],['h','Hilfe'],
-    ['1 … '+TABS.length,'Reiter wechseln'],['r','Neu laden'],['?','Diese Übersicht'],['Esc','Schließen']];
-  sheet('Tastenkürzel',el('div',{class:'keys'},
-    ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[],'Schließen');
+  const keys=[['n',tr('Erfassen')],['c','Check-in'],['f',tr('Fokus starten oder beenden')],
+    ['a',tr('Neue Aufgabe')],['g',tr('Angefangenes erledigen')],['h',tr('Hilfe')],
+    ['1 … '+TABS.length,tr('Reiter wechseln')],['r',tr('Neu laden')],['?',tr('Diese Übersicht')],['Esc',tr('Schließen')]];
+  sheet(tr('Tastenkürzel'),el('div',{class:'keys'},
+    ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[],tr('Schließen'));
 }
 $('#keys-btn').addEventListener('click',keysDialog);
 function openHelpTab(){
@@ -2833,7 +3202,7 @@ function openHelpTab(){
 }
 
 $('#stop-btn').addEventListener('click',async()=>{
-  if(!confirm('Server beenden? Danach ist diese Seite nicht mehr erreichbar.')) return;
+  if(!confirm(tr('Server beenden? Danach ist diese Seite nicht mehr erreichbar.'))) return;
   try{await api('/api/stop',{method:'POST'})}catch(e){}
   // Kein Wiederverbinden auf etwas, das gerade absichtlich zugeht.
   wsStop();
@@ -2933,7 +3302,7 @@ function wsOpen(){
   sock.onopen=()=>{
     if(sock!==ws) return;
     wsTries=0;
-    linkChip('VERBUNDEN',false);
+    linkChip(tr('VERBUNDEN'),false);
     // Während der Trennung kann sich etwas geändert haben.
     sync();
   };
@@ -2944,15 +3313,17 @@ function wsOpen(){
     ws=null;
     // 1001 heißt: Der Server geht aus. Das ist Absicht, kein Problem — und
     // ein Wiederverbinden hätte kein Ziel.
+    // Der Grund kommt so vom Server (`expert_server.dart`) und ist ein
+    // Protokollwert, kein Nutzertext — deshalb nicht durch tr().
     if(e.code===1001||e.reason==='Server beendet'){
       wsWanted=false;
-      linkChip('SERVER BEENDET',false);
+      linkChip(tr('SERVER BEENDET'),false);
       return;
     }
     // Kurzes Hakeln bekommt keine Warnfarbe: Ein Wechsel des Zugangspunkts
     // dauert Sekunden, und eine Anzeige, die dabei jedes Mal aufleuchtet,
     // wird ab dem dritten Mal nicht mehr gelesen.
-    linkChip(wsTries<3?'VERBINDET …':'GETRENNT',wsTries>=3);
+    linkChip(wsTries<3?tr('VERBINDET …'):tr('GETRENNT'),wsTries>=3);
     wsRetry();
   };
   // Der Grund steht im darauffolgenden onclose, nicht hier.
@@ -2970,7 +3341,7 @@ function wsRetry(){
   wsTimer=setTimeout(wsOpen,wait);
 }
 
-function wsStart(){wsWanted=true;wsTries=0;linkChip('VERBINDET …',false);wsOpen()}
+function wsStart(){wsWanted=true;wsTries=0;linkChip(tr('VERBINDET …'),false);wsOpen()}
 function wsStop(){
   wsWanted=false;
   clearTimeout(wsTimer);
@@ -2996,9 +3367,17 @@ setInterval(()=>{
   sync();
 },20000);
 
+/* Erst die Sprache auf das Markup anwenden: Der Anmeldebildschirm steht
+   schon da, bevor die erste Antwort kommt, und soll nicht auf Deutsch
+   aufblitzen. Was hier gilt, ist die Browsersprache — die des Telefons
+   kommt mit dem ersten Zustand. */
+document.documentElement.lang=LANG;
+localise(document);
+
 /* Schon angemeldet? Dann direkt hinein, sonst die Freigabe anbieten. */
 api('/api/state').then(async data=>{
   S=data;
+  setLanguage(data.language);
   $('#gate').classList.add('hide');$('#app').classList.remove('hide');
   markTabs();
   paintHeader();paintAction();paintCapline();

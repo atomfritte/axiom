@@ -41,6 +41,7 @@ import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../i18n/i18n.dart';
 import '../state/runtime.dart';
 import 'mdns_responder.dart';
 import 'expert_certificate.dart';
@@ -1624,6 +1625,15 @@ final class ExpertServer {
     final ctx = await runtime.currentContext();
     return {
       'at': snapshot.at.toIso8601String(),
+      // Die Sprache der Oberflaeche — die der App, nicht die des Browsers.
+      //
+      // Der Browser auf dem Arbeitsrechner steht auf irgendetwas; die
+      // Einstellung in AXIOM ist eine Entscheidung. Beide Oberflaechen sollen
+      // dieselbe Sprache sprechen, sonst liest man denselben Satz zweimal
+      // verschieden. Bis diese Antwort da ist — also auf dem
+      // Anmeldebildschirm — nimmt die Seite die Browsersprache als beste
+      // verfuegbare Vermutung.
+      'language': runtime.language ?? AppLanguage.de.code,
       'values': {
         for (final variable in RuleVocabulary.numerics)
           if (ctx.numeric(variable.id) != null)

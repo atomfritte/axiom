@@ -105,6 +105,9 @@ Erst dann ist sie versioniert.
   — nicht hinter einem Bezeichner wie `now.emptyTitle`.
   Für Code ohne `BuildContext` (Benachrichtigungen, Widget) gibt es
   `translate(language, …)`; die Sprache wird durchgereicht, nie global gelesen.
+  In der Weboberfläche des Expertenmodus gilt dieselbe Regel mit `tr('…')`
+  und `data-t` für festes Markup — die Sprache kommt dort über `/api/state`
+  vom Telefon, damit beide Bildschirme dieselbe sprechen.
   Der Kern liefert Sätze mit Werten als `Phrase('{0} min über …', [n])`, damit
   Zahlen nicht aus fertigen Sätzen zurückgerechnet werden müssen.
 - Domain-Typen sind unveränderlich (`final`, `copyWith`).
@@ -179,6 +182,7 @@ stattdessen von `i18n_test.dart` geprüft.
 | Verhalten | `axiom_app/test/app_test` | genau eine Handlung (G1), sichtbare Regel-ID (G2) |
 | Sprache | `axiom_app/test/language_test` | keine Schuldsprache, echte Umlaute, kein Netzwerk |
 | Übersetzung | `axiom_app/test/i18n_test` | jeder Text hat eine englische Fassung, gleiche Platzhalter, gleicher Ton |
+| Übersetzung (Web) | `axiom_app/test/expert_i18n_test` | dasselbe für `assets/expert/index.html` — dort greift kein Dart-Werkzeug |
 | Systemanbindung | `axiom_app/test/platform_integration_test` | Manifest und Kotlin — die Ebene, durch die Widget-Tests fallen |
 | Optik | `axiom_app/test/screenshot_test` | Referenzbilder in `test/screenshots/` |
 

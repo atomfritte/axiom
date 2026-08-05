@@ -446,13 +446,14 @@ kommt es hier an: „Nichts in Reichweite" ist eine bewusste Entscheidung gegen
 „Du hast 14 offene Aufgaben", und diese Entscheidung soll nicht hinter einem
 Bezeichner wie `now.emptyTitle` verschwinden.
 
-Drei Ebenen sind abgedeckt:
+Vier Ebenen sind abgedeckt:
 
 | Ebene | Wo | Wie |
 |---|---|---|
 | Oberfläche | `lib/i18n/en.dart` | deutscher Satz → englischer Satz |
 | Kern | `Phrase('{0} min über …', [n])` | Quelltext und Werte getrennt, damit Zahlen nicht zurückgerechnet werden müssen |
 | Regelwerk | `title_en`, `rationale_en` im YAML | Regeln sind Daten, ihre Übersetzung auch |
+| Expertenmodus | `assets/expert/index.html` | dieselbe Regel im Browser: `tr('…')` und ein `data-t`-Attribut für festes Markup. Die Seite folgt der Einstellung **des Telefons**, nicht der des Browsers — sonst liest man denselben Satz auf zwei Bildschirmen verschieden |
 
 `i18n_test.dart` hält drei Dinge fest: **jeder** übersetzbare Text hat eine
 englische Fassung, die Platzhalter stimmen auf beiden Seiten überein, und der

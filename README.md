@@ -434,13 +434,14 @@ That keeps the wording legible where it was chosen. Which matters here more than
 "Nothing in reach" is a deliberate choice against "You have 14 open tasks", and that choice
 should not disappear behind an identifier like `now.emptyTitle`.
 
-Three layers are covered:
+Four layers are covered:
 
 | Layer | Where | How |
 |---|---|---|
 | Interface | `lib/i18n/en.dart` | German sentence → English sentence |
 | Core | `Phrase('{0} min über …', [n])` | source and values kept apart, so numbers never have to be recovered from a finished sentence |
 | Rulebook | `title_en`, `rationale_en` in the YAML | rules are data; so are their translations |
+| Expert mode | `assets/expert/index.html` | same rule, in the browser: `tr('…')` and a `data-t` attribute for fixed markup. The page follows the **phone's** setting, not the browser's — otherwise you read the same sentence two different ways on two screens |
 
 `i18n_test.dart` pins down three things: **every** translatable text has an English version, the
 placeholders match on both sides, and the tone holds — no guilt language, no exclamation marks.

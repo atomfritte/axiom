@@ -147,6 +147,22 @@ void main() {
       expect((await json(res))['values'], isNotEmpty);
     });
 
+    test('die Sprache der App kommt mit', () async {
+      // Die Weboberfläche richtet sich danach, nicht nach dem Browser: Wer
+      // vom englischen Arbeitsrechner auf ein deutsches Telefon sieht, soll
+      // nicht denselben Satz zweimal verschieden lesen. Ein Quelltextver-
+      // gleich reicht dafür nicht — hier wird abgerufen.
+      final cookie = await login(server.status.pin!);
+
+      h.runtime.language = 'en';
+      expect((await json(await call('GET', '/api/state', cookie: cookie)))
+          ['language'], 'en');
+
+      h.runtime.language = 'de';
+      expect((await json(await call('GET', '/api/state', cookie: cookie)))
+          ['language'], 'de');
+    });
+
     test('Aufgaben lassen sich anlegen und ändern', () async {
       final cookie = await login(server.status.pin!);
 
@@ -1144,7 +1160,9 @@ ${english ? '''  rationale_en: >
       final source = page();
       expect(source, contains('data-tab="help"'));
       expect(source, contains("case 'h':"));
-      expect(source, contains("['h','Hilfe']"));
+      // Seit die Oberfläche übersetzt wird, steht der Text in `tr()` — die
+      // Zusage bleibt dieselbe: Das Kürzel ist in der Übersicht aufgeführt.
+      expect(source, contains("['h',tr('Hilfe')]"));
     });
   });
 

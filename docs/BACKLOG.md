@@ -46,16 +46,6 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
   Zustand wird stattdessen **angezeigt** (*System → Daten*), statt ihn zu verschleiern.
 - **Notiert:** 2026-08-05
 
-### Weboberfläche des Expertenmodus übersetzen
-- **Defizit:** keins — Reichweite, nicht Selbstregulation
-- **Frühestens:** wenn jemand ohne Deutsch den Expertenmodus benutzt
-- **Warum nicht jetzt:** Die App hat zwei Sprachen, `index.html` hat eine: Alle Texte stehen
-  fest auf Deutsch im Markup. Die App löst das über den deutschen Satz als Schlüssel — im
-  Browser bräuchte es denselben Mechanismus, also eine ausgelieferte Tabelle und einen Aufruf
-  pro Text. Machbar, aber es ist die Oberfläche, die genau ein Mensch benutzt. Sichtbare Folge:
-  englische Screenshots der Weboberfläche gibt es nicht.
-- **Notiert:** 2026-08-05
-
 ### Geofences für ortsgebundene Aufgaben
 - **Defizit:** D2 — aber ohne Geofence gelöst
 - **Frühestens:** nicht vorgesehen (siehe `docs/02-ARCHITEKTUR.md §8`)
