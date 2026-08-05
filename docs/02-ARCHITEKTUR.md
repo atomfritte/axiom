@@ -40,7 +40,7 @@
                                 │ Port-Implementierungen
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │  INFRASTRUCTURE                     packages/axiom_data             │
-│  SQLite (sqlite3, unverschlüsselt) · YAML-Loader · Health Connect · │
+│  SQLite (sqlite3mc, verschlüsselt) · YAML-Loader · Health Connect · │
 │  Alarm/Notification-Scheduler · Export/Backup                       │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ optional, ab S4
@@ -104,13 +104,13 @@ Der Core definiert, die Infrastruktur implementiert. Tests nutzen In-Memory-Fake
 
 | Port | Zweck | Prod-Implementierung |
 |---|---|---|
-| `EventStore` | append / query Events | SQLite über `sqlite3` |
+| `EventStore` | append / query Events | SQLite über `sqlite3` (sqlite3mc) |
 | `RuleSource` | Regelwerk laden + validieren | YAML aus `rules/`, App-Assets + User-Overlay |
 | `Clock` | **jede** Zeitabfrage | `SystemClock` / `FakeClock` (Tests) |
 | `Notifier` | Interventionen ausspielen | Android Notifications + exakte Alarme |
 | `HealthSource` | Schlaf, Schritte | Health Connect (Android) |
 | `DeviceAutomation` | DND, Fokusmodus, Routinen | Android APIs / Samsung Modes&Routines |
-| `SecureStore` | Schlüssel, Biometrie-Gate | *geplant, nicht gebaut* |
+| `SecureStore` | Schlüssel der Datenbank | Android-Keystore (`DatabaseKey.kt`); Biometrie-Gate offen |
 
 `Clock` als Port ist nicht optional: ohne ihn sind zeitabhängige Regeln (also fast alle) nicht
 deterministisch testbar. Direkte `DateTime.now()`-Aufrufe im Core sind ein CI-Fehler.
@@ -127,8 +127,10 @@ deterministisch testbar. Direkte `DateTime.now()`-Aufrufe im Core sind ein CI-Fe
 - **Decisions** — jede Ausgabe wird protokolliert: Zeit, Zustand, Regel-ID, Nutzerreaktion.
   Das ist das Audit-Log, das G2 einlösbar macht.
 
-Verschlüsselung der Datenbank: **geplant, nicht gebaut** (`docs/BACKLOG.md`). Die Datei liegt
-im Klartext im privaten App-Verzeichnis.
+Verschlüsselung der Datenbank: ChaCha20-Poly1305 über SQLite3MultipleCiphers. Der Schlüssel ist
+eine zufällige Passphrase, eingewickelt mit einem AES-Schlüssel aus dem Android-Keystore. Auf dem
+Linux-Rechner gibt es keinen Schlüsselspeicher — dort liegt die Datei im Klartext, sichtbar
+gemacht statt verschwiegen.
 Backup: signierter, verschlüsselter Export (`.axiom` = tar + age/libsodium) auf Nutzerwunsch.
 
 Details: [03-DATENMODELL.md](03-DATENMODELL.md)

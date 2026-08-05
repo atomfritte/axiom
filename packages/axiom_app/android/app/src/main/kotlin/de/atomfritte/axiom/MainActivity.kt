@@ -209,6 +209,10 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
 
+                    // Der Schluessel der Datenbank. Kommt vor allem anderen,
+                    // weil ohne ihn nichts geoeffnet werden kann.
+                    "databaseKey" -> result.success(DatabaseKey.passphrase(this))
+
                     "permissionStatus" -> result.success(permissionStatus())
 
                     "requestExactAlarm" -> result.success(requestExactAlarm())

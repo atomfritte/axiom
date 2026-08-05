@@ -304,7 +304,7 @@ For Claude Code: [CLAUDE.md](CLAUDE.md).
 
 ## Stack
 
-Flutter 3.44 / Dart 3.12 · SQLite · YAML rulebook under git
+Flutter 3.44 / Dart 3.12 · SQLite (SQLite3MultipleCiphers) · YAML rulebook under git
 Targets: Android (Galaxy S25 Ultra, primary) and Linux desktop (companion)
 
 ## Layout

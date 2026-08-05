@@ -19,7 +19,6 @@ dependencies:
     path: ../axiom_data
   flutter_riverpod: ^3.3.1
   path_provider: ^2.1.5
-  sqlite3_flutter_libs: ^0.5.0
   basic_utils: ^5.8.2
   crypto: ^3.0.7
 
@@ -68,3 +67,10 @@ flutter:
           weight: 500
         - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
           weight: 600
+
+# Siehe packages/axiom_data/pubspec.yaml. Die Einstellung gehoert in das
+# Paket, das gebaut wird — also auch hierher.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

@@ -4,11 +4,17 @@ Everything stays on the device. No account, no cloud, no telemetry — and an ex
 
 ## Where it sits
 
-In a SQLite file in the app's private storage. Other apps cannot reach it — that is Android's doing, not AXIOM's.
+In a SQLite file in the app's private storage. Other apps cannot reach it — that is Android's doing.
 
-**The file itself is not separately encrypted.** It sits behind device encryption and the operating system's app separation, but AXIOM does not add encryption of its own. This is spelled out because the opposite used to be written here. What follows from it: anyone holding your unlocked device, or taking a full device backup, can get at this data. A screen lock is not a formality.
+**On the phone the file is encrypted.** Without the key it cannot be read, not even as a copy. The key lives in the device keystore, in secured hardware, and cannot leave it — it travels into no backup and onto no other device.
 
-**Exports** are different: `.axiom` files are encrypted, with a passphrase you choose.
+What that does **not** protect against: someone holding your unlocked device who opens the app. For them the keystore decrypts willingly. A screen lock is not a formality; it is the first line of defence.
+
+**On the desktop the file sits in plain text.** Linux has no keystore to put a key in, and a key file next to the database would be a prop. What is there is as protected as your user account. The app tells you which case applies — under *System → Data*.
+
+**Exports** are encrypted on both, with a passphrase you choose.
+
+If the key is lost — cleared app data, a restored backup, a new device — the database can no longer be read. AXIOM then creates a fresh one and **says so** on that same screen, rather than sitting there empty without comment.
 
 Everything is an **event**, and events are only appended, never changed and never deleted. A correction is a new event. Two things follow from that: the entire state can be recalculated from the stream at any time, and nothing disappears quietly.
 

@@ -440,8 +440,22 @@ void main() {
     /// Bezeichner — ein Schluessel, eine Intent-Aktion, ein Prefs-Name. Die
     /// schreiben sich klein, ohne Leerzeichen und ohne Umlaute. Was anders
     /// aussieht, ist ein Satz und gehoert nach `SystemTexts`.
+    /// Namen, die Android vorgibt und die niemand uebersetzen kann.
+    ///
+    /// Die Heuristik unten kann sie nicht von einem Wort unterscheiden: Sie
+    /// fangen gross an, haben kein Leerzeichen und keinen Punkt. Sie sind
+    /// trotzdem kein Nutzertext, sondern Bezeichner aus einer fremden
+    /// Schnittstelle — `"AndroidKeyStore"` ist der Name eines JCA-Providers
+    /// und steht so in der Android-Dokumentation.
+    ///
+    /// Die Liste bleibt kurz. Waechst sie, ist das eine Entscheidung: Wer
+    /// hier etwas eintraegt, nimmt es aus der Pruefung heraus, und das soll
+    /// man sehen.
+    const platformNames = {'AndroidKeyStore'};
+
     bool looksLikeUserText(String literal) {
       if (literal.length < 3) return false;
+      if (platformNames.contains(literal)) return false;
       if (RegExp('[äöüßÄÖÜ„”]').hasMatch(literal)) return true;
       // Zeichenketten mit `$` sind Vorlagen: Sie setzen Werte in einen Text
       // ein, der selbst schon aus `AxiomTexts` kommt.

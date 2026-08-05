@@ -313,7 +313,7 @@ Für Claude Code: [CLAUDE.md](CLAUDE.md)
 
 ## Stack
 
-Flutter 3.44 / Dart 3.12 · SQLite über `sqlite3`, ohne ORM · YAML-Regelwerk unter Git
+Flutter 3.44 / Dart 3.12 · SQLite über `sqlite3` (SQLite3MultipleCiphers) · YAML-Regelwerk unter Git
 Ziele: Android (Galaxy S25 Ultra, primär) und Linux Desktop (Companion)
 
 ## Struktur

@@ -282,10 +282,10 @@ usage_log(id TEXT PK, at INTEGER, screen TEXT, duration_s INTEGER, counts INTEGE
 ```
 
 - **Engine:** SQLite über das `sqlite3`-Paket, direkt, ohne ORM
-- **Verschlüsselung: geplant, nicht gebaut.** `SqliteEventStore` nimmt einen `encryptionKey`
-  entgegen und setzt `PRAGMA key`, aber kein Aufrufer übergibt einen; einen Biometrie-Gate gibt
-  es nicht. Die Datei liegt im Klartext im privaten App-Verzeichnis, geschützt allein durch
-  Geräteverschlüsselung und die App-Trennung von Android. Siehe `docs/BACKLOG.md`.
+- **Verschlüsselung:** auf Android ja (SQLite3MultipleCiphers, ChaCha20-Poly1305, Schlüssel im
+  Android-Keystore), auf dem Linux-Rechner nein — dort fehlt der Schlüsselspeicher. Der Zustand
+  steht in der App unter *System → Daten*. Einen Biometrie-Gate gibt es nicht; er steht im
+  Backlog.
 - **Migrationen:** versioniert, vorwärtsgerichtet, mit Test pro Schritt
 - **Wiederherstellbarkeit:** Löscht man alle Projektionstabellen, muss ein voller Rebuild aus
   `events` denselben Zustand erzeugen. Das ist ein Testfall, keine Absichtserklärung.

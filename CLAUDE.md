@@ -205,12 +205,14 @@ und Medikation. Entsprechend:
   per mDNS als `axiom.local` an — link-lokales Multicast, nur Name und IP, nur solange er läuft
   (ADR-0005 Punkt 2a). Genau eine Datei darf das, und ein Test hält die Liste kurz.
 - Keine Telemetrie, kein Analytics-SDK, kein Crash-Reporting an Dritte. Nie. Auch nicht "anonym".
-- **Noch nicht umgesetzt: SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate.** Hier stand
-  das jahrelang wie ein Zustand. Es ist ein Ziel: `SqliteEventStore` nimmt einen `encryptionKey`
-  entgegen und setzt `PRAGMA key`, aber kein Aufrufer übergibt einen — `axiom.db` liegt im
-  Klartext in `files/`, und einen Biometrie-Gate gibt es nicht. Solange das so ist, wird es
-  **nirgendwo als vorhanden beschrieben**, auch nicht in der README. Siehe `docs/BACKLOG.md`.
-  Wer den Schutz baut, streicht diesen Absatz — nicht vorher.
+- **Die Datenbank ist auf Android verschlüsselt, auf dem Rechner nicht.** SQLite ist als
+  SQLite3MultipleCiphers eingebunden (ChaCha20-Poly1305, gewählt beim Bauen über den Hook in
+  `pubspec.yaml`). Den Schlüssel erzeugt `DatabaseKey.kt`: eine zufällige Passphrase, eingewickelt
+  mit einem AES-Schlüssel aus dem Android-Keystore, der die gesicherte Hardware nie verlässt.
+  Auf dem Linux-Rechner gibt es keinen Schlüsselspeicher — dort liegt die Datei im Klartext, und
+  die App **sagt das** (*System → Daten → Wo die Daten liegen*). Ein Biometrie-Gate gibt es nicht.
+  Was hier steht, wird von `axiom_data/test/encryption_test.dart` geprüft, nicht geglaubt: Der
+  Test liest die Datei und sucht den Klartext darin.
 - `rules/personal/` und alle `*.axiom`-Exporte bleiben lokal.
 - **Vor jedem `git push` prüfen, ob echte persönliche Daten im Diff sind.**
 

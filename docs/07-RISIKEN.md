@@ -102,11 +102,11 @@ Beziehungskonflikte, Medikation. Bei Verlust: erheblicher persönlicher Schaden,
 beruflichen und versicherungsrechtlichen Folgen.
 
 **Gegenmaßnahmen:**
-- ~~SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate~~ — **nicht gebaut.** Stand hier
-  als Gegenmaßnahme, ohne es zu sein. Die Datenbank liegt im Klartext hinter der
-  Geräteverschlüsselung und der App-Trennung von Android; ein entsperrtes Gerät oder ein volles
-  Backup umgeht beides. Damit ist R6 **nicht** auf das hier angenommene Restrisiko gesenkt.
-  Siehe `docs/BACKLOG.md`
+- Datenbank verschlüsselt (ChaCha20-Poly1305), Schlüssel im Android-Keystore. Schützt die
+  *Datei* — Kopie, `adb`-Auszug, Auslesen eines ausgeschalteten Geräts. Schützt **nicht** gegen
+  jemanden mit dem entsperrten Gerät: Für den entschlüsselt der Keystore bereitwillig. Ein
+  Biometrie-Gate wäre die Antwort darauf und ist nicht gebaut. Auf dem Linux-Rechner ist die
+  Datei unverschlüsselt (kein Schlüsselspeicher); die App zeigt das an
 - Kein Netzwerkzugriff im Core. Keine Telemetrie. Kein Analytics-SDK. Kein Crash-Reporting an Dritte
 - `rules/personal/` ist git-ignoriert
 - Export nur verschlüsselt und nur auf explizite Aktion

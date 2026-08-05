@@ -31,13 +31,56 @@ const _ruleAssets = <String>[
 
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
 
+/// Wann die Datenbank zuletzt neu angelegt werden musste, als ISO-Zeit.
+///
+/// Steht in den Einstellungen der *neuen* Datenbank — die alte ist zu dem
+/// Zeitpunkt weg. Der Systeminspektor zeigt es an; niemand soll es daran
+/// merken, dass Aufgaben fehlen.
+const kDatabaseResetSetting = 'db_reset_at';
+
+/// Oeffnet die Datenbank, notfalls neu.
+///
+/// **Warum hier ueberhaupt geloescht wird.** Ist die Datei unlesbar, ist sie
+/// unwiederbringlich: Ohne passenden Schluessel gibt es kein Verfahren, das
+/// den Inhalt zurueckholt. Bleiben koennte sie trotzdem — dann startet die App
+/// nie wieder, bis jemand von Hand eingreift. Fuer eine App, die
+/// Selbstregulation stuetzen soll, ist ein Start ohne Bestand der deutlich
+/// kleinere Schaden als gar kein Start.
+///
+/// Passiert ist es trotzdem, und deshalb wird es festgehalten statt
+/// verschwiegen ([kDatabaseResetSetting]). Eine App, die kommentarlos leer
+/// dasteht, laesst einen an sich selbst zweifeln — genau die Wirkung, die
+/// dieses Projekt vermeiden will.
+///
+/// Der Fall tritt ein bei einer unverschluesselten Datei aus einer frueheren
+/// Fassung, nach geloeschten App-Daten, nach einem zurueckgespielten Backup
+/// und beim Geraetewechsel.
+SqliteEventStore _openDatabase(String path, Clock clock, String? key) {
+  try {
+    return SqliteEventStore.open(path, clock: clock, encryptionKey: key);
+  } on DatabaseUnreadable {
+    // WAL und Shared-Memory muessen mit weg. Bleiben sie liegen, findet
+    // SQLite eine Sitzung zu einer Datei vor, die es nicht mehr gibt.
+    for (final suffix in ['', '-wal', '-shm']) {
+      final file = File('$path$suffix');
+      if (file.existsSync()) file.deleteSync();
+    }
+    final store = SqliteEventStore.open(path, clock: clock, encryptionKey: key);
+    store.setSetting(
+      kDatabaseResetSetting,
+      clock.nowUtc().toIso8601String(),
+    );
+    return store;
+  }
+}
+
 /// Baut die Laufzeit auf: Datenbank oeffnen, Regelwerk laden, Engine binden.
 final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
   final clock = ref.watch(clockProvider);
 
   final dir = await getApplicationSupportDirectory();
   final dbPath = '${dir.path}${Platform.pathSeparator}axiom.db';
-  final store = SqliteEventStore.open(dbPath, clock: clock);
+  final store = _openDatabase(dbPath, clock, await AndroidBridge.databaseKey());
   ref.onDispose(store.close);
 
   final sources = <String, String>{};

@@ -24,17 +24,26 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
 
 ## Aufgenommen
 
-### Datenbank verschlüsseln (SQLCipher)
-- **Defizit:** keins — aber `CLAUDE.md` sagt es zu, und die Datei enthält Substanzkonsum,
-  Beziehungskonflikte und Medikation
-- **Frühestens:** sofort, sobald jemand anders als der Autor die App benutzt
-- **Warum nicht jetzt:** Die Zusage steht seit Beginn im Dokument, die Umsetzung nicht im Code —
-  `axiom.db` liegt unverschlüsselt in `files/`. Auf einem entsperrten, verschlüsselten Gerät mit
-  Biometrie-Gate ist der reale Zugewinn klein: Android trennt App-Verzeichnisse, und wer root hat,
-  hat auch den Keystore-Schlüssel im laufenden Prozess. Der Aufwand ist es trotzdem wert, weil das
-  Versprechen sonst falsch ist — und ein falsches Datenschutzversprechen ist schlimmer als ein
-  fehlendes. Bis dahin gilt: **Der Text im Dokument beschreibt ein Ziel, keinen Zustand.**
-  Blockiert einen Release an Dritte, nicht den Eigengebrauch.
+### Biometrie-Gate vor dem Start
+- **Defizit:** keins — Schutz, nicht Selbstregulation
+- **Frühestens:** wenn das Gerät regelmäßig entsperrt aus der Hand gegeben wird
+- **Warum nicht jetzt:** Die Datenbank ist verschlüsselt, aber der Schlüsselspeicher gibt sie
+  jedem heraus, der die App öffnen kann. Ein Biometrie-Gate würde genau diese Lücke schließen —
+  `setUserAuthenticationRequired(true)` am Keystore-Schlüssel, ein Satz Code. Es kostet aber
+  einen Bildschirm vor jedem Start, in einer App, deren Erfassung unter drei Sekunden bleiben
+  soll (G1). Der Reibungspreis ist real und der Zugewinn hängt daran, wie oft das entsperrte
+  Gerät fremden Händen erreichbar ist. Erst entscheiden, dann bauen.
+- **Notiert:** 2026-08-05
+
+### Verschlüsselung auch auf dem Linux-Rechner
+- **Defizit:** keins
+- **Frühestens:** wenn der Rechner geteilt wird
+- **Warum nicht jetzt:** Auf Android wickelt der Keystore die Passphrase ein. Linux hat nichts
+  Gleichwertiges: Eine Schlüsseldatei neben der Datenbank wäre eine Attrappe, und `libsecret`
+  wäre eine Abhängigkeit für einen Companion, der auf genau einem Rechner läuft. Bliebe eine
+  Passphrase bei jedem Start — machbar, weil der Desktop nicht der Drei-Sekunden-Pfad ist, aber
+  ein Bildschirm mehr für einen Rechner, dessen Benutzerkonto die eigentliche Grenze ist. Der
+  Zustand wird stattdessen **angezeigt** (*System → Daten*), statt ihn zu verschleiern.
 - **Notiert:** 2026-08-05
 
 ### Weboberfläche des Expertenmodus übersetzen

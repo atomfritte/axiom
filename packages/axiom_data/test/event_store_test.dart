@@ -459,7 +459,7 @@ void _schemaGuard() {
       final path = '${dir.path}/axiom.db';
       sqlite3.open(path)
         ..execute('PRAGMA user_version = ${kSchemaVersion + 1};')
-        ..dispose();
+        ..close();
 
       expect(
         () => SqliteEventStore.open(path, clock: FakeClock(DateTime(2026))),
@@ -493,7 +493,7 @@ void _schemaGuard() {
       sqlite3.open(path)
         ..execute('DROP TABLE IF EXISTS rule_overrides;')
         ..execute('PRAGMA user_version = 5;')
-        ..dispose();
+        ..close();
 
       final store = SqliteEventStore.open(path, clock: clock);
       final db = sqlite3.open(path);
@@ -501,7 +501,7 @@ void _schemaGuard() {
           .select("SELECT name FROM sqlite_master WHERE type='table';")
           .map((r) => r['name'])
           .toList();
-      db.dispose();
+      db.close();
       expect(tables, contains('rule_overrides'),
           reason: 'Sonst bricht der Regeleditor auf genau den Geräten, auf '
               'denen AXIOM schon lief');
@@ -519,7 +519,7 @@ void _schemaGuard() {
       sqlite3.open(path)
         ..execute('ALTER TABLE tasks DROP COLUMN place;')
         ..execute('PRAGMA user_version = 6;')
-        ..dispose();
+        ..close();
 
       final store = SqliteEventStore.open(path, clock: clock);
       await store.upsertTask(const Task(

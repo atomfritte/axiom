@@ -1613,4 +1613,15 @@ const Map<String, String> kEnglish = {
       'HERE',
   'SCHWER':
       'HARD',
+  // Zustand der Ablage — Datenbildschirm.
+  'Wo die Daten liegen': 'Where the data sits',
+  'ABLAGE': 'STORAGE',
+  'Verschlüsselt': 'Encrypted',
+  'Nicht verschlüsselt': 'Not encrypted',
+  'Die Datei ist ohne Schlüssel nicht lesbar. Der Schlüssel liegt im Schlüsselspeicher des Geräts und kann ihn nicht verlassen. Wer das entsperrte Gerät in der Hand hält, kommt trotzdem heran — dagegen hilft nur das Bildschirmschloss.':
+      'The file cannot be read without a key. The key lives in the device keystore and cannot leave it. Anyone holding your unlocked device still gets at it — only a screen lock helps against that.',
+  'Die Datei liegt im Klartext. Auf dem Rechner gibt es keinen Schlüsselspeicher, in den ein Schlüssel gehörte — eine Schlüsseldatei daneben wäre eine Attrappe. Was hier liegt, ist so geschützt wie dein Benutzerkonto.':
+      'The file sits in plain text. There is no keystore on the desktop to put a key in — a key file next to the database would be a prop. What is here is as protected as your user account.',
+  'Am {0} musste die Datenbank neu angelegt werden — der Schlüssel passte nicht mehr zur vorhandenen Datei. Der bisherige Bestand ist damit entfallen.':
+      'On {0} the database had to be created anew — the key no longer matched the existing file. Everything held until then is gone.',
 };

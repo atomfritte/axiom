@@ -100,6 +100,32 @@ abstract final class AndroidBridge {
   /// Systemfunktion tot, ohne dass irgendwo ein Fehler erscheint.
   static bool get isSupported => !kIsWeb && Platform.isAndroid;
 
+  // ── Schlüssel der Datenbank ───────────────────────────────────────────
+
+  /// Die Passphrase für `PRAGMA key`, oder `null`.
+  ///
+  /// `null` heißt: unverschlüsselt weiterarbeiten. Das ist auf dem
+  /// Linux-Rechner der Normalfall — dort gibt es keinen Schlüsselspeicher,
+  /// in den man etwas legen könnte, das die eigene Anmeldung überdauert;
+  /// eine Schlüsseldatei neben der Datenbank wäre eine Attrappe. Auf Android
+  /// heißt `null`, dass der Keystore nicht antwortet. Beides ist ein
+  /// Zustand, kein Fehler, und beides wird im Systeminspektor angezeigt
+  /// statt verschwiegen.
+  ///
+  /// Kein Zwischenspeicher: Der Aufruf passiert genau einmal pro Start,
+  /// bevor die Datenbank geöffnet wird. Eine Passphrase, die länger als
+  /// nötig in einem Feld liegt, ist eine Passphrase mehr im Speicherabbild.
+  static Future<String?> databaseKey() async {
+    if (!isSupported) return null;
+    try {
+      return await _channel
+          .invokeMethod<String>('databaseKey')
+          .timeout(_timeout);
+    } on Object {
+      return null;
+    }
+  }
+
   // ── Berechtigungen ────────────────────────────────────────────────────
 
   /// Ab Android 14 erforderlich für minutengenaue Erinnerungen.

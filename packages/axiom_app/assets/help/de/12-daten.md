@@ -4,11 +4,17 @@ Alles bleibt auf dem Gerät. Kein Konto, keine Cloud, keine Telemetrie — und e
 
 ## Wo sie liegen
 
-In einer SQLite-Datei im privaten Speicher der App. Andere Apps kommen nicht heran — dafür sorgt Android, nicht AXIOM.
+In einer SQLite-Datei im privaten Speicher der App. Andere Apps kommen nicht heran — dafür sorgt Android.
 
-**Die Datei selbst ist nicht zusätzlich verschlüsselt.** Sie liegt hinter der Geräteverschlüsselung und der App-Trennung des Betriebssystems, aber AXIOM legt keine eigene Verschlüsselung darüber. Das steht hier, weil an dieser Stelle lange das Gegenteil stand. Was daraus folgt: Wer dein entsperrtes Gerät in der Hand hält oder ein vollständiges Geräte-Backup mitnimmt, kann an diese Daten kommen. Ein Bildschirmschloss ist deshalb keine Formalität.
+**Auf dem Telefon ist die Datei verschlüsselt.** Ohne Schlüssel ist sie nicht lesbar, auch nicht als Kopie. Der Schlüssel liegt im Schlüsselspeicher des Geräts, in gesicherter Hardware, und kann sie nicht verlassen — er wandert nicht in ein Backup und nicht auf ein anderes Gerät mit.
 
-Anders bei **Exporten**: Die `.axiom`-Dateien sind verschlüsselt, mit einer Passphrase, die du vergibst.
+Was das **nicht** schützt: jemanden, der dein entsperrtes Gerät in der Hand hält und die App öffnet. Für den entschlüsselt der Schlüsselspeicher bereitwillig. Ein Bildschirmschloss ist deshalb keine Formalität, sondern die erste Verteidigungslinie.
+
+**Auf dem Rechner liegt die Datei im Klartext.** Linux hat keinen Schlüsselspeicher, in den ein Schlüssel gehörte; eine Schlüsseldatei daneben wäre eine Attrappe. Was dort liegt, ist so geschützt wie dein Benutzerkonto. Die App sagt dir, was gerade gilt — unter *System → Daten*.
+
+**Exporte** sind auf beiden Seiten verschlüsselt, mit einer Passphrase, die du vergibst.
+
+Geht der Schlüssel verloren — gelöschte App-Daten, ein zurückgespieltes Backup, ein neues Gerät —, ist die Datenbank nicht mehr lesbar. AXIOM legt dann eine neue an und **sagt es dir** auf demselben Bildschirm, statt kommentarlos leer dazustehen.
 
 Alles ist ein **Ereignis**, und Ereignisse werden nur angehängt, nie geändert und nie gelöscht. Eine Korrektur ist ein neues Ereignis. Daraus folgt zweierlei: Der gesamte Zustand lässt sich jederzeit aus dem Strom neu berechnen, und nichts verschwindet stillschweigend.
 

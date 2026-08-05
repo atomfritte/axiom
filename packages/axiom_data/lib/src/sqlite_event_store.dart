@@ -6,6 +6,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -34,17 +35,49 @@ import 'package:sqlite3/sqlite3.dart';
 ///     Listenfeld muesste jede Abfrage mitladen.
 const int kSchemaVersion = 9;
 
+/// Die Datei ist da, laesst sich aber nicht lesen.
+///
+/// Bedeutet fast immer: Der Schluessel passt nicht. Entweder liegt dort noch
+/// eine unverschluesselte Datenbank aus einer frueheren Fassung, oder der
+/// Schluessel im Geraetespeicher ist ein anderer geworden — nach geloeschten
+/// App-Daten, einem zurueckgespielten Backup, einem Geraetewechsel.
+///
+/// Absichtlich ein eigener Typ und keine `SqliteException`: Der Aufrufer soll
+/// genau diesen Fall behandeln koennen, ohne jede Datenbankstoerung
+/// mitzufangen.
+final class DatabaseUnreadable implements Exception {
+  final String path;
+  final Object cause;
+
+  const DatabaseUnreadable(this.path, this.cause);
+
+  @override
+  String toString() => 'DatabaseUnreadable($path): $cause';
+}
+
 final class SqliteEventStore implements EventStore {
   final Database _db;
   final Clock _clock;
 
-  SqliteEventStore._(this._db, this._clock);
+  /// Wo die Datei liegt, oder `null` bei einer Datenbank im Arbeitsspeicher.
+  /// Gebraucht von [isEncrypted], das die Datei selbst befragt.
+  final String? _path;
+
+  SqliteEventStore._(this._db, this._clock, this._path);
 
   /// Oeffnet oder erstellt die Datenbank.
   ///
-  /// [encryptionKey] aktiviert SQLCipher (`PRAGMA key`). Auf Plattformen ohne
-  /// SQLCipher-Bibliothek wird der Aufruf ignoriert — die Datenbank ist dann
-  /// unverschluesselt. Der Aufrufer prueft das ueber [isEncrypted].
+  /// [encryptionKey] setzt `PRAGMA key`. Die ausgelieferte SQLite-Fassung ist
+  /// SQLite3MultipleCiphers (siehe `pubspec.yaml`), Standardchiffre
+  /// ChaCha20-Poly1305.
+  ///
+  /// **Passt der Schluessel nicht, fliegt [DatabaseUnreadable].** Das ist der
+  /// Fall bei einer unverschluesselten Altdatei, bei einem verlorenen
+  /// Keystore-Schluessel und bei einer fremden Datei. Weiterlaufen liesse sich
+  /// hier nicht sinnvoll: Die Datei ist da und ist unlesbar. Was daraus folgt
+  /// — neu anlegen oder abbrechen — entscheidet der Aufrufer, nicht diese
+  /// Schicht. Eine Speicherschicht, die von sich aus Daten wegwirft, waere
+  /// das Letzte, was man ihr zutrauen moechte.
   factory SqliteEventStore.open(
     String path, {
     required Clock clock,
@@ -52,16 +85,22 @@ final class SqliteEventStore implements EventStore {
   }) {
     final db = sqlite3.open(path);
     if (encryptionKey != null && encryptionKey.isNotEmpty) {
-      try {
-        db.execute("PRAGMA key = '${encryptionKey.replaceAll("'", "''")}';");
-      } on SqliteException {
-        // Keine SQLCipher-Bibliothek vorhanden. Kein harter Fehler:
-        // Der Aufrufer entscheidet, ob er ohne Verschluesselung startet.
-      }
+      db.execute("PRAGMA key = '${encryptionKey.replaceAll("'", "''")}';");
     }
+
+    // Der erste echte Zugriff. Vorher steht nur fest, dass sich eine Datei
+    // oeffnen liess — ob sie sich auch *lesen* laesst, zeigt sich erst hier:
+    // Bei falschem Schluessel ist schon die Kopfzeile Rauschen.
+    try {
+      db.select('PRAGMA user_version;');
+    } on SqliteException catch (e) {
+      db.close();
+      throw DatabaseUnreadable(path, e);
+    }
+
     db.execute('PRAGMA journal_mode = WAL;');
     db.execute('PRAGMA foreign_keys = ON;');
-    final store = SqliteEventStore._(db, clock);
+    final store = SqliteEventStore._(db, clock, path == ':memory:' ? null : path);
     store._migrate();
     return store;
   }
@@ -76,14 +115,47 @@ final class SqliteEventStore implements EventStore {
   /// alles in einer Transaktionsgrenze liegt.
   Database get rawDatabase => _db;
 
+  /// Ob die Datei auf der Platte ohne Schluessel lesbar waere.
+  ///
+  /// **Gefragt wird die Datei, nicht die Verbindung.** Zwei Anlaeufe davor
+  /// waren falsch: `PRAGMA cipher_version` kennt nur SQLCipher und antwortet
+  /// unter SQLite3MultipleCiphers gar nicht; `PRAGMA cipher` antwortet immer
+  /// mit `chacha20`, weil es die *voreingestellte* Chiffre nennt und nicht den
+  /// Zustand dieser Datei. Beide haetten im Systeminspektor eine Zusicherung
+  /// angezeigt, die von der Wirklichkeit unabhaengig war — schlimmer als gar
+  /// keine Anzeige.
+  ///
+  /// Eine unverschluesselte SQLite-Datei beginnt mit `SQLite format 3\0`. Das
+  /// steht so im Dateiformat und gilt unabhaengig davon, welche Bibliothek
+  /// gerade eingebunden ist. Fehlt die Kennung, ist der Anfang der Datei
+  /// Chiffrat.
+  ///
+  /// Eine Datenbank im Arbeitsspeicher meldet `false`: Sie liegt nirgends,
+  /// also ist auch nichts geschuetzt.
   bool get isEncrypted {
+    final path = _path;
+    if (path == null) return false;
     try {
-      final result = _db.select('PRAGMA cipher_version;');
-      return result.isNotEmpty && '${result.first.values.first}'.isNotEmpty;
-    } on SqliteException {
+      final handle = File(path).openSync();
+      try {
+        final head = handle.readSync(_plainHeader.length);
+        if (head.length < _plainHeader.length) return false;
+        for (var i = 0; i < _plainHeader.length; i++) {
+          if (head[i] != _plainHeader[i]) return true;
+        }
+        return false;
+      } finally {
+        handle.closeSync();
+      }
+    } on FileSystemException {
       return false;
     }
   }
+
+  static const _plainHeader = <int>[
+    0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, //
+    0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00, // "SQLite format 3\0"
+  ];
 
   void _migrate() {
     final current = _db.select('PRAGMA user_version;').first.values.first as int;
@@ -952,7 +1024,7 @@ final class SqliteEventStore implements EventStore {
   Future<int> eventCount() async =>
       _db.select('SELECT COUNT(*) AS c FROM events').first['c'] as int;
 
-  void close() => _db.dispose();
+  void close() => _db.close();
 }
 
 final class _StoredHistory implements DecisionHistory {

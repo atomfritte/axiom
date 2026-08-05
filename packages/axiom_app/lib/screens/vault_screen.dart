@@ -40,9 +40,15 @@ class VaultScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge),
         children: [
+          // Export und Import zuerst: Sie sind der Grund, aus dem dieser
+          // Bildschirm geöffnet wird. Der Zustand der Ablage ist Auskunft,
+          // keine Handlung — stünde er oben, läge der Knopf unter dem Falz.
           _ExportCard(),
           SizedBox(height: Space.lg),
           _ImportCard(),
+          SizedBox(height: Space.xxl),
+          SectionLabel(context.t('Wo die Daten liegen')),
+          _StorageCard(),
           SizedBox(height: Space.xxl),
           SectionLabel(context.t('Wirkfenster')),
           _MedSection(),
@@ -50,6 +56,85 @@ class VaultScreen extends ConsumerWidget {
       ),
     ),
     );
+  }
+}
+
+// ── Zustand der Ablage ──────────────────────────────────────────────────
+
+/// Was mit der Datenbankdatei tatsächlich ist — nicht, was zugesagt wurde.
+///
+/// Diese Karte gibt es, weil an dieser Stelle über Jahre das Gegenteil des
+/// Zustands stand: Die Dokumentation nannte SQLCipher, die Datei lag im
+/// Klartext. Eine Zusicherung, die man nicht nachsehen kann, ist keine (G2).
+/// Der Wert kommt deshalb nicht aus einer Einstellung, sondern aus dem
+/// Dateikopf — `isEncrypted` liest die Datei selbst.
+class _StorageCard extends ConsumerWidget {
+  const _StorageCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    final runtime = ref.watch(runtimeProvider).value;
+    if (runtime == null) return const SizedBox.shrink();
+
+    final encrypted = runtime.store.isEncrypted;
+    final resetAt = runtime.store.setting(kDatabaseResetSetting);
+
+    return Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.t('ABLAGE'),
+              style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: Space.sm),
+          Row(
+            children: [
+              Icon(
+                encrypted ? Icons.lock_outline : Icons.lock_open_outlined,
+                size: 18,
+                color: encrypted ? p.calm : p.inkFaint,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  encrypted
+                      ? context.t('Verschlüsselt')
+                      : context.t('Nicht verschlüsselt'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            encrypted
+                ? context.t('Die Datei ist ohne Schlüssel nicht lesbar. Der Schlüssel liegt im Schlüsselspeicher des Geräts und kann ihn nicht verlassen. Wer das entsperrte Gerät in der Hand hält, kommt trotzdem heran — dagegen hilft nur das Bildschirmschloss.')
+                : context.t('Die Datei liegt im Klartext. Auf dem Rechner gibt es keinen Schlüsselspeicher, in den ein Schlüssel gehörte — eine Schlüsseldatei daneben wäre eine Attrappe. Was hier liegt, ist so geschützt wie dein Benutzerkonto.'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: p.inkDim,
+                ),
+          ),
+          if (resetAt != null) ...[
+            const SizedBox(height: Space.lg),
+            Text(
+              context.t('Am {0} musste die Datenbank neu angelegt werden — der Schlüssel passte nicht mehr zur vorhandenen Datei. Der bisherige Bestand ist damit entfallen.', [
+                _readable(resetAt),
+              ]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: p.caution,
+                  ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _readable(String iso) {
+    final at = DateTime.tryParse(iso)?.toLocal();
+    if (at == null) return iso;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(at.day)}.${two(at.month)}.${at.year}';
   }
 }
 
