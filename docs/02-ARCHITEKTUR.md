@@ -40,7 +40,7 @@
                                 │ Port-Implementierungen
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │  INFRASTRUCTURE                     packages/axiom_data             │
-│  SQLite (Drift, SQLCipher) · YAML-Loader · Health Connect ·         │
+│  SQLite (sqlite3, unverschlüsselt) · YAML-Loader · Health Connect · │
 │  Alarm/Notification-Scheduler · Export/Backup                       │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ optional, ab S4
@@ -60,7 +60,7 @@
 | Package | Typ | Verantwortung | Darf abhängen von |
 |---|---|---|---|
 | `axiom_core` | pure Dart | Domain, State Engine, Rule Engine, Ports | nichts Externes (nur `meta`, `collection`) |
-| `axiom_data` | Dart | SQLite/Drift, YAML-Loader, Health, Export | `axiom_core` |
+| `axiom_data` | Dart | SQLite, YAML-Loader, Health, Export | `axiom_core` |
 | `axiom_app` | Flutter | UI, Notifications, Widgets, Platform-Kanäle | `axiom_core`, `axiom_data` |
 | `ops/sync` | Docker | optionaler Sync-Endpoint | — |
 
@@ -104,13 +104,13 @@ Der Core definiert, die Infrastruktur implementiert. Tests nutzen In-Memory-Fake
 
 | Port | Zweck | Prod-Implementierung |
 |---|---|---|
-| `EventStore` | append / query Events | Drift + SQLite (SQLCipher) |
+| `EventStore` | append / query Events | SQLite über `sqlite3` |
 | `RuleSource` | Regelwerk laden + validieren | YAML aus `rules/`, App-Assets + User-Overlay |
 | `Clock` | **jede** Zeitabfrage | `SystemClock` / `FakeClock` (Tests) |
 | `Notifier` | Interventionen ausspielen | Android Notifications + exakte Alarme |
-| `HealthSource` | Schlaf, Schritte, HR | Health Connect (Android) |
+| `HealthSource` | Schlaf, Schritte | Health Connect (Android) |
 | `DeviceAutomation` | DND, Fokusmodus, Routinen | Android APIs / Samsung Modes&Routines |
-| `SecureStore` | Schlüssel, Biometrie-Gate | Android Keystore |
+| `SecureStore` | Schlüssel, Biometrie-Gate | *geplant, nicht gebaut* |
 
 `Clock` als Port ist nicht optional: ohne ihn sind zeitabhängige Regeln (also fast alle) nicht
 deterministisch testbar. Direkte `DateTime.now()`-Aufrufe im Core sind ein CI-Fehler.
@@ -127,7 +127,8 @@ deterministisch testbar. Direkte `DateTime.now()`-Aufrufe im Core sind ein CI-Fe
 - **Decisions** — jede Ausgabe wird protokolliert: Zeit, Zustand, Regel-ID, Nutzerreaktion.
   Das ist das Audit-Log, das G2 einlösbar macht.
 
-Verschlüsselung: SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate beim Start.
+Verschlüsselung der Datenbank: **geplant, nicht gebaut** (`docs/BACKLOG.md`). Die Datei liegt
+im Klartext im privaten App-Verzeichnis.
 Backup: signierter, verschlüsselter Export (`.axiom` = tar + age/libsodium) auf Nutzerwunsch.
 
 Details: [03-DATENMODELL.md](03-DATENMODELL.md)
@@ -146,7 +147,7 @@ hier hardwareseitig lösbar.
 | **Home-Widget** | "Jetzt: X" + Zeitanker permanent sichtbar (Objektpermanenz) | M2, M3 |
 | **Always-On-Display** | Nächster Anker ohne Bildschirmaktivierung | M3 |
 | **Exakte Alarme** (`SCHEDULE_EXACT_ALARM`) | Zeittrigger sind der wirksamste Interventionstyp (D4) — Minutengenauigkeit ist Pflicht | M3, M7, M8 |
-| **Health Connect** | Schlaf, Schritte, Herzfrequenz → `capacity`, `load_index` | M7, M8, M9 |
+| **Health Connect** | Schlaf und Schritte → `capacity`, `load_index`. Nur diese zwei, lesend | M7, M8, M9 |
 | **Modes & Routines** | DND-Automation für Deep-Work-Slots | M4 |
 | **Bixby Routines / Intents** | externe Trigger in AXIOM hinein | M1, M6 |
 | **DeX / Linux-Desktop** | Deep-Work-Erkennung am Rechner | M4 |

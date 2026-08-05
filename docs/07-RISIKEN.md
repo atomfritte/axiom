@@ -102,7 +102,11 @@ Beziehungskonflikte, Medikation. Bei Verlust: erheblicher persönlicher Schaden,
 beruflichen und versicherungsrechtlichen Folgen.
 
 **Gegenmaßnahmen:**
-- SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate
+- ~~SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate~~ — **nicht gebaut.** Stand hier
+  als Gegenmaßnahme, ohne es zu sein. Die Datenbank liegt im Klartext hinter der
+  Geräteverschlüsselung und der App-Trennung von Android; ein entsperrtes Gerät oder ein volles
+  Backup umgeht beides. Damit ist R6 **nicht** auf das hier angenommene Restrisiko gesenkt.
+  Siehe `docs/BACKLOG.md`
 - Kein Netzwerkzugriff im Core. Keine Telemetrie. Kein Analytics-SDK. Kein Crash-Reporting an Dritte
 - `rules/personal/` ist git-ignoriert
 - Export nur verschlüsselt und nur auf explizite Aktion

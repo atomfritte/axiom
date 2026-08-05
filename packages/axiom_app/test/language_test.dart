@@ -201,6 +201,31 @@ void main() {
   });
 
   group('Datenschutz', () {
+    /// Alles, was von sich aus hinausginge.
+    ///
+    /// Die Liste ist nach **Richtung** geschnitten, nicht nach Stichwort:
+    /// `WebSocket.connect` baut eine Verbindung auf und ist verboten;
+    /// `WebSocketTransformer.upgrade` nimmt eine an, die der Browser
+    /// aufgebaut hat, und ist erlaubt (ADR-0005 — AXIOM lauscht, ruft nie).
+    /// Ein Test, der jedes Vorkommen von „WebSocket" verböte, wäre beim Bau
+    /// der Verbindungsanzeige abgeschaltet worden — und hätte danach auch
+    /// den Verbindungsaufbau nicht mehr gefangen.
+    const outgoing = [
+      "import 'dart:html'",
+      'package:http/',
+      'HttpClient(',
+      'Socket.connect',
+      'WebSocket.connect',
+      // Ein Client-Paket käme an der Zeile darüber vorbei: Dort heißt der
+      // Aufbau `IOWebSocketChannel.connect`. Ohne diesen Eintrag ließe sich
+      // die Zusage mit einer Abhängigkeit umgehen.
+      'WebSocketChannel.connect',
+      'package:web_socket_channel',
+      // Auch ohne Verbindung: Wer ein Paket verschickt, ruft etwas
+      // auf. Die eine erlaubte Ausnahme steht im Test darunter.
+      'RawDatagramSocket.bind',
+    ];
+
     test('AXIOM ruft nichts von sich aus auf (ADR-0005)', () {
       // Die frühere Zusage war stärker: Ohne INTERNET-Berechtigung *konnte*
       // nichts hinaus. Mit dem Expertenmodus ist die Berechtigung da, und
@@ -209,16 +234,7 @@ void main() {
       final hits = <String>[];
       for (final file in appSources()) {
         final content = file.readAsStringSync();
-        for (final forbidden in [
-          "import 'dart:html'",
-          'package:http/',
-          'HttpClient(',
-          'Socket.connect',
-          'WebSocket.connect',
-          // Auch ohne Verbindung: Wer ein Paket verschickt, ruft etwas
-          // auf. Die eine erlaubte Ausnahme steht im Test darunter.
-          'RawDatagramSocket.bind',
-        ]) {
+        for (final forbidden in outgoing) {
           if (file.path.endsWith('server/mdns_responder.dart') &&
               forbidden == 'RawDatagramSocket.bind') {
             continue;
@@ -230,6 +246,32 @@ void main() {
       }
       expect(hits, isEmpty,
           reason: 'Ausgehender Netzwerkzugriff gefunden:\n${hits.join("\n")}');
+    });
+
+    test('die Regel lässt die Annahme durch und fängt den Aufbau', () {
+      // Der Wächter selbst geprüft, wie bei der Schuldsprache: Ein Test, der
+      // die richtige Richtung mitverbietet, wird beim ersten Bedarf
+      // abgeschaltet — und fängt danach gar nichts mehr.
+      bool flagged(String line) => outgoing.any(line.contains);
+
+      expect(flagged("await WebSocket.connect('wss://irgendwo')"), isTrue);
+      expect(flagged('IOWebSocketChannel.connect(uri)'), isTrue);
+      expect(flagged("import 'package:web_socket_channel/io.dart';"), isTrue);
+      // Und das, was der Expertenmodus tatsächlich tut, bleibt erlaubt.
+      expect(flagged('await WebSocketTransformer.upgrade(request)'), isFalse);
+      expect(flagged('WebSocketTransformer.isUpgradeRequest(request)'), isFalse);
+    });
+
+    test('einen WebSocket nimmt genau eine Datei entgegen', () {
+      // Dieselbe Buchführung wie beim lauschenden Server: Die Annahme einer
+      // Aufwertung ist erlaubt, aber nicht überall. Wächst diese Liste, ist
+      // das eine Entscheidung und kein Versehen.
+      final accepting = appSources()
+          .where((f) => f.readAsStringSync().contains('WebSocketTransformer'))
+          .map((f) => f.path)
+          .toList();
+      expect(accepting, hasLength(1));
+      expect(accepting.single, endsWith('server/expert_server.dart'));
     });
 
     test('der Expertenmodus startet nur mit der App, nie von selbst', () {

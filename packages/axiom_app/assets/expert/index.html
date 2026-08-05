@@ -22,6 +22,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
 <title>AXIOM · Expertenmodus</title>
+<!-- Dieselbe Marke wie im Kopf, ausgeliefert vom Server (`/favicon.svg`).
+     Ohne sie steht im Reiter ein leeres Blatt, und wer AXIOM neben acht
+     anderen Reitern offen hat, findet es am Symbol, nicht am Titel. -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 
 <style>
 /* ── Schriften ─────────────────────────────────────────────────────────
@@ -502,6 +506,11 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
         <path d="M10 4v15" stroke="var(--signal)" stroke-width="3"/></svg>AXIOM
     </div>
     <div class="chips" id="hchips"></div>
+    <!-- Verbunden oder nicht. Ohne diese Anzeige sieht eine Seite mit
+         Zahlen von vorhin genauso aus wie eine mit aktuellen — und das ist
+         die schlimmste Variante. -->
+    <span class="chip" id="link-chip" role="status"
+          title="Verbindung zum Telefon">VERBINDET …</span>
     <div class="spacer"></div>
     <div class="budget" id="budget" title="Zeit im System heute (G4)">
       <span class="eyebrow">META</span>
@@ -675,6 +684,9 @@ async function startPush(){
 }
 function showGate(){
   clearInterval(pushPoll);
+  // Ohne Sitzung gibt es auch keinen Kanal — sonst liefe im Hintergrund ein
+  // Verbindungsversuch, den der Server ohnehin abweist.
+  wsStop();
   // Ein offenes Blatt liegt über allem, auch über der Anmeldung. Es
   // stehenzulassen hieße, die Freigabe hinter einem Dialog zu verstecken.
   if($('#dlg').open) $('#dlg').close();
@@ -708,6 +720,7 @@ async function enter(){
   $('#gate').classList.add('hide');$('#app').classList.remove('hide');
   markTabs();
   await reload();
+  wsStart();
 }
 
 /* ── Zustand ───────────────────────────────────────────────────────
@@ -2822,6 +2835,8 @@ function openHelpTab(){
 $('#stop-btn').addEventListener('click',async()=>{
   if(!confirm('Server beenden? Danach ist diese Seite nicht mehr erreichbar.')) return;
   try{await api('/api/stop',{method:'POST'})}catch(e){}
+  // Kein Wiederverbinden auf etwas, das gerade absichtlich zugeht.
+  wsStop();
   document.body.innerHTML='<div style="display:grid;place-items:center;min-height:100vh">'+
     '<p style="color:var(--dim)">Der Server ist aus. Die App auf dem Telefon startet ihn wieder.</p></div>';
 });
@@ -2870,7 +2885,7 @@ setInterval(()=>{
    Nicht nachgeladen wird, solange ein Blatt offen ist, im Regeleditor
    gearbeitet wird oder der Cursor in einem Feld steht. Ein Neuzeichnen
    unter den Händen kostet mehr als eine Zahl, die eine Minute alt ist. */
-setInterval(async()=>{
+async function sync(){
   if($('#app').classList.contains('hide')||$('#dlg').open||editor) return;
   const focused=document.activeElement;
   if(focused&&focused.matches&&focused.matches('input,textarea,select')) return;
@@ -2883,7 +2898,102 @@ setInterval(async()=>{
       tasks=(await api('/api/tasks')).tasks;
       paintTaskCount();redrawTasks();
     }
+    lastSync=Date.now();
   }catch(e){}
+}
+
+/* ── Die Verbindung ──────────────────────────────────────────────────
+   Das Telefon liegt in der Tasche. Fällt es aus dem WLAN, geht es in den
+   Ruhezustand oder schaltet sich der Server nach dreißig Minuten Leerlauf
+   ab, zeigte diese Seite bisher weiter Zahlen — und man hielt sie für
+   aktuell. Eine sichtbar getrennte Oberfläche ist besser als eine, die
+   falsch ist und richtig aussieht.
+
+   Über den Kanal kommt nur ein Wort. Die Daten holt die Seite wie zuvor
+   über die geprüften Routen; ein zweiter Weg an dieselben Daten wäre eine
+   zweite Stelle, an der eine Prüfung fehlen kann. */
+let ws=null,wsTries=0,wsTimer=null,wsWanted=false,lastSync=Date.now();
+
+function linkChip(text,warn){
+  const c=$('#link-chip');
+  if(!c) return;
+  c.className=warn?'chip warn':'chip';
+  c.textContent=text;
+}
+
+function wsOpen(){
+  if(!wsWanted) return;
+  clearTimeout(wsTimer);
+  // Die Adresse ergibt sich aus der Seite selbst. Eine getippte wäre eine
+  // zweite Stelle, an der eine Portnummer altert.
+  const url=(location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws';
+  let sock;
+  try{sock=new WebSocket(url)}catch(e){wsRetry();return}
+  ws=sock;
+  sock.onopen=()=>{
+    if(sock!==ws) return;
+    wsTries=0;
+    linkChip('VERBUNDEN',false);
+    // Während der Trennung kann sich etwas geändert haben.
+    sync();
+  };
+  // Was ankommt, ist ein Signal und kein Inhalt: nachladen, nicht auswerten.
+  sock.onmessage=()=>sync();
+  sock.onclose=e=>{
+    if(sock!==ws) return;
+    ws=null;
+    // 1001 heißt: Der Server geht aus. Das ist Absicht, kein Problem — und
+    // ein Wiederverbinden hätte kein Ziel.
+    if(e.code===1001||e.reason==='Server beendet'){
+      wsWanted=false;
+      linkChip('SERVER BEENDET',false);
+      return;
+    }
+    // Kurzes Hakeln bekommt keine Warnfarbe: Ein Wechsel des Zugangspunkts
+    // dauert Sekunden, und eine Anzeige, die dabei jedes Mal aufleuchtet,
+    // wird ab dem dritten Mal nicht mehr gelesen.
+    linkChip(wsTries<3?'VERBINDET …':'GETRENNT',wsTries>=3);
+    wsRetry();
+  };
+  // Der Grund steht im darauffolgenden onclose, nicht hier.
+  sock.onerror=()=>{};
+}
+
+function wsRetry(){
+  if(!wsWanted) return;
+  // 1 s, 2 s, 4 s … gedeckelt bei 30 s. Ohne Wachstum wäre es eine Anfrage
+  // je Sekunde an ein Telefon, das gerade schläft; ohne Deckel wartete man
+  // nach einer Nacht stundenlang auf den nächsten Versuch.
+  const wait=Math.min(30000,1000*Math.pow(2,wsTries));
+  wsTries++;
+  clearTimeout(wsTimer);
+  wsTimer=setTimeout(wsOpen,wait);
+}
+
+function wsStart(){wsWanted=true;wsTries=0;linkChip('VERBINDET …',false);wsOpen()}
+function wsStop(){
+  wsWanted=false;
+  clearTimeout(wsTimer);
+  const sock=ws;ws=null;
+  if(sock) try{sock.close()}catch(e){}
+}
+
+/* Der häufigste Fall von allen: Der Reiter lag im Hintergrund, das Telefon
+   schlief. Bis zum nächsten Abstand zu warten hieße, auf eine Seite zu
+   sehen, die längst wieder erreichbar ist. */
+addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!wsWanted) return;
+  if(!ws||ws.readyState>1){wsTries=0;wsOpen()}
+});
+
+/* Der Takt bleibt — als Rückfall, nicht als Hauptweg.
+   Steht die Verbindung, meldet der Server jede Änderung sofort, und der
+   Takt läuft nur noch etwa minütlich weiter: Was am Telefon geändert wird,
+   geht nicht durch den Server und meldet sich deshalb nicht von selbst.
+   Steht sie nicht, ist er wieder das Einzige, was frische Zahlen bringt. */
+setInterval(()=>{
+  if(ws&&ws.readyState===1&&Date.now()-lastSync<55000) return;
+  sync();
 },20000);
 
 /* Schon angemeldet? Dann direkt hinein, sonst die Freigabe anbieten. */
@@ -2893,5 +3003,6 @@ api('/api/state').then(async data=>{
   markTabs();
   paintHeader();paintAction();paintCapline();
   await loadSurface();render();
+  wsStart();
 }).catch(()=>showGate());
 </script>

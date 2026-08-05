@@ -44,7 +44,7 @@ sondern dass das Bauen des Systems zur Prokrastination wird (siehe `docs/07-RISI
 
 ```
 axiom_core   pure Dart. Domain + Engine + Ports.  KEINE Flutter-, Platform- oder I/O-Abhängigkeit.
-axiom_data   SQLite/Drift, YAML-Loader, Health, Export.   → darf axiom_core
+axiom_data   SQLite, YAML-Loader, Health, Export.         → darf axiom_core
 axiom_app    Flutter UI, Notifications, Widgets.          → darf axiom_core, axiom_data
 ```
 
@@ -205,7 +205,12 @@ und Medikation. Entsprechend:
   per mDNS als `axiom.local` an — link-lokales Multicast, nur Name und IP, nur solange er läuft
   (ADR-0005 Punkt 2a). Genau eine Datei darf das, und ein Test hält die Liste kurz.
 - Keine Telemetrie, kein Analytics-SDK, kein Crash-Reporting an Dritte. Nie. Auch nicht "anonym".
-- SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate.
+- **Noch nicht umgesetzt: SQLCipher, Schlüssel im Android Keystore, Biometrie-Gate.** Hier stand
+  das jahrelang wie ein Zustand. Es ist ein Ziel: `SqliteEventStore` nimmt einen `encryptionKey`
+  entgegen und setzt `PRAGMA key`, aber kein Aufrufer übergibt einen — `axiom.db` liegt im
+  Klartext in `files/`, und einen Biometrie-Gate gibt es nicht. Solange das so ist, wird es
+  **nirgendwo als vorhanden beschrieben**, auch nicht in der README. Siehe `docs/BACKLOG.md`.
+  Wer den Schutz baut, streicht diesen Absatz — nicht vorher.
 - `rules/personal/` und alle `*.axiom`-Exporte bleiben lokal.
 - **Vor jedem `git push` prüfen, ob echte persönliche Daten im Diff sind.**
 

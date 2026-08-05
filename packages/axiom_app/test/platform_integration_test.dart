@@ -122,6 +122,33 @@ void main() {
       // Schreibende Health-Berechtigungen waeren ein Eingriff in fremde
       // Daten und in keiner Regel begruendbar.
       expect(manifest, isNot(contains('permission.health.WRITE')));
+
+      // Und nichts, was nicht gelesen wird.
+      //
+      // READ_HEART_RATE stand hier, ohne dass der Code je einen Puls
+      // abgefragt haette — waehrend das Onboarding dem Nutzer ausdruecklich
+      // „kein Puls, kein Gewicht, kein Standort" zusagt. Eine Berechtigung,
+      // die man nicht braucht, ist keine Kleinigkeit: Sie steht im
+      // Systemdialog, der Nutzer erteilt sie, und die Zusage daneben ist
+      // damit falsch.
+      final declared = RegExp(r'android\.permission\.health\.READ_(\w+)')
+          .allMatches(manifest)
+          .map((m) => m.group(1)!)
+          .toSet();
+      final used = File(
+              'android/app/src/main/kotlin/de/atomfritte/axiom/HealthBridge.kt')
+          .readAsStringSync();
+      for (final permission in declared) {
+        final record = {
+          'SLEEP': 'SleepSessionRecord',
+          'STEPS': 'StepsRecord',
+        }[permission];
+        expect(record, isNotNull,
+            reason: 'READ_$permission ist deklariert, aber diesem Test '
+                'unbekannt — wird es überhaupt gelesen?');
+        expect(used, contains(record!),
+            reason: 'READ_$permission wird angefordert, aber nie gelesen');
+      }
     });
 
     test('die Plattformerkennung kommt von Flutter, nicht von uns', () {

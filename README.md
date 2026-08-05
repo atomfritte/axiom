@@ -56,24 +56,6 @@ rule.
 | Shows a list | Shows **one** action + `rule_id` + reasoning |
 | Rewards usage | **Caps** usage (meta-guard) |
 
-### One action, never a list
-
-This is the part that most often gets misread as a limitation. It is the point.
-
-Presenting five options requires choosing between them, and choosing is exactly the executive
-function that is scarce in this profile. A list does not reduce load — it relocates it. So the
-main screen shows one thing, and next to it the rule that put it there.
-
-### Every output is auditable
-
-There is no model, no score without a visible formula, and no LLM in the decision loop. Every
-recommendation carries its `rule_id`, and every rule is a readable YAML file under version
-control. `evaluate(state, ruleset) → decision` is a pure function: same input, same output,
-always.
-
-That is not a purity exercise. A systemizing mind discards a system it cannot audit — and a
-system that gets discarded collects no data.
-
 ## The four laws
 
 Any conflict is resolved in favour of these, even against an explicit feature request.
@@ -88,6 +70,210 @@ Any conflict is resolved in favour of these, even against an explicit feature re
 G4 is the most important one here. The main risk to this project is not technical failure but
 that building the system becomes the procrastination. Which is why the meta-guard was built
 first, not last.
+
+## What it does
+
+What follows is organised around what a user runs into, not around module numbers — those live in
+[00-KONZEPT](docs/00-KONZEPT.md). Every point below has a longer, illustrated version in the app
+itself under *Help*, shipped as plain Markdown in
+[`packages/axiom_app/assets/help/en/`](packages/axiom_app/assets/help/en/) — linked per section
+below.
+
+### Capture
+
+A few seconds pass between a thought arriving and it being written down; whatever is not caught in
+that window is gone. That is why there are seven ways in rather than one, none of them mandatory:
+a persistent notification you can type straight into without unlocking the phone, a quick-settings
+tile, a home screen widget, a long press on the app icon, `ACTION_SEND` from any other app, the S
+Pen's Air Command menu, and the microphone in the input field. Capture asks for nothing beyond the
+text — no category, no project, no priority, no date. Sorting happens later, deliberately, not on
+impulse. Details: [Capture](packages/axiom_app/assets/help/en/03-erfassen.md).
+
+### One action, never a list
+
+The main screen shows exactly one thing, never several to choose from — choosing is itself the
+executive function that is scarce in this profile, and a list does not reduce that load, it
+relocates it. What wins, in a fixed order that can be read back: a rule that just fired (an
+appointment in ten minutes beats any depth of focus) · a task already in progress · the next
+startable task, ranked by consequences, deadline pressure and start energy · a split suggestion,
+when nothing is in reach but something is waiting · nothing, when nothing is needed right now.
+Three responses exist next to the rule that produced the suggestion — Understood, Later, Doesn't
+fit — and none of them produces guilt, a streak or a missed-count. "Doesn't fit" is what the weekly
+review later turns into a retire suggestion for the rule behind it. Every output carries its
+`rule_id`; every rule is a readable YAML file under version control; `evaluate(state, ruleset) →
+decision` is a pure function, same input always giving the same output. Details:
+[One action](packages/axiom_app/assets/help/en/04-eine-handlung.md).
+
+### State: capacity, load, regulation
+
+Six readings, each one expandable into how it was calculated: capacity, compensation load,
+stimulation need, focus load today, regulation reserve, sleep debt. Capacity decides what is even
+shown, and it is made up of sleep debt (30 %), compensation load (25 %), focus load (20 %),
+regulation reserve (15 %) and the shape of the day (10 %). Compensation load carries four levels
+with real consequences inside the system: at L1 focus blocks cap at 75 minutes, at L2 they cap at
+50 and new commitments need confirmation, at L3 — the maintenance mode — everything optional is
+hidden and blocks cap at 30 minutes, for 72 hours. Every reading carries a confidence; below it,
+rules stay quiet rather than guess. The numbers come from three sources and no others: check-ins,
+sleep entries, and — if granted — sleep windows and steps from Health Connect (below). Details:
+[State](packages/axiom_app/assets/help/en/05-zustand.md).
+
+### Tasks: start energy, splitting, place, deadline, blockers
+
+There is deliberately no `priority` field. A task carries start energy (1–10 — how hard the cold
+start is, not how long the work takes), consequences (what not doing it costs), an optional
+deadline and an optional place. Visible is whatever sits below today's capacity; the order among
+visible tasks comes from consequences times deadline pressure divided by start energy. A task can
+also block another — exactly one relationship, "A blocks B", nothing richer — and a blocked task
+is simply waiting, computed from that relationship rather than stored as its own state, so a
+finished blocker cannot leave a stale flag behind. A task that is important, urgent and still out
+of reach does not get a reminder; it gets a split prompt, and the question is deliberately not
+"what does this break into" but "what is the very first two-minute action" — AXIOM proposes no
+sub-steps of its own, only the question, a catalogue of shapes, and a check that the step really
+sits below the target. For anything with a deadline, a runway is calculated — start energy × 15
+minutes plus the estimated work — and shown once it stops fitting before the deadline. Details:
+[Tasks](packages/axiom_app/assets/help/en/06-aufgaben.md).
+
+### Time anchors and backward chaining
+
+An appointment does not cost its own length, it costs travel plus getting ready plus a buffer plus
+the time it takes to disengage from whatever is currently running — the step the head always
+forgets. From those four numbers (20 / 15 / 10 / 10 minutes by default) AXIOM counts backwards
+from the appointment to the moment the current activity has to stop, sets an exact alarm on every
+step, and surfaces the nearest one at the very top of the main screen, highlighted once it is
+inside twenty minutes. It is not a calendar and reads no calendar — only the lead time of an
+appointment that is already on one. Details:
+[Time anchors](packages/axiom_app/assets/help/en/07-zeitanker.md).
+
+### Focus, stimulation budget, the brake
+
+A focus block runs 15, 25, 50, 75 or 90 minutes — fewer options as compensation load rises — and
+the governor protects it, interrupting only for a reason it can name: PROTECTED, NOTE,
+INTERRUPTION, STOP NOW, with an appointment always beating a block. Ending one asks for a single
+sentence, where it was left, because that note is what makes re-entry cheap, not the timer.
+Stimulation need is modelled as a budget, not a failing: channels are self-defined with an
+intensity and a typical length, concentrated work earns budget at a rate of 1:3 (ninety minutes of
+obligation unlock thirty), and an unplanned slot gets counted, not judged. The brake targets
+actions wanted in the moment and often not the next day: a self-written checklist plus a waiting
+period (5 to 60 minutes, 24 hours, or until 09:00) sit between the impulse and the action —
+"I'll skip it" works immediately, "I'll do it" only once the wait is over. Details:
+[Focus, stimulation and the brake](packages/axiom_app/assets/help/en/08-fokus.md).
+
+### Review and calibration
+
+Four reviews, each with a hard time cap that closes it by itself: day (2 min), week (15 min),
+month (30 min), quarter (60 min). The weekly one turns a rule's "doesn't fit" responses into a
+verdict — RETIRE for a rule that only gets rejected, TOO NARROW for one that never fires, CONFLICT
+for two that keep displacing each other. Formula weights start as documented estimates; once
+fourteen days, twenty check-ins and seven sleep entries are on record, `tools/bin/calibrate.dart`
+proposes real ones from the data — it writes nothing itself — and the weekly review is where a
+proposal gets checked before it goes live. Details:
+[Review and calibration](packages/axiom_app/assets/help/en/10-rueckblick.md).
+
+### The meta-work cap
+
+This is the part the rest of the project exists to protect, and the reason `docs/07-RISIKEN.md`
+names it R1: a systemizing mind can spend indefinitely more time configuring a system than the
+system ever saves, because tuning a rule is reliably more stimulating than doing the task the rule
+points at. Left unchecked, building AXIOM becomes the procrastination it was meant to solve.
+
+The guard against that was built in Stage 1, before there was a rulebook worth tuning: AXIOM
+budgets its own use at twelve minutes a day. Capture does not count; configuration, rule editing
+and browsing do. At twelve minutes the rule editor locks itself — for the rest of the day, not
+until some future review slot, because a limit you can predict is one you can plan around. The
+weekly review makes the trade visible instead of assumed: minutes spent in AXIOM against an
+estimate of minutes saved (three per capture, ten per split, four per anchor step reached) — a
+number to check the premise against, not to believe on faith. If that ratio tips, that is a system
+fault, not a personal one. One thing keeps working regardless of the budget: switching a
+misfiring rule off. Letting a rule that is actively wrong run until tomorrow would be the worse
+failure.
+
+## Health Connect
+
+Two quantities, read-only, nothing else: sleep windows and daily steps. No heart rate, no weight,
+no location — and nothing is ever written back to Health Connect; AXIOM only reads.
+
+**Why it exists.** Sleep debt is the single strongest weight in the capacity formula — 30 %, see
+[State](#state-capacity-load-regulation) above — and self-reported sleep is exactly the channel
+that fails first under load: on the days a bad night would matter most for a recommendation, a
+typed-in entry is the thing most likely to be missing. Reading it from the system closes that
+specific gap. It does not add a new one: nothing about the reading is evaluative, and it lands as
+the same kind of event a hand-typed sleep entry would.
+
+**How it enters the formula.** An imported sleep window becomes a `sleep_window` event with a
+sleep-debt estimate against a seven-hour target, and daily steps become a `health_sample` event —
+the same shapes a manual entry produces. `StateDeriver` does not know or care where a reading came
+from; Health Connect only changes how many readings exist and how current they are.
+
+**Optional, and not load-bearing.** Nothing fundamental is missing without it, only precision.
+Onboarding offers it once, it can be switched on or off at any time under *System → Data sources*,
+and the Linux desktop build has no Health Connect at all — it calculates from check-ins alone, same
+rules, one source fewer.
+
+**Read-only and idempotent.** The permissions requested are read-only. Every imported record
+carries Health Connect's own record ID, and each import checks what is already stored before
+writing anything — importing the same window twice changes nothing, which matters because events
+in AXIOM are append-only and a duplicate could not be undone. None of it leaves the device: Health
+Connect is a local system service, and reading from it does not touch the `INTERNET` permission
+discussed below.
+
+Details: [Your data](packages/axiom_app/assets/help/en/12-daten.md).
+
+## Expert mode
+
+Writing rules, seeing the task list with every field, reading the raw event stream — all of that
+needs screen area a phone does not have. Expert mode is a small HTTP server the phone runs for its
+own browser tab elsewhere on the same network: **off until switched on**, and working against the
+phone's real, live database rather than a copy.
+
+**A full client, not a read-only mirror.** The browser shows the same one action and the same
+ranking the phone would show — a fired rule, then whatever is running, then the next startable
+task — plus what the phone deliberately does not: the whole task tree with blockers and splitting,
+a board view of the stock, the rulebook as editable YAML, the weekly review, the raw event stream,
+and the help pages. G1 still applies: the ordering is identical, and the full list sits next to it
+as what it is — stock, not a choice being offered.
+
+**Getting in.** Starting the server (*System → Expert mode → Start server*) shows an address —
+usually `axiom.local`, resolved via multicast DNS so the name survives the router reassigning an
+IP address, plus a raw IP as fallback — a fingerprint, and from then on a **number comparison** is
+the primary way to sign in: opening the address shows a two-digit number in the browser, the same
+number appears on the phone next to "matches" and "doesn't match". The safety is in the comparison,
+not the tap — if someone else is asking to sign in at the same moment, their number shows up on the
+phone, not on the screen the user is looking at, so confirming only what genuinely matches never
+lets a second party in. A six-digit PIN, generated fresh per run and shown only in the app, is the
+second way in, for a browser that cannot show the live number. Either way a session is an
+`HttpOnly` cookie; the PIN and the comparison code never appear in a URL.
+
+**The other comparison.** The browser will warn once, because the certificate is self-signed and
+no outside authority vouches for it — the point is not to click the warning away but to compare:
+the same SHA-256 fingerprint is shown in the app and under the browser's "view certificate". If
+they match, the connection goes to this phone and nothing sits between. The certificate is
+generated once on the device and reused across restarts, so the warning is a one-time check rather
+than a reflex trained to be dismissed.
+
+**Starting and stopping.** No autostart at boot, ever. Optionally — off by default — the server can
+come up whenever the app itself is opened, for the case where the phone is in a pocket at a desk
+and a server nobody remembers to switch on does not get used; every other guardrail below still
+applies unchanged in that mode. It stops itself after five wrong PINs or rejected sign-ins, after
+thirty minutes without a request, from a button in the app or on its own persistent notification —
+which is up the whole time it runs, naming the address, so its state is never something to guess
+at — and always when the app is closed.
+
+**The name on the network.** So `axiom.local` resolves, the phone answers name queries on the
+local network by multicast DNS — the one place AXIOM sends a packet on its own initiative. That
+packet carries only this device's name and IP address, goes only to the link-local multicast
+group that no router forwards beyond the local segment, exists only while the server runs, and is
+withdrawn with a goodbye packet when it stops.
+
+**The honest price.** Expert mode is why AXIOM declares the `INTERNET` permission at all. The
+earlier, structural guarantee — that the operating system itself made an outbound connection
+impossible — no longer holds. What replaces it is narrower and tested rather than assumed:
+**AXIOM listens, but never calls out.** There is no HTTP client anywhere in the app, no outbound
+socket, no SDK that could open one; `language_test.dart` forbids `package:http`, `HttpClient`,
+`Socket.connect`, `WebSocket.connect` and `dart:html` across the whole app, and pins down that
+exactly one file opens a socket at all — the server, and the mDNS responder above it, both only to
+listen or to announce. See [ADR-0005](docs/adr/ADR-0005-expertenmodus.md) for the full reasoning,
+including why this was judged worth the permission and what would have to change for that
+judgement to be revisited.
 
 ## Documentation
 
@@ -107,6 +293,13 @@ first, not last.
 
 The documentation is in German — it predates the decision to publish, and translating it would
 cost more than it returns. The code, identifiers and this README are English.
+
+The table above is the *design* documentation — why AXIOM is built the way it is. The *user*
+documentation — what each screen does, in English, with screenshots — ships inside the app under
+*Help* and lives as plain Markdown in
+[`packages/axiom_app/assets/help/en/`](packages/axiom_app/assets/help/en/00-index.md); the "What
+it does" section above links into it chapter by chapter.
+
 For Claude Code: [CLAUDE.md](CLAUDE.md).
 
 ## Stack
@@ -179,10 +372,10 @@ Keep the keystore. Without it no build can be installed over an existing one
 
 | | |
 |---|---|
-| Tests | 451 green (215 core · 88 data · 148 app) |
+| Tests | 854 green (272 core · 113 data · 469 app) |
 | Analyzer | clean across all packages |
-| Rulebook | 17 rules valid, 16 active — 8 of them **uncalibrated** |
-| Release APK | built, **without the INTERNET permission** — verified in the package |
+| Rulebook | 18 rules valid, 16 active — 8 of them **uncalibrated** |
+| Release APK | built, **with the `INTERNET` permission** — declared for expert mode only (ADR-0005), no other network code in the app |
 
 **Stage 1** — capture (< 3 s), check-in, capacity line, state view with derivation, rule
 inspector, meta-guard, onboarding, home screen widget, quick settings tile, exact alarms, app
@@ -221,43 +414,12 @@ Edits live as an overlay in the database, never in `rules/core/`. `ruleToYaml` r
 exactly the form `rules/` uses, so anything written on the phone can be copied back into version
 control. A round-trip test keeps that honest.
 
-### Expert mode
+### Expert mode, in short
 
-A local HTTP server on the phone, **off until you start it**. Point a browser on your computer at
-it and you get what the phone deliberately does not show: the task list with every field, the
-rulebook as editable YAML, the state vector with its derivation, the raw event stream. It works
-on the device's **real** data — unlike the desktop build, which has its own database.
-
-It costs the `INTERNET` permission, so the guardrails are not decoration:
-
-| | |
-|---|---|
-| Start | only on command — no autostart, no restart after a reboot (`START_NOT_STICKY`) |
-| Login | six-digit PIN, new on every start, visible only in the app |
-| Session | `HttpOnly` cookie; the PIN never appears in a URL |
-| Wrong PINs | after five the server stops itself |
-| Idle | after 30 minutes without a request, likewise |
-| Visibility | an ongoing notification with the address and a stop button |
-| Transport | TLS with a self-signed certificate; if TLS fails, the server does not start |
-
-The browser will warn once — no outside authority vouches for the certificate. The point is not
-to click that warning away: **the certificate's SHA-256 fingerprint is shown in the app**, and
-the browser shows the same value under "View certificate". If they match, you are talking to your
-phone and to nothing in between. The certificate is stored and reused across restarts, so the
-warning appears once rather than every time — repetition is exactly what turns a warning into a
-reflex.
-
-### About the network
-
-`INTERNET` used to be absent from the manifest — at the operating system level nothing *could*
-leave the device. Expert mode ends that guarantee. What replaces it is narrower and tested:
-**AXIOM listens, but never calls out.** No HTTP client, no outbound connection, no SDK that could
-open one. `language_test.dart` forbids `package:http`, `HttpClient`, `Socket.connect`,
-`WebSocket.connect` and `dart:html` across the whole app, and asserts that exactly one file opens
-a socket — the server, and only to listen. See [ADR-0005](docs/adr/ADR-0005-expertenmodus.md).
-
-Sync still needs no server: events are immutable, so their union is conflict-free and a repeated
-import is idempotent. Two devices converge over an encrypted file.
+Covered in full above under [Expert mode](#expert-mode) — a local HTTP server the phone runs only
+on command, giving a browser on the same network a full client against the phone's real data.
+Sync itself still needs no server: events are immutable, so their union is conflict-free and a
+repeated import is idempotent. Two devices converge over an encrypted file.
 
 ### Two languages
 
@@ -301,12 +463,19 @@ with setup instructions.
 | S Pen | low | Air command shortcut; `ACTION_CREATE_NOTE` is wired up, but One UI does not expose the role |
 | Voice | low | `actions.intent.CREATE_NOTE` for Assistant, Bixby routine |
 
-Two platform limits, named explicitly rather than worked around:
+Platform limits, named explicitly rather than worked around:
 
 - **Android has no lock screen widgets** — removed in 5.0. The remaining route to permanent
   visibility while locked is the ongoing notification (`VISIBILITY_PUBLIC`).
 - **Samsung Notes has no public interface.** Screen-off memos stay there. The official pen route
   is `ACTION_CREATE_NOTE`.
+- **The S25 Ultra's S Pen has no Bluetooth**, so Air Actions do not exist on it — for any app, not
+  only this one. What remains is pulling out the pen and tapping AXIOM in the Air Command menu,
+  which is two moves once registered as a shortcut.
+- **"Hey Google, note in AXIOM" does not work.** Assistant voice commands require distribution
+  through Google Play, and a self-installed app is not signature-verified by Google. The
+  microphone in the capture field, a Bixby routine, or an `axiom://capture?text=…` link work
+  instead.
 
 ### Calibration
 

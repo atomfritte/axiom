@@ -1,10 +1,14 @@
 # Your data
 
-Everything sits encrypted on the device. No account, no cloud, no telemetry — and an export that stays readable without AXIOM.
+Everything stays on the device. No account, no cloud, no telemetry — and an export that stays readable without AXIOM.
 
 ## Where it sits
 
-In an encrypted database in the app's private storage. The key lives in the device keystore.
+In a SQLite file in the app's private storage. Other apps cannot reach it — that is Android's doing, not AXIOM's.
+
+**The file itself is not separately encrypted.** It sits behind device encryption and the operating system's app separation, but AXIOM does not add encryption of its own. This is spelled out because the opposite used to be written here. What follows from it: anyone holding your unlocked device, or taking a full device backup, can get at this data. A screen lock is not a formality.
+
+**Exports** are different: `.axiom` files are encrypted, with a passphrase you choose.
 
 Everything is an **event**, and events are only appended, never changed and never deleted. A correction is a new event. Two things follow from that: the entire state can be recalculated from the stream at any time, and nothing disappears quietly.
 

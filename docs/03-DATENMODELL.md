@@ -281,8 +281,11 @@ decisions(id TEXT PK, at INTEGER, rule_id TEXT, action TEXT,
 usage_log(id TEXT PK, at INTEGER, screen TEXT, duration_s INTEGER, counts INTEGER)
 ```
 
-- **Engine:** SQLite via Drift, verschlüsselt mit SQLCipher
-- **Schlüssel:** Android Keystore, Biometrie-Gate beim Start
+- **Engine:** SQLite über das `sqlite3`-Paket, direkt, ohne ORM
+- **Verschlüsselung: geplant, nicht gebaut.** `SqliteEventStore` nimmt einen `encryptionKey`
+  entgegen und setzt `PRAGMA key`, aber kein Aufrufer übergibt einen; einen Biometrie-Gate gibt
+  es nicht. Die Datei liegt im Klartext im privaten App-Verzeichnis, geschützt allein durch
+  Geräteverschlüsselung und die App-Trennung von Android. Siehe `docs/BACKLOG.md`.
 - **Migrationen:** versioniert, vorwärtsgerichtet, mit Test pro Schritt
 - **Wiederherstellbarkeit:** Löscht man alle Projektionstabellen, muss ein voller Rebuild aus
   `events` denselben Zustand erzeugen. Das ist ein Testfall, keine Absichtserklärung.

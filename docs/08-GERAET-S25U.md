@@ -103,11 +103,31 @@ lässt sich das Widget schlicht nicht hinzufügen. Prüfbar am gebauten Paket:
 
 | Quelle | Daten | Speist |
 |---|---|---|
-| **Health Connect** | Schlafphasen, Schlafdauer, Schritte, Herzfrequenz, HRV | `sleepDebt`, `capacity`, `loadIndex` |
-| Galaxy Watch (falls vorhanden) | HR, HRV, Schlaf, Bewegung | `loadIndex`, M4 Bewegungslosigkeitserkennung |
+| **Health Connect** | Schlafdauer, Schritte pro Tag | `sleepDebt`, `capacity`, `loadIndex` |
 | Bildschirmzeit / Usage Stats | App-Nutzung, Entsperrvorgänge, Nachtnutzung | M4 Hyperfokus, M8 Nacht-Kaskade |
 | Kalender (lesend) | Termine | M3 Backward-Chaining |
 | Standort (grob, optional) | zu Hause / unterwegs | Kontextfilter M2 |
+
+Was das Gerät zusätzlich hergäbe und AXIOM **nicht** liest: Herzfrequenz, HRV,
+Schlafphasen, Watch-Sensorik. Nicht aus technischen Gründen — sondern weil keine
+Regel sie auswertet. Eine Berechtigung ohne Regel dahinter ist eine Zusage, die
+das Onboarding bricht („Schlafzeiten und Schritte pro Tag. Sonst nichts").
+`platform_integration_test.dart` prüft das gegen `HealthBridge.kt`: Steht im
+Manifest eine Health-Berechtigung, die der Code nie anfordert, fällt der Test.
+
+<details>
+<summary>Frühere Fassung dieser Tabelle</summary>
+
+Hier standen ursprünglich Herzfrequenz, HRV und eine Galaxy-Watch-Zeile. Beides
+war Planung, kein Zustand — sie ist nie gebaut worden, die Berechtigung stand
+aber im Manifest.
+
+| Quelle | Daten | Speist |
+|---|---|---|
+| ~~Health Connect~~ | ~~Schlafphasen, Schlafdauer, Schritte, Herzfrequenz, HRV~~ | ~~`sleepDebt`, `capacity`, `loadIndex`~~ |
+| ~~Galaxy Watch (falls vorhanden)~~ | ~~HR, HRV, Schlaf, Bewegung~~ | ~~`loadIndex`, M4 Bewegungslosigkeitserkennung~~ |
+
+</details>
 
 Alle Quellen sind **einzeln abschaltbar**. Voreinstellung: nur Health Connect und Kalender.
 Standort und Usage Stats sind opt-in — sie sind die invasivsten und liefern den geringsten

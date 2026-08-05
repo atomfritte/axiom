@@ -62,7 +62,6 @@
     <!-- Health Connect: granular, jede einzeln widerrufbar. -->
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
 
     <application
         android:label="AXIOM"

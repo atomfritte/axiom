@@ -111,7 +111,7 @@ void main() {
       final source =
           File('lib/design/widgets/capacity_line.dart').readAsStringSync();
       for (final word in ['LEICHT', 'SCHWER', 'HIER']) {
-        expect(source, contains("context.t('" + word + "')"), reason: word);
+        expect(source, contains("context.t('$word')"), reason: word);
       }
     });
   });

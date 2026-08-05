@@ -125,7 +125,10 @@ const int kExpertPort = 8787;
 typedef RuntimeResolver = Future<AxiomRuntime> Function();
 
 final class ExpertServer {
-  ExpertServer({required this.resolveRuntime, required this.onChanged});
+  ExpertServer({
+    required this.resolveRuntime,
+    required void Function() onChanged,
+  }) : _notifyApp = onChanged;
 
   /// Wird bei jeder Anfrage neu aufgelöst.
   ///
@@ -135,9 +138,34 @@ final class ExpertServer {
   final RuntimeResolver resolveRuntime;
 
   /// Meldet der App, dass sich etwas geändert hat.
-  final void Function() onChanged;
+  final void Function() _notifyApp;
+
+  /// Meldet eine Änderung — der App **und** jedem offenen Browser.
+  ///
+  /// Ein Aufruf, zwei Empfänger. Getrennt gerufen müsste jede Stelle, die
+  /// etwas ändert, an beide denken, und die eine, die es vergisst, zeigt im
+  /// Browser stumm die Zahlen von vorhin.
+  void onChanged() {
+    _notifyApp();
+    _broadcast();
+  }
 
   HttpServer? _server;
+
+  /// Offene Verbindungen zur Verbindungsanzeige der Seite.
+  ///
+  /// Sie tragen **keine** Nutzdaten — nur das Wort „changed". Siehe
+  /// [_websocket].
+  final Set<WebSocket> _sockets = {};
+
+  /// Ob die letzte Anfrage ihren Socket abgegeben hat.
+  ///
+  /// Nach einer Aufwertung zum WebSocket gehört er der Verbindung und nicht
+  /// mehr der Antwort; die Antwort danach zu schließen wäre ein Griff auf
+  /// etwas, das es nicht mehr gibt. Gesetzt in [_websocket], gelesen und
+  /// zurückgesetzt in [_serve] — dazwischen liegt kein anderer Durchlauf,
+  /// weil die Schleife eine Anfrage nach der anderen abarbeitet.
+  bool _detached = false;
 
   /// Meldet den Namen im lokalen Netz an, solange der Server laeuft.
   final _mdns = MdnsResponder();
@@ -219,6 +247,17 @@ final class ExpertServer {
     _idleStopAt = null;
     _sessions.clear();
     _pin = null;
+    // Ein Abschied mit Grund. Die Seite kann dann „Server beendet" statt
+    // „Verbindung verloren" zeigen — das eine ist Absicht, das andere ein
+    // Problem, und wer den Unterschied nicht sieht, sucht einen Fehler, den
+    // es nicht gibt.
+    final sockets = _sockets.toList();
+    _sockets.clear();
+    for (final socket in sockets) {
+      unawaited(socket
+          .close(WebSocketStatus.goingAway, 'Server beendet')
+          .catchError((Object _) {}));
+    }
     final server = _server;
     _server = null;
     _address = null;
@@ -250,15 +289,92 @@ final class ExpertServer {
         _json(request, 500,
             {'error': _authorised(request) ? '$e' : 'Verarbeitungsfehler'});
       }
+      if (_detached) {
+        // Aufgewertet: Der Socket lebt weiter, die Anfrage ist vorbei.
+        _detached = false;
+        continue;
+      }
       await request.response.close().catchError((_) {});
     }
   }
 
   /// Setzt die Leerlaufuhr zurück.
+  ///
+  /// **Nur echte Anfragen dürfen das.** Eine bestehende WebSocket-Verbindung
+  /// zählt ausdrücklich nicht als Aktivität: Sonst hielte ein Reiter, den
+  /// jemand am Freitag offen gelassen hat, den Port mit Gesundheitsdaten bis
+  /// Montag offen — genau das, wogegen die dreißig Minuten gebaut sind.
   void _touch() {
     _idleTimer?.cancel();
     _idleStopAt = DateTime.now().add(kExpertIdleTimeout);
     _idleTimer = Timer(kExpertIdleTimeout, stop);
+  }
+
+  // ── Der Kanal für Änderungen ──────────────────────────────────────────
+
+  /// Ein Wort, keine Nutzdaten.
+  ///
+  /// Über diesen Kanal geht ausschließlich „es hat sich etwas geändert".
+  /// Die Daten holt die Seite über die bestehenden Routen, die geprüft
+  /// sind. Ein zweiter Weg an dieselben Daten wäre eine zweite Stelle, an
+  /// der eine Prüfung fehlen kann.
+  void _broadcast() {
+    for (final socket in _sockets.toList()) {
+      try {
+        socket.add('changed');
+      } on Object {
+        // Eine Verbindung, die nichts mehr annimmt, trägt sich über
+        // `onDone` ohnehin selbst aus.
+      }
+    }
+  }
+
+  /// Die Aufwertung zum WebSocket — der Weg, auf dem die Seite erfährt,
+  /// dass sie nachladen soll, und dass es den Server noch gibt.
+  ///
+  /// **Warum überhaupt.** Fällt das Telefon aus dem WLAN, geht in den
+  /// Ruhezustand oder schaltet sich nach dreißig Minuten Leerlauf ab, zeigte
+  /// der Browser bisher weiter Zahlen — und man hielt sie für aktuell. Eine
+  /// Oberfläche, die sichtbar getrennt ist, ist besser als eine, die falsch
+  /// ist und richtig aussieht.
+  ///
+  /// **Die Richtung ist alles.** Der Browser verbindet sich hierher; AXIOM
+  /// ruft nichts auf (ADR-0005). Eine selbst aufgebaute Verbindung bleibt im
+  /// App-Code verboten und wird von `language_test.dart` gefangen — hier
+  /// wird eine angenommen, nicht aufgebaut.
+  ///
+  /// **Hinter der Sitzungsprüfung.** Ein Kanal, der Zustandsänderungen
+  /// meldet, ist ein Datenkanal, auch wenn über ihn nur ein Wort geht: Wer
+  /// mithört, weiß, wann jemand etwas erfasst hat.
+  ///
+  /// **Und ohne `_touch()`.** Siehe dort — eine offene Verbindung ist keine
+  /// Nutzung, und das, was über sie hereinkommt, auch nicht.
+  Future<void> _websocket(HttpRequest request) async {
+    if (!_authorised(request)) {
+      return _json(request, 401, {'error': 'PIN erforderlich'});
+    }
+    if (!WebSocketTransformer.isUpgradeRequest(request)) {
+      return _json(request, 400, {
+        'error': 'Dieser Weg ist eine Aufwertung zum WebSocket, keine Abfrage',
+      });
+    }
+
+    final socket = await WebSocketTransformer.upgrade(request);
+    _detached = true;
+    // Damit ein stiller Abbruch — Telefon im Ruhezustand, WLAN weg — nicht
+    // als bestehende Verbindung stehen bleibt. Ein Ping ist kein Aufruf: Er
+    // läuft in einer Verbindung, die der Browser aufgebaut hat.
+    socket.pingInterval = const Duration(seconds: 30);
+    _sockets.add(socket);
+    socket.listen(
+      // Der Browser hat auf diesem Weg nichts zu sagen. Alles, was er will,
+      // geht über die geprüften Routen; Ankommendes wird verworfen — und
+      // rührt die Leerlaufuhr nicht an.
+      (_) {},
+      onDone: () => _sockets.remove(socket),
+      onError: (Object _) => _sockets.remove(socket),
+      cancelOnError: true,
+    );
   }
 
   // ── Anfragen ──────────────────────────────────────────────────────────
@@ -272,6 +388,49 @@ final class ExpertServer {
     '/font/mono-400.ttf': 'assets/fonts/IBMPlexMono-Regular.ttf',
     '/font/mono-500.ttf': 'assets/fonts/IBMPlexMono-Medium.ttf',
   };
+
+  /// Die Marke im Reiter — dieselben zwei Striche wie im Kopf der Seite.
+  ///
+  /// **Warum eine ausgelieferte Datei und kein `data:`-URI.** Die
+  /// Sicherheitsrichtlinie der Seite lässt nur `'self'` zu. Ein `data:`-URI
+  /// wäre über `img-src` zwar möglich, stünde aber im Markup und ließe sich
+  /// nicht zwischenspeichern — eine Datei ist der geradere Weg, nach dem
+  /// Vorbild der Schriften.
+  ///
+  /// **Warum ohne Sitzung.** Der Browser holt das Symbol, bevor sich jemand
+  /// angemeldet hat. Hinter der Prüfung bliebe im Reiter ein leeres Blatt
+  /// stehen — und zu verbergen gibt es hier nichts: zwei Striche, keine
+  /// Daten.
+  ///
+  /// **Warum drei Farbpaare.** Der Reiter kann hell oder dunkel sein, und
+  /// welches von beidem gilt, weiß die Seite nicht. Die Voreinstellung ist
+  /// deshalb das Paar, das auf beiden Hintergründen lesbar bleibt —
+  /// gedämpftes Grau und das tiefe Bernstein; die beiden Fassungen darunter
+  /// schärfen nach, wo der Browser die Frage beantwortet. Ohne diesen
+  /// Mittelweg stünde bei einem Browser, der `prefers-color-scheme` im
+  /// Symbol nicht auswertet, Beinahe-Schwarz auf schwarzem Grund.
+  ///
+  /// Alle Werte stammen aus `tokens.dart`, damit hier keine Farbe entsteht,
+  /// die nur an dieser Stelle existiert und still weiteraltert.
+  /// Die Farbe steht dabei als Attribut am Strich und nicht in einer
+  /// Variablen: Wer `var()` in einem Symbol nicht auflöst, zeichnet sonst
+  /// gar nichts — und ein unsichtbares Symbol ist schlechter als ein
+  /// mittelmäßig kontrastiertes. Die Vorlage darunter schärft nach, wo die
+  /// Frage beantwortet wird.
+  static const _favicon = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" fill="none">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .line { stroke: #ECEAE4 } .bar { stroke: #E8A33D }
+    }
+    @media (prefers-color-scheme: light) {
+      .line { stroke: #15181B } .bar { stroke: #9A6510 }
+    }
+  </style>
+  <path class="line" d="M3 13h7M12 13h7" stroke="#7A848B" stroke-width="2"/>
+  <path class="bar" d="M10 3v16" stroke="#B8761F" stroke-width="4"/>
+</svg>
+''';
 
   // ── Nutzerdokumentation: drei feste Listen statt drei Pfadbauten ─────
   //
@@ -349,6 +508,24 @@ final class ExpertServer {
         ..write(html);
       return;
     }
+
+    // Das Symbol im Reiter. Ohne Sitzung, und ohne `_touch()`: Ein Browser,
+    // der beim Wiederherstellen eines Reiters sein Symbol nachlädt, hat
+    // niemanden davorsitzen — das als Nutzung zu zählen verschöbe die
+    // Leerlaufgrenze ohne Anlass.
+    if (path == '/favicon.svg') {
+      request.response
+        ..statusCode = 200
+        ..headers.contentType = ContentType('image', 'svg+xml', charset: 'utf-8')
+        ..headers.set('Cache-Control', 'public, max-age=604800')
+        ..headers.set('X-Content-Type-Options', 'nosniff')
+        ..write(_favicon);
+      return;
+    }
+
+    // Der Kanal für die Verbindungsanzeige. Mit eigener Sitzungsprüfung,
+    // weil er als einziger Weg ausdrücklich nicht `_touch()` ruft.
+    if (path == '/ws') return _websocket(request);
 
     // Dieselben Schriften wie auf dem Telefon.
     //

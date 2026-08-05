@@ -5,6 +5,7 @@
 /// offenen Scheunentor unterscheidet. Genau die stehen hier.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -1362,6 +1363,153 @@ ${english ? '''  rationale_en: >
         expect(row.containsKey('children'), isFalse);
         expect(row.containsKey('events'), isFalse);
       }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Der Kanal, über den die Seite merkt, dass es den Server noch gibt.
+  //
+  // Die Richtung ist der ganze Punkt: Der Browser verbindet sich hierher,
+  // AXIOM ruft nichts auf (ADR-0005). Und eine bestehende Verbindung ist
+  // keine Nutzung — sonst hielte ein vergessener Reiter den Port mit
+  // Gesundheitsdaten offen, bis jemand das Telefon ausschaltet.
+  // ──────────────────────────────────────────────────────────────────────
+
+  /// Was der Browser tut: eine Aufwertung anfragen. Das Zertifikat wird
+  /// dabei geprüft wie bei jedem anderen Aufruf auch.
+  Future<WebSocket> connect({String? cookie}) {
+    final client = HttpClient()
+      ..badCertificateCallback = (cert, host, port) =>
+          _fingerprint(cert) == server.status.fingerprint;
+    return WebSocket.connect(
+      'wss://127.0.0.1:$port/ws',
+      headers: {'cookie': ?cookie},
+      customClient: client,
+    );
+  }
+
+  group('Der Kanal für Änderungen', () {
+    test('ohne Sitzung gibt es ihn nicht', () async {
+      // Ein Kanal, der Zustandsänderungen meldet, ist ein Datenkanal — auch
+      // wenn über ihn nur ein Wort geht. Wer mithört, weiß, wann jemand
+      // etwas erfasst hat.
+      await expectLater(connect(), throwsA(anything));
+      expect((await call('GET', '/ws')).statusCode, 401);
+    });
+
+    test('ohne Aufwertung ist der Weg keine Abfrage', () async {
+      // Sonst wäre eine 200 mit leerem Rumpf die Antwort, und im Browser
+      // sähe eine nicht zustande gekommene Verbindung aus wie eine.
+      final cookie = await login(server.status.pin!);
+      expect((await call('GET', '/ws', cookie: cookie)).statusCode, 400);
+    });
+
+    test('eine Änderung meldet sich als Signal, nicht als Inhalt', () async {
+      final cookie = await login(server.status.pin!);
+      final socket = await connect(cookie: cookie);
+      final messages = <Object?>[];
+      socket.listen(messages.add);
+
+      await call('POST', '/api/capture',
+          cookie: cookie, body: {'text': 'Steuerunterlagen sortieren'});
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      expect(messages, ['changed']);
+      // Kein Wort aus der Erfassung geht diesen Weg. Die Daten holt die
+      // Seite über die geprüften Routen; ein zweiter Weg an dieselben Daten
+      // wäre eine zweite Stelle, an der eine Prüfung fehlen kann.
+      expect(messages.join(), isNot(contains('Steuer')));
+      await socket.close();
+    });
+
+    test('eine offene Verbindung verlängert den Leerlauf nicht', () async {
+      // Die eigentliche Falle. Zählte die Verbindung als Aktivität, hielte
+      // ein Reiter, den jemand am Freitag offen gelassen hat, den Port bis
+      // Montag offen — genau das, wogegen die dreißig Minuten gebaut sind.
+      final cookie = await login(server.status.pin!);
+      final before = server.status.idleStopAt;
+      expect(before, isNotNull);
+
+      final socket = await connect(cookie: cookie);
+      // Auch nicht, was über die Verbindung hereinkommt.
+      socket.add('hallo');
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(server.status.idleStopAt, before,
+          reason: 'Eine bestehende Verbindung ist keine Nutzung');
+
+      // Gegenprobe: Eine echte Anfrage verschiebt die Grenze sehr wohl —
+      // sonst prüfte der Test nur, dass gar nichts passiert.
+      await call('GET', '/api/state', cookie: cookie);
+      expect(server.status.idleStopAt, isNot(before));
+      await socket.close();
+    });
+
+    test('beim Beenden kommt ein Abschied mit Grund', () async {
+      // „Server beendet" ist etwas anderes als „Verbindung verloren": Das
+      // eine ist Absicht, das andere ein Problem. Wer den Unterschied nicht
+      // sieht, sucht einen Fehler, den es nicht gibt.
+      final cookie = await login(server.status.pin!);
+      final socket = await connect(cookie: cookie);
+      final closed = Completer<void>();
+      socket.listen((_) {}, onDone: closed.complete);
+
+      await server.stop();
+      await closed.future.timeout(const Duration(seconds: 5));
+
+      expect(socket.closeCode, WebSocketStatus.goingAway);
+      expect(socket.closeReason, 'Server beendet');
+    });
+  });
+
+  group('Das Symbol im Reiter', () {
+    test('kommt ohne Sitzung — sonst bliebe dort ein leeres Blatt', () async {
+      // Der Browser holt es, bevor sich jemand angemeldet hat. Zu verbergen
+      // gibt es nichts: zwei Striche, keine Daten.
+      final res = await call('GET', '/favicon.svg');
+      expect(res.statusCode, 200);
+      expect(res.headers.contentType?.mimeType, 'image/svg+xml');
+      expect(await res.transform(utf8.decoder).join(), contains('<svg'));
+    });
+
+    test('und verschiebt die Leerlaufgrenze nicht', () async {
+      // Ein Reiter, der beim Wiederherstellen sein Symbol nachlädt, hat
+      // niemanden davorsitzen.
+      final before = server.status.idleStopAt;
+      await call('GET', '/favicon.svg');
+      expect(server.status.idleStopAt, before);
+    });
+
+    test('die Seite verweist darauf', () {
+      final page = File('assets/expert/index.html').readAsStringSync();
+      expect(page, contains('rel="icon"'));
+      expect(page, contains('/favicon.svg'));
+    });
+
+    test('auch im Symbol keine Farbe, die der Kern nicht kennt', () {
+      // Dieselbe Zusage wie für die Palette der Seite. Das Symbol liegt im
+      // Server statt in tokens.dart, und genau solche Stellen altern still
+      // weiter, wenn niemand hinsieht.
+      final source = File('lib/server/expert_server.dart').readAsStringSync();
+      final svg = RegExp(r"static const _favicon = '''(.*?)'''", dotAll: true)
+          .firstMatch(source)
+          ?.group(1);
+      expect(svg, isNotNull);
+
+      final tokens = File('lib/design/tokens.dart').readAsStringSync();
+      final known = RegExp(r'Color\(0xFF([0-9A-Fa-f]{6})\)')
+          .allMatches(tokens)
+          .map((m) => m.group(1)!.toUpperCase())
+          .toSet();
+      final used = RegExp(r'#([0-9A-Fa-f]{6})')
+          .allMatches(svg!)
+          .map((m) => m.group(1)!.toUpperCase())
+          .toSet();
+      expect(used, isNotEmpty);
+      expect(used.difference(known), isEmpty,
+          reason: 'Diese Farben stehen nur im Symbol');
+      // Beide Fassungen: Der Reiter kann hell oder dunkel sein, und welches
+      // von beidem gilt, weiß die Seite nicht.
+      expect(svg, contains('prefers-color-scheme: dark'));
     });
   });
 }
