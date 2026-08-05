@@ -1607,4 +1607,10 @@ const Map<String, String> kEnglish = {
   'Jede offene Aufgabe wartet auf einen Blocker, der selbst noch aussteht. Die Aufgabenliste zeigt, worauf.':
       'Every open task waits on a blocker that is itself still open. The task list shows on what.',
   'Ansehen, was wartet': 'See what is waiting',
+  'LEICHT':
+      'EASY',
+  'HIER':
+      'HERE',
+  'SCHWER':
+      'HARD',
 };

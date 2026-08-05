@@ -70,6 +70,52 @@ String _unescape(String source) => source
     .replaceAll(r'\$', r'$');
 
 void main() {
+  group('Kein Text ohne Übersetzung', () {
+    test('kein nacktes Literal in einem Text-Widget', () {
+      // Der Vollständigkeitstest prüft jeden `context.t(...)`-Aufruf. Was
+      // er nicht sieht, ist ein Literal, das gar nicht erst durch die
+      // Übersetzung läuft: `Text('Verstanden')` stand so im Quelltext und
+      // erschien in der englischen Oberfläche auf Deutsch, ohne dass
+      // irgendetwas rot wurde.
+      final pattern = RegExp("Text\\(\\s*'([^']{2,})'");
+      final harmless = RegExp(r'^[\d\s.,:/+×·—–-]+$');
+      final offenders = <String>[];
+      for (final dir in ['lib/screens', 'lib/design']) {
+        for (final file in Directory(dir)
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'))) {
+          final source = file.readAsStringSync();
+          for (final match in pattern.allMatches(source)) {
+            final literal = match.group(1)!;
+            if (harmless.hasMatch(literal)) continue;
+            // Interpolationen sind Werte, keine Saetze: `'$e'`,
+            // `'${task.activationEnergy}/10'`. Uebersetzt wird der Rahmen,
+            // in dem sie stehen — und der laeuft ohnehin durch `context.t`.
+            if (literal.contains(r'$')) continue;
+            offenders.add('${file.path}: "$literal"');
+          }
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'Diese Texte laufen nicht durch die Übersetzung:\n'
+              '${offenders.join("\n")}');
+    });
+
+    test('auch was ein Painter zeichnet, ist übersetzt', () {
+      // Ein `CustomPainter` hat keinen `BuildContext` und kann `context.t`
+      // nicht aufrufen — die Beschriftungen der Kapazitätslinie standen
+      // deshalb fest auf Deutsch mitten in einer englischen Oberfläche.
+      // Sie kommen jetzt von außen; dieser Test hält fest, dass es so
+      // bleibt.
+      final source =
+          File('lib/design/widgets/capacity_line.dart').readAsStringSync();
+      for (final word in ['LEICHT', 'SCHWER', 'HIER']) {
+        expect(source, contains("context.t('" + word + "')"), reason: word);
+      }
+    });
+  });
+
   group('Sprache beim allerersten Start', () {
     test('kommt vom Gerät, nicht aus einer Voreinstellung', () {
       // Vorher stand hier fest Deutsch. Auf einem englisch eingestellten

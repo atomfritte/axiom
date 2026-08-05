@@ -44,3 +44,8 @@ doc/api/
 .DS_Store
 *.log
 *.swp
+
+# Material fuer Beitraege und Vorstellungen. Nichts davon gehoert ins Repo:
+# Screenshots veralten, Entwuerfe sind privat, und beides waere Ballast
+# in jeder Klonung.
+/promo/

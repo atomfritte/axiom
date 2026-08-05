@@ -81,6 +81,11 @@ final class CapacityLine extends StatelessWidget {
             curve: Motion.instrument,
             builder: (context, threshold, _) => CustomPaint(
               painter: _CapacityLinePainter(
+                labels: (
+                  easy: context.t('LEICHT'),
+                  here: context.t('HIER'),
+                  hard: context.t('SCHWER'),
+                ),
                 threshold: threshold,
                 tasks: tasks,
                 highlightTaskId: highlightTaskId,
@@ -124,13 +129,24 @@ final class CapacityLine extends StatelessWidget {
   }
 }
 
+/// Die drei Beschriftungen der Achse.
+///
+/// Sie kommen von aussen, weil ein `CustomPainter` keinen `BuildContext`
+/// hat — und ohne Kontext gibt es keine Sprache. Fest verdrahtet standen
+/// hier drei deutsche Woerter mitten in einer sonst englischen Oberflaeche,
+/// und kein Test konnte das sehen: Der i18n-Test sucht `context.t(...)`,
+/// und genau das war hier nicht moeglich.
+typedef CapacityLabels = ({String easy, String here, String hard});
+
 final class _CapacityLinePainter extends CustomPainter {
+  final CapacityLabels labels;
   final double threshold;
   final List<Task> tasks;
   final String? highlightTaskId;
   final AxiomPalette palette;
 
   const _CapacityLinePainter({
+    required this.labels,
     required this.threshold,
     required this.tasks,
     required this.highlightTaskId,
@@ -242,12 +258,12 @@ final class _CapacityLinePainter extends CustomPainter {
       painter.paint(canvas, Offset(dx, _axisY + 12));
     }
 
-    label('LEICHT', _padX, palette.inkFaint);
-    label('SCHWER', size.width - _padX, palette.inkFaint,
+    label(labels.easy, _padX, palette.inkFaint);
+    label(labels.hard, size.width - _padX, palette.inkFaint,
         align: TextAlign.right);
     // Mittige Beschriftung nur, wenn genug Platz ist.
     if (thresholdX > 78 && thresholdX < size.width - 78) {
-      label('HIER', thresholdX, palette.signal, align: TextAlign.center);
+      label(labels.here, thresholdX, palette.signal, align: TextAlign.center);
     }
   }
 

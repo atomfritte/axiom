@@ -414,7 +414,9 @@ class _DecisionCard extends ConsumerWidget {
                     await runtime.respondTo(decision, DecisionResponse.followed);
                     refreshAxiom(ref);
                   },
-                  child: Text(isCheckin ? context.t('Check-in machen') : 'Verstanden'),
+                  child: Text(isCheckin
+                      ? context.t('Check-in machen')
+                      : context.t('Verstanden')),
                 ),
               ),
               const SizedBox(width: Space.md),
