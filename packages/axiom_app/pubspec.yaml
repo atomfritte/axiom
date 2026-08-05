@@ -34,6 +34,20 @@ flutter:
   assets:
     - assets/rules/
     - assets/expert/
+    # Die Hilfe. Verzeichnisweise, damit ein neues Kapitel nur eine Datei
+    # ist und kein Eintrag hier — vergessene Eintraege ergaeben eine Hilfe,
+    # die es gibt und die niemand findet.
+    - assets/help/de/
+    - assets/help/en/
+    - assets/help/img/
+    # Die Schriftlizenz muss die Schriften begleiten.
+    #
+    # IBM Plex steht unter der SIL Open Font License, und die verlangt beim
+    # Weitergeben, dass die Lizenz mitgeht. Flutter bindet Schriften unter
+    # `fonts:` ein und nimmt eine Textdatei daneben nicht mit — beim
+    # Verteilen der APK waere das eine Lizenzverletzung, die niemandem
+    # auffaellt, weil die App laeuft.
+    - assets/fonts/IBMPlex-OFL.txt
 
   fonts:
     - family: PlexSans

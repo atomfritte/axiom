@@ -50,7 +50,8 @@ class MainActivity : FlutterActivity() {
         const val REQ_NOTES_ROLE = 8803
         const val REQ_SPEECH = 8804
 
-        data class ChannelSpec(val id: String, val name: String, val importance: Int)
+        /** [texts] ist der Schluesselpraefix in [AxiomTexts], nicht der Text. */
+        data class ChannelSpec(val id: String, val texts: String, val importance: Int)
 
         /**
          * Ein Benachrichtigungskanal je Eingriffstiefe.
@@ -58,27 +59,59 @@ class MainActivity : FlutterActivity() {
          * schaltet im Zweifel alles stumm.
          */
         val CHANNELS = listOf(
-            ChannelSpec("axiom_info", "Hinweise", NotificationManager.IMPORTANCE_MIN),
-            ChannelSpec("axiom_nudge", "Leise Anstöße", NotificationManager.IMPORTANCE_LOW),
-            ChannelSpec("axiom_intervene", "Interventionen", NotificationManager.IMPORTANCE_DEFAULT),
-            ChannelSpec("axiom_enforce", "Verbindliche Regeln", NotificationManager.IMPORTANCE_HIGH),
+            ChannelSpec("axiom_info", "channel.info", NotificationManager.IMPORTANCE_MIN),
+            ChannelSpec("axiom_nudge", "channel.nudge", NotificationManager.IMPORTANCE_LOW),
+            ChannelSpec("axiom_intervene", "channel.intervene", NotificationManager.IMPORTANCE_DEFAULT),
+            ChannelSpec("axiom_enforce", "channel.enforce", NotificationManager.IMPORTANCE_HIGH),
         )
 
+        /**
+         * Legt die Kanaele an — und benennt sie um, wenn sie schon da sind.
+         *
+         * **Was `createNotificationChannel` bei einem vorhandenen Kanal
+         * wirklich tut.** Nachgesehen, weil davon abhaengt, ob ein
+         * Sprachwechsel ueberhaupt ankommt: Name, Beschreibung und Gruppe
+         * werden uebernommen — die Dokumentation nennt den Sprachwechsel
+         * ausdruecklich als den vorgesehenen Anlass dafuer. Die Wichtigkeit
+         * nur, wenn sie *gesenkt* wird und der Nutzer den Kanal nicht selbst
+         * angefasst hat. **Alles andere wird ignoriert**: Ton, Vibration,
+         * Abzeichen, `setBypassDnd`. Wer also spaeter am Klangverhalten etwas
+         * aendern will, braucht eine neue Kanal-ID; fuer Text genuegt dieser
+         * Aufruf.
+         */
         fun createChannels(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val manager = context.getSystemService(NotificationManager::class.java)
             CHANNELS.forEach { spec ->
-                val channel = NotificationChannel(spec.id, spec.name, spec.importance)
-                channel.description = when (spec.id) {
-                    "axiom_info" -> "Erscheint nur im Rückblick."
-                    "axiom_nudge" -> "Still, wegwischbar."
-                    "axiom_intervene" -> "Sichtbar, erwartet eine Antwort."
-                    else -> "Nur für Regeln, die du selbst verbindlich gesetzt hast."
-                }
+                val channel = NotificationChannel(
+                    spec.id,
+                    AxiomTexts.get(context, "${spec.texts}.name"),
+                    spec.importance,
+                )
+                channel.description =
+                    AxiomTexts.get(context, "${spec.texts}.description")
                 // Nur die verbindliche Stufe darf Ruhezeiten durchbrechen.
+                // Wirkt ausschliesslich beim ersten Anlegen — siehe oben.
                 channel.setBypassDnd(spec.id == "axiom_enforce")
                 manager.createNotificationChannel(channel)
             }
+        }
+
+        /**
+         * Schreibt die Kanaltexte neu, nachdem die App die Sprache geliefert
+         * hat.
+         *
+         * Die Kanaele entstehen frueh — beim Start, nach einem Neustart, beim
+         * ersten Alarm — und damit lange bevor Dart sagen kann, welche
+         * Sprache gilt. Bis dahin greift `res/values(-de)/strings.xml`, also
+         * die Sprache des Geraets. Sobald die App laeuft, gewinnt die in der
+         * App gewaehlte.
+         */
+        fun renameChannels(context: Context) {
+            createChannels(context)
+            PresenceService.createChannel(context)
+            LiveSlotService.createChannel(context)
+            ExpertService.createChannel(context)
         }
     }
 
@@ -141,10 +174,7 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        createChannels(this)
-        PresenceService.createChannel(this)
-        LiveSlotService.createChannel(this)
-        ExpertService.createChannel(this)
+        renameChannels(this)
         // Muss bei jedem Start erneut angemeldet werden: Das System raeumt
         // langlebige Shortcuts auf, wenn die App laenger nicht lief.
         ShareTargets.publish(this)
@@ -152,6 +182,33 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // Alles, was das System anzeigt, kommt von der Dart-Seite
+                    // — sie kennt die gewaehlte Sprache, Kotlin nicht.
+                    "applyTexts" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val texts = (call.argument<Map<String, Any?>>("texts")
+                            ?: emptyMap())
+                            .mapValues { it.value?.toString().orEmpty() }
+                        val changed = AxiomTexts.apply(
+                            this,
+                            call.argument<String>("language").orEmpty(),
+                            texts,
+                        )
+                        // Nur bei einem Wechsel: Kanalnamen neu schreiben und
+                        // das Widget neu zeichnen. Der Aufruf laeuft nach
+                        // jedem Auswertungszyklus.
+                        if (changed) {
+                            renameChannels(this)
+                            AxiomWidgetProvider.redraw(this)
+                            // Das Teilen-Ziel traegt seine Beschriftung mit
+                            // sich; ohne dieses erneute Anmelden stuende sie
+                            // bis zum naechsten App-Start in der alten
+                            // Sprache im Teilen-Blatt.
+                            ShareTargets.publish(this)
+                        }
+                        result.success(true)
+                    }
+
                     "permissionStatus" -> result.success(permissionStatus())
 
                     "requestExactAlarm" -> result.success(requestExactAlarm())
@@ -554,11 +611,7 @@ class MainActivity : FlutterActivity() {
     private fun requestPinWidget(): Map<String, Any?> {
         val manager = getSystemService(AppWidgetManager::class.java)
         if (!manager.isRequestPinAppWidgetSupported) {
-            return failure(
-                "Dieser Startbildschirm nimmt keine Anfrage entgegen. Dann " +
-                    "über die Widget-Auswahl: lange auf den Homescreen " +
-                    "tippen → Widgets → AXIOM."
-            )
+            return failure("reason.widget.unsupported")
         }
         return try {
             val requested = manager.requestPinAppWidget(
@@ -567,9 +620,9 @@ class MainActivity : FlutterActivity() {
                 null,
             )
             if (requested) success()
-            else failure("Der Startbildschirm hat die Anfrage abgelehnt.")
+            else failure("reason.widget.refused")
         } catch (e: Throwable) {
-            failure("Anfrage fehlgeschlagen: ${e.javaClass.simpleName}")
+            failure("reason.widget.failed", e.javaClass.simpleName)
         }
     }
 
@@ -591,7 +644,7 @@ class MainActivity : FlutterActivity() {
      */
     private fun requestNotesRole(): Map<String, Any?> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            return failure("Die Rolle „Notiz-App\" gibt es erst ab Android 14.")
+            return failure("reason.notes.since14")
         }
         return try {
             val roles = getSystemService(RoleManager::class.java)
@@ -600,13 +653,7 @@ class MainActivity : FlutterActivity() {
                 // Die Standard-Apps zu oeffnen waere hier eine Sackgasse:
                 // Ohne die Rolle gibt es dort keinen Eintrag „Notizen", und
                 // man sucht in einem Menue nach etwas, das es nicht gibt.
-                return failure(
-                    "Dieses Gerät bietet die Rolle „Notiz-App\" nicht an — " +
-                        "Samsung schaltet sie in One UI nicht frei. Der Weg " +
-                        "zum Stift führt hier über das Air-Command-Menü: " +
-                        "Einstellungen → Erweiterte Funktionen → S Pen → " +
-                        "Air Command → Verknüpfungen → AXIOM."
-                )
+                return failure("reason.notes.unavailable")
             }
             startActivityForResult(
                 roles.createRequestRoleIntent(RoleManager.ROLE_NOTES),
@@ -614,7 +661,7 @@ class MainActivity : FlutterActivity() {
             )
             success()
         } catch (e: Throwable) {
-            failure("Der Systemdialog ließ sich nicht öffnen: ${e.javaClass.simpleName}")
+            failure("reason.notes.dialog", e.javaClass.simpleName)
         }
     }
 
@@ -629,14 +676,18 @@ class MainActivity : FlutterActivity() {
     private fun success(): Map<String, Any?> = mapOf("ok" to true)
 
     /**
-     * Fehlschlag mit Grund.
+     * Fehlschlag mit Grund — als Schluessel, nicht als Satz.
      *
-     * Jeder verschluckte Fehler wird auf dem Geraet zu „passiert nichts" —
-     * und „passiert nichts" ist von aussen nicht diagnostizierbar. Lieber
-     * ein unschoener Satz als ein stummer Knopf.
+     * Jeder verschluckte Fehler wird auf dem Geraet zu „passiert nichts", und
+     * „passiert nichts" ist von aussen nicht diagnostizierbar. Lieber ein
+     * unschoener Satz als ein stummer Knopf.
+     *
+     * Den Satz baut aber die Dart-Seite: Sie kennt die gewaehlte Sprache,
+     * Kotlin nicht. Hier steht nur der Schluessel aus `SystemTexts.reasons`
+     * und, wo noetig, der Wert fuer `{0}` — meist der Name der Ausnahme.
      */
-    private fun failure(reason: String): Map<String, Any?> =
-        mapOf("ok" to false, "reason" to reason)
+    private fun failure(reason: String, vararg args: String): Map<String, Any?> =
+        mapOf("ok" to false, "reason" to reason, "reasonArgs" to args.toList())
 
     private fun notesRoleHeld(): Boolean = try {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
@@ -726,12 +777,21 @@ class MainActivity : FlutterActivity() {
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
             )
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale ?: "de-DE")
+            // Ohne Vorgabe die Sprache des Geraets. Fest "de-DE" hiess: Wer
+            // die App auf Englisch stellt, diktiert weiter gegen eine
+            // deutsche Erkennung — und bekommt Wortsalat zurueck.
+            .putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE,
+                locale ?: java.util.Locale.getDefault().toLanguageTag(),
+            )
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             // Offline bevorzugen, wenn ein Sprachpaket da ist: schneller und
             // ohne dass Gesprochenes das Geraet verlaesst.
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Sprich einfach.")
+            .putExtra(
+                RecognizerIntent.EXTRA_PROMPT,
+                AxiomTexts.get(this, "speech.prompt"),
+            )
         return try {
             pendingSpeech = result
             startActivityForResult(intent, REQ_SPEECH)

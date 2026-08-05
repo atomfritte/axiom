@@ -103,11 +103,12 @@ object HealthBridge {
             HealthConnectClient.SDK_UNAVAILABLE
         }
         if (sdk != HealthConnectClient.SDK_AVAILABLE) {
+            // Nur der Schluessel und der Rohwert: Den Satz baut die
+            // Dart-Seite, die kennt die gewaehlte Sprache.
             return mapOf(
                 "ok" to false,
-                "reason" to "Health Connect meldet sich als nicht nutzbar " +
-                    "(Status $sdk). Ohne den Dienst gibt es nichts " +
-                    "freizugeben.",
+                "reason" to "reason.health.unusable",
+                "reasonArgs" to listOf(sdk.toString()),
             )
         }
         // Ab Android 14 sind das gewoehnliche Laufzeitberechtigungen. Der
@@ -123,8 +124,8 @@ object HealthBridge {
             } catch (e: Throwable) {
                 mapOf(
                     "ok" to false,
-                    "reason" to "Die Berechtigungsabfrage ließ sich nicht " +
-                        "öffnen: ${e.javaClass.simpleName}",
+                    "reason" to "reason.health.dialog",
+                    "reasonArgs" to listOf(e.javaClass.simpleName),
                 )
             }
         }
@@ -138,10 +139,8 @@ object HealthBridge {
         } catch (e: Throwable) {
             mapOf(
                 "ok" to false,
-                "reason" to "Health Connect ist installiert, öffnet aber " +
-                    "keinen Freigabedialog (${e.javaClass.simpleName}). In " +
-                    "den Systemeinstellungen unter Health Connect lässt sich " +
-                    "AXIOM dort von Hand freigeben.",
+                "reason" to "reason.health.silent",
+                "reasonArgs" to listOf(e.javaClass.simpleName),
             )
         }
     }

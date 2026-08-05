@@ -5,7 +5,7 @@
 A deterministic, local-first rule engine for self-regulation.
 An exocortex for a highly compensated ADHD profile.
 
-**Private. One user. One device. Not a product.**
+**Private. One user. One device.**
 
 ---
 
@@ -23,6 +23,29 @@ measure state, apply rules you wrote yourself, output **exactly one** next actio
 reasoning and the rule ID that produced it.
 
 The measure of success is not "more done". It is **the same output at lower cognitive cost**.
+
+## What that disclaimer means in practice
+
+The banner above is short because it has to be read. Here is what it
+actually commits to, so it can be checked rather than believed:
+
+**It is a task list.** With rules, built around how a neurodivergent brain
+behaves — but a task list. It does not diagnose, screen, treat, or monitor.
+
+**No clinical anything.** No thresholds from a manual, no assessment score,
+no claim that using it improves a condition. `capacity` and `load_index`
+are arithmetic over numbers you typed in yourself. They describe a state
+inside this app and mean nothing outside it.
+
+**It never advises on medication.** The med module, if you switch it on,
+writes down what you tell it. It does not suggest a dose, a time, or a
+change — not once, under any circumstances. That is enforced in the code
+and in the project's own rules, not left to good intentions.
+
+**It knows when to step back.** The one opinion AXIOM has about your health
+is a visible note, after fourteen days at the highest load level,
+suggesting a conversation with a person might be worth more than another
+rule.
 
 ## What makes it different
 
@@ -352,5 +375,11 @@ tools/bin/make-icons.sh
 
 ## Licence
 
-None yet. This is a personal project published for reading, not a package to depend on. If you
-want to use something from it, ask.
+[PolyForm Strict 1.0.0](LICENSE.md) — deliberately not an open-source licence.
+
+You may read this code and run it privately for noncommercial purposes. You may not redistribute
+it and you may not build your own thing on top of it. Copyright and every commercial right stay
+with the author.
+
+Third-party components keep their own licences and all permit this use; the obligations, and the
+one that needed action, are listed in [THIRD-PARTY-LICENCES.md](THIRD-PARTY-LICENCES.md).

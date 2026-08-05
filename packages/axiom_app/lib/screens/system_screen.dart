@@ -27,6 +27,7 @@ import '../state/runtime.dart';
 import 'channels_screen.dart';
 import 'check_screen.dart';
 import 'expert_screen.dart';
+import 'help_screen.dart';
 import 'rule_editor_screen.dart';
 import 'signal_screen.dart';
 import 'tasks_screen.dart';
@@ -174,6 +175,15 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
               ),
               const SizedBox(height: Space.sm),
               _LinkRow(
+                icon: Icons.help_outline,
+                label: context.t('Hilfe'),
+                detail: context.t(
+                  'Wozu jeder Bildschirm da ist und wie eine Regel entscheidet',
+                ),
+                target: const HelpScreen(),
+              ),
+              const SizedBox(height: Space.sm),
+              _LinkRow(
                 icon: Icons.lock_outline,
                 label: context.t('Daten'),
                 detail: context.t(
@@ -224,8 +234,14 @@ class _BudgetCard extends StatelessWidget {
           const SizedBox(height: Space.md),
           Text(
             over
+                // Tagesweise, nicht bis zum nächsten Review: Genau das
+                // prüft `AxiomRuntime.isConfigLocked()`, und ein Deckel, den
+                // man vorhersagen kann, ist einer, um den herum man plant.
+                // „Morgen wieder" ist lernbar, „irgendwann nach dem nächsten
+                // Rückblick" nicht — und ein unlernbarer Deckel wird
+                // bekämpft statt angenommen (R7).
                 ? context.t(
-                    'Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.',
+                    'Budget aufgebraucht. Änderungen am Regelwerk sind bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.',
                   )
                 : context.t(
                     'Zeit, die du im System verbringst statt im Leben. Erfassen zählt nicht mit.',

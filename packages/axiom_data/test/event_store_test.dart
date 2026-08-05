@@ -232,6 +232,58 @@ void main() {
     });
   });
 
+  group('Freigegebene Browser', () {
+    test('eine Freigabe gilt, bis sie abläuft', () async {
+      final now = DateTime.utc(2026, 8, 5, 10);
+      await store.trustBrowser('hash-a',
+          until: now.add(const Duration(days: 3)), now: now, label: 'Büro');
+
+      expect(await store.isTrustedBrowser('hash-a', now), isTrue);
+      expect(
+        await store.isTrustedBrowser(
+            'hash-a', now.add(const Duration(days: 2, hours: 23))),
+        isTrue,
+      );
+      // Eine Freigabe ohne Ende waere eine Entscheidung, an die sich
+      // niemand erinnert.
+      expect(
+        await store.isTrustedBrowser(
+            'hash-a', now.add(const Duration(days: 3, seconds: 1))),
+        isFalse,
+      );
+    });
+
+    test('ein fremdes Merkzeichen kommt nicht hinein', () async {
+      final now = DateTime.utc(2026, 8, 5, 10);
+      await store.trustBrowser('hash-a',
+          until: now.add(const Duration(days: 3)), now: now);
+      expect(await store.isTrustedBrowser('hash-b', now), isFalse);
+    });
+
+    test('abgelaufene Einträge verschwinden bei der Abfrage', () async {
+      // Das Aufraeumen haengt an der Abfrage und nicht an einem Zeitgeber:
+      // Ein abgelaufener Eintrag darf nie den Ausschlag geben, auch nicht,
+      // wenn seit Wochen niemand aufgeraeumt hat.
+      final now = DateTime.utc(2026, 8, 5, 10);
+      await store.trustBrowser('alt',
+          until: now.add(const Duration(days: 1)), now: now);
+      final later = now.add(const Duration(days: 2));
+      await store.isTrustedBrowser('irgendwas', later);
+      expect(await store.trustedBrowserCount(later), 0);
+    });
+
+    test('alles zurücknehmen geht in einem Zug', () async {
+      final now = DateTime.utc(2026, 8, 5, 10);
+      for (final h in ['a', 'b', 'c']) {
+        await store.trustBrowser(h,
+            until: now.add(const Duration(days: 3)), now: now);
+      }
+      expect(await store.trustedBrowserCount(now), 3);
+      expect(await store.forgetTrustedBrowsers(), 3);
+      expect(await store.isTrustedBrowser('a', now), isFalse);
+    });
+  });
+
   group('Meta-Guard (M12)', () {
     test('summiert nur budgetrelevante Nutzung', () async {
       await store.logUsage('system', const Duration(minutes: 5));

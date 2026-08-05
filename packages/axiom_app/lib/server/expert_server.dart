@@ -272,6 +272,57 @@ final class ExpertServer {
     '/font/mono-500.ttf': 'assets/fonts/IBMPlexMono-Medium.ttf',
   };
 
+  // ── Nutzerdokumentation: drei feste Listen statt drei Pfadbauten ─────
+  //
+  // Kapitelnummer, Sprache und Bildname kommen aus dem Netz. Aus keinem
+  // von ihnen wird ein Asset-Pfad zusammengesetzt — jeder ist ein
+  // Schlüssel in eine `const`-Liste, und was dort nicht steht, gibt es
+  // nicht. Ein aus der Anfrage gebauter Pfad ist die Stelle, an der ein
+  // lokaler Server unbemerkt zum Dateiserver für das ganze Bündel wird;
+  // `../` wäre dann kein Angriff mehr, sondern nur eine Anfrage.
+
+  /// Nummer → Dateiname. Die Nummer ist zugleich das Ziel von `kapitel:NN`
+  /// in der Doku: Ein Querverweis zeigt damit auf ein Kapitel und nicht auf
+  /// einen Dateinamen, der sich beim Umbenennen ändert.
+  static const _helpChapters = <String, String>{
+    '00': '00-index',
+    '01': '01-was-das-ist',
+    '02': '02-erster-tag',
+    '03': '03-erfassen',
+    '04': '04-eine-handlung',
+    '05': '05-zustand',
+    '06': '06-aufgaben',
+    '07': '07-zeitanker',
+    '08': '08-fokus',
+    '09': '09-regelwerk',
+    '10': '10-rueckblick',
+    '11': '11-expertenmodus',
+    '12': '12-daten',
+    '13': '13-grenzen',
+  };
+
+  /// Auch die Sprache wählt ein Verzeichnis — ein ungeprüfter
+  /// Verzeichnisname ist dieselbe Lücke wie ein ungeprüfter Dateiname.
+  static const _helpDirs = <String, String>{
+    'de': 'assets/help/de/',
+    'en': 'assets/help/en/',
+  };
+
+  static const _helpImages = <String, String>{
+    '/help/img/anker.webp': 'assets/help/img/anker.webp',
+    '/help/img/aufgaben.webp': 'assets/help/img/aufgaben.webp',
+    '/help/img/bremse.webp': 'assets/help/img/bremse.webp',
+    '/help/img/eichung.webp': 'assets/help/img/eichung.webp',
+    '/help/img/fokus.webp': 'assets/help/img/fokus.webp',
+    '/help/img/health.webp': 'assets/help/img/health.webp',
+    '/help/img/jetzt.webp': 'assets/help/img/jetzt.webp',
+    '/help/img/reiz.webp': 'assets/help/img/reiz.webp',
+    '/help/img/review.webp': 'assets/help/img/review.webp',
+    '/help/img/system.webp': 'assets/help/img/system.webp',
+    '/help/img/zerlegen.webp': 'assets/help/img/zerlegen.webp',
+    '/help/img/zustand.webp': 'assets/help/img/zustand.webp',
+  };
+
   Future<void> _handle(HttpRequest request) async {
     final path = request.uri.path;
 
@@ -616,6 +667,23 @@ final class ExpertServer {
               },
           ],
         });
+
+      // ── Nutzerdokumentation ──────────────────────────────────────────
+      //
+      // Sie enthält keine Nutzerdaten — sie erklärt die App. Trotzdem
+      // hinter der Sitzungsprüfung: Eine Route, die daran vorbeigeht, ist
+      // eine, die man beim nächsten Zusatz vergisst, und der Unterschied
+      // zwischen „erklärt die Oberfläche" und „zeigt, was drinsteht" ist
+      // eine Zeile Code weit. Der Preis ist null — wer die Hilfe liest,
+      // ist ohnehin angemeldet.
+      case ('GET', ['api', 'help']):
+        return _json(request, 200, await _helpIndex(_helpLang(request)));
+
+      case ('GET', ['api', 'help', final id]):
+        return _helpChapter(request, id, _helpLang(request));
+
+      case ('GET', ['help', 'img', _]):
+        return _helpImage(request, path);
 
       case ('POST', ['api', 'stop']):
         unawaited(stop());
@@ -1358,6 +1426,161 @@ final class ExpertServer {
       ],
       'issues': runtime.ruleIssues.map((i) => '$i').toList(),
     };
+  }
+
+  // ── Nutzerdokumentation ───────────────────────────────────────────────
+
+  /// Die angefragte Sprache, oder ein Fehler.
+  ///
+  /// Kein stilles Zurückfallen auf Deutsch bei `lang=fr`: Der Aufrufer
+  /// bekäme sonst eine Antwort, die aussieht wie die gewünschte, und merkte
+  /// den Tippfehler nie.
+  static String _helpLang(HttpRequest request) {
+    final lang = request.uri.queryParameters['lang'] ?? 'de';
+    if (!_helpDirs.containsKey(lang)) {
+      throw _Invalid('Diese Sprache gibt es nicht. Erlaubt sind '
+          '${_helpDirs.keys.join(", ")}.');
+    }
+    return lang;
+  }
+
+  /// Ein Kapitel im Klartext, oder null, wenn es das nicht gibt.
+  ///
+  /// Fehlt die englische Fassung, kommt die deutsche mit gesetztem
+  /// `fallback` — sichtbar unfertig ist besser als stumm fehlend, und ein
+  /// leeres Kapitel wäre beides zugleich.
+  ///
+  /// Der Pfad entsteht aus zwei `const`-Listen, nicht aus der Anfrage:
+  /// [_helpDirs] steuert das Verzeichnis, [_helpChapters] die Datei.
+  static Future<({String markdown, bool fallback})?> _helpSource(
+    String id,
+    String lang,
+  ) async {
+    final file = _helpChapters[id];
+    if (file == null) return null;
+    for (final (candidate, fallback) in [
+      (lang, false),
+      if (lang != 'de') ('de', true),
+    ]) {
+      try {
+        final text = await rootBundle.loadString('${_helpDirs[candidate]!}$file.md');
+        return (markdown: text, fallback: fallback);
+      } on Object {
+        // Nicht im Bündel. Die nächste Sprache versuchen; bleibt auch die
+        // leer, entscheidet der Aufrufer, was er meldet.
+      }
+    }
+    return null;
+  }
+
+  /// Die Kapitelliste, wie `00-index.md` sie ordnet.
+  ///
+  /// Die Reihenfolge steht in der Doku, nicht hier: Wer ein Kapitel
+  /// verschiebt, verschiebt es an einer Stelle. Nennt der Index nichts
+  /// Lesbares — weil er fehlt oder anders geschrieben ist —, wird
+  /// stattdessen jedes vorhandene Kapitel aufgeführt. Eine leere Hilfe wäre
+  /// die schlechteste Antwort: Die Kapitel sind da, nur ihre Ordnung nicht.
+  static Future<Map<String, Object?>> _helpIndex(String lang) async {
+    final chapters = <Map<String, Object?>>[];
+    final seen = <String>{};
+    var fallback = false;
+
+    final index = await _helpSource('00', lang);
+    if (index != null) {
+      fallback = index.fallback;
+      for (final match in _helpLinkPattern.allMatches(index.markdown)) {
+        final id = match.group(2)!;
+        // Der Index selbst ist kein Kapitel — er ist die Liste.
+        if (id == '00' || !_helpChapters.containsKey(id)) continue;
+        if (!seen.add(id)) continue;
+        chapters.add({'id': id, 'title': match.group(1)!.trim()});
+      }
+    }
+
+    if (chapters.isEmpty) {
+      for (final id in _helpChapters.keys) {
+        if (id == '00') continue;
+        final source = await _helpSource(id, lang);
+        if (source == null) continue;
+        if (source.fallback) fallback = true;
+        chapters.add({'id': id, 'title': _helpTitle(source.markdown, id)});
+      }
+    }
+    return {'chapters': chapters, 'fallback': fallback};
+  }
+
+  /// Ein Verweis auf ein Kapitel: `[Titel](kapitel:06)` oder
+  /// `[Titel](06-aufgaben.md)`. Beides kommt in Handschriften vor, und der
+  /// Index ist Text, kein Datenformat.
+  static final RegExp _helpLinkPattern =
+      RegExp(r'\[([^\]\n]+)\]\(\s*(?:kapitel:)?(\d{2})[^)]*\)');
+
+  Future<void> _helpChapter(
+    HttpRequest request,
+    String id,
+    String lang,
+  ) async {
+    // Die Nummer aus der Anfrage wird nachgeschlagen, nie eingesetzt. Was
+    // nicht in der Liste steht, ist unbekannt — „../" ebenso wie „99".
+    if (!_helpChapters.containsKey(id) || id == '00') {
+      return _json(request, 404, {
+        'error': 'Dieses Kapitel gibt es nicht. Vorhanden sind: '
+            '${_helpChapters.keys.where((k) => k != '00').join(", ")}.',
+      });
+    }
+    final source = await _helpSource(id, lang);
+    if (source == null) {
+      return _json(request, 404, {
+        'error': 'Dieses Kapitel liegt nicht im App-Bündel. Die Hilfe wird '
+            'aus assets/help/ ausgeliefert; fehlt der Eintrag in '
+            'pubspec.yaml, ist der Text geschrieben, aber nicht dabei.',
+      });
+    }
+    return _json(request, 200, {
+      'id': id,
+      'title': _helpTitle(source.markdown, id),
+      'markdown': source.markdown,
+      'fallback': source.fallback,
+    });
+  }
+
+  Future<void> _helpImage(HttpRequest request, String path) async {
+    final asset = _helpImages[path];
+    if (asset == null) {
+      return _json(request, 404, {'error': 'Dieses Bild gibt es nicht.'});
+    }
+    final List<int> bytes;
+    try {
+      bytes = (await rootBundle.load(asset)).buffer.asUint8List();
+    } on Object {
+      return _json(request, 404, {
+        'error': 'Dieses Bild liegt nicht im App-Bündel.',
+      });
+    }
+    request.response
+      ..statusCode = 200
+      ..headers.contentType = ContentType('image', 'webp')
+      // `private`, nicht `public`: Die Antwort hängt an einer Sitzung, und
+      // ein Zwischenspeicher, der sie weitergibt, wäre einer zu viel.
+      ..headers.set('Cache-Control', 'private, max-age=604800')
+      ..headers.set('X-Content-Type-Options', 'nosniff')
+      ..add(bytes);
+    await request.response.close();
+  }
+
+  /// Die Überschrift eines Kapitels — aus dem Text, nicht aus einer zweiten
+  /// Liste. Eine gepflegte Titelliste im Server driftete von der Doku ab,
+  /// und dann hieße dasselbe Kapitel an zwei Stellen verschieden.
+  static String _helpTitle(String markdown, String id) {
+    for (final line in const LineSplitter().convert(markdown)) {
+      final text = line.trim();
+      if (text.startsWith('# ')) return text.substring(2).trim();
+    }
+    // Ohne Überschrift der Dateiname: lesbar genug, um das Kapitel zu
+    // finden, und sichtbar unfertig.
+    return (_helpChapters[id] ?? id)
+        .replaceFirst(RegExp(r'^\d+-'), '')
+        .replaceAll('-', ' ');
   }
 
   /// Teilschritte je Elternaufgabe.

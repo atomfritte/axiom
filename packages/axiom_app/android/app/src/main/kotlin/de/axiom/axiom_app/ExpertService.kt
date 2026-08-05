@@ -70,10 +70,10 @@ class ExpertService : Service() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val channel = android.app.NotificationChannel(
                 CHANNEL,
-                "Expertenmodus",
+                AxiomTexts.get(context, "channel.expert.name"),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Sichtbar, solange der lokale Server läuft."
+                description = AxiomTexts.get(context, "channel.expert.description")
                 setShowBadge(false)
                 enableVibration(false)
                 setSound(null, null)
@@ -113,20 +113,24 @@ class ExpertService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Expertenmodus läuft")
+            .setContentTitle(AxiomTexts.get(this, "expert.title"))
             .setContentText(address)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$address\n\nVerschlüsselt mit einem selbst signierten " +
-                    "Zertifikat. Ohne Anfrage schaltet sich der Server nach " +
-                    "30 Minuten ab."
-            ))
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "$address\n\n" + AxiomTexts.get(this, "expert.detail")
+                )
+            )
             .setContentIntent(stop)
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Beenden", stop)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                AxiomTexts.get(this, "expert.stop"),
+                stop,
+            )
             .build()
     }
 }

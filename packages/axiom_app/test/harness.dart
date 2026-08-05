@@ -38,6 +38,15 @@ final class TestHarness {
     final sources = loadRuleAssets();
     final parsed = YamlRuleSource(sources).parse();
 
+    // Sprache festnageln, nicht der Umgebung ueberlassen.
+    //
+    // Seit die App beim ersten Start die Geraetesprache uebernimmt, haengt
+    // die Oberflaeche im Test an der Systemsprache des Rechners — dieselbe
+    // Testdatei erzeugt dann auf einem deutschen und einem englischen
+    // Rechner verschiedene Referenzbilder. Ein Test, dessen Ergebnis von
+    // der Maschine abhaengt, prueft nichts.
+    store.setSetting('language', 'de');
+
     return TestHarness._(
       store,
       clock,

@@ -290,6 +290,56 @@ textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;li
 .ev .t{color:var(--faint)}.ev .k{color:var(--info)}
 .ev .p{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* ── Hilfe ─────────────────────────────────────────────────────────────
+   Kapitelliste und Kapitel nebeneinander — das ist der eine Vorteil dieser
+   Fläche gegenüber dem Telefon, wo man für jeden Sprung zurück muss.
+
+   Umbruch über flex-wrap statt über eine Breitenabfrage: Bei 2,4-facher
+   Schrift sind 13rem keine 208 Pixel mehr, sondern 500. Eine Abfrage in
+   Pixeln ließe dann zwei Spalten stehen, die nicht mehr hineinpassen; der
+   Umbruch rechnet mit dem, was der Inhalt tatsächlich braucht. */
+.help{display:flex;flex-wrap:wrap;gap:1.4rem;align-items:flex-start}
+.help .toc{flex:0 1 13rem;min-width:0;display:grid;gap:.3rem;align-content:start}
+.help .chapter{flex:1 1 22rem;min-width:0}
+.toc .seg{margin-bottom:.2rem}
+.toc button.ch{display:block;width:100%;text-align:left;font-size:.86rem;color:var(--dim);
+  padding:.35rem .5rem;border-left:2px solid transparent;border-radius:3px;overflow-wrap:anywhere}
+.toc button.ch:hover{color:var(--ink)}
+.toc button.ch[aria-current=true]{color:var(--ink);background:var(--raised);border-left-color:var(--signal)}
+.toc .num{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-right:.45rem}
+.toc .hit{display:block;font-size:.72rem;color:var(--faint);margin-top:.15rem;overflow-wrap:anywhere}
+
+/* Lesebreite in rem: Sie wächst mit der Schrift mit, statt bei großer
+   Schrift zwei Wörter je Zeile stehen zu lassen. */
+/* Ein Pfad oder ein Bezeichner ohne Leerzeichen ist länger als jede
+   Spalte. Ohne diese Zeile schöbe er die Seite auf, statt umzubrechen. */
+.md{max-width:46rem;overflow-wrap:break-word}
+.md h1{margin:.1rem 0 .8rem}
+.md h2{margin:1.7rem 0 .5rem}
+.md h3{font-size:.95rem;font-weight:500;color:var(--dim);margin:1.2rem 0 .4rem}
+.md p{margin:0 0 .8rem;font-size:.92rem}
+.md ul,.md ol{margin:0 0 .9rem;padding-left:1.3rem;color:var(--dim);font-size:.92rem}
+.md li{margin-bottom:.3rem}
+.md blockquote{border-left:2px solid var(--signal);padding-left:.85rem;margin:0 0 .9rem;
+  color:var(--ink);font-size:.92rem}
+.md code{font-family:PlexMono,monospace;font-size:.85em;background:var(--raised);
+  border:1px solid var(--rule);border-radius:3px;padding:.05rem .3rem;overflow-wrap:anywhere}
+/* Eine breite Tabelle scrollt in ihrem eigenen Kasten. Ohne das schöbe sie
+   die ganze Seite auseinander — derselbe Grund wie bei .stack. */
+.md .scroll{overflow-x:auto;margin:0 0 .9rem}
+.md table{border-collapse:collapse;font-size:.86rem}
+.md th,.md td{border:1px solid var(--rule);padding:.35rem .6rem;text-align:left;vertical-align:top}
+.md th{background:var(--raised);color:var(--ink);font-weight:500}
+.md td{color:var(--dim)}
+.md figure{margin:0 0 1.1rem;max-width:30rem;background:var(--raised);
+  border:1px solid var(--rule);border-radius:5px;padding:.5rem}
+.md figure img{display:block;width:100%;height:auto;border-radius:3px}
+.md figcaption{color:var(--faint);font-size:.76rem;margin-top:.45rem}
+.md img{max-width:100%;height:auto}
+.md .lnk{color:var(--signal);font-size:inherit;padding:0;
+  text-decoration:underline;text-underline-offset:2px}
+.md .lnk:hover{color:var(--deep)}
+
 dialog{border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);
   padding:1.4rem;width:min(34rem,calc(100vw - 2rem));max-height:86vh;overflow:auto}
 dialog::backdrop{background:color-mix(in srgb,var(--base) 72%,transparent);backdrop-filter:blur(3px)}
@@ -364,7 +414,7 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
     <div class="seg" role="group" aria-label="Textgröße">
       <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
     </div>
-    <button class="btn quiet" id="help-btn" title="Tastenkürzel (?)">?</button>
+    <button class="btn quiet" id="keys-btn" title="Tastenkürzel (?)">?</button>
     <button class="btn quiet" id="stop-btn" title="Server beenden">Beenden</button>
   </header>
 
@@ -400,6 +450,7 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
         <button role="tab" data-tab="rules" aria-selected="false">Regelwerk<span class="count" id="c-rules"></span></button>
         <button role="tab" data-tab="review" aria-selected="false">Review</button>
         <button role="tab" data-tab="events" aria-selected="false">Ereignisse</button>
+        <button role="tab" data-tab="help" aria-selected="false">Hilfe</button>
       </div>
       <section class="panel" id="surface"></section>
     </div>
@@ -559,10 +610,14 @@ async function enter(){
    Welcher Reiter offen war, hängt am Browser: Wer die Seite acht Stunden
    offen hat, lädt sie irgendwann neu und will dort weitermachen, wo er war,
    nicht wieder bei den Aufgaben anfangen. */
-const TABS=['tasks','board','inbox','state','rules','review','events'];
+const TABS=['tasks','board','inbox','state','rules','review','events','help'];
 let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null;
+/* Voreingestellt das Board: Es beantwortet „wie viel wovon", und das ist
+   die Frage, mit der man an einen Bildschirm mit Platz geht. Die Liste
+   beantwortet „was zuerst" — dafür steht links schon die eine Handlung.
+   Eine getroffene Wahl gewinnt weiterhin; nur die Voreinstellung dreht. */
 let tab=TABS.includes(localStorage.getItem('axiom.tab'))
-  ?localStorage.getItem('axiom.tab'):'tasks';
+  ?localStorage.getItem('axiom.tab'):'board';
 let ruleIssues=[];
 
 async function refresh(){S=await api('/api/state');paintHeader();paintAction();paintCapline()}
@@ -579,6 +634,7 @@ async function loadSurface(){
   else if(tab==='events') events=(await api('/api/events?limit=250')).events;
   else if(tab==='inbox') inbox=await api('/api/inbox');
   else if(tab==='review') review=await api('/api/review?scope='+(review?.scope||'day'));
+  else if(tab==='help') await loadHelp();
 }
 async function reload(){await refresh();await loadSurface();render()}
 
@@ -721,7 +777,7 @@ function markTabs(){
     b.setAttribute('aria-selected',b.dataset.tab===tab?'true':'false'));
 }
 const VIEWS={tasks:viewTasks,board:viewBoard,inbox:viewInbox,state:viewState,
-  rules:viewRules,review:viewReview,events:viewEvents};
+  rules:viewRules,review:viewReview,events:viewEvents,help:viewHelp};
 function render(){
   if(!S) return;
   $('#c-inbox').textContent=S.inboxCount?' '+S.inboxCount:'';
@@ -898,16 +954,30 @@ const dueChip=t=>expires(t)?el('span',{class:'due'},dueLabel(t.decayAt)):null;
 
 /* Welche Handlungen offenstehen, hängt am Zustand und sonst nichts —
    dieselbe Liste in Liste und Board, sonst böte dieselbe Aufgabe je nach
-   Reiter etwas anderes an. */
+   Reiter etwas anderes an. Und dieselbe Liste wie auf dem Telefon
+   (tasks_screen.dart), sonst kann man im Browser etwas nicht, was dort
+   geht — der teuerste Unterschied, weil man ihn für einen Fehler hält.
+
+   Zerlegen hängt an jeder offenen Zeile, auf jeder Ebene: auch an einem
+   Teilschritt, der sich als immer noch zu groß herausstellt, und auch an
+   einer Aufgabe, die schon zerlegt ist — dann kommen Schritte hinzu. Die
+   Hürde liegt am Anfang, und wo sie liegt, weiß nur der Nutzer [D2].
+
+   Nur „Anfangen" fehlt der zerlegten Aufgabe: Sie ist durch ihre Schritte
+   vertreten, und sie neben ihnen zur Wahl zu stellen wäre genau die
+   Doppelung, die das Zerlegen auflöst. */
 function taskActions(t){
+  if(t.state==='done'||t.state==='dropped') return [];
+  const split=el('button',{class:'btn quiet',
+    onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen');
   if(t.state==='active') return [
     el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
-    el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen')];
-  if(t.state==='ready') return [
+    el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen'),split];
+  if(t.state==='blocked') return [
+    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),split];
+  return [
     el('button',{class:'btn primary',onclick:()=>act(t.id,'start')},'Anfangen'),
-    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),
-    el('button',{class:'btn quiet',onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen')];
-  return [];
+    el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),split];
 }
 
 function taskRow(t,m,depth){
@@ -1149,6 +1219,275 @@ function viewEvents(){
       el('span',{class:'p',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))));
   return frag;
 }
+
+/* ── Hilfe ───────────────────────────────────────────────────────────
+   Die Bedienungsanleitung, im Browser lesbar. Sie liegt als Markdown im
+   App-Bündel und kommt kapitelweise vom Server — dieselben Texte, die auf
+   dem Telefon in der Hilfe stehen, keine zweite Fassung.
+
+   Warum sie hier überhaupt anders ist als dort: Auf dem Telefon liest man
+   ein Kapitel und muss für jeden Sprung zurück. Hier stehen Liste und
+   Kapitel nebeneinander und die Suche geht über alle — das ist der ganze
+   Unterschied, und er ist der Grund, warum diese Fläche existiert.
+
+   Die Sprachwahl gilt nur für die Doku. Die Oberfläche ringsum ist
+   deutsch, und ein englisches Kapitel darin ist eine halbe Übersetzung —
+   aber die Texte gibt es in beiden Fassungen, und wer die englische lesen
+   will, soll sie nicht suchen müssen. Fehlt sie, kommt die deutsche mit
+   einem Hinweis darüber statt einer leeren Seite. */
+let helpChapters=[],helpId=null,helpDoc=null,helpQuery='',helpError=null;
+let helpAllLoaded=false,helpLoading=null;
+let helpLang=localStorage.getItem('axiom.help.lang')==='en'?'en':'de';
+const helpCache=new Map();
+
+async function loadHelp(){
+  try{helpChapters=(await api('/api/help?lang='+helpLang)).chapters||[];helpError=null}
+  catch(e){helpChapters=[];helpError=e.message}
+  if(!helpChapters.some(c=>c.id===helpId))
+    helpId=helpChapters.length?helpChapters[0].id:null;
+  helpDoc=helpId?await helpDocOf(helpId):null;
+}
+/* Einmal geholt, bleibt im Speicher. Vierzehn Kapitel Text sind hier kein
+   Speicherproblem — auf dem Telefon wäre das eine andere Frage, und genau
+   deshalb steht die Suche nur hier. Fehlgeschlagenes wird nicht gemerkt:
+   Ein Kapitel, das der Server gerade nicht hatte, soll beim nächsten Klick
+   wieder versucht werden. */
+async function helpDocOf(id){
+  const key=helpLang+'/'+id;
+  if(helpCache.has(key)) return helpCache.get(key);
+  try{
+    const doc=await api('/api/help/'+encodeURIComponent(id)+'?lang='+helpLang);
+    helpCache.set(key,doc);
+    return doc;
+  }catch(e){return {id,title:'',markdown:'',error:e.message}}
+}
+async function openChapter(id){
+  if(!id) return;
+  helpId=id;
+  helpDoc=await helpDocOf(id);
+  if(tab!=='help'){tab='help';localStorage.setItem('axiom.tab',tab);markTabs()}
+  render();
+  // Wer einem Verweis folgt, will den Anfang des Kapitels sehen und nicht
+  // die Stelle, an der er stand.
+  const box=$('#chapter');
+  if(box) box.scrollIntoView({block:'nearest'});
+}
+async function setHelpLang(lang){
+  if(lang===helpLang) return;
+  helpLang=lang;localStorage.setItem('axiom.help.lang',lang);
+  helpAllLoaded=false;helpLoading=null;
+  await loadHelp();render();
+}
+
+/* Gesucht wird im Text, nicht nur in den Überschriften: Wer „Reizbudget"
+   eintippt, weiß meist nicht, in welchem Kapitel es steht — das ist der
+   Grund, aus dem er sucht. Dafür werden beim ersten Tastendruck alle
+   Kapitel einmal geholt. */
+async function helpSearchInput(e){
+  helpQuery=e.target.value;
+  if(helpQuery.trim()&&!helpAllLoaded){
+    // Auf denselben Lauf warten, nicht einen zweiten starten: Sonst
+    // schickt jeder weitere Tastendruck vor der ersten Antwort noch
+    // einmal vierzehn Anfragen an ein Telefon.
+    helpLoading=helpLoading||Promise.all(helpChapters.map(c=>helpDocOf(c.id)));
+    await helpLoading;
+    helpAllLoaded=true;helpLoading=null;
+  }
+  const list=$('#help-list');
+  if(list) fillToc(list);
+}
+function helpMatches(){
+  const q=helpQuery.trim().toLowerCase();
+  if(!q) return helpChapters.map(c=>({id:c.id,title:c.title,hit:null}));
+  const out=[];
+  for(const c of helpChapters){
+    const doc=helpCache.get(helpLang+'/'+c.id);
+    const text=String((doc&&doc.markdown)||'');
+    const at=text.toLowerCase().indexOf(q);
+    if(at<0&&!String(c.title||'').toLowerCase().includes(q)) continue;
+    out.push({id:c.id,title:c.title,hit:at<0?null:helpExcerpt(text,at,q.length)});
+  }
+  return out;
+}
+function helpExcerpt(text,at,length){
+  const from=Math.max(0,at-40);
+  return (from?'… ':'')+
+    text.slice(from,at+length+50).replace(/\s+/g,' ').trim()+' …';
+}
+
+function viewHelp(){
+  const list=el('div',{id:'help-list'});
+  const chapter=el('div',{class:'chapter md',id:'chapter'});
+  fillToc(list);fillChapter(chapter);
+  return el('div',{class:'help'},
+    el('div',{class:'toc'},
+      el('div',{class:'seg',role:'group','aria-label':'Sprache der Hilfe'},
+        el('button',{'aria-pressed':helpLang==='de'?'true':'false',
+          onclick:()=>setHelpLang('de')},'DEUTSCH'),
+        el('button',{'aria-pressed':helpLang==='en'?'true':'false',
+          onclick:()=>setHelpLang('en')},'ENGLISH')),
+      el('input',{type:'search',value:helpQuery,placeholder:'Suchen',
+        'aria-label':'Hilfe durchsuchen',oninput:helpSearchInput}),
+      list),
+    chapter);
+}
+function fillToc(box){
+  if(helpError){put(box,el('p',{class:'faint'},helpError));return}
+  if(!helpChapters.length){
+    put(box,el('p',{class:'faint'},'Keine Kapitel im Bündel.'));return;
+  }
+  const matches=helpMatches();
+  if(!matches.length){put(box,el('p',{class:'faint'},'Nichts gefunden.'));return}
+  put(box,matches.map(c=>el('button',{class:'ch',
+    'aria-current':c.id===helpId?'true':'false',onclick:()=>openChapter(c.id)},
+    el('span',{class:'num mono'},c.id),c.title,
+    c.hit?el('span',{class:'hit'},c.hit):null)));
+}
+function fillChapter(box){
+  if(!helpDoc){
+    put(box,el('p',{class:'faint'},
+      'Die Hilfe liegt als Text im App-Bündel. Steht dort nichts, zeigt der Server nichts — die Kapitel entstehen unter assets/help/.'));
+    return;
+  }
+  if(helpDoc.error){put(box,el('p',{class:'faint'},helpDoc.error));return}
+  put(box,
+    helpDoc.fallback?el('p',{class:'why'},
+      'Dieses Kapitel gibt es noch nicht auf Englisch. Darunter steht die deutsche Fassung.'):null,
+    mdRender(helpDoc.markdown||''));
+}
+
+/* ── Hilfe: Darsteller — Anfang ───────────────────────────────────────
+   Ein Markdown-Darsteller in genau dem Umfang, den die Doku benutzt:
+   Überschriften, Fließtext mit fett und Code, zwei Sorten Aufzählung,
+   hervorgehobener Absatz, Tabelle, Bild, Kapitelverweis. Mehr wäre eine
+   zweite Baustelle mit eigenen Fehlern.
+
+   **Kein Markup aus der Antwort.** Der Text ist von einem Menschen
+   geschrieben, aber sein Weg hierher führt über das Netz — und ein
+   Darsteller, der dem Browser eine Zeichenkette zum Auswerten gibt, macht
+   aus jeder spitzen Klammer in der Doku eine Anweisung. Gebaut wird
+   deshalb Knoten für Knoten mit el(). Der Test dazu verbietet die
+   Eigenschaften, die das könnten, zwischen diesen beiden Marken
+   namentlich — deshalb steht keine von ihnen hier im Text.
+
+   Zwei Ziele werden erkannt, nicht übernommen: `img/name.webp` und
+   `kapitel:NN`. Alles andere bleibt Text — auch ein Verweis nach draußen,
+   den die Seite gar nicht laden dürfte (ADR-0005). Was der Darsteller
+   nicht kennt, gibt er unverändert aus: Er darf nie werfen und nie etwas
+   verschlucken, denn eine Zeile, die sichtbar unfertig aussieht, ist immer
+   besser als eine, die verschwunden ist. */
+/* Kursiv kommt nach fett — sonst schluckt `*…*` die erste Haelfte von
+   `**…**` und aus fettem Text wird ein Sternchen mit Kursivschrift.
+   Die Doku benutzt Kursiv fuer Navigationspfade („System → Erfassen") und
+   fuer die Beschriftung von Bedienelementen; ohne diese Regel standen die
+   Sternchen sichtbar im Text. */
+const MD_INLINE=/\*\*([^*]+)\*\*|\*([^*\n]+)\*|`([^`]+)`|(!?)\[([^\]]*)\]\(([^)\s]+)\)/g;
+const MD_IMG=/^img\/([a-z0-9-]+\.webp)$/;
+const MD_CHAPTER=/^kapitel:(\d{2})$/;
+const MD_BLOCK=/^(#{1,3}\s|\s*>|\s*[-*]\s|\s*\d+\.\s|\s*\|)/;
+
+function mdRender(src){
+  const frag=document.createDocumentFragment();
+  const lines=String(src).replace(/\r/g,'').split('\n');
+  let i=0;
+  const take=test=>{const out=[];while(i<lines.length&&test(lines[i])) out.push(lines[i++]);return out};
+  while(i<lines.length){
+    const line=lines[i];
+    if(!line.trim()){i++;continue}
+    const head=/^(#{1,3})\s+(.*)$/.exec(line);
+    if(head){i++;frag.append(el('h'+head[1].length,{},mdInline(head[2].trim())));continue}
+    if(/^\s*>\s?/.test(line)){
+      frag.append(el('blockquote',{},mdInline(
+        take(l=>/^\s*>\s?/.test(l)).map(l=>l.replace(/^\s*>\s?/,'')).join(' ').trim())));
+      continue;
+    }
+    if(/^\s*[-*]\s+/.test(line)){
+      frag.append(el('ul',{},take(l=>/^\s*[-*]\s+/.test(l))
+        .map(l=>el('li',{},mdInline(l.replace(/^\s*[-*]\s+/,''))))));
+      continue;
+    }
+    if(/^\s*\d+\.\s+/.test(line)){
+      frag.append(el('ol',{},take(l=>/^\s*\d+\.\s+/.test(l))
+        .map(l=>el('li',{},mdInline(l.replace(/^\s*\d+\.\s+/,''))))));
+      continue;
+    }
+    if(/^\s*\|/.test(line)){frag.append(mdTable(take(l=>/^\s*\|/.test(l))));continue}
+    // Die erste Zeile wird immer verbraucht — sonst stünde der Zeiger
+    // still, wenn eine Zeile in keinen Zweig passt, und die Schleife liefe
+    // ewig.
+    const rows=[lines[i++]];
+    while(i<lines.length&&lines[i].trim()&&!MD_BLOCK.test(lines[i])) rows.push(lines[i++]);
+    frag.append(mdParagraph(rows.join(' ').trim()));
+  }
+  return frag;
+}
+
+/* Ein Absatz, der aus nichts als einem Bild besteht, wird zur Abbildung
+   mit Unterschrift — der Alternativtext ist ohnehin die Bildunterschrift,
+   und zweimal derselbe Satz wäre einmal zu viel. */
+function mdParagraph(text){
+  const only=/^!\[([^\]]*)\]\(([^)\s]+)\)$/.exec(text);
+  if(only){
+    const image=mdImage(only[2],only[1]);
+    if(image) return el('figure',{},image,
+      only[1]?el('figcaption',{},only[1]):null);
+  }
+  return el('p',{},mdInline(text));
+}
+
+function mdTable(rows){
+  const cells=row=>row.trim().replace(/^\|/,'').replace(/\|$/,'')
+    .split('|').map(c=>c.trim());
+  const isRule=row=>/^\s*\|[\s:|-]+$/.test(row);
+  const body=[];
+  let head=null;
+  rows.forEach((row,index)=>{
+    // Die Trennzeile macht die Zeile darüber zum Kopf. Steht sie
+    // woanders, wird sie übergangen statt als Inhalt gezeigt.
+    if(isRule(row)){if(index===1&&body.length===1) head=body.pop();return}
+    body.push(cells(row));
+  });
+  const table=el('table',{});
+  if(head) table.append(el('thead',{},el('tr',{},head.map(c=>el('th',{},mdInline(c))))));
+  table.append(el('tbody',{},body.map(r=>el('tr',{},r.map(c=>el('td',{},mdInline(c)))))));
+  return el('div',{class:'scroll'},table);
+}
+
+function mdInline(text){
+  const out=[];
+  let last=0,m;
+  MD_INLINE.lastIndex=0;
+  while((m=MD_INLINE.exec(text))!==null){
+    if(m.index>last) out.push(text.slice(last,m.index));
+    last=MD_INLINE.lastIndex;
+    if(m[1]!==undefined){out.push(el('strong',{},m[1]));continue}
+    if(m[2]!==undefined){out.push(el('em',{},m[2]));continue}
+    if(m[3]!==undefined){out.push(el('code',{},m[3]));continue}
+    const node=m[4]==='!'?mdImage(m[6],m[5]):mdLink(m[6],m[5]);
+    out.push(node===null?m[0]:node);
+  }
+  if(last<text.length) out.push(text.slice(last));
+  return out;
+}
+/* Der Dateiname wird erkannt, nicht übernommen: Was nicht genau
+   `img/name.webp` ist, wird hier kein Bildpfad. Der Server führt dieselbe
+   Liste noch einmal und liefert nur aus, was darin steht — zwei Schlösser
+   an derselben Tür, weil hinter ihr das ganze App-Bündel liegt. */
+function mdImage(target,alt){
+  const m=MD_IMG.exec(String(target));
+  if(!m) return null;
+  return el('img',{src:'/help/img/'+m[1],alt:alt||'',loading:'lazy'});
+}
+/* Nur Verweise ins eigene Regelwerk werden anklickbar, und sie werden ein
+   Knopf statt eines Verweises: Ein Ziel aus dem Text der Antwort wäre eine
+   Adresse, die diese Seite nicht kennt — und nach draußen führt hier
+   nichts (ADR-0005). */
+function mdLink(target,label){
+  const m=MD_CHAPTER.exec(String(target));
+  if(!m) return null;
+  return el('button',{class:'lnk',onclick:()=>openChapter(m[1])},label||m[1]);
+}
+/* ── Hilfe: Darsteller — Ende ─────────────────────────────────────── */
 
 /* ── Blätter ─────────────────────────────────────────────────────── */
 function sheet(title,body,actions,closeLabel){
@@ -2082,14 +2421,21 @@ function plainScalar(text){
   return text;
 }
 
-function helpDialog(){
+/* Heißt bewusst nicht mehr „helpDialog": „Hilfe" ist seit dem Reiter
+   daneben die Bedienungsanleitung. Zwei Dinge mit demselben Namen sind
+   zwei Dinge, die man verwechselt. */
+function keysDialog(){
   const keys=[['n','Erfassen'],['c','Check-in'],['f','Fokus starten oder beenden'],
-    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],
+    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],['h','Hilfe'],
     ['1 … '+TABS.length,'Reiter wechseln'],['r','Neu laden'],['?','Diese Übersicht'],['Esc','Schließen']];
   sheet('Tastenkürzel',el('div',{class:'keys'},
     ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[],'Schließen');
 }
-$('#help-btn').addEventListener('click',helpDialog);
+$('#keys-btn').addEventListener('click',keysDialog);
+function openHelpTab(){
+  const b=document.querySelector('#tabs button[data-tab="help"]');
+  if(b) b.click();
+}
 
 $('#stop-btn').addEventListener('click',async()=>{
   if(!confirm('Server beenden? Danach ist diese Seite nicht mehr erreichbar.')) return;
@@ -2117,8 +2463,9 @@ addEventListener('keydown',e=>{
     case 'c': checkinDialog(); break;
     case 'f': S?.focus?endFocusDialog():focusDialog(); break;
     case 'a': taskDialog(); break;
+    case 'h': openHelpTab(); break;
     case 'r': reload(); break;
-    case '?': helpDialog(); break;
+    case '?': keysDialog(); break;
     case 'g': {const run=(S?.running||[])[0]; if(run) act(run.id,'complete'); break}
   }
 });

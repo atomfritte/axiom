@@ -7,11 +7,13 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:axiom_core/axiom_core.dart'
     show CompareOp, RuleVocabulary, Severity;
 import 'package:axiom_data/axiom_data.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:axiom_app/server/expert_certificate.dart';
 import 'package:axiom_app/server/expert_server.dart';
@@ -810,6 +812,338 @@ ${english ? '''  rationale_en: >
       }
       expect(values.containsKey('meta_minutes_today'), isTrue,
           reason: 'G4 misst die App selbst — der Wert gehört sichtbar dazu');
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Die Nutzerdokumentation. Sie ist der erste Inhalt dieses Servers, der
+  // nicht aus der Datenbank kommt, sondern aus dem App-Bündel — und damit
+  // die erste Route, bei der eine Zeichenkette aus dem Netz einen
+  // Dateinamen bezeichnet. Genau dort liegt die Gefahr, und genau die
+  // steht hier.
+  //
+  // Die Kapitel entstehen parallel. Fehlen sie beim Testlauf, ist das kein
+  // Testfehler: Der Server muss es dann sagen statt zu werfen, und das ist
+  // hier ebenso festgehalten wie der Fall, dass sie da sind.
+  // ──────────────────────────────────────────────────────────────────────
+
+  group('Die Hilfe kommt aus einer Liste, nicht aus einem Pfad', () {
+    /// Die erste Kapitelnummer, die der Server nennt — oder null, solange
+    /// die Doku noch nicht im Bündel liegt.
+    Future<String?> firstChapter(String cookie) async {
+      final list = await json(await call('GET', '/api/help', cookie: cookie));
+      final chapters = list['chapters']! as List;
+      return chapters.isEmpty ? null : (chapters.first as Map)['id'] as String;
+    }
+
+    test('ohne Sitzung gibt es auch die Hilfe nicht', () async {
+      // Sie enthält keine Nutzerdaten — sie erklärt die Oberfläche. Aber
+      // eine Route, die an der Sitzungsprüfung vorbeigeht, ist eine, die
+      // man beim nächsten Zusatz vergisst, und der Weg von „erklärt die
+      // Oberfläche" zu „zeigt, was drinsteht" ist eine Zeile weit.
+      for (final path in ['/api/help', '/api/help/01', '/help/img/jetzt.webp']) {
+        expect((await call('GET', path)).statusCode, 401, reason: path);
+      }
+    });
+
+    test('kein Weg aus der Kapitelliste heraus', () async {
+      // Die Kapitelnummer kommt aus dem Netz. Würde daraus ein Pfad
+      // gebaut, stünde hinter dieser Route das ganze App-Bündel — samt
+      // Regelwerk, Zertifikat und allem, was sonst noch mitgeliefert wird.
+      final cookie = await login(server.status.pin!);
+      for (final id in [
+        '..',
+        '../../pubspec.yaml',
+        '%2e%2e%2f%2e%2e%2fpubspec.yaml',
+        '..%2F..%2Flib%2Fmain.dart',
+        '01/../../expert/index.html',
+        // Der Dateiname ist keine gültige Kennung: Ausgeliefert wird nach
+        // Nummer, damit ein Umbenennen keinen Verweis bricht.
+        '01-was-das-ist',
+        // Der Index ist die Liste, kein Kapitel.
+        '00',
+        '99',
+      ]) {
+        final res = await call('GET', '/api/help/$id', cookie: cookie);
+        expect(res.statusCode, isNot(200), reason: 'Kapitel "$id"');
+        final body = await res.transform(utf8.decoder).join();
+        expect(body, isNot(contains('uses-material-design')),
+            reason: 'Kapitel "$id" hat pubspec.yaml ausgeliefert');
+        expect(body, isNot(contains('<!--')),
+            reason: 'Kapitel "$id" hat eine Datei aus dem Bündel ausgeliefert');
+      }
+    });
+
+    test('kein Weg aus der Bildliste heraus', () async {
+      final cookie = await login(server.status.pin!);
+      for (final name in [
+        '../../../pubspec.yaml',
+        '%2e%2e%2fexpert%2findex.html',
+        'jetzt.webp/../../expert/index.html',
+        'gibtesnicht.webp',
+        'jetzt.png',
+      ]) {
+        final res = await call('GET', '/help/img/$name', cookie: cookie);
+        expect(res.statusCode, isNot(200), reason: name);
+        expect(res.headers.contentType?.mimeType, isNot('image/webp'),
+            reason: name);
+      }
+    });
+
+    test('eine unbekannte Sprache ist ein Fehler, kein stiller Rückfall',
+        () async {
+      // Sonst bekäme der Aufrufer bei `lang=fr` eine Antwort, die aussieht
+      // wie die gewünschte, und merkte den Tippfehler nie.
+      final cookie = await login(server.status.pin!);
+      for (final path in ['/api/help?lang=fr', '/api/help/01?lang=../de']) {
+        final res = await call('GET', path, cookie: cookie);
+        expect(res.statusCode, 400, reason: path);
+        expect((await json(res))['error'], isNotEmpty, reason: path);
+      }
+    });
+
+    test('die Liste nennt nur Kapitel, die sich auch abrufen lassen',
+        () async {
+      // Ein Eintrag im Inhaltsverzeichnis, der ins Leere zeigt, ist
+      // schlimmer als ein fehlender: Man sucht dann den Fehler bei sich.
+      final cookie = await login(server.status.pin!);
+      final res = await call('GET', '/api/help', cookie: cookie);
+      expect(res.statusCode, 200);
+      for (final entry in (await json(res))['chapters']! as List) {
+        final chapter = entry as Map<String, Object?>;
+        expect(chapter['id'], matches(RegExp(r'^\d{2}$')), reason: '$chapter');
+        expect(chapter['id'], isNot('00'), reason: 'Der Index ist die Liste');
+        expect(chapter['title'], isNotEmpty, reason: '$chapter');
+        expect(
+            (await call('GET', '/api/help/${chapter['id']}', cookie: cookie))
+                .statusCode,
+            200,
+            reason: 'Kapitel ${chapter['id']} steht in der Liste, fehlt aber');
+      }
+    });
+
+    test('ein Kapitel bringt seinen Text mit — oder seinen Grund', () async {
+      final cookie = await login(server.status.pin!);
+      final id = await firstChapter(cookie);
+      if (id == null) {
+        // Noch nicht im Bündel. Dann muss der Server das sagen, und zwar
+        // so, dass man weiß, wo man nachsieht.
+        final res = await call('GET', '/api/help/01', cookie: cookie);
+        expect(res.statusCode, 404);
+        expect((await json(res))['error'], contains('assets/help/'));
+        return;
+      }
+      final chapter =
+          await json(await call('GET', '/api/help/$id', cookie: cookie));
+      expect(chapter['id'], id);
+      expect(chapter['title'], isNotEmpty);
+      expect(chapter['markdown'], isNotEmpty);
+      expect(chapter['fallback'], isFalse);
+    });
+
+    test('fehlt die englische Fassung, kommt die deutsche — nie nichts',
+        () async {
+      // Sichtbar unfertig ist besser als stumm fehlend (CLAUDE.md). Was
+      // auf Deutsch da ist, muss auf Englisch erreichbar sein, notfalls im
+      // deutschen Wortlaut mit gesetzter Marke.
+      final cookie = await login(server.status.pin!);
+      final id = await firstChapter(cookie);
+      if (id == null) return;
+      final res = await call('GET', '/api/help/$id?lang=en', cookie: cookie);
+      expect(res.statusCode, 200);
+      final chapter = await json(res);
+      expect(chapter['markdown'], isNotEmpty);
+      expect(chapter['fallback'], isA<bool>());
+    });
+
+    test('ein Bild kommt als Bild und darf liegen bleiben', () async {
+      final cookie = await login(server.status.pin!);
+      final res = await call('GET', '/help/img/jetzt.webp', cookie: cookie);
+      if (res.statusCode == 404) {
+        expect((await json(res))['error'], isNotEmpty,
+            reason: 'Fehlt es im Bündel, wird das gesagt und nicht geworfen');
+        return;
+      }
+      expect(res.statusCode, 200);
+      expect(res.headers.contentType?.mimeType, 'image/webp');
+      // `private`: Die Antwort hängt an einer Sitzung, und ein
+      // Zwischenspeicher, der sie weitergibt, wäre einer zu viel.
+      expect(res.headers.value('cache-control'), contains('private'));
+      expect(res.headers.value('cache-control'), contains('max-age'));
+      expect(await res.fold<int>(0, (sum, chunk) => sum + chunk.length),
+          greaterThan(0));
+    });
+  });
+
+  // Die Kapitel entstehen parallel zu diesem Server. Ohne sie bliebe die
+  // Hälfte der Auswertung ungeprüft — die Reihenfolge aus dem Index, der
+  // Titel aus der Überschrift, der Rückfall auf Deutsch. Genau das sind
+  // die Stellen, an denen man sich vertut. Deshalb wird hier ein Bündel
+  // vorgetäuscht: geprüft wird die Auswertung, nicht das Vorhandensein.
+  group('Mit einer Doku im Bündel', () {
+    const index = '''
+# Hilfe
+
+- [Was das ist](kapitel:01)
+- [Aufgaben](kapitel:06)
+- [Gibt es nicht](kapitel:77)
+- [Der Index selbst](kapitel:00)
+- [Ein Bild](img/jetzt.webp)
+''';
+    const chapters = {
+      'assets/help/de/00-index.md': index,
+      'assets/help/de/01-was-das-ist.md': '# Was das ist\n\nEin Satz.',
+      'assets/help/de/06-aufgaben.md': '# Aufgaben\n\nNoch ein Satz.',
+      'assets/help/en/06-aufgaben.md': '# Tasks\n\nOne sentence.',
+      'assets/help/img/jetzt.webp': 'kein echtes Bild, aber Bytes',
+    };
+
+    /// Legt dem Bündel genau diese Dateien unter. Alles andere gibt es
+    /// dann nicht — mehr braucht keiner dieser Tests.
+    void bundle(Map<String, String> assets) {
+      rootBundle.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+        final key = utf8.decode(message!.buffer
+            .asUint8List(message.offsetInBytes, message.lengthInBytes));
+        final text = assets[key];
+        if (text == null) return null;
+        return ByteData.sublistView(Uint8List.fromList(utf8.encode(text)));
+      });
+    }
+
+    setUp(() => bundle(chapters));
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', null);
+      rootBundle.clear();
+    });
+
+    test('die Reihenfolge steht im Index, nicht im Server', () async {
+      // Wer ein Kapitel verschiebt, verschiebt es an einer Stelle. Und was
+      // der Index nennt, das es nicht gibt, wird übergangen statt
+      // angeboten — ein Eintrag ins Leere ist schlimmer als kein Eintrag.
+      final cookie = await login(server.status.pin!);
+      final list = await json(await call('GET', '/api/help', cookie: cookie));
+      expect(list['chapters'], [
+        {'id': '01', 'title': 'Was das ist'},
+        {'id': '06', 'title': 'Aufgaben'},
+      ]);
+    });
+
+    test('ein Kapitel bringt Überschrift und Text mit', () async {
+      final cookie = await login(server.status.pin!);
+      final chapter =
+          await json(await call('GET', '/api/help/06', cookie: cookie));
+      expect(chapter['title'], 'Aufgaben');
+      expect(chapter['markdown'], contains('Noch ein Satz.'));
+      expect(chapter['fallback'], isFalse);
+    });
+
+    test('ohne englische Fassung kommt die deutsche mit Marke', () async {
+      // Sichtbar unfertig ist besser als stumm fehlend: Die Marke sagt der
+      // Oberfläche, dass sie einen Hinweis darüberschreiben muss.
+      final cookie = await login(server.status.pin!);
+      final missing =
+          await json(await call('GET', '/api/help/01?lang=en', cookie: cookie));
+      expect(missing['fallback'], isTrue);
+      expect(missing['markdown'], contains('Ein Satz.'));
+
+      final present =
+          await json(await call('GET', '/api/help/06?lang=en', cookie: cookie));
+      expect(present['fallback'], isFalse);
+      expect(present['title'], 'Tasks');
+    });
+
+    test('ohne lesbaren Index stehen trotzdem alle Kapitel da', () async {
+      // Eine leere Hilfe wäre die schlechteste Antwort: Die Kapitel sind
+      // da, nur ihre Ordnung fehlt. Dann zählt der Server sie selbst auf
+      // und nimmt die Überschrift als Titel.
+      bundle({
+        'assets/help/de/01-was-das-ist.md': '# Was das ist\n\nEin Satz.',
+        'assets/help/de/06-aufgaben.md': 'Ohne Überschrift.',
+      });
+      final cookie = await login(server.status.pin!);
+      final list = await json(await call('GET', '/api/help', cookie: cookie));
+      expect(list['chapters'], [
+        {'id': '01', 'title': 'Was das ist'},
+        // Ohne Überschrift der Dateiname: lesbar genug, um das Kapitel zu
+        // finden, und sichtbar unfertig.
+        {'id': '06', 'title': 'aufgaben'},
+      ]);
+    });
+
+    test('ein Bild kommt als Bild', () async {
+      final cookie = await login(server.status.pin!);
+      final res = await call('GET', '/help/img/jetzt.webp', cookie: cookie);
+      expect(res.statusCode, 200);
+      expect(res.headers.contentType?.mimeType, 'image/webp');
+      expect(res.headers.value('cache-control'), contains('private'));
+      expect(await res.transform(utf8.decoder).join(), isNotEmpty);
+    });
+
+    test('auch mit Doku im Bündel führt kein Pfad hinaus', () async {
+      // Die Bilder liegen jetzt wirklich da — die Frage ist, ob man von
+      // ihnen aus weiterkommt.
+      final cookie = await login(server.status.pin!);
+      for (final path in [
+        '/help/img/%2e%2e%2fde%2f01-was-das-ist.md',
+        '/help/img/../de/01-was-das-ist.md',
+        '/api/help/%2e%2e%2f%2e%2e%2fexpert%2findex.html',
+      ]) {
+        final res = await call('GET', path, cookie: cookie);
+        expect(res.statusCode, isNot(200), reason: path);
+        expect(await res.transform(utf8.decoder).join(),
+            isNot(contains('Ein Satz.')),
+            reason: path);
+      }
+    });
+  });
+
+  group('Die Hilfe im Browser', () {
+    String page() => File('assets/expert/index.html').readAsStringSync();
+
+    test('der Darsteller baut Knoten, kein Markup', () {
+      // Die Doku ist Text, den ein Mensch geschrieben hat — aber ihr Weg in
+      // diese Seite führt über das Netz. Ein Darsteller, der Markup aus der
+      // Antwort zusammensetzt, macht aus jeder spitzen Klammer in einem
+      // Kapitel eine Anweisung an den Browser.
+      final source = page();
+      final start = source.indexOf('Hilfe: Darsteller — Anfang');
+      final end = source.indexOf('Hilfe: Darsteller — Ende');
+      expect(start, greaterThan(0), reason: 'Die Anfangsmarke fehlt');
+      expect(end, greaterThan(start), reason: 'Die Endmarke fehlt');
+      final renderer = source.substring(start, end);
+      for (final forbidden in [
+        'innerHTML',
+        'outerHTML',
+        'insertAdjacentHTML',
+        'document.write',
+        'eval(',
+      ]) {
+        expect(renderer, isNot(contains(forbidden)), reason: forbidden);
+      }
+      expect(renderer, contains('el('), reason: 'Gebaut wird mit el()');
+    });
+
+    test('der Bildpfad entsteht nur aus einem erkannten Namen', () {
+      // Genau eine Stelle setzt einen Bildpfad zusammen, und unmittelbar
+      // davor steht die Erkennung. Zwei Stellen hieße: eine davon prüft
+      // nicht, und man sieht es keiner von beiden an.
+      final source = page();
+      const needle = "'/help/img/'";
+      expect(needle.allMatches(source).length, 1);
+      final at = source.indexOf(needle);
+      expect(source.substring(at - 220, at), contains('MD_IMG.exec'));
+    });
+
+    test('der Reiter und sein Kürzel stehen beide da', () {
+      // Ein Kürzel, das in der Übersicht fehlt, gibt es für den Nutzer
+      // nicht — und `?` war schon belegt.
+      final source = page();
+      expect(source, contains('data-tab="help"'));
+      expect(source, contains("case 'h':"));
+      expect(source, contains("['h','Hilfe']"));
     });
   });
 }

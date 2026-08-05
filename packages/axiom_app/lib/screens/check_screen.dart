@@ -194,7 +194,7 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       : context.t('Noch keins platziert. Samsungs Startbildschirm merkt sich die Widget-Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig — dieser Knopf geht daran vorbei.'),
                   action: context.t('Jetzt hinzufügen'),
                   onAction: () async {
-                    final outcome = await AndroidBridge.requestPinWidget();
+                    final outcome = await AndroidBridge.requestPinWidget(language: context.language);
                     if (!context.mounted) return;
                     if (!outcome.ok) {
                       _say(outcome.reason ??
@@ -213,7 +213,7 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                           : context.t('Dieses Gerät bietet die Rolle nicht an. Der Weg zum Stift führt über Air Command → Verknüpfungen.'),
                   action: context.t('Notiz-Rolle anfragen'),
                   onAction: () async {
-                    final outcome = await AndroidBridge.requestNotesRole();
+                    final outcome = await AndroidBridge.requestNotesRole(language: context.language);
                     if (!context.mounted) return;
                     if (!outcome.ok) {
                       _say(outcome.reason ??
@@ -274,7 +274,7 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       await HealthSync.openSettings();
                       return;
                     }
-                    final outcome = await HealthSync.connect();
+                    final outcome = await HealthSync.connect(language: context.language);
                     if (!context.mounted) return;
                     if (!outcome.ok) {
                       _say(outcome.reason ??

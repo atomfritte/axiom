@@ -133,9 +133,10 @@ const Map<String, String> kEnglish = {
       'If something important stays right of the line, AXIOM suggests '
           'splitting it until one piece lands on the left.',
   'Bremse': 'Brake',
-  'Budget aufgebraucht. Änderungen am Regelwerk sind bis zum nächsten Wochen-Review gesperrt. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.':
-      'Budget used up. Rule changes are locked until the next weekly review. '
-          'That is deliberate: tuning the system feels like work but is not.',
+  'Budget aufgebraucht. Änderungen am Regelwerk sind bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen. Das ist Absicht: Das System zu optimieren fühlt sich an wie Arbeit, ist aber keine.':
+      'Budget used up. Rule changes are closed until tomorrow. Capture, work '
+          'and looking things up stay open. That is deliberate: tuning the '
+          'system feels like work but is not.',
   'CHECK-IN': 'CHECK-IN',
   'Check-in': 'Check-in',
   'Check-in gespeichert.': 'Check-in saved.',
@@ -1454,4 +1455,136 @@ const Map<String, String> kEnglish = {
       'STEPS OPEN: {0}',
   'Diese Aufgaben sind durch ihre Teilschritte vertreten. Sie kommen zurück, sobald kein Schritt mehr offen ist.':
       'These tasks are represented by their steps. They come back once no step is open any more.',
+
+  // Hilfe
+  'Wozu jeder Bildschirm da ist und wie eine Regel entscheidet':
+      'What each screen is for, and how a rule decides',
+  'Die Hilfe braucht ungewöhnlich lange. Sie liegt in der App, nicht im Netz — ein Neustart hilft hier fast immer.':
+      'The help is taking unusually long. It sits inside the app, not on the network — a restart almost always sorts it out.',
+  'In der Hilfe suchen':
+      'Search the help',
+  'Suche zurücksetzen':
+      'Clear the search',
+  'Suchen':
+      'Search',
+  '{0} Fundstellen':
+      '{0} places found',
+  'KEIN TREFFER':
+      'NO MATCH',
+  'Dazu steht nichts in der Hilfe':
+      'The help says nothing about that',
+  'Gesucht wird im Text der Kapitel, ohne Wortstammerkennung. Ein kürzeres Wort trifft oft mehr.':
+      'The search runs over the chapter text, without stemming. A shorter word often matches more.',
+  'KEINE KAPITEL':
+      'NO CHAPTERS',
+  'Die Hilfe ist nicht mitgeliefert':
+      'The help is not bundled',
+  'Unter assets/help/de/ liegt keine Textdatei. Die App läuft davon unberührt weiter — es gibt nur nichts nachzulesen.':
+      'There is no text file under assets/help/de/. The app runs untouched by that — there is simply nothing to read up on.',
+  'Die Übersicht fehlt. Die Kapitel selbst sind da — hier stehen sie so, wie sie im Verzeichnis liegen.':
+      'The overview is missing. The chapters themselves are here — listed the way they sit in the directory.',
+  'Dieses Kapitel gibt es noch nicht auf Englisch. Hier steht die deutsche Fassung.':
+      'This chapter has no English version yet. What follows is the German one.',
+  'Kapitel {0} gibt es nicht.':
+      'There is no chapter {0}.',
+  'NICHT GELADEN':
+      'NOT LOADED',
+  'Dieses Kapitel fehlt':
+      'This chapter is missing',
+  'Die Datei ist nicht mitgeliefert. Die anderen Kapitel sind davon unberührt.':
+      'The file is not bundled. The other chapters are untouched by that.',
+  'IN DIESEM KAPITEL':
+      'IN THIS CHAPTER',
+  'Kapitel {0}':
+      'Chapter {0}',
+  'Übersicht':
+      'Overview',
+  'Hilfe':
+      'Help',
+  'Bild fehlt':
+      'Image missing',
+
+  // ── Systemseite: was Android zeigt, nicht AXIOM ─────────────────────
+  // Quelle: lib/platform/system_texts.dart. Diese Saetze erscheinen in
+  // Benachrichtigungen, im Widget und in der Schnelleinstellung.
+  'Hinweise':
+      'Notices',
+  'Erscheint nur im Rückblick.':
+      'Only shows up in review.',
+  'Leise Anstöße':
+      'Quiet nudges',
+  'Still, wegwischbar.':
+      'Silent, swipeable.',
+  'Interventionen':
+      'Interventions',
+  'Sichtbar, erwartet eine Antwort.':
+      'Visible, expects an answer.',
+  'Verbindliche Regeln':
+      'Binding rules',
+  'Nur für Regeln, die du selbst verbindlich gesetzt hast.':
+      'Only for rules you made binding yourself.',
+  'Zeigt die nächste Handlung. Still, ohne Ton.':
+      'Shows the next action. Silent, no sound.',
+  'Laufender Slot':
+      'Running slot',
+  'Fokus und Reiz-Slots, solange sie laufen. Still.':
+      'Focus and sensation slots while they run. Silent.',
+  'Sichtbar, solange der lokale Server läuft.':
+      'Visible while the local server runs.',
+  'Was ist dir eingefallen?':
+      'What came to mind?',
+  'Erfasst':
+      'Captured',
+  'Slot läuft':
+      'Slot running',
+  'Beenden':
+      'End',
+  'noch {0} von {1} min':
+      '{0} of {1} min left',
+  '{0} min über den Bezugspunkt':
+      '{0} min past the reference point',
+  '+{0} min':
+      '+{0} min',
+  'Expertenmodus läuft':
+      'Expert mode is running',
+  'Verschlüsselt mit einem selbst signierten Zertifikat. Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.':
+      'Encrypted with a self-signed certificate. Without a request the server shuts down after 30 minutes.',
+  'Gedanken in AXIOM festhalten':
+      'Hold on to a thought in AXIOM',
+  'In AXIOM erfassen':
+      'Capture in AXIOM',
+  'Sprich einfach.':
+      'Just speak.',
+  'Diese Funktion gibt es nur auf Android.':
+      'This only exists on Android.',
+  'Das System hat nicht geantwortet. Die Funktion bleibt aus, die App läuft weiter.':
+      'The system did not answer. The function stays off, the app keeps running.',
+  'Das System hat nicht geantwortet.':
+      'The system did not answer.',
+  'Die Systembrücke antwortet nicht. Das ist ein Fehler in AXIOM, nicht am Gerät.':
+      'The system bridge is not answering. That is a fault in AXIOM, not on the device.',
+  'Dieser Startbildschirm nimmt keine Anfrage entgegen. Dann über die Widget-Auswahl: lange auf den Homescreen tippen → Widgets → AXIOM.':
+      'This home screen takes no such request. Then via the widget picker: long-press the home screen → Widgets → AXIOM.',
+  'Der Startbildschirm hat die Anfrage abgelehnt.':
+      'The home screen declined the request.',
+  'Anfrage fehlgeschlagen: {0}':
+      'Request failed: {0}',
+  'Die Rolle „Notiz-App" gibt es erst ab Android 14.':
+      'The “note-taking app” role exists only from Android 14 on.',
+  'Dieses Gerät bietet die Rolle „Notiz-App" nicht an — Samsung schaltet sie in One UI nicht frei. Der Weg zum Stift führt hier über das Air-Command-Menü: Einstellungen → Erweiterte Funktionen → S Pen → Air Command → Verknüpfungen → AXIOM.':
+      'This device does not offer the “note-taking app” role — Samsung does not enable it in One UI. The way to the pen here is the Air Command menu: Settings → Advanced features → S Pen → Air Command → Shortcuts → AXIOM.',
+  'Der Systemdialog ließ sich nicht öffnen: {0}':
+      'The system dialog would not open: {0}',
+  'Der Benachrichtigungskanal „Dauerhafte Anzeige" ist abgeschaltet. Einstellungen → Benachrichtigungen → AXIOM → Dauerhafte Anzeige.':
+      'The notification channel “Always visible” is switched off. Settings → Notifications → AXIOM → Always visible.',
+  'Benachrichtigungen sind für AXIOM abgeschaltet. Ohne sie hat die Anzeige nichts, worin sie erscheinen kann.':
+      'Notifications are switched off for AXIOM. Without them the display has nothing to appear in.',
+  'Das System hat den Dienst abgelehnt: {0}':
+      'The system declined the service: {0}',
+  'Health Connect meldet sich als nicht nutzbar (Status {0}). Ohne den Dienst gibt es nichts freizugeben.':
+      'Health Connect reports itself as unusable (status {0}). Without the service there is nothing to grant.',
+  'Die Berechtigungsabfrage ließ sich nicht öffnen: {0}':
+      'The permission request would not open: {0}',
+  'Health Connect ist installiert, öffnet aber keinen Freigabedialog ({0}). In den Systemeinstellungen unter Health Connect lässt sich AXIOM dort von Hand freigeben.':
+      'Health Connect is installed but opens no permission dialog ({0}). In the system settings under Health Connect, AXIOM can be granted access by hand.',
 };

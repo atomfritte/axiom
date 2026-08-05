@@ -145,7 +145,7 @@
         <activity
             android:name=".CreateNoteActivity"
             android:exported="true"
-            android:label="Notiz erfassen"
+            android:label="@string/label_create_note"
             android:theme="@android:style/Theme.NoDisplay"
             android:excludeFromRecents="true"
             android:showWhenLocked="true">
@@ -194,8 +194,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Zeigt dauerhaft die nächste Handlung und nimmt
-                    Notizen direkt in der Benachrichtigung entgegen." />
+                android:value="@string/fgs_presence" />
         </service>
 
         <!--
@@ -210,8 +209,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Zeigt die Restzeit eines laufenden Fokus- oder
-                    Reiz-Slots, solange er läuft." />
+                android:value="@string/fgs_live" />
         </service>
 
         <!--
@@ -224,8 +222,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Hält den lokalen Server des Expertenmodus am
-                    Leben, solange er vom Nutzer eingeschaltet ist." />
+                android:value="@string/fgs_expert" />
         </service>
 
         <!-- Nimmt Text entgegen, der in der Benachrichtigung getippt wurde. -->
@@ -286,7 +283,7 @@
             android:name=".CaptureTileService"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="AXIOM erfassen"
+            android:label="@string/label_capture_tile"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

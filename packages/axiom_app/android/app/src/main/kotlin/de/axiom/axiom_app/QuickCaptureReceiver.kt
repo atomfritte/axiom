@@ -28,7 +28,7 @@ class QuickCaptureReceiver : BroadcastReceiver() {
             // man nicht, ob es angekommen ist — und tippt es nochmal.
             PresenceService.update(
                 context,
-                "Erfasst",
+                AxiomTexts.get(context, "presence.saved"),
                 if (text.length > 40) "${text.take(40)}…" else text,
             )
         }

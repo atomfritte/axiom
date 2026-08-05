@@ -136,10 +136,10 @@ class LiveSlotService : Service() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val channel = android.app.NotificationChannel(
                 CHANNEL,
-                "Laufender Slot",
+                AxiomTexts.get(context, "channel.live.name"),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Fokus und Reiz-Slots, solange sie laufen. Still."
+                description = AxiomTexts.get(context, "channel.live.description")
                 setShowBadge(false)
                 enableVibration(false)
                 setSound(null, null)
@@ -186,7 +186,8 @@ class LiveSlotService : Service() {
     private fun build(): Notification {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val kind = prefs.getString("kind", "focus") ?: "focus"
-        val title = prefs.getString("title", null) ?: "Slot läuft"
+        val title = prefs.getString("title", null)
+            ?: AxiomTexts.get(this, "live.title")
         val detail = prefs.getString("detail", null).orEmpty()
         val startedAt = prefs.getLong("startedAt", System.currentTimeMillis())
         val plannedMin = prefs.getInt("plannedMin", 50).coerceAtLeast(1)
@@ -225,7 +226,7 @@ class LiveSlotService : Service() {
             .setChronometerCountDown(!over)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Beenden",
+                AxiomTexts.get(this, "live.stop"),
                 stop,
             )
 
@@ -272,15 +273,27 @@ class LiveSlotService : Service() {
 
     /** Was in die Pille passt — sehr wenig. Sieben Zeichen sind das Maximum. */
     private fun chipLabel(remainingMin: Int): String =
-        if (remainingMin >= 0) "$remainingMin min" else "+${-remainingMin} min"
+        if (remainingMin >= 0) {
+            AxiomTexts.format(this, "live.chip", remainingMin)
+        } else {
+            AxiomTexts.format(this, "live.chip.over", -remainingMin)
+        }
 
+    /**
+     * Der Satz kommt aus [AxiomTexts], nur die Zahlen von hier.
+     *
+     * Wichtig fuer die Uebersetzung: Im Englischen steht die Restzeit an
+     * einer anderen Stelle im Satz. Deshalb nummerierte Platzhalter statt
+     * zusammengesetzter Bruchstuecke — aus Bruchstuecken laesst sich kein
+     * anderer Satzbau bauen.
+     */
     private fun elapsedLabel(elapsedMin: Int, plannedMin: Int): String {
         val remaining = plannedMin - elapsedMin
         return if (remaining >= 0) {
-            "noch $remaining von $plannedMin min"
+            AxiomTexts.format(this, "live.remaining", remaining, plannedMin)
         } else {
             // Sachlich, ohne Vorwurf: eine Zahl, keine Bewertung (G3, R7).
-            "${-remaining} min über den Bezugspunkt"
+            AxiomTexts.format(this, "live.over", -remaining)
         }
     }
 }

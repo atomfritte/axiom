@@ -130,7 +130,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
             hint: context.t('Falls es in der Widget-Auswahl fehlt: Samsungs Startbildschirm merkt sich die Liste einer App und aktualisiert sie nach einem Update nicht zuverlässig. Der Knopf hier fragt das System direkt.'),
             action: context.t('Widget hinzufügen'),
             onAction: () async {
-              final outcome = await AndroidBridge.requestPinWidget();
+              final outcome = await AndroidBridge.requestPinWidget(language: context.language);
               if (!context.mounted) return;
               _say(outcome.ok
                   ? context.t('Anfrage gestellt — bestätige sie auf dem Startbildschirm.')
@@ -161,7 +161,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
             hint: context.t('Air Actions — der Stiftknopf als Fernbedienung — gibt es auf dem Galaxy S25 Ultra nicht mehr: Dessen Stift hat kein Bluetooth. Die Rolle „Notiz-App" für den Doppeltipp schaltet Samsung in One UI ebenfalls nicht frei. Screen-off-Memos landen weiterhin in Samsung Notes, dafür gibt es keine offene Schnittstelle.'),
             action: context.t('Notiz-Rolle anfragen'),
             onAction: () async {
-              final outcome = await AndroidBridge.requestNotesRole();
+              final outcome = await AndroidBridge.requestNotesRole(language: context.language);
               if (!context.mounted || outcome.ok) return;
               _say(outcome.reason ??
                   context.t('Das System hat die Anfrage nicht angenommen.'));
@@ -202,6 +202,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
   Future<void> _togglePresence(bool value, AxiomSnapshot? snapshot) async {
     // Vor dem ersten await lesen: Danach ist der Kontext moeglicherweise weg.
     final detail = context.t('Tippen zum Erfassen');
+    final language = context.language;
 
     if (!AndroidBridge.isSupported) {
       _say(context.t('Die dauerhafte Anzeige gibt es nur auf Android.'));
@@ -236,6 +237,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
           snapshot?.startable.firstOrNull?.title ??
           'AXIOM',
       detail: detail,
+      language: language,
     );
     await HapticFeedback.selectionClick();
     if (!mounted) return;

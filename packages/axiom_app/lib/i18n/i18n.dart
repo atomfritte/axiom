@@ -38,6 +38,16 @@ enum AppLanguage {
         (l) => l.code == code,
         orElse: () => AppLanguage.de,
       );
+
+  /// Die Sprache des Geräts — für den allerersten Start.
+  ///
+  /// Deutsch bleibt der Rückfall, weil es die Quellsprache ist: Fehlt eine
+  /// Übersetzung, erscheint ohnehin der deutsche Satz. Eine unbekannte
+  /// Systemsprache landet also nicht bei einer halb leeren Oberfläche.
+  static AppLanguage fromLocale(Locale locale) => AppLanguage.values.firstWhere(
+        (l) => l.code == locale.languageCode,
+        orElse: () => AppLanguage.en,
+      );
 }
 
 /// Übersetzt einen deutschen Quelltext. Für Code ohne `BuildContext` —

@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 import 'dart:io';
 
 import 'package:axiom_core/axiom_core.dart';
@@ -357,7 +358,17 @@ final class LanguageChoice extends Notifier<AppLanguage> {
   @override
   AppLanguage build() {
     final runtime = ref.watch(runtimeProvider).value;
-    return AppLanguage.parse(runtime?.language);
+    final chosen = runtime?.language;
+    // Eine getroffene Wahl gewinnt immer. Nur wenn noch nie eine getroffen
+    // wurde, entscheidet das Geraet.
+    //
+    // Vorher stand hier fest Deutsch. Fuer ein Geraet, auf dem Englisch
+    // eingestellt ist, hiess das: eine App in einer Sprache, die man nicht
+    // liest — und die Umschaltung liegt hinter Menuepunkten, die man dafuer
+    // erst lesen muesste. Wer die Systemsprache setzt, hat die Frage
+    // bereits beantwortet.
+    if (chosen != null && chosen.isNotEmpty) return AppLanguage.parse(chosen);
+    return AppLanguage.fromLocale(PlatformDispatcher.instance.locale);
   }
 
   Future<void> set(AppLanguage language) async {

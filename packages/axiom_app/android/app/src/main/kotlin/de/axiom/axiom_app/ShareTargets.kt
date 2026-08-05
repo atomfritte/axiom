@@ -28,8 +28,8 @@ object ShareTargets {
 
     fun publish(context: Context) {
         val shortcut = ShortcutInfoCompat.Builder(context, ID)
-            .setShortLabel("Erfassen")
-            .setLongLabel("In AXIOM erfassen")
+            .setShortLabel(AxiomTexts.get(context, "share.short"))
+            .setLongLabel(AxiomTexts.get(context, "share.long"))
             .setIcon(IconCompat.createWithResource(context, R.mipmap.ic_launcher))
             .setCategories(setOf(CATEGORY))
             .setLongLived(true)

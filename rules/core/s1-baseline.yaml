@@ -112,7 +112,20 @@
     action: lock_config
     params:
       budget_minutes_per_day: 12
-      unlock_at: next_review_slot
+      # Tagesweise, nicht bis zum nächsten Rückblick.
+      #
+      # Hier stand `next_review_slot`, während der Code tagesweise sperrte
+      # und die Budgetkarte eine dritte Fassung erzählte — drei Aussagen
+      # über dasselbe Gesetz. Für ein System, dessen zweites Gesetz
+      # Erklärbarkeit ist, ist das der schlimmere Fehler von beiden.
+      #
+      # Entschieden wurde für den Tag: Ein Deckel, den man vorhersagen
+      # kann, ist einer, um den herum man plant. „Morgen wieder" ist
+      # lernbar; „irgendwann nach dem nächsten Rückblick" nicht — und ein
+      # unlernbarer Deckel wird bekämpft statt angenommen. Zwölf Minuten
+      # sind ohnehin knapp; eine mehrtägige Sperre darüber wäre keine
+      # Selbstbegrenzung mehr, sondern eine Strafe (R7).
+      unlock_at: next_day
   priority: 95
   severity: enforce
   cooldown: { minutes: 1440, max_per_day: 1 }

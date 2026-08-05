@@ -28,7 +28,7 @@ import 'package:sqlite3/sqlite3.dart';
 /// v7: `tasks.place` — Ortsbindung als frei vergebener Name. Der aktuelle
 ///     Ort selbst braucht keine Spalte: Er ist die Projektion des letzten
 ///     `place_entered`-Events.
-const int kSchemaVersion = 7;
+const int kSchemaVersion = 8;
 
 final class SqliteEventStore implements EventStore {
   final Database _db;
@@ -320,7 +320,99 @@ final class SqliteEventStore implements EventStore {
       }
     }
 
+    if (current < 8) {
+      // Browser, die einmal von Hand freigegeben wurden.
+      //
+      // **Warum nur der Hash.** Wer diese Datei in die Hand bekommt, hat
+      // ohnehin die Gesundheitsdaten — aber er soll damit nicht auch noch
+      // den Schluessel bekommen, mit dem sich ein Browser kuenftig
+      // anmeldet. Gespeichert wird deshalb SHA-256 des Merkzeichens; das
+      // Original steht nur im Cookie des Browsers und existiert auf dem
+      // Geraet nirgends.
+      //
+      // **Warum mit Ablauf.** Eine Freigabe ohne Ende waere eine
+      // Entscheidung, an die sich niemand erinnert. Drei Tage sind lang
+      // genug fuer eine Arbeitswoche mit Wochenende dazwischen und kurz
+      // genug, dass ein vergessener Rechner im Buero von selbst zufaellt.
+      _db.execute('''
+        CREATE TABLE IF NOT EXISTS trusted_browsers (
+          token_hash  TEXT    PRIMARY KEY,
+          label       TEXT,
+          approved_at INTEGER NOT NULL,
+          expires_at  INTEGER NOT NULL,
+          last_seen   INTEGER
+        );
+      ''');
+    }
+
     _db.execute('PRAGMA user_version = $kSchemaVersion;');
+  }
+
+  // ── Freigegebene Browser ──────────────────────────────────────────────
+
+  /// Merkt sich einen freigegebenen Browser — als Hash, nie im Klartext.
+  ///
+  /// Der Aufrufer hasht selbst und uebergibt nur [tokenHash]. Der Name des
+  /// Parameters ist Absicht: Wer hier versehentlich das Merkzeichen
+  /// hineingibt, soll es beim Lesen sehen.
+  Future<void> trustBrowser(
+    String tokenHash, {
+    required DateTime until,
+    required DateTime now,
+    String? label,
+  }) async {
+    _db.execute(
+      'INSERT INTO trusted_browsers '
+      '(token_hash, label, approved_at, expires_at, last_seen) '
+      'VALUES (?, ?, ?, ?, ?) '
+      'ON CONFLICT(token_hash) DO UPDATE SET '
+      'expires_at = excluded.expires_at, last_seen = excluded.last_seen',
+      [
+        tokenHash,
+        label,
+        now.toUtc().millisecondsSinceEpoch,
+        until.toUtc().millisecondsSinceEpoch,
+        now.toUtc().millisecondsSinceEpoch,
+      ],
+    );
+  }
+
+  /// Ist dieser Browser noch freigegeben? Raeumt dabei Abgelaufenes weg.
+  ///
+  /// Das Aufraeumen haengt bewusst an der Abfrage und nicht an einem
+  /// Zeitgeber: Ein Eintrag, der abgelaufen ist, darf nie den Ausschlag
+  /// geben — auch dann nicht, wenn seit Wochen niemand aufgeraeumt hat.
+  Future<bool> isTrustedBrowser(String tokenHash, DateTime now) async {
+    final millis = now.toUtc().millisecondsSinceEpoch;
+    _db.execute('DELETE FROM trusted_browsers WHERE expires_at <= ?', [millis]);
+    final rows = _db.select(
+      'SELECT 1 FROM trusted_browsers WHERE token_hash = ? LIMIT 1',
+      [tokenHash],
+    );
+    if (rows.isEmpty) return false;
+    _db.execute(
+      'UPDATE trusted_browsers SET last_seen = ? WHERE token_hash = ?',
+      [millis, tokenHash],
+    );
+    return true;
+  }
+
+  /// Alle Freigaben zuruecknehmen. Gibt zurueck, wie viele es waren.
+  Future<int> forgetTrustedBrowsers() async {
+    final count = _db
+        .select('SELECT COUNT(*) AS n FROM trusted_browsers')
+        .first['n'] as int;
+    _db.execute('DELETE FROM trusted_browsers');
+    return count;
+  }
+
+  /// Wie viele Browser gerade freigegeben sind — fuer die Anzeige.
+  Future<int> trustedBrowserCount(DateTime now) async {
+    final rows = _db.select(
+      'SELECT COUNT(*) AS n FROM trusted_browsers WHERE expires_at > ?',
+      [now.toUtc().millisecondsSinceEpoch],
+    );
+    return rows.first['n'] as int;
   }
 
   /// Naechste Sequenznummer. Monoton, unabhaengig vom Zeitstempel.

@@ -13,6 +13,7 @@ library;
 
 import 'package:axiom_core/axiom_core.dart';
 
+import '../i18n/i18n.dart';
 import '../state/runtime.dart';
 import 'android_bridge.dart';
 
@@ -76,8 +77,11 @@ abstract final class HealthSync {
   ///
   /// Gibt den Grund zurück, wenn sich nichts öffnet — sonst ist ein Knopf,
   /// der nichts tut, von einem kaputten nicht zu unterscheiden.
-  static Future<PlatformOutcome> connect() =>
-      AndroidBridge.healthRequestPermissions();
+  /// [language] entscheidet nur, in welcher Sprache der Grund erklärt wird.
+  static Future<PlatformOutcome> connect({
+    AppLanguage language = AppLanguage.de,
+  }) =>
+      AndroidBridge.healthRequestPermissions(language: language);
 
   static Future<void> openSettings() => AndroidBridge.healthOpenSettings();
 

@@ -18,6 +18,7 @@ import 'package:axiom_app/screens/channels_screen.dart';
 import 'package:axiom_app/screens/check_screen.dart';
 import 'package:axiom_app/screens/expert_screen.dart';
 import 'package:axiom_app/screens/focus_screen.dart';
+import 'package:axiom_app/screens/help_screen.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
 import 'package:axiom_app/screens/intercept_screen.dart';
 import 'package:axiom_app/screens/now_screen.dart';
@@ -54,6 +55,7 @@ final _screens = <String, Widget Function()>{
   'vorfälle': () => const SignalScreen(),
   'daten': () => const VaultScreen(),
   'expertenmodus': () => const ExpertScreen(),
+  'hilfe': () => const HelpScreen(),
 };
 
 /// Die Blätter, die sich über einen Screen legen. Sie tragen die

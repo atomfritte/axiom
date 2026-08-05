@@ -261,18 +261,38 @@ void main() {
 
     testWidgets('eine feuernde Regel schlägt die laufende Aufgabe',
         (tester) async {
-      // Die Regel ist die Instanz, die entscheidet (G2) — ein Termin in
-      // zehn Minuten schlägt jede laufende Vertiefung. Sichtbar bleiben
-      // muss die Aufgabe trotzdem, sonst ist sie genau dann weg, wenn
-      // etwas dazwischenkommt.
-      h.completeOnboarding();
-      final task = await h.runtime.createTask(
+      // Die Regel ist die Instanz, die entscheidet (G2) — sie schlägt jede
+      // laufende Vertiefung. Sichtbar bleiben muss die Aufgabe trotzdem,
+      // sonst ist sie genau dann weg, wenn etwas dazwischenkommt.
+      //
+      // Eigene Uhrzeit statt der des Testblocks: 09:00 liegt im Fenster von
+      // R-001 („Check-in Morgen", 08:45–09:30), und bei frischem Stand ist
+      // `count_today(checkin) < 1` erfüllt — die Regel feuert damit *durch
+      // Konstruktion* und nicht, weil zufällig gerade eine passt. Der
+      // frühere Stand lief um 12:15 und behauptete im Kommentar einen
+      // Mittags-Check-in, den es zu dieser Zeit nie gab; er hielt nur,
+      // solange irgendeine andere Regel zufällig griff.
+      final morning = TestHarness.create(at: DateTime(2026, 8, 3, 9));
+      addTearDown(morning.dispose);
+      morning.completeOnboarding();
+      final task = await morning.runtime.createTask(
         title: 'Etwas Angefangenes',
         activationEnergy: 2, salience: 5, stakes: 5);
-      await h.runtime.startTask(task);
-      await pumpPhone(tester, h.wrap(const NowScreen()));
+      await morning.runtime.startTask(task);
 
-      // Um 12:15 feuert der Mittags-Check-in. Er bekommt die Karte …
+      // Zwei Fallen, beide hier hineingelaufen und beide vermerkt:
+      //
+      // Kein `evaluate()` vorab, um die Lage zu prüfen. Regeln tragen
+      // `max_per_day`, und jede Auswertung verbraucht das Kontingent — der
+      // Vorab-Blick nimmt dem Bildschirm genau die Regel weg, die er zeigen
+      // soll, und die zweitbeste rückt nach.
+      //
+      // Und keine Prüfung auf eine bestimmte Kennung. Welche Regel um 09:00
+      // gewinnt, hängt an Prioritäten und Cooldowns des ganzen Regelwerks;
+      // ein Test, der das festschreibt, fällt bei jeder neuen Regel um,
+      // ohne dass etwas kaputt wäre. Geprüft wird die Zusicherung: Es steht
+      // *eine* Regel da, mit Kennung (G2).
+      await pumpPhone(tester, morning.wrap(const NowScreen()));
       expect(find.textContaining('R-'), findsWidgets);
       // … und die laufende Aufgabe bleibt daneben sichtbar.
       expect(find.text('LÄUFT'), findsWidgets);

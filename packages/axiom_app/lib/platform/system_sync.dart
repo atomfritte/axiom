@@ -24,6 +24,12 @@ abstract final class SystemSync {
   }) async {
     if (!AndroidBridge.isSupported) return;
 
+    // Zuerst die Texte, dann die Werte. Alles, was Android selbst zeichnet —
+    // Kanalnamen, Knopfbeschriftungen, die Zeile unter dem Widget — kommt von
+    // hier; die Systemseite erfindet keinen Text mehr. Der Aufruf ist billig:
+    // Sie schreibt nur, wenn sich die Sprache geändert hat.
+    await AndroidBridge.applySystemTexts(language);
+
     final (headline, detail) = _describe(snapshot, language);
     await AndroidBridge.updateWidget(
       headline: headline,
@@ -114,8 +120,12 @@ abstract final class SystemSync {
   /// Richtet die Tagesanker ein. Einmal nach dem Onboarding.
   static Future<void> installDailyAnchors({
     AppLanguage language = AppLanguage.de,
-  }) =>
-      AndroidBridge.scheduleDailyCheckins(language: language);
+  }) async {
+    // Auch hier zuerst: Die Anker werden im Onboarding gesetzt, also
+    // moeglicherweise bevor je ein Auswertungszyklus gelaufen ist.
+    await AndroidBridge.applySystemTexts(language);
+    await AndroidBridge.scheduleDailyCheckins(language: language);
+  }
 
   // ── Zeitanker (M3) ────────────────────────────────────────────────────
 

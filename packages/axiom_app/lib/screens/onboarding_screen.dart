@@ -485,7 +485,7 @@ class _PageHealthState extends ConsumerState<_PageHealth> {
       _busy = true;
       _reason = null;
     });
-    final outcome = await HealthSync.connect();
+    final outcome = await HealthSync.connect(language: context.language);
     if (!mounted) return;
     setState(() {
       _busy = false;

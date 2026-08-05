@@ -34,6 +34,19 @@ class AxiomWidgetProvider : AppWidgetProvider() {
                 .putInt("capacity", capacity)
                 .apply()
 
+            redraw(context)
+        }
+
+        /**
+         * Zeichnet mit unveraendertem Inhalt neu.
+         *
+         * Gebraucht nach einem Sprachwechsel: „JETZT", „ERFASSEN" und die
+         * Kapazitaetszeile stehen im Layout beziehungsweise werden hier
+         * gesetzt — ohne dieses Neuzeichnen blieben sie in der alten Sprache
+         * stehen, bis der naechste Auswertungszyklus etwas anderes zu sagen
+         * hat.
+         */
+        fun redraw(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(
                 ComponentName(context, AxiomWidgetProvider::class.java)
@@ -43,14 +56,27 @@ class AxiomWidgetProvider : AppWidgetProvider() {
 
         private fun render(context: Context, manager: AppWidgetManager, id: Int) {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val headline = prefs.getString("headline", null) ?: "Nichts anliegend"
-            val detail = prefs.getString("detail", null) ?: "Tippen zum Erfassen"
+            val headline = prefs.getString("headline", null)
+                ?: AxiomTexts.get(context, "widget.headline")
+            val detail = prefs.getString("detail", null)
+                ?: AxiomTexts.get(context, "widget.detail")
             val capacity = prefs.getInt("capacity", 0)
 
             val views = RemoteViews(context.packageName, R.layout.axiom_widget).apply {
+                // Die beiden festen Marken stehen auch im Layout, damit die
+                // Vorschau in der Widget-Auswahl nicht leer ist. Hier werden
+                // sie erneut gesetzt: Das Layout kennt nur die Sprache des
+                // Geraets, AXIOM die in der App gewaehlte.
+                setTextViewText(
+                    R.id.widget_label, AxiomTexts.get(context, "widget.label"))
+                setTextViewText(
+                    R.id.widget_capture, AxiomTexts.get(context, "widget.capture"))
                 setTextViewText(R.id.widget_headline, headline)
                 setTextViewText(R.id.widget_detail, detail)
-                setTextViewText(R.id.widget_capacity, "KAPAZITÄT $capacity")
+                setTextViewText(
+                    R.id.widget_capacity,
+                    AxiomTexts.format(context, "widget.capacity", capacity),
+                )
                 setProgressBar(R.id.widget_bar, 100, capacity, false)
 
                 setOnClickPendingIntent(

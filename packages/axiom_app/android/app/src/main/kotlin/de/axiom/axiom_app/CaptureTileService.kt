@@ -18,8 +18,9 @@ class CaptureTileService : TileService() {
     override fun onStartListening() {
         qsTile?.apply {
             state = Tile.STATE_INACTIVE
-            label = "Erfassen"
-            contentDescription = "Gedanken in AXIOM festhalten"
+            label = AxiomTexts.get(this@CaptureTileService, "tile.label")
+            contentDescription =
+                AxiomTexts.get(this@CaptureTileService, "tile.description")
             updateTile()
         }
     }

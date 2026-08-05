@@ -488,6 +488,24 @@ void main() {
       expect(handler, contains('fromMillisecondsSinceEpoch'));
     });
 
+    test('die Schriftlizenz geht mit den Schriften mit', () {
+      // IBM Plex steht unter der SIL Open Font License, und die verlangt
+      // beim Weitergeben, dass die Lizenz die Schriften begleitet. Flutter
+      // bindet Schriften unter `fonts:` ein und nimmt eine Textdatei
+      // daneben nicht mit — beim Verteilen der APK waere das eine
+      // Verletzung, die niemandem auffaellt, weil die App laeuft.
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('assets/fonts/IBMPlex-OFL.txt'));
+      expect(File('assets/fonts/IBMPlex-OFL.txt').existsSync(), isTrue);
+      // Und wenn eine Schrift dazukommt, muss auch ihre Lizenz mit.
+      final fonts = Directory('assets/fonts')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.ttf'))
+          .length;
+      expect(fonts, greaterThan(0));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

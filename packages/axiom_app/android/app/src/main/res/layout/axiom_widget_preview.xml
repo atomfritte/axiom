@@ -13,7 +13,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="JETZT"
+        android:text="@string/axiom_widget_label"
         android:textSize="10sp"
         android:letterSpacing="0.12"
         android:fontFamily="monospace"
@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:maxLines="2"
-        android:text="Rückruf Werkstatt"
+        android:text="@string/axiom_preview_headline"
         android:textSize="19sp"
         android:textColor="@color/axiom_ink" />
 
@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:text="Start 2/10"
+        android:text="@string/axiom_preview_detail"
         android:textSize="12sp"
         android:textColor="@color/axiom_ink_dim" />
 
@@ -63,7 +63,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="KAPAZITÄT 61"
+        android:text="@string/axiom_preview_capacity"
         android:textSize="10sp"
         android:letterSpacing="0.08"
         android:fontFamily="monospace"

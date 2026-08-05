@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../i18n/i18n.dart';
+import 'system_texts.dart';
 
 /// Ergebnis eines Systemaufrufs — mit Grund, wenn er scheitert.
 ///
@@ -22,16 +23,20 @@ import '../i18n/i18n.dart';
 /// war der teuerste Fehler in diesem Projekt: fuenf gemeldete Probleme, vier
 /// verschiedene Ursachen, und keine davon von aussen unterscheidbar. Ein
 /// unschoener Satz ist besser als ein stummer Knopf.
+///
+/// [reason] ist ein fertiger Satz in der Sprache, die der Aufrufer
+/// mitgegeben hat. Die Systemseite liefert dafuer nur einen Schluessel —
+/// Kotlin kennt die gewaehlte Sprache nicht und soll keine Saetze bauen.
 final class PlatformOutcome {
   final bool ok;
   final String? reason;
 
   const PlatformOutcome(this.ok, [this.reason]);
 
-  static const unsupported = PlatformOutcome(
-    false,
-    'Diese Funktion gibt es nur auf Android.',
-  );
+  static PlatformOutcome unsupported(AppLanguage language) => PlatformOutcome(
+        false,
+        SystemTexts.reason(language, 'reason.unsupported'),
+      );
 }
 
 /// Wohin eine Benachrichtigung führt.
@@ -54,6 +59,23 @@ abstract final class AxiomRoute {
 
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.axiom/system');
+
+  // ── Texte der Systemseite ─────────────────────────────────────────────
+
+  /// Reicht die Texte hinunter, die Android anzeigt.
+  ///
+  /// Benachrichtigungskanäle, dauerhafte Anzeige, Widget, Schnelleinstellung:
+  /// Alles davon zeichnet das Betriebssystem, alles davon ist Nutzertext.
+  /// Kotlin kennt die in der App gewählte Sprache nicht und soll sie auch
+  /// nicht kennen — es nimmt die fertigen Sätze entgegen.
+  ///
+  /// Läuft nach jedem Auswertungszyklus mit. Die Systemseite schreibt nur,
+  /// wenn sich die Sprache geändert hat; sonst ist der Aufruf ein Blick auf
+  /// eine gespeicherte Zeichenkette.
+  static Future<bool> applySystemTexts(AppLanguage language) => _invoke(
+        'applyTexts',
+        {'language': language.code, 'texts': SystemTexts.forLanguage(language)},
+      );
 
   /// Wie lange auf eine Antwort der Systemseite gewartet wird.
   ///
@@ -198,7 +220,9 @@ abstract final class AndroidBridge {
   static Future<PlatformOutcome> startPresence({
     required String headline,
     required String detail,
-  }) => _outcome('presenceStart', {'headline': headline, 'detail': detail});
+    AppLanguage language = AppLanguage.de,
+  }) => _outcome('presenceStart', language,
+      {'headline': headline, 'detail': detail});
 
   static Future<bool> updatePresence({
     required String headline,
@@ -291,8 +315,13 @@ abstract final class AndroidBridge {
     }
   }
 
-  static Future<PlatformOutcome> healthRequestPermissions() =>
-      _outcome('healthRequestPermissions');
+  /// [language] entscheidet, in welcher Sprache ein Fehlschlag erklärt wird.
+  /// Sie wird durchgereicht statt global gelesen — sonst wäre sie an genau
+  /// der Stelle unsichtbar, an der sie wirkt.
+  static Future<PlatformOutcome> healthRequestPermissions({
+    AppLanguage language = AppLanguage.de,
+  }) =>
+      _outcome('healthRequestPermissions', language);
 
   /// Antwortet der Kanal ueberhaupt?
   ///
@@ -330,8 +359,10 @@ abstract final class AndroidBridge {
   /// aktualisiert sie nach einem Update nicht immer. Wer dort nichts findet
   /// oder ein „konnte nicht hinzugefuegt werden" bekommt, kommt hierueber
   /// trotzdem ans Ziel.
-  static Future<PlatformOutcome> requestPinWidget() =>
-      _outcome('requestPinWidget');
+  static Future<PlatformOutcome> requestPinWidget({
+    AppLanguage language = AppLanguage.de,
+  }) =>
+      _outcome('requestPinWidget', language);
 
   /// Wie viele Widget-Instanzen tatsaechlich auf dem Startbildschirm liegen.
   static Future<int> widgetCount() async {
@@ -353,8 +384,10 @@ abstract final class AndroidBridge {
   /// Ohne diese Rolle taucht AXIOM beim Stift-Doppeltipp nicht auf. Der
   /// Intent-Filter allein reicht nicht — das System fragt die Rolle ab,
   /// nicht den Filter.
-  static Future<PlatformOutcome> requestNotesRole() =>
-      _outcome('requestNotesRole');
+  static Future<PlatformOutcome> requestNotesRole({
+    AppLanguage language = AppLanguage.de,
+  }) =>
+      _outcome('requestNotesRole', language);
 
   // ── Diagnose ──────────────────────────────────────────────────────────
 
@@ -362,7 +395,9 @@ abstract final class AndroidBridge {
   ///
   /// Existiert, weil „geht nicht" keine Fehlermeldung ist. Jede Zeile hier
   /// ist eine Aussage des Systems, nicht eine Vermutung der App.
-  static Future<Map<String, Object?>> diagnostics() async {
+  static Future<Map<String, Object?>> diagnostics({
+    AppLanguage language = AppLanguage.de,
+  }) async {
     if (!isSupported) return const {};
     try {
       final result = await _channel
@@ -370,7 +405,7 @@ abstract final class AndroidBridge {
           .timeout(_healthTimeout);
       return result ?? const {};
     } on TimeoutException {
-      return const {'error': 'Das System hat nicht geantwortet.'};
+      return {'error': translate(language, 'Das System hat nicht geantwortet.')};
     } on Object catch (e) {
       return {'error': '$e'};
     }
@@ -491,30 +526,43 @@ abstract final class AndroidBridge {
   // ── Intern ────────────────────────────────────────────────────────────
 
   /// Wie [_invoke], aber mit dem Grund des Scheiterns.
+  ///
+  /// Die Systemseite antwortet mit `reason` als Schluessel und `reasonArgs`
+  /// als Werten dazu — der Satz entsteht erst hier, in der Sprache, die der
+  /// Aufrufer mitgegeben hat.
   static Future<PlatformOutcome> _outcome(
-    String method, [
+    String method,
+    AppLanguage language, [
     Map<String, Object?>? args,
   ]) async {
-    if (!isSupported) return PlatformOutcome.unsupported;
+    if (!isSupported) return PlatformOutcome.unsupported(language);
     try {
       final result = await _channel
           .invokeMapMethod<String, Object?>(method, args)
           .timeout(_timeout);
       if (result == null) return const PlatformOutcome(false);
-      return PlatformOutcome(result['ok'] == true, result['reason'] as String?);
+      final key = result['reason'] as String?;
+      return PlatformOutcome(
+        result['ok'] == true,
+        key == null
+            ? null
+            : SystemTexts.reason(
+                language,
+                key,
+                (result['reasonArgs'] as List?)?.cast<Object?>() ?? const [],
+              ),
+      );
     } on PlatformException catch (e) {
       return PlatformOutcome(false, e.message);
     } on TimeoutException {
-      return const PlatformOutcome(
+      return PlatformOutcome(
         false,
-        'Das System hat nicht geantwortet. Die Funktion bleibt aus, die App '
-        'läuft weiter.',
+        SystemTexts.reason(language, 'reason.timeout'),
       );
     } on Object {
-      return const PlatformOutcome(
+      return PlatformOutcome(
         false,
-        'Die Systembrücke antwortet nicht. Das ist ein Fehler in AXIOM, '
-        'nicht am Gerät.',
+        SystemTexts.reason(language, 'reason.bridge'),
       );
     }
   }

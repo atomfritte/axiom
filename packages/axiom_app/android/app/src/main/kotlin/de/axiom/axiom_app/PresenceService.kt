@@ -44,9 +44,6 @@ class PresenceService : Service() {
 
         const val KEY_TEXT = "axiom_quick_text"
 
-        /** Was in der Pille Platz hat. Wenige Zeichen, kein Satz. */
-        const val SHORT_LABEL = "Jetzt"
-
         private const val PREFS = "axiom_presence"
 
         /**
@@ -66,19 +63,15 @@ class PresenceService : Service() {
             if (channel != null &&
                 channel.importance == NotificationManager.IMPORTANCE_NONE
             ) {
-                return mapOf(
-                    "ok" to false,
-                    "reason" to "Der Benachrichtigungskanal „Dauerhafte " +
-                        "Anzeige\" ist abgeschaltet. Einstellungen → " +
-                        "Benachrichtigungen → AXIOM → Dauerhafte Anzeige.",
-                )
+                // Nur der Schluessel: Den Satz baut die Dart-Seite, die
+                // kennt die gewaehlte Sprache.
+                return mapOf("ok" to false, "reason" to "reason.presence.channel")
             }
 
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                 return mapOf(
                     "ok" to false,
-                    "reason" to "Benachrichtigungen sind für AXIOM abgeschaltet. " +
-                        "Ohne sie hat die Anzeige nichts, worin sie erscheinen kann.",
+                    "reason" to "reason.presence.notifications",
                 )
             }
 
@@ -105,8 +98,8 @@ class PresenceService : Service() {
                     .apply()
                 mapOf(
                     "ok" to false,
-                    "reason" to "Das System hat den Dienst abgelehnt: " +
-                        e.javaClass.simpleName,
+                    "reason" to "reason.presence.refused",
+                    "reasonArgs" to listOf(e.javaClass.simpleName),
                 )
             }
         }
@@ -209,10 +202,10 @@ class PresenceService : Service() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val channel = android.app.NotificationChannel(
                 CHANNEL,
-                "Dauerhafte Anzeige",
+                AxiomTexts.get(context, "channel.presence.name"),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Zeigt die nächste Handlung. Still, ohne Ton."
+                description = AxiomTexts.get(context, "channel.presence.description")
                 setShowBadge(false)
                 enableVibration(false)
                 setSound(null, null)
@@ -247,10 +240,16 @@ class PresenceService : Service() {
                     startForeground(NOTIFICATION_ID, buildNotification())
                     note(this, running = true, error = null)
                 } catch (e: Throwable) {
+                    // Roh, wie das System es meldet, und ohne eigenen Satz
+                    // drumherum: Diese Zeile ist eine Aussage von Android,
+                    // keine von AXIOM — und damit auch nichts, was in einer
+                    // Sprache stehen muesste.
                     note(
                         this,
                         running = false,
-                        error = "${e.javaClass.simpleName}: ${e.message ?: "ohne Meldung"}",
+                        error = e.message
+                            ?.let { "${e.javaClass.simpleName}: $it" }
+                            ?: e.javaClass.simpleName,
                     )
                     stopSelf()
                     return START_NOT_STICKY
@@ -264,8 +263,10 @@ class PresenceService : Service() {
 
     private fun buildNotification(): Notification {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val headline = prefs.getString("headline", null) ?: "AXIOM"
-        val detail = prefs.getString("detail", null) ?: "Tippen zum Erfassen"
+        val headline = prefs.getString("headline", null)
+            ?: AxiomTexts.get(this, "presence.headline")
+        val detail = prefs.getString("detail", null)
+            ?: AxiomTexts.get(this, "presence.detail")
 
         val open = PendingIntent.getActivity(
             this, 0,
@@ -277,7 +278,7 @@ class PresenceService : Service() {
         // Direkt in der Benachrichtigung tippen. Der Kern des Ganzen:
         // kein Entsperren, kein App-Start, kein Kontextwechsel [D9].
         val remoteInput = RemoteInput.Builder(KEY_TEXT)
-            .setLabel("Was ist dir eingefallen?")
+            .setLabel(AxiomTexts.get(this, "presence.input"))
             .build()
 
         val captureIntent = PendingIntent.getBroadcast(
@@ -289,7 +290,7 @@ class PresenceService : Service() {
 
         val captureAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_edit,
-            "Erfassen",
+            AxiomTexts.get(this, "presence.capture"),
             captureIntent,
         )
             .addRemoteInput(remoteInput)
@@ -328,7 +329,7 @@ class PresenceService : Service() {
             .addAction(captureAction)
             .addAction(
                 android.R.drawable.ic_menu_agenda,
-                "Check-in",
+                AxiomTexts.get(this, "presence.checkin"),
                 checkinIntent,
             )
 
@@ -343,7 +344,8 @@ class PresenceService : Service() {
             // Deshalb wird hier gebeten, nicht behauptet — und der
             // Systemcheck sagt, was daraus geworden ist.
             builder.setRequestPromotedOngoing(true)
-            builder.setShortCriticalText(SHORT_LABEL)
+            // Was in die Pille Platz hat. Wenige Zeichen, kein Satz.
+            builder.setShortCriticalText(AxiomTexts.get(this, "presence.short"))
         }
 
         return builder.build()

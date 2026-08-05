@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Systemtexte auf Deutsch — die Quellsprache des Projekts.
+
+  Dieselben Saetze stehen als Quelltext in `lib/platform/system_texts.dart`.
+  Sie hier doppelt zu halten ist Absicht: Diese Datei greift, bevor die App je
+  gelaufen ist (erster Start, Alarm nach einem Neustart, Schnelleinstellung
+  direkt nach der Installation). Ohne sie waere der Text in genau diesen
+  Momenten leer, und leer ist der einzige Zustand, den man nicht deuten kann.
+
+  `i18n_test` haelt beide Dateien deckungsgleich mit der Dart-Seite.
+-->
+<resources>
+
+    <!-- ── Was das System ohne die App zeichnet ───────────────────────── -->
+
+    <string name="widget_description">Die nächste Handlung und deine heutige Kapazität, ohne die App zu öffnen.</string>
+    <string name="shortcut_capture_short">Erfassen</string>
+    <string name="shortcut_capture_long">Gedanken festhalten</string>
+    <string name="shortcut_checkin_short">Check-in</string>
+    <string name="shortcut_checkin_long">Zustand messen</string>
+    <string name="shortcut_focus_short">Fokus</string>
+    <string name="shortcut_focus_long">Fokusblock starten</string>
+    <string name="label_create_note">Notiz erfassen</string>
+    <string name="label_capture_tile">AXIOM erfassen</string>
+
+    <!--
+      Die Begruendung des Vordergrunddienst-Typs (`fgs_*`) fehlt hier mit
+      Absicht. Android laesst Ressourcen, auf die das Manifest verweist,
+      nicht nach Sprache variieren — der Lint-Fehler `ManifestResource`
+      bricht sonst den Release-Build ab. Ein `values-de/`-Eintrag waere
+      also nicht nur wirkungslos, sondern eine Bauunterbrechung.
+    -->
+
+    <!-- ── Vorschau in der Widget-Auswahl ─────────────────────────────── -->
+
+    <string name="axiom_preview_headline">Rückruf Werkstatt</string>
+    <string name="axiom_preview_detail">Start 2/10</string>
+    <string name="axiom_preview_capacity">KAPAZITÄT 61</string>
+
+    <!-- ── Rueckfall fuer AxiomTexts ──────────────────────────────────── -->
+
+    <string name="axiom_channel_info_name">Hinweise</string>
+    <string name="axiom_channel_info_description">Erscheint nur im Rückblick.</string>
+    <string name="axiom_channel_nudge_name">Leise Anstöße</string>
+    <string name="axiom_channel_nudge_description">Still, wegwischbar.</string>
+    <string name="axiom_channel_intervene_name">Interventionen</string>
+    <string name="axiom_channel_intervene_description">Sichtbar, erwartet eine Antwort.</string>
+    <string name="axiom_channel_enforce_name">Verbindliche Regeln</string>
+    <string name="axiom_channel_enforce_description">Nur für Regeln, die du selbst verbindlich gesetzt hast.</string>
+    <string name="axiom_channel_presence_name">Dauerhafte Anzeige</string>
+    <string name="axiom_channel_presence_description">Zeigt die nächste Handlung. Still, ohne Ton.</string>
+    <string name="axiom_channel_live_name">Laufender Slot</string>
+    <string name="axiom_channel_live_description">Fokus und Reiz-Slots, solange sie laufen. Still.</string>
+    <string name="axiom_channel_expert_name">Expertenmodus</string>
+    <string name="axiom_channel_expert_description">Sichtbar, solange der lokale Server läuft.</string>
+
+    <string name="axiom_presence_headline">AXIOM</string>
+    <string name="axiom_presence_detail">Tippen zum Erfassen</string>
+    <string name="axiom_presence_short">Jetzt</string>
+    <string name="axiom_presence_input">Was ist dir eingefallen?</string>
+    <string name="axiom_presence_capture">Erfassen</string>
+    <string name="axiom_presence_checkin">Check-in</string>
+    <string name="axiom_presence_saved">Erfasst</string>
+
+    <string name="axiom_live_title">Slot läuft</string>
+    <string name="axiom_live_stop">Beenden</string>
+    <string name="axiom_live_remaining">noch {0} von {1} min</string>
+    <string name="axiom_live_over">{0} min über den Bezugspunkt</string>
+    <string name="axiom_live_chip">{0} min</string>
+    <string name="axiom_live_chip_over">+{0} min</string>
+
+    <string name="axiom_widget_label">JETZT</string>
+    <string name="axiom_widget_capture">ERFASSEN</string>
+    <string name="axiom_widget_headline">Nichts anliegend</string>
+    <string name="axiom_widget_detail">Tippen zum Erfassen</string>
+    <string name="axiom_widget_capacity">KAPAZITÄT {0}</string>
+
+    <string name="axiom_expert_title">Expertenmodus läuft</string>
+    <string name="axiom_expert_detail">Verschlüsselt mit einem selbst signierten Zertifikat. Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.</string>
+    <string name="axiom_expert_stop">Beenden</string>
+
+    <string name="axiom_tile_label">Erfassen</string>
+    <string name="axiom_tile_description">Gedanken in AXIOM festhalten</string>
+    <string name="axiom_share_short">Erfassen</string>
+    <string name="axiom_share_long">In AXIOM erfassen</string>
+
+    <string name="axiom_speech_prompt">Sprich einfach.</string>
+</resources>

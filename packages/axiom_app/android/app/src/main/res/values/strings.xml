@@ -1,10 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Systemtexte in der Standardsprache — Englisch.
+
+  Warum Englisch hier und Deutsch unter `values-de/`, obwohl Deutsch die
+  Quellsprache des Projekts ist: `values/` ist der Rueckfall fuer jede
+  Geraetesprache, die sonst nirgends passt. Genau dieselbe Entscheidung
+  trifft `AppLanguage.fromLocale` (unbekannte Sprache → Englisch), und beide
+  Seiten muessen dasselbe tun. Ein deutsches `values/` hiesse: Wer sein
+  Geraet auf Franzoesisch stellt, bekommt eine englische App mit deutschen
+  Benachrichtigungen.
+
+  Diese Datei ist nur der Rueckfall. Sobald die App einmal gelaufen ist,
+  ueberschreibt `SystemTexts` diese Saetze mit denen der in der App
+  gewaehlten Sprache (siehe AxiomTexts.kt). Was hier steht, sieht man also
+  vor dem allerersten Start, nach einem Neustart bevor die App wieder lief,
+  und in der Widget-Auswahl.
+-->
 <resources>
-    <string name="widget_description">Die nächste Handlung und deine heutige Kapazität, ohne die App zu öffnen.</string>
-    <string name="shortcut_capture_short">Erfassen</string>
-    <string name="shortcut_capture_long">Gedanken festhalten</string>
+
+    <!-- ── Was das System ohne die App zeichnet ───────────────────────── -->
+
+    <string name="widget_description">The next action and your capacity today, without opening the app.</string>
+    <string name="shortcut_capture_short">Capture</string>
+    <string name="shortcut_capture_long">Hold on to a thought</string>
     <string name="shortcut_checkin_short">Check-in</string>
-    <string name="shortcut_checkin_long">Zustand messen</string>
-    <string name="shortcut_focus_short">Fokus</string>
-    <string name="shortcut_focus_long">Fokusblock starten</string>
+    <string name="shortcut_checkin_long">Measure state</string>
+    <string name="shortcut_focus_short">Focus</string>
+    <string name="shortcut_focus_long">Start a focus block</string>
+    <string name="label_create_note">Capture a note</string>
+    <string name="label_capture_tile">AXIOM capture</string>
+
+    <!--
+      Begruendung des Vordergrunddienst-Typs. Android zeigt sie in den
+      App-Informationen; ohne sie lehnt das System den Dienst spaeter ab.
+
+      **Nicht uebersetzbar, und das ist keine Nachlaessigkeit.** Ressourcen,
+      auf die das Manifest verweist, duerfen bei Android nicht nach
+      Konfiguration variieren; ein `values-de/`-Gegenstueck bricht den
+      Release-Build mit `ManifestResource` ab. Diese drei Saetze stehen
+      deshalb nur einmal da, auf Englisch. `android:label` ist von der Regel
+      ausgenommen und wird weiterhin uebersetzt.
+    -->
+    <string name="fgs_presence">Shows the next action at all times and takes notes straight from the notification.</string>
+    <string name="fgs_live">Shows the time left in a running focus or sensation slot, for as long as it runs.</string>
+    <string name="fgs_expert">Keeps the local server of expert mode alive for as long as it is switched on.</string>
+
+    <!-- ── Vorschau in der Widget-Auswahl ─────────────────────────────── -->
+
+    <string name="axiom_preview_headline">Call the garage back</string>
+    <string name="axiom_preview_detail">Start 2/10</string>
+    <string name="axiom_preview_capacity">CAPACITY 61</string>
+
+    <!-- ── Rueckfall fuer AxiomTexts ──────────────────────────────────── -->
+
+    <string name="axiom_channel_info_name">Notices</string>
+    <string name="axiom_channel_info_description">Only shows up in review.</string>
+    <string name="axiom_channel_nudge_name">Quiet nudges</string>
+    <string name="axiom_channel_nudge_description">Silent, swipeable.</string>
+    <string name="axiom_channel_intervene_name">Interventions</string>
+    <string name="axiom_channel_intervene_description">Visible, expects an answer.</string>
+    <string name="axiom_channel_enforce_name">Binding rules</string>
+    <string name="axiom_channel_enforce_description">Only for rules you made binding yourself.</string>
+    <string name="axiom_channel_presence_name">Always visible</string>
+    <string name="axiom_channel_presence_description">Shows the next action. Silent, no sound.</string>
+    <string name="axiom_channel_live_name">Running slot</string>
+    <string name="axiom_channel_live_description">Focus and sensation slots while they run. Silent.</string>
+    <string name="axiom_channel_expert_name">Expert mode</string>
+    <string name="axiom_channel_expert_description">Visible while the local server runs.</string>
+
+    <string name="axiom_presence_headline">AXIOM</string>
+    <string name="axiom_presence_detail">Tap to capture</string>
+    <string name="axiom_presence_short">Now</string>
+    <string name="axiom_presence_input">What came to mind?</string>
+    <string name="axiom_presence_capture">Capture</string>
+    <string name="axiom_presence_checkin">Check-in</string>
+    <string name="axiom_presence_saved">Captured</string>
+
+    <string name="axiom_live_title">Slot running</string>
+    <string name="axiom_live_stop">End</string>
+    <string name="axiom_live_remaining">{0} of {1} min left</string>
+    <string name="axiom_live_over">{0} min past the reference point</string>
+    <string name="axiom_live_chip">{0} min</string>
+    <string name="axiom_live_chip_over">+{0} min</string>
+
+    <string name="axiom_widget_label">NOW</string>
+    <string name="axiom_widget_capture">CAPTURE</string>
+    <string name="axiom_widget_headline">Nothing pending</string>
+    <string name="axiom_widget_detail">Tap to capture</string>
+    <string name="axiom_widget_capacity">CAPACITY {0}</string>
+
+    <string name="axiom_expert_title">Expert mode is running</string>
+    <string name="axiom_expert_detail">Encrypted with a self-signed certificate. Without a request the server shuts down after 30 minutes.</string>
+    <string name="axiom_expert_stop">End</string>
+
+    <string name="axiom_tile_label">Capture</string>
+    <string name="axiom_tile_description">Hold on to a thought in AXIOM</string>
+    <string name="axiom_share_short">Capture</string>
+    <string name="axiom_share_long">Capture in AXIOM</string>
+
+    <string name="axiom_speech_prompt">Just speak.</string>
 </resources>
