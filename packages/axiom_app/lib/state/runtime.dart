@@ -890,6 +890,21 @@ final class AxiomRuntime {
   /// Schrauben am System selbst (D3, R1).
   Future<bool> isConfigLocked() async =>
       (await store.usageToday(clock.nowLocal())) >= kMetaBudget;
+  /// Soll der Expertenmodus mitstarten, wenn die App geöffnet wird?
+  ///
+  /// **Warum das eine Einstellung ist und keine Selbstverständlichkeit.**
+  /// ADR-0005 hat den Autostart ausgeschlossen: Ein offener Port mit
+  /// Gesundheitsdaten, der von selbst aufgeht, ist etwas anderes als einer,
+  /// den man einschaltet. Was hier erlaubt wird, ist enger als das, was
+  /// dort gemeint war — kein Start beim Hochfahren, kein Weiterlaufen ohne
+  /// die App, sondern nur: Wer die App öffnet, hat den Server dabei.
+  ///
+  /// Die Sicherungen bleiben alle: PIN oder Zahlenabgleich, dauerhafte
+  /// Anzeige mit Stopp-Knopf, Abschaltung nach dreißig Minuten Leerlauf.
+  bool get expertAutostart => store.setting('expert_autostart') == 'true';
+  set expertAutostart(bool on) =>
+      store.setSetting('expert_autostart', on ? 'true' : 'false');
+
   bool get onboardingDone => store.setting('onboarding_done') == 'true';
   void markOnboardingDone() => store.setSetting('onboarding_done', 'true');
   /// Anzeigesprache als Sprachcode. Leer heisst: noch nie gewaehlt.

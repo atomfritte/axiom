@@ -14,7 +14,6 @@ import 'package:axiom_app/design/widgets/instruments.dart';
 import 'package:axiom_app/screens/capture_sheet.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
 import 'package:axiom_app/screens/rule_editor_screen.dart';
-import 'package:axiom_app/screens/channels_screen.dart';
 import 'package:axiom_app/state/runtime.dart';
 import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/onboarding_screen.dart';

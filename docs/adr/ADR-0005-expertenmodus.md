@@ -59,16 +59,47 @@ niemand einen `MulticastLock` hält. Ohne ihn — und ohne
 `CHANGE_WIFI_MULTICAST_STATE` — hört der Responder keine einzige Anfrage, ohne Fehler und ohne
 Logeintrag. Die Sperre hängt am Expertenmodus, nicht am App-Start: Sie kostet Strom.
 
-**3. Der Server ist aus, bis er eingeschaltet wird.** Kein Autostart, kein Weiterlaufen nach
-einem Neustart. Er hält sich an fünf Regeln:
+**3. Der Server ist aus, bis er eingeschaltet wird.** Kein Start beim Hochfahren, kein
+Weiterlaufen nach einem Neustart, kein Anlauf aus einem Dienst heraus. Er hält sich an fünf
+Regeln:
 
 | | |
 |---|---|
-| Anmeldung | Sechsstellige PIN, bei jedem Start neu, nur in der App sichtbar |
+| Anmeldung | Zahlenabgleich oder sechsstellige PIN — siehe Punkt 3a |
 | Sitzung | `HttpOnly`-Cookie, `SameSite=Strict`; die PIN steht nie in einer URL |
 | Fehlversuche | nach fünf falschen PINs stoppt der Server sich selbst |
 | Leerlauf | nach 30 Minuten ohne Anfrage stoppt er sich selbst |
 | Sichtbarkeit | dauerhafte Benachrichtigung mit Adresse und Stopp-Knopf, solange er läuft |
+
+**3a. Anmeldung per Zahlenabgleich.**
+
+Die PIN abzutippen ist der Normalfall geblieben, aber nicht der erste Weg. Wer die Adresse
+aufruft, bekommt eine zweistellige Zahl; dieselbe Zahl erscheint auf dem Telefon, zusammen mit
+„Stimmt überein" und „Stimmt nicht".
+
+*Warum das mehr ist als Bequemlichkeit.* Eine Benachrichtigung „Anmeldung zulassen?" wird
+weggedrückt wie jede andere — die Bestätigung allein sichert nichts. Der Schutz liegt im
+**Vergleich**: Fragt jemand anders im selben Moment an, steht dessen Zahl auf dem Telefon und
+nicht auf dem Bildschirm, vor dem der Nutzer sitzt. Wer nur bestätigt, was übereinstimmt, lässt
+niemand anderen herein.
+
+Deshalb gibt es zu jedem Zeitpunkt **genau eine** offene Anfrage: Zwei Zahlen zur Auswahl wären
+wieder ein Knopf. Sie verfällt nach 90 Sekunden, eine neue Anfrage ist frühestens nach drei
+Sekunden möglich, und eine Ablehnung zählt wie ein Fehlversuch — nach fünf schaltet sich der
+Server ab.
+
+**3b. Mitstarten mit der App — optional, aus als Voreinstellung.**
+
+Die erste Fassung schloss jeden Autostart aus. Das galt einem Server, der von selbst aufgeht und
+läuft, ohne dass jemand davon weiß. Erlaubt ist jetzt etwas Engeres: Wer die Einstellung
+setzt, hat den Server dabei, **sobald er die App öffnet** — nicht beim Hochfahren, nicht aus
+einem Dienst, nicht ohne die App.
+
+Der Anlass ist real: Am Arbeitsplatz liegt das Telefon in der Tasche, und ein Server, den man
+erst am Gerät einschalten muss, wird nicht benutzt. Alle Sicherungen bleiben: Anmeldung,
+dauerhafte Benachrichtigung mit Adresse und Stopp-Knopf, Abschaltung nach dreißig Minuten
+Leerlauf. Der Unterschied zum ursprünglich Verbotenen ist, dass niemand den Zustand verpassen
+kann — die Anzeige steht, solange er läuft.
 
 **4. TLS mit selbst signiertem Zertifikat.**
 
@@ -111,9 +142,15 @@ Garantie im System — plus Tests, die sie festhalten.
 
 - ADR-0002 Punkt 2 gilt nicht mehr. Punkt 1 (local-first, kein Account, kein Backend), Punkt 3
   (Event Sourcing) und Punkt 4 (Sync nur E2E-verschlüsselt) bleiben unverändert.
-- Der Expertenmodus ist **kein zweiter Client**. Er zeigt, was das Telefon bewusst nicht zeigt:
-  Listen, Rohdaten, Felder. Die Entscheidung im Moment — genau eine Handlung (G1) — bleibt dort,
-  wo sie hingehört.
+- Der Expertenmodus ist inzwischen **ein vollwertiger Client**. Die erste Fassung sagte, die
+  Entscheidung im Moment bleibe auf dem Telefon; das galt für ein Gerät, das man dabei hat. Am
+  Arbeitsplatz liegt es in der Tasche, und ein Vorschlag, den man nicht annehmen kann, ist
+  keiner.
+
+  **G1 bleibt davon unberührt.** Der Browser zeigt dieselbe Rangfolge wie das Telefon — eine
+  feuernde Regel, sonst das Laufende, sonst der Vorschlag — und genau eine Handlung, nie eine
+  Liste zur Auswahl. Die Liste steht daneben, als das, was der Expertenmodus ohnehin ist:
+  Bestand, nicht Auswahl.
 - Neue Prüfpflicht vor jedem Release: kein ausgehender Netzwerkcode, Server standardmäßig aus.
 - Sollte der Expertenmodus zur Hauptoberfläche werden, ist das ein Signal, dass die
   Telefon-Ansicht etwas Falsches tut — nicht, dass der Server erweitert gehört.

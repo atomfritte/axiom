@@ -31,11 +31,15 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
   String get metaScreen => 'expert';
 
   bool _busy = false;
+  bool _autostart = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ref.read(runtimeProvider.future).then((runtime) {
+      if (mounted) setState(() => _autostart = runtime.expertAutostart);
+    });
   }
 
   @override
@@ -70,7 +74,20 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
           ),
           const SizedBox(height: Space.xl),
 
-          if (status.running)
+          // Eine offene Freigabeanfrage schlaegt alles andere: Sie ist
+          // zeitkritisch, und sie ist der Moment, in dem der Vergleich
+          // stattfinden muss.
+          if (status.pendingNumber != null)
+            _Approval(
+              number: status.pendingNumber!,
+              onApprove: () => ref
+                  .read(expertModeProvider.notifier)
+                  .resolvePending(approve: true),
+              onDeny: () => ref
+                  .read(expertModeProvider.notifier)
+                  .resolvePending(approve: false),
+            )
+          else if (status.running)
             _Running(status: status)
           else
             Panel(
@@ -94,6 +111,40 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
             child: Text(status.running
                 ? context.t('Server beenden')
                 : context.t('Server starten')),
+          ),
+
+          const SizedBox(height: Space.xl),
+          Panel(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.t('Mitstarten, wenn AXIOM aufgeht'),
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: Space.xs),
+                      Text(
+                        context.t('Nicht beim Hochfahren und nicht ohne die App — nur, wenn du sie öffnest. Anmeldung, dauerhafte Anzeige und die Abschaltung nach dreißig Minuten Leerlauf bleiben.'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _autostart,
+                  onChanged: (value) async {
+                    final runtime = await ref.read(runtimeProvider.future);
+                    runtime.expertAutostart = value;
+                    if (!mounted) return;
+                    setState(() => _autostart = value);
+                    if (value && !ref.read(expertModeProvider).running) {
+                      await ref.read(expertModeProvider.notifier).start();
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: Space.xl),
@@ -276,4 +327,78 @@ class _Point extends StatelessWidget {
           Text(body, style: Theme.of(context).textTheme.bodySmall),
         ],
       );
+}
+
+/// Eine offene Freigabeanfrage aus dem Browser.
+///
+/// **Warum die Zahl groß ist und der Text kurz.** Der Schutz liegt nicht in
+/// der Bestätigung, sondern im Vergleich. Eine Meldung „Anmeldung zulassen?"
+/// wird weggedrückt wie jede andere; zwei Zahlen nebeneinander zu halten
+/// verlangt einen Blick, und genau der ist die Sicherung: Fragt jemand
+/// anders im selben Moment an, steht dessen Zahl hier — und nicht auf dem
+/// Bildschirm, vor dem du sitzt.
+///
+/// Deshalb steht „Stimmt nicht" gleichberechtigt daneben und nicht klein
+/// darunter. Ablehnen ist hier die richtige Antwort, nicht die Ausnahme.
+class _Approval extends StatelessWidget {
+  final String number;
+  final VoidCallback onApprove;
+  final VoidCallback onDeny;
+
+  const _Approval({
+    required this.number,
+    required this.onApprove,
+    required this.onDeny,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Panel(
+      accent: p.signal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.t('FREIGABE ANGEFRAGT'),
+              style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: Space.md),
+          Center(
+            child: Text(
+              number,
+              style: monoStyle(context,
+                  size: 56, weight: FontWeight.w600, color: p.signal),
+            ),
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            context.t('Steht dieselbe Zahl auf dem Bildschirm, vor dem du sitzt?'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            context.t('Wenn nicht, hat jemand anders angefragt. Dann ablehnen — das kostet nichts außer einem zweiten Versuch.'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.xl),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: onApprove,
+                  child: Text(context.t('Stimmt überein')),
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onDeny,
+                  child: Text(context.t('Stimmt nicht')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

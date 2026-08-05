@@ -375,6 +375,43 @@ void main() {
       expect(cert, contains('_shape'));
     });
 
+    test('Alarme überleben einen Neustart — alle, nicht nur drei', () {
+      // Android verwirft beim Booten jeden Alarm. Der BootReceiver setzte
+      // vorher drei fest verdrahtete Check-ins neu; Ankererinnerungen,
+      // Abendgrenze und Schlafeintrag blieben weg. Ausgerechnet die
+      // Rueckwaertsverkettung eines Termins (M3) — die Erinnerung mit der
+      // hoechsten Folgewirkung — ueberlebte keinen Neustart, und zwar
+      // lautlos.
+      // Ohne Kommentare: Sie erklaeren genau die Begriffe, die im Code
+      // nicht mehr vorkommen duerfen.
+      final boot = code(android('kotlin/de/axiom/axiom_app/BootReceiver.kt'));
+      expect(boot, contains('restoreAll'));
+      // Keine fest verdrahteten Zeiten und keine deutschen Texte mehr:
+      // Der Empfaenger kennt die Sprache des Nutzers nicht.
+      expect(boot, isNot(contains('Check-in')));
+      expect(boot, isNot(contains('Calendar')));
+
+      final scheduler =
+          code(android('kotlin/de/axiom/axiom_app/MainActivity.kt'));
+      expect(scheduler, contains('fun restoreAll'));
+      // Gespiegelt beim Planen, vergessen beim Abbestellen — sonst feuert
+      // nach einem Neustart ein Alarm, den jemand laengst geloescht hat.
+      expect(scheduler, contains('remember(context'));
+      expect(scheduler, contains('forget(context, id)'));
+    });
+
+    test('die Uhr in der Oberfläche läuft wirklich', () {
+      // `nowProvider` aktualisierte sich nur bei einer Nutzeraktion. Damit
+      // stand jede Zeitanzeige still: Die Wartezeit der Bremse lief nie ab,
+      // die Fokusuhr blieb stehen. Eine Uhr, die nicht laeuft, ist
+      // schlimmer als keine — man glaubt ihr.
+      final source =
+          code(File('lib/state/providers.dart').readAsStringSync());
+      final block = source.substring(source.indexOf('final nowProvider'));
+      expect(block.substring(0, block.indexOf('});')),
+          contains('Timer.periodic'));
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/axiom/axiom_app/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

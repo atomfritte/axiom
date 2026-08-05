@@ -150,9 +150,31 @@ final inboxProvider = FutureProvider<List<Event>>((ref) async {
 /// Die Oberflaeche darf `DateTime.now()` nicht direkt aufrufen: Sonst
 /// rechnet sie mit einer anderen Zeit als die Engine, und in Tests zeigt
 /// sie Schritte als vergangen an, die noch bevorstehen.
-final nowProvider = Provider<DateTime>((ref) {
+///
+/// **Warum das tickt.** Vorher aktualisierte sich dieser Wert nur, wenn
+/// `refreshTickProvider` hochzaehlte — also bei einer Nutzeraktion. Damit
+/// stand jede Zeitanzeige still: Die Wartezeit der Bremse lief auf dem
+/// Bildschirm nie ab, die Fokusuhr blieb auf der Minute stehen, in der man
+/// hingesehen hatte, und der Countdown zum naechsten Zeitanker zaehlte
+/// nicht herunter. Eine Uhr, die nicht laeuft, ist schlimmer als keine:
+/// Man glaubt ihr.
+///
+/// Sekundentakt, weil die Bremse Sekunden anzeigt. `autoDispose`, damit der
+/// Takt stehenbleibt, sobald ihn niemand mehr ansieht.
+final nowProvider = Provider.autoDispose<DateTime>((ref) {
   ref.watch(refreshTickProvider);
-  return ref.watch(clockProvider).nowLocal();
+  final clock = ref.watch(clockProvider);
+
+  // In Tests laeuft eine FakeClock. Ein echter Timer wuerde dort nur
+  // Nachlaufzeit erzeugen, ohne dass sich der Wert je aendert.
+  if (clock is SystemClock) {
+    final timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      ref.invalidateSelf();
+    });
+    ref.onDispose(timer.cancel);
+  }
+
+  return clock.nowLocal();
 });
 
 /// Kennzahlen und Regelurteile fuer einen Review-Umfang.
@@ -316,6 +338,12 @@ final class ExpertMode extends Notifier<ExpertStatus> {
   /// Fuer die Anzeige: der Server kann sich zwischen zwei Blicken selbst
   /// abgeschaltet haben.
   void refresh() => _sync();
+
+  /// Freigeben oder ablehnen — die Antwort auf den Zahlenabgleich.
+  void resolvePending({required bool approve}) {
+    _server?.resolvePending(approve: approve);
+    _sync();
+  }
 }
 
 final expertModeProvider =

@@ -47,6 +47,7 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       unawaited(_drainPending());
       unawaited(SystemSync.installDailyAnchors(language: language));
       unawaited(SleepGate.schedule(language: language));
+      unawaited(_maybeStartExpert());
     });
   }
 
@@ -138,6 +139,23 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
 
   Future<void> _open(Widget screen) => Navigator.of(context)
       .push(MaterialPageRoute<void>(builder: (_) => screen));
+
+  /// Startet den Expertenmodus mit, wenn er dafür eingeschaltet ist.
+  ///
+  /// Bewusst nur hier und nirgends sonst: Dieser Pfad läuft, wenn die App
+  /// geöffnet wird — nicht beim Hochfahren, nicht aus einem Dienst heraus.
+  /// Der Unterschied ist der ganze Punkt (ADR-0005, Punkt 3).
+  Future<void> _maybeStartExpert() async {
+    try {
+      final runtime = await ref.read(runtimeProvider.future);
+      if (!runtime.expertAutostart) return;
+      if (ref.read(expertModeProvider).running) return;
+      await ref.read(expertModeProvider.notifier).start();
+    } on Object {
+      // Kein Grund, die App nicht zu starten. Der Schalter im
+      // Expertenmodus zeigt, dass er aus ist.
+    }
+  }
 
   static Future<String?> _invokeString(String method) async {
     try {

@@ -210,6 +210,120 @@ void main() {
     });
   });
 
+  group('Die Oberfläche und der Server passen zusammen', () {
+    test('jede Route, die die Seite ruft, gibt es auch', () async {
+      // Der Fall, der sonst erst auf dem Schreibtisch auffaellt: ein Knopf,
+      // der eine Route ruft, die es nicht gibt. Im Browser sieht das aus
+      // wie „passiert nichts" — dieselbe Fehlerklasse, die uns auf Android
+      // eine Woche gekostet hat.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      final server = File('lib/server/expert_server.dart').readAsStringSync();
+      final routes = RegExp(r'''['"](/api/[a-z/]+)''')
+          .allMatches(page)
+          .map((m) => m.group(1)!)
+          .toSet();
+      expect(routes, isNotEmpty);
+      for (final route in routes) {
+        final segments = route.split('/').where((s) => s.isNotEmpty);
+        final pattern = "'${segments.join("', '")}'";
+        expect(server.contains(pattern) || server.contains(route), isTrue,
+            reason: 'Die Seite ruft $route — der Server kennt sie nicht');
+      }
+    });
+
+    test('die Seite lädt nichts von außen', () {
+      // ADR-0005: AXIOM ruft nichts von sich aus auf. Eine Schriftart oder
+      // ein Skript von einem fremden Server waere genau das — und die
+      // Sicherheitsrichtlinie der Seite waere dann nur noch Zierde.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      for (final forbidden in ['http://', 'https://', '//cdn', 'integrity=']) {
+        expect(page, isNot(contains(forbidden)), reason: forbidden);
+      }
+      // Die Schriften kommen vom Server selbst.
+      expect(page, contains('url(/font/'));
+    });
+
+    test('dieselben Paletten wie in der App', () {
+      // Zwei Oberflaechen, die sich aehnlich sehen wollen, driften
+      // auseinander, sobald die Farben zweimal getippt sind. Geprueft wird
+      // deshalb gegen tokens.dart, nicht gegen eine Erwartung.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      final tokens = File('lib/design/tokens.dart').readAsStringSync();
+      for (final key in ['signal', 'calm', 'caution', 'info', 'base']) {
+        final hex = RegExp('$key: Color\\(0xFF([0-9A-Fa-f]{6})\\)')
+            .firstMatch(tokens)
+            ?.group(1);
+        expect(hex, isNotNull, reason: key);
+        expect(page.toUpperCase(), contains('#${hex!.toUpperCase()}'),
+            reason: '$key weicht ab');
+      }
+    });
+  });
+
+  group('Freigabe per Zahlenabgleich', () {
+    test('die Zahl steht auf beiden Seiten', () async {
+      final res = await call('POST', '/api/auth/request');
+      expect(res.statusCode, 200);
+      final body = await json(res);
+      // Zweistellig: lang genug, dass Zufall nicht traegt, kurz genug, um
+      // sie in einem Blick zu vergleichen statt abzulesen.
+      expect(body['number'], matches(RegExp(r'^\d{2}$')));
+      expect(server.pendingNumber, body['number']);
+    });
+
+    test('vor der Freigabe kommt niemand hinein', () async {
+      final body = await json(await call('POST', '/api/auth/request'));
+      final poll = await call('GET', '/api/auth/poll?id=${body['id']}');
+      expect(poll.statusCode, 202);
+      expect(poll.headers.value('set-cookie'), isNull);
+      // Und die Daten bleiben zu.
+      expect((await call('GET', '/api/state')).statusCode, 401);
+    });
+
+    test('nach der Freigabe kommt die Sitzung', () async {
+      final body = await json(await call('POST', '/api/auth/request'));
+      server.resolvePending(approve: true);
+      final poll = await call('GET', '/api/auth/poll?id=${body['id']}');
+      expect(poll.statusCode, 200);
+      final cookie = poll.headers.value('set-cookie')!;
+      expect(cookie, contains('HttpOnly'));
+      expect(cookie, contains('Secure'));
+      expect(cookie, contains('SameSite=Strict'));
+
+      final state = await call('GET', '/api/state',
+          cookie: cookie.split(';').first);
+      expect(state.statusCode, 200);
+    });
+
+    test('ablehnen sperrt genau diese Anfrage', () async {
+      final body = await json(await call('POST', '/api/auth/request'));
+      server.resolvePending(approve: false);
+      final poll = await call('GET', '/api/auth/poll?id=${body['id']}');
+      expect(poll.statusCode, 403);
+      expect(poll.headers.value('set-cookie'), isNull);
+    });
+
+    test('eine fremde Kennung bekommt keine Sitzung', () async {
+      // Sonst waere der Zahlenabgleich wertlos: Wer irgendeine Anfrage
+      // freigeben laesst, duerfte sonst jede andere abholen.
+      await call('POST', '/api/auth/request');
+      server.resolvePending(approve: true);
+      final poll = await call('GET', '/api/auth/poll?id=fremd');
+      expect(poll.statusCode, 410);
+    });
+
+    test('es gibt immer nur eine offene Anfrage', () async {
+      // Zwei Zahlen auf dem Telefon waeren eine Auswahl — und wer
+      // auswaehlt, vergleicht nicht mehr.
+      final first = await json(await call('POST', '/api/auth/request'));
+      await Future<void>.delayed(const Duration(seconds: 4));
+      final second = await json(await call('POST', '/api/auth/request'));
+      expect(second['id'], isNot(first['id']));
+      expect((await call('GET', '/api/auth/poll?id=${first['id']}')).statusCode,
+          410);
+    }, timeout: const Timeout(Duration(seconds: 30)));
+  });
+
   group('Die Verbindung ist verschlüsselt', () {
     test('Klartext wird nicht bedient', () async {
       // Ein HTTP-Aufruf auf den TLS-Port darf nicht irgendwie doch

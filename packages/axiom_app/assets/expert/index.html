@@ -1,351 +1,921 @@
 <!--
-  Expertenmodus — die Oberfläche am großen Bildschirm.
+  Expertenmodus — AXIOM am großen Bildschirm.
 
-  Vollständig eigenständig: kein CDN, keine Schriftart von außen, kein
-  Skript, das nachgeladen wird. Das ist keine Sparsamkeit, sondern die
-  Bedingung aus ADR-0005 — AXIOM ruft nichts von sich aus auf, und eine
-  Seite, die eine Schriftart von einem fremden Server holt, täte genau das.
+  Kein zweites AXIOM mit eigenem Geschmack, sondern dasselbe Instrument auf
+  einer Fläche, die mehr trägt: dieselben sechs Paletten aus tokens.dart,
+  dieselben zwei Schriften aus dem App-Bündel, dieselbe Kapazitätslinie.
+  Wer beide nebeneinander offen hat, soll keinen Bruch sehen.
 
-  Zeigt bewusst, was die App bewusst nicht zeigt: Listen, Rohwerte, Felder.
-  Die Entscheidung im Moment bleibt auf dem Telefon genau eine Handlung.
+  Was hinzukommt, ist das, was ein Schreibtisch hergibt und eine Hand nicht:
+  Listen NEBEN der Handlung statt statt ihrer, Tastenkürzel, Rohdaten.
+
+  Was nicht hinzukommt, ist eine zweite Art zu entscheiden. Oben links steht
+  genau eine Handlung, so wie auf dem Telefon (G1). Die Liste daneben ist
+  Bestand, nicht Auswahl.
+
+  Vollständig eigenständig: kein CDN, kein nachgeladenes Skript, keine
+  fremde Schriftart. Das ist die Bedingung aus ADR-0005 — AXIOM ruft nichts
+  von sich aus auf, und eine Seite, die eine Schrift von fremden Servern
+  holt, täte genau das.
 -->
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
 <title>AXIOM · Expertenmodus</title>
+
 <style>
-  :root{
-    --base:#0E1113; --panel:#171B1E; --raised:#1F2529; --rule:#2A3237;
-    --ink:#ECEAE4; --dim:#9BA4AB; --faint:#7A848B;
-    --signal:#E8A33D; --calm:#7FA88A; --caution:#C4653A; --info:#6E90A4;
-    --mono:ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--base);color:var(--ink);
-    font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-  a{color:var(--signal)}
-  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
-    padding:14px 20px;border-bottom:1px solid var(--rule);
-    position:sticky;top:0;background:var(--base);z-index:5}
-  .mark{font:600 15px/1 var(--mono);letter-spacing:.22em;color:var(--signal)}
-  nav{display:flex;gap:4px;flex-wrap:wrap}
-  nav button{background:transparent;border:1px solid transparent;color:var(--dim);
-    font:600 12px/1 var(--mono);letter-spacing:.08em;padding:9px 13px;
-    border-radius:4px;cursor:pointer}
-  nav button:hover{color:var(--ink)}
-  nav button[aria-selected=true]{background:var(--panel);border-color:var(--rule);color:var(--ink)}
-  main{padding:20px;max-width:1280px}
-  section[hidden]{display:none}
-  h2{font:500 20px/1.25 inherit;margin:0 0 4px}
-  .hint{color:var(--dim);font-size:13.5px;margin:0 0 18px;max-width:70ch}
-  .panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;
-    padding:16px;margin-bottom:14px}
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{text-align:left;font:600 11px/1 var(--mono);letter-spacing:.09em;
-    color:var(--faint);padding:0 10px 9px;white-space:nowrap}
-  td{padding:9px 10px;border-top:1px solid var(--rule);vertical-align:middle}
-  tr:hover td{background:var(--raised)}
-  input,textarea,select{background:var(--base);color:var(--ink);
-    border:1px solid var(--rule);border-radius:4px;padding:7px 9px;font:inherit;width:100%}
-  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--signal)}
-  textarea{font:13px/1.5 var(--mono);min-height:250px;resize:vertical}
-  .num{width:72px;font:14px/1 var(--mono);text-align:center}
-  button.act{background:var(--signal);color:#14100A;border:0;border-radius:4px;
-    padding:10px 16px;font:600 13px/1 inherit;cursor:pointer}
-  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--rule);
-    border-radius:4px;padding:8px 12px;font:13px/1 inherit;cursor:pointer}
-  button.ghost:hover{color:var(--ink);border-color:var(--dim)}
-  .tag{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.07em;
-    padding:4px 7px;border-radius:3px;border:1px solid currentColor;margin-right:5px}
-  .mono{font:12.5px/1.5 var(--mono);color:var(--dim)}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-  .metric .k{font:600 10.5px/1 var(--mono);letter-spacing:.09em;color:var(--faint)}
-  .metric .v{font:300 34px/1.1 var(--mono);margin-top:6px}
-  .bar{height:3px;background:var(--rule);margin-top:8px;border-radius:2px;overflow:hidden}
-  .bar i{display:block;height:100%;background:var(--signal)}
-  #gate{max-width:420px;margin:14vh auto;text-align:center}
-  #gate input{text-align:center;font:400 30px/1 var(--mono);letter-spacing:.3em;padding:14px}
-  .warn{border-color:var(--caution);color:var(--caution)}
-  .ok{color:var(--calm)}
-  .err{color:var(--caution);font-size:13px;margin-top:10px;white-space:pre-wrap}
-  footer{color:var(--faint);font-size:12px;padding:24px 20px 40px;max-width:80ch}
+/* ── Schriften ─────────────────────────────────────────────────────────
+   Aus dem App-Bündel, ausgeliefert vom Server selbst. Mono trägt jeden
+   Messwert — eine Systemschrift an dieser Stelle macht aus einem
+   abgelesenen Wert einen gemeinten. */
+@font-face{font-family:Plex;src:url(/font/sans-400.ttf);font-weight:400;font-display:swap}
+@font-face{font-family:Plex;src:url(/font/sans-500.ttf);font-weight:500;font-display:swap}
+@font-face{font-family:PlexMono;src:url(/font/mono-400.ttf);font-weight:400;font-display:swap}
+@font-face{font-family:PlexMono;src:url(/font/mono-500.ttf);font-weight:500;font-display:swap}
+
+/* ── Paletten ──────────────────────────────────────────────────────────
+   Wortgleich aus lib/design/tokens.dart, nicht nachempfunden. */
+:root,[data-scheme=instrument][data-mode=dark]{
+  --base:#0E1113;--panel:#171B1E;--raised:#1F2529;--rule:#2A3237;
+  --ink:#ECEAE4;--dim:#9BA4AB;--faint:#7A848B;
+  --signal:#E8A33D;--deep:#B8761F;--calm:#7FA88A;--caution:#C4653A;--info:#6E90A4;
+  --on-signal:#1A1206}
+[data-scheme=instrument][data-mode=light]{
+  --base:#F2F1ED;--panel:#FFFFFF;--raised:#FAF9F6;--rule:#CFCCC4;
+  --ink:#15181B;--dim:#4A545B;--faint:#6E767C;
+  --signal:#9A6510;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
+  --on-signal:#FFFFFF}
+[data-scheme=contrast][data-mode=dark]{
+  --base:#0A0C0E;--panel:#15191C;--raised:#1E2428;--rule:#3D474D;
+  --ink:#F5F3EE;--dim:#C2C9CE;--faint:#9BA5AC;
+  --signal:#FFBB55;--deep:#D08A28;--calm:#9CC7A6;--caution:#E08356;--info:#8FB3C7;
+  --on-signal:#140E04}
+[data-scheme=contrast][data-mode=light]{
+  --base:#FAFAF8;--panel:#FFFFFF;--raised:#F2F1ED;--rule:#B4B0A7;
+  --ink:#0D1012;--dim:#3B4248;--faint:#5C666D;
+  --signal:#7A4E08;--deep:#5C3A05;--calm:#2E5239;--caution:#7C3316;--info:#2B4757;
+  --on-signal:#FFFFFF}
+[data-scheme=muted][data-mode=dark]{
+  --base:#12100D;--panel:#1A1714;--raised:#221E1A;--rule:#332C26;
+  --ink:#E0D8CC;--dim:#A3988A;--faint:#7D7264;
+  --signal:#D79A55;--deep:#A87433;--calm:#8FA98C;--caution:#BE7A55;--info:#8B9AA0;
+  --on-signal:#17110A}
+[data-scheme=muted][data-mode=light]{
+  --base:#F4F0E7;--panel:#FBF8F1;--raised:#FFFDF8;--rule:#D5CDBE;
+  --ink:#221E19;--dim:#57503F;--faint:#7A7263;
+  --signal:#8A5A16;--deep:#6B450F;--calm:#44634A;--caution:#8C4A26;--info:#3F5A66;
+  --on-signal:#FFFFFF}
+
+/* Vier Stufen wie in der App — kein stufenloser Regler. Ein Regler ist
+   eine Entscheidung mit unendlich vielen Antworten (G1). */
+[data-size=s]{--scale:.9}[data-size=m]{--scale:1}
+[data-size=l]{--scale:1.18}[data-size=xl]{--scale:1.38}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:calc(16px * var(--scale,1))}
+body{background:var(--base);color:var(--ink);
+  font:400 1rem/1.55 Plex,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:3rem}
+.mono{font-family:PlexMono,ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:2px}
+
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;
+  padding:.7rem 1.25rem;background:color-mix(in srgb,var(--base) 92%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)}
+.mark{display:flex;align-items:center;gap:.5rem;font-weight:500;letter-spacing:.14em;font-size:.78rem}
+.chips{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
+.chip{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.09em;padding:.28rem .5rem;
+  border:1px solid var(--rule);border-radius:3px;color:var(--dim);white-space:nowrap}
+.chip b{color:var(--ink);font-weight:500}
+.chip.on{border-color:var(--signal);color:var(--signal)}
+.chip.warn{border-color:var(--caution);color:var(--caution)}
+.spacer{flex:1 1 auto}
+.seg{display:flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.seg button{font-family:PlexMono,monospace;font-size:.64rem;letter-spacing:.08em;padding:.3rem .48rem;
+  color:var(--faint);border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--signal)}
+.seg button:hover{color:var(--ink)}
+.budget{display:flex;align-items:center;gap:.45rem;min-width:8rem}
+.budget .track{position:relative;flex:1;height:2px;background:var(--rule)}
+.budget .fill{position:absolute;inset:0 auto 0 0;background:var(--signal)}
+.budget.over .fill{background:var(--caution)}
+
+main{max-width:1560px;margin:0 auto;padding:1.25rem;display:grid;gap:1.25rem}
+@media(min-width:1080px){main{grid-template-columns:minmax(340px,26rem) 1fr;align-items:start}
+  .rail{position:sticky;top:4.6rem}}
+.rail{display:grid;gap:1rem;align-content:start}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:1.1rem}
+.panel.accent{border-color:color-mix(in srgb,var(--signal) 55%,var(--rule))}
+.panel.calm{border-color:color-mix(in srgb,var(--calm) 55%,var(--rule))}
+.eyebrow{font-family:PlexMono,monospace;font-size:.65rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.sec{display:flex;align-items:center;gap:.75rem;margin:0 0 .7rem}
+.sec .line{flex:1;height:1px;background:var(--rule)}
+h1{font-size:1.65rem;font-weight:400;line-height:1.2;letter-spacing:-.01em}
+h2{font-size:1.05rem;font-weight:500}
+p{color:var(--dim);font-size:.9rem}
+.faint{color:var(--faint);font-size:.8rem}
+.stamp{display:inline-flex;align-items:center;gap:.35rem;font-family:PlexMono,monospace;font-size:.68rem;
+  letter-spacing:.08em;border:1px solid color-mix(in srgb,var(--info) 60%,transparent);
+  color:var(--info);padding:.2rem .45rem;border-radius:3px}
+.why{color:var(--dim);font-size:.85rem;border-left:2px solid var(--rule);padding-left:.75rem;margin:.85rem 0 0}
+.row{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:1.05rem}
+.btn{padding:.6rem 1rem;border-radius:4px;border:1px solid var(--rule);color:var(--ink);font-size:.88rem;
+  transition:background .12s,border-color .12s}
+.btn:hover{border-color:var(--dim)}
+.btn.primary{background:var(--signal);color:var(--on-signal);border-color:var(--signal);font-weight:500}
+.btn.primary:hover{background:var(--deep);border-color:var(--deep)}
+.btn.quiet{border-color:transparent;color:var(--faint)}
+.btn.quiet:hover{color:var(--ink)}
+.btn.grow{flex:1 1 8rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.capline{width:100%;height:76px;display:block;overflow:visible}
+.capline .axis{stroke:var(--rule);stroke-width:1}
+.capline .din{fill:var(--calm)}
+.capline .dout{fill:none;stroke:var(--faint)}
+.capline .dnow{fill:var(--signal)}
+.capline .m{stroke:var(--signal);stroke-width:2}
+.capline text{font-family:PlexMono,monospace;font-size:9px;fill:var(--faint);letter-spacing:.1em}
+
+#cap-text{width:100%;min-height:4.2rem;resize:vertical;background:var(--raised);
+  border:1px solid var(--rule);border-radius:4px;padding:.7rem .8rem;line-height:1.5}
+#cap-text:focus{outline:none;border-color:var(--signal)}
+
+.tabs{display:flex;gap:.15rem;overflow-x:auto;border-bottom:1px solid var(--rule);margin-bottom:1rem}
+.tabs button{padding:.55rem .8rem;font-size:.85rem;color:var(--faint);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--signal)}
+.tabs button:hover{color:var(--ink)}
+.tabs .count{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-left:.3rem}
+
+.item{display:grid;grid-template-columns:3px 1fr auto;gap:.85rem;align-items:start;
+  padding:.8rem 0;border-bottom:1px solid var(--rule)}
+.item:last-child{border-bottom:0}
+.item .bar{width:3px;align-self:stretch;border-radius:2px;background:var(--rule);min-height:2.1rem}
+.item.reach .bar{background:var(--signal)}
+.item.run .bar{background:var(--calm)}
+.item .title{font-size:.94rem}
+.item.done .title{color:var(--faint);text-decoration:line-through}
+.meta{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.2rem}
+.meta span{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint)}
+.meta .due{color:var(--caution)}
+.acts{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end}
+.acts .btn{padding:.32rem .58rem;font-size:.77rem}
+
+.dial{margin:0 0 1.05rem}
+.dial .head{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem}
+.dial .val{font-family:PlexMono,monospace;color:var(--signal);font-weight:500}
+.dial .ends{display:flex;justify-content:space-between;margin-top:.15rem}
+.dial .ends span{font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:.5rem 0 0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--rule)}
+input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-8px;
+  border-radius:50%;background:var(--signal);border:2px solid var(--panel)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--signal);
+  border:2px solid var(--panel)}
+input[type=text],input[type=number],input[type=password],input[type=datetime-local],textarea,select{
+  background:var(--raised);border:1px solid var(--rule);border-radius:4px;padding:.5rem .65rem;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--signal)}
+label{display:block;font-size:.8rem;color:var(--dim);margin-bottom:.3rem}
+.field{margin-bottom:.9rem}
+
+.value{padding:.85rem 0;border-bottom:1px solid var(--rule)}
+.value:last-child{border-bottom:0}
+.value.can{cursor:pointer}
+.value .head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.value .num{font-family:PlexMono,monospace;font-size:1.3rem;font-weight:500}
+.value .track{height:2px;background:var(--rule);margin:.45rem 0 .1rem;position:relative}
+.value .fill{position:absolute;inset:0 auto 0 0;background:var(--signal)}
+.terms{margin-top:.5rem;display:none}
+.value.open .terms{display:block}
+.term{display:flex;justify-content:space-between;font-family:PlexMono,monospace;font-size:.7rem;
+  color:var(--faint);padding:.15rem 0}
+.term b{color:var(--dim);font-weight:400}
+
+textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;line-height:1.55;tab-size:2}
+.ev{display:grid;grid-template-columns:auto auto 1fr;gap:.7rem;font-family:PlexMono,monospace;font-size:.72rem;
+  padding:.32rem 0;border-bottom:1px solid color-mix(in srgb,var(--rule) 45%,transparent)}
+.ev .t{color:var(--faint)}.ev .k{color:var(--info)}
+.ev .p{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+dialog{border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);
+  padding:1.4rem;width:min(34rem,calc(100vw - 2rem));max-height:86vh;overflow:auto}
+dialog::backdrop{background:color-mix(in srgb,var(--base) 72%,transparent);backdrop-filter:blur(3px)}
+dialog h2{margin-bottom:.9rem}
+kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:3px;padding:.05rem .32rem;color:var(--dim)}
+.keys{display:grid;gap:.4rem}
+.keys div{display:flex;justify-content:space-between;gap:1rem;font-size:.85rem}
+
+#toast{position:fixed;left:50%;bottom:1.6rem;transform:translateX(-50%) translateY(1rem);
+  background:var(--raised);border:1px solid var(--rule);border-radius:5px;padding:.6rem 1rem;
+  font-size:.85rem;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:60;max-width:90vw}
+#toast.on{opacity:1;transform:translateX(-50%)}
+
+#gate{display:grid;place-items:center;min-height:100vh;padding:1.5rem}
+#gate .panel{width:min(24rem,100%)}
+#pin{font-family:PlexMono,monospace;font-size:1.5rem;letter-spacing:.45rem;text-align:center}
+#match{font-family:PlexMono,monospace;font-size:3.4rem;font-weight:500;letter-spacing:.2em;
+  color:var(--signal);text-align:center;padding:1rem 0}
+.hide{display:none!important}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
+<!-- ── Anmeldung ────────────────────────────────────────────────────── -->
 <div id="gate">
-  <div class="mark">AXIOM</div>
-  <h2 style="margin-top:20px">Expertenmodus</h2>
-  <p class="hint" style="text-align:left">
-    Die sechsstellige PIN steht in der App unter <em>System → Expertenmodus</em>.
-    Sie ist bei jedem Start neu. Nach fünf Fehlversuchen schaltet sich der
-    Server ab. Der Fingerabdruck des Zertifikats steht ebenfalls dort —
-    er sollte mit dem übereinstimmen, den dieser Browser anzeigt.
-  </p>
-  <input id="pin" inputmode="numeric" maxlength="6" placeholder="······" autofocus>
-  <div style="margin-top:14px"><button class="act" id="unlock">Öffnen</button></div>
-  <div class="err" id="gateErr"></div>
+  <div class="panel">
+    <div class="mark" style="margin-bottom:1.1rem">
+      <svg width="20" height="20" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M3 13h7M12 13h7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 4v15" stroke="var(--signal)" stroke-width="3"/></svg>AXIOM
+    </div>
+
+    <div id="gate-push">
+      <p class="faint">Auf dem Telefon erscheint gleich eine Zahl. Stimmt sie mit der hier überein, gibst du dort frei — sonst nicht.</p>
+      <div id="match">··</div>
+      <p id="push-msg" class="faint" style="min-height:1.2rem;text-align:center"></p>
+      <button class="btn quiet" id="use-pin" style="width:100%">Stattdessen PIN eingeben</button>
+    </div>
+
+    <div id="gate-pin" class="hide">
+      <p class="faint" style="margin-bottom:.8rem">Die PIN steht in der App. Sie gilt nur für diesen Start.</p>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6"
+             placeholder="······" aria-label="PIN">
+      <p id="gate-msg" class="faint" style="margin-top:.6rem;min-height:1.2rem"></p>
+      <button class="btn primary" id="gate-go" style="width:100%;margin-top:.4rem">Anmelden</button>
+      <button class="btn quiet" id="use-push" style="width:100%;margin-top:.3rem">Zurück zur Freigabe</button>
+    </div>
+  </div>
 </div>
 
-<div id="app" hidden>
+<!-- ── Anwendung ────────────────────────────────────────────────────── -->
+<div id="app" class="hide">
   <header>
-    <span class="mark">AXIOM</span>
-    <nav>
-      <button data-tab="state" aria-selected="true">ZUSTAND</button>
-      <button data-tab="tasks">AUFGABEN</button>
-      <button data-tab="rules">REGELWERK</button>
-      <button data-tab="events">EREIGNISSE</button>
-    </nav>
-    <span style="flex:1"></span>
-    <button class="ghost" id="reload">Neu laden</button>
-    <button class="ghost warn" id="shutdown">Server beenden</button>
+    <div class="mark">
+      <svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M3 13h7M12 13h7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 4v15" stroke="var(--signal)" stroke-width="3"/></svg>AXIOM
+    </div>
+    <div class="chips" id="hchips"></div>
+    <div class="spacer"></div>
+    <div class="budget" id="budget" title="Zeit im System heute (G4)">
+      <span class="eyebrow">META</span>
+      <span class="track"><span class="fill" id="budget-fill"></span></span>
+      <span class="mono" style="font-size:.68rem" id="budget-txt">–</span>
+    </div>
+    <div class="seg" role="group" aria-label="Helligkeit">
+      <button data-mode="auto">AUTO</button><button data-mode="dark">DUNKEL</button><button data-mode="light">HELL</button>
+    </div>
+    <div class="seg" role="group" aria-label="Farbschema">
+      <button data-scheme="instrument">INSTRUMENT</button><button data-scheme="contrast">KONTRAST</button><button data-scheme="muted">GEDÄMPFT</button>
+    </div>
+    <div class="seg" role="group" aria-label="Textgröße">
+      <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
+    </div>
+    <button class="btn quiet" id="help-btn" title="Tastenkürzel (?)">?</button>
+    <button class="btn quiet" id="stop-btn" title="Server beenden">Beenden</button>
   </header>
 
   <main>
-    <section id="state">
-      <h2>Zustand</h2>
-      <p class="hint">Die Werte, gegen die jede Regel prüft — mit der Herleitung,
-        aus der sie entstanden sind. Kein Wert ohne sichtbare Formel.</p>
-      <div class="grid" id="metrics"></div>
-      <div class="panel" id="breakdown"></div>
-    </section>
+    <div class="rail">
+      <section class="panel accent" id="act" aria-live="polite"></section>
 
-    <section id="tasks" hidden>
-      <h2>Aufgaben</h2>
-      <p class="hint">Alle Felder, alle Zustände. Die App zeigt bewusst nur eine
-        Handlung — hier ist die Liste, weil Planen etwas anderes ist als
-        Entscheiden im Moment.</p>
-      <div class="panel">
+      <section class="panel">
+        <div class="sec"><span class="eyebrow">Erfassen</span><span class="line"></span><kbd>n</kbd></div>
+        <textarea id="cap-text" placeholder="Was ist dir eingefallen?" aria-label="Erfassen"></textarea>
         <div class="row">
-          <input id="newTitle" placeholder="Neue Aufgabe" style="flex:1;min-width:220px">
-          <label class="mono">Start <input class="num" id="newAe" type="number" min="1" max="10" value="5"></label>
-          <label class="mono">Sog <input class="num" id="newSal" type="number" min="1" max="5" value="3"></label>
-          <label class="mono">Folgen <input class="num" id="newStakes" type="number" min="1" max="5" value="3"></label>
-          <button class="act" id="addTask">Anlegen</button>
+          <button class="btn primary grow" id="cap-save">Speichern</button>
+          <button class="btn" id="checkin-btn" title="Check-in (c)">Check-in</button>
         </div>
+        <p class="faint" style="margin-top:.5rem">Ohne Rückfrage, ohne Kategorie. Sortiert wird später.</p>
+      </section>
+
+      <section class="panel">
+        <div class="sec"><span class="eyebrow">Aktivierungsenergie</span><span class="line"></span>
+          <span class="mono" style="font-size:.7rem;color:var(--signal)" id="cap-label">–</span></div>
+        <svg class="capline" id="capline" viewBox="0 0 320 76" preserveAspectRatio="none"
+             role="img" aria-label="Kapazitätslinie"></svg>
+        <p class="faint" id="cap-note" style="margin-top:.4rem"></p>
+      </section>
+    </div>
+
+    <div>
+      <div class="tabs" role="tablist" id="tabs">
+        <button role="tab" data-tab="tasks" aria-selected="true">Aufgaben<span class="count" id="c-tasks"></span></button>
+        <button role="tab" data-tab="inbox" aria-selected="false">Eingang<span class="count" id="c-inbox"></span></button>
+        <button role="tab" data-tab="state" aria-selected="false">Zustand</button>
+        <button role="tab" data-tab="rules" aria-selected="false">Regelwerk<span class="count" id="c-rules"></span></button>
+        <button role="tab" data-tab="review" aria-selected="false">Review</button>
+        <button role="tab" data-tab="events" aria-selected="false">Ereignisse</button>
       </div>
-      <div class="panel" style="overflow-x:auto"><table id="taskTable"></table></div>
-    </section>
-
-    <section id="rules" hidden>
-      <h2>Regelwerk</h2>
-      <p class="hint">Bearbeiten geht direkt im YAML. Ungültiges wird abgelehnt,
-        nicht stillschweigend übersprungen. Jede gespeicherte Änderung läuft
-        sieben Tage stumm mit.</p>
-      <div id="ruleList"></div>
-    </section>
-
-    <section id="events" hidden>
-      <h2>Ereignisse</h2>
-      <p class="hint">Der Strom, aus dem alles andere gerechnet wird. Append-only:
-        Es gibt hier nichts zu ändern, nur zu lesen.</p>
-      <div class="panel" style="overflow-x:auto"><table id="eventTable"></table></div>
-    </section>
+      <section class="panel" id="surface"></section>
+    </div>
   </main>
-
-  <footer>
-    Verschlüsselt mit einem selbst signierten Zertifikat. Die Warnung beim ersten
-    Zugriff ist erwartet — entscheidend ist, dass der Fingerabdruck, den der Browser
-    unter „Zertifikat anzeigen" nennt, mit dem in der App übereinstimmt.
-    Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.
-  </footer>
 </div>
 
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dlg"></dialog>
+
 <script>
-const $ = s => document.querySelector(s);
-const el = (t, p = {}) => Object.assign(document.createElement(t), p);
-const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
-  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,a={},...kids)=>{
+  const n=document.createElement(t);
+  for(const [k,v] of Object.entries(a)){
+    if(v===null||v===undefined||v===false) continue;
+    if(k==='class') n.className=v;
+    else if(k.startsWith('on')) n.addEventListener(k.slice(2),v);
+    else n.setAttribute(k,v===true?'':v);
+  }
+  for(const k of kids.flat()) if(k!==null&&k!==undefined&&k!==false)
+    n.append(k.nodeType?k:document.createTextNode(String(k)));
+  return n;
+};
+const fmt=n=>(n===null||n===undefined)?'–':String(n);
+let toastTimer;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),3200)}
 
-async function api(path, opts = {}) {
-  const res = await fetch(path, {
-    ...opts,
-    headers: {'Content-Type': 'application/json', ...(opts.headers || {})},
-  });
-  if (res.status === 401) { gate(); throw new Error('unauthorised'); }
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.issues ? body.issues.join('\n') : (body.error || res.statusText));
-  return body;
+async function api(path,opts={}){
+  const res=await fetch(path,{credentials:'same-origin',
+    headers:opts.body?{'Content-Type':'application/json'}:{},...opts});
+  if(res.status===401){showGate();throw new Error('401')}
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+  return data;
 }
 
-function gate() { $('#gate').hidden = false; $('#app').hidden = true; }
-
-$('#unlock').onclick = async () => {
-  const pin = $('#pin').value.trim();
-  const res = await fetch('/api/login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({pin}),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (res.ok) { $('#gate').hidden = true; $('#app').hidden = false; loadAll(); return; }
-  $('#gateErr').textContent = body.attemptsLeft !== undefined
-    ? `${body.error}. Noch ${body.attemptsLeft} Versuch(e).`
-    : body.error || 'Fehlgeschlagen';
-  $('#pin').value = '';
-};
-$('#pin').onkeydown = e => { if (e.key === 'Enter') $('#unlock').click(); };
-
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x === b));
-  ['state','tasks','rules','events'].forEach(id => $('#' + id).hidden = id !== b.dataset.tab);
-});
-
-$('#reload').onclick = loadAll;
-$('#shutdown').onclick = async () => {
-  await fetch('/api/stop', {method: 'POST'}).catch(() => {});
-  document.body.innerHTML =
-    '<main><h2>Server beendet.</h2><p class="hint">Neu starten geht in der App.</p></main>';
-};
-
-// ── Zustand ───────────────────────────────────────────────────────────
-async function loadState() {
-  const s = await api('/api/state');
-  $('#metrics').innerHTML = Object.entries(s.values).map(([k, v]) => `
-    <div class="panel metric">
-      <div class="k">${esc(v.label).toUpperCase()}</div>
-      <div class="v">${v.value ?? '–'}</div>
-      <div class="bar"><i style="width:${Math.max(0, Math.min(100, v.value ?? 0))}%"></i></div>
-      <div class="mono" style="margin-top:8px">Konfidenz ${(v.confidence ?? 1).toFixed(2)}</div>
-    </div>`).join('');
-
-  const rows = Object.entries(s.breakdown).map(([key, terms]) => `
-    <div style="margin-bottom:14px">
-      <div class="k mono" style="color:var(--faint)">${esc(key).toUpperCase()}</div>
-      ${terms.map(t => `<div class="mono">${esc(t.label)}
-        <span style="color:${t.contribution < 0 ? 'var(--caution)' : 'var(--calm)'}">
-        ${t.contribution >= 0 ? '+' : '−'}${Math.abs(t.contribution).toFixed(1)}</span></div>`).join('')}
-    </div>`).join('');
-  $('#breakdown').innerHTML =
-    `<div class="k mono" style="color:var(--faint);margin-bottom:12px">SO WIRD GERECHNET</div>${rows}
-     <div class="mono" style="margin-top:14px">Laststufe ${esc(s.loadLevel)} · ${esc(s.regime)}
-     · Meta-Work heute ${s.metaMinutesToday} min</div>`;
-}
-
-// ── Aufgaben ──────────────────────────────────────────────────────────
-const STATES = ['ready','active','blocked','done','dropped'];
-
-async function loadTasks() {
-  const {tasks} = await api('/api/tasks');
-  const t = $('#taskTable');
-  t.innerHTML = `<thead><tr>
-    <th>Titel</th><th>Start</th><th>Sog</th><th>Folgen</th>
-    <th>Zustand</th><th>Verfällt</th><th>ID</th></tr></thead>`;
-  const body = el('tbody');
-  for (const task of tasks) {
-    const tr = el('tr');
-    tr.innerHTML = `
-      <td><input value="${esc(task.title)}" data-f="title"></td>
-      <td><input class="num" type="number" min="1" max="10" value="${task.activationEnergy}" data-f="activationEnergy"></td>
-      <td><input class="num" type="number" min="1" max="5" value="${task.salience}" data-f="salience"></td>
-      <td><input class="num" type="number" min="1" max="5" value="${task.stakes}" data-f="stakes"></td>
-      <td><select data-f="state">${STATES.map(s =>
-        `<option ${s === task.state ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
-      <td class="mono">${task.decayAt ? esc(task.decayAt.slice(0, 16).replace('T', ' ')) : '–'}</td>
-      <td class="mono" style="font-size:11px">${esc(task.id.slice(-6))}</td>`;
-    tr.querySelectorAll('[data-f]').forEach(input => {
-      const save = async () => {
-        const field = input.dataset.f;
-        const value = input.type === 'number' ? Number(input.value) : input.value;
-        try { await api('/api/tasks/' + task.id, {
-          method: 'PATCH', body: JSON.stringify({[field]: value})});
-        } catch (e) { alert(e.message); }
-      };
-      input.onchange = save;
+/* ── Darstellung ─────────────────────────────────────────────────────
+   Im Browser gespeichert, nicht auf dem Gerät: Es ist eine Eigenschaft
+   dieses Bildschirms, nicht des Nutzers. Der Monitor im Büro verlangt
+   etwas anderes als das Telefon in der Hand. */
+const prefs={mode:localStorage.getItem('axiom.mode')||'auto',
+  scheme:localStorage.getItem('axiom.scheme')||'instrument',
+  size:localStorage.getItem('axiom.size')||'m'};
+const darkQ=matchMedia('(prefers-color-scheme: dark)');
+function applyPrefs(){
+  const r=document.documentElement;
+  r.dataset.scheme=prefs.scheme;
+  r.dataset.mode=prefs.mode==='auto'?(darkQ.matches?'dark':'light'):prefs.mode;
+  r.dataset.size=prefs.size;
+  for(const key of ['mode','scheme','size'])
+    document.querySelectorAll('[data-'+key+']').forEach(b=>{
+      if(b.tagName==='BUTTON') b.setAttribute('aria-pressed',b.dataset[key]===prefs[key]);
     });
-    body.append(tr);
-  }
-  t.append(body);
 }
+darkQ.addEventListener('change',()=>{if(prefs.mode==='auto')applyPrefs()});
+document.querySelectorAll('header .seg button').forEach(b=>b.addEventListener('click',()=>{
+  for(const key of ['mode','scheme','size'])
+    if(b.dataset[key]){prefs[key]=b.dataset[key];localStorage.setItem('axiom.'+key,b.dataset[key])}
+  applyPrefs();
+}));
+applyPrefs();
 
-$('#addTask').onclick = async () => {
-  const title = $('#newTitle').value.trim();
-  if (!title) return;
-  await api('/api/tasks', {method: 'POST', body: JSON.stringify({
-    title,
-    activationEnergy: Number($('#newAe').value),
-    salience: Number($('#newSal').value),
-    stakes: Number($('#newStakes').value),
-  })});
-  $('#newTitle').value = '';
-  loadTasks();
-};
+/* ── Freigabe per Zahlenabgleich ──────────────────────────────────────
+   Statt eine PIN abzutippen: Der Browser fragt eine Freigabe an und
+   bekommt eine Zahl. Dieselbe Zahl erscheint auf dem Telefon, zusammen
+   mit einem Knopf.
 
-// ── Regelwerk ─────────────────────────────────────────────────────────
-async function loadRules() {
-  const {rules, issues} = await api('/api/rules');
-  const host = $('#ruleList');
-  host.innerHTML = issues.length
-    ? `<div class="panel warn"><b>Nicht geladen</b><div class="mono">${
-        issues.map(esc).join('<br>')}</div></div>`
-    : '';
-
-  for (const rule of rules) {
-    const box = el('div', {className: 'panel'});
-    box.innerHTML = `
-      <div class="row">
-        <span class="mono" style="color:var(--info)">${esc(rule.id)}</span>
-        <b style="flex:1">${esc(rule.title)}</b>
-        <span class="tag" style="color:var(--signal)">${esc(rule.severity).toUpperCase()}</span>
-        ${rule.deficit ? `<span class="tag" style="color:var(--dim)">${esc(rule.deficit)}</span>` : ''}
-        ${rule.edited ? '<span class="tag" style="color:var(--info)">BEARBEITET</span>' : ''}
-        ${rule.shadowDaysLeft ? `<span class="tag" style="color:var(--caution)">STUMM NOCH ${rule.shadowDaysLeft} T</span>` : ''}
-        <button class="ghost" data-toggle>Bearbeiten</button>
-      </div>
-      <div class="mono" style="margin-top:8px">${esc(rule.condition)} → ${esc(rule.action)}</div>
-      <div hidden data-editor style="margin-top:12px">
-        <textarea spellcheck="false">${esc(rule.yaml)}</textarea>
-        <div class="row" style="margin-top:10px">
-          <button class="act" data-save>Speichern</button>
-          ${rule.edited ? '<button class="ghost" data-reset>Zurücksetzen</button>' : ''}
-          <span class="mono">Speichern startet sieben Tage Schattenzeit.</span>
-        </div>
-        <div class="err" data-err></div>
-      </div>`;
-
-    const editor = box.querySelector('[data-editor]');
-    box.querySelector('[data-toggle]').onclick = () => editor.hidden = !editor.hidden;
-    box.querySelector('[data-save]').onclick = async () => {
-      const err = box.querySelector('[data-err]');
-      err.textContent = '';
-      try {
-        await api('/api/rules/' + rule.id, {method: 'PUT',
-          body: JSON.stringify({yaml: box.querySelector('textarea').value})});
-        loadRules();
-      } catch (e) { err.textContent = e.message; }
-    };
-    const reset = box.querySelector('[data-reset]');
-    if (reset) reset.onclick = async () => {
-      await api('/api/rules/' + rule.id, {method: 'DELETE'});
-      loadRules();
-    };
-    host.append(box);
-  }
+   Der Schutz liegt im Abgleich, nicht in der Zahl. Fragt jemand anders im
+   selben Moment eine Freigabe an, zeigt das Telefon dessen Zahl — und die
+   steht dann nicht auf diesem Bildschirm. Wer nur bestätigt, was
+   übereinstimmt, gibt niemand anderen herein. Eine Freigabe ohne
+   Vergleich wäre bloß ein Knopf, den man wegdrückt. */
+let pushPoll=null;
+async function startPush(){
+  clearInterval(pushPoll);
+  $('#match').textContent='··';
+  $('#push-msg').textContent='Frage an …';
+  try{
+    const c=await fetch('/api/auth/request',{method:'POST',credentials:'same-origin'})
+      .then(r=>r.json());
+    if(c.error){$('#push-msg').textContent=c.error;return}
+    $('#match').textContent=c.number;
+    $('#push-msg').textContent='Auf dem Telefon freigeben, wenn die Zahl stimmt.';
+    let waited=0;
+    pushPoll=setInterval(async()=>{
+      waited+=2;
+      const r=await fetch('/api/auth/poll?id='+encodeURIComponent(c.id),{credentials:'same-origin'});
+      if(r.status===200){clearInterval(pushPoll);await enter();return}
+      if(r.status!==202||waited>120){
+        clearInterval(pushPoll);
+        $('#push-msg').textContent=r.status===403
+          ? 'Abgelehnt. Wenn du das nicht warst, hat jemand anders angefragt.'
+          : 'Abgelaufen. Erneut versuchen.';
+        $('#match').textContent='··';
+      }
+    },2000);
+  }catch(e){$('#push-msg').textContent='Der Server antwortet nicht.'}
 }
-
-// ── Ereignisse ────────────────────────────────────────────────────────
-async function loadEvents() {
-  const {events} = await api('/api/events?limit=300');
-  const t = $('#eventTable');
-  t.innerHTML = `<thead><tr><th>Zeit</th><th>Typ</th><th>Quelle</th><th>Inhalt</th></tr></thead>`;
-  const body = el('tbody');
-  for (const e of events) {
-    const tr = el('tr');
-    tr.innerHTML = `<td class="mono">${esc(e.at.slice(0, 16).replace('T', ' '))}</td>
-      <td class="mono" style="color:var(--info)">${esc(e.type)}</td>
-      <td class="mono">${esc(e.source)}</td>
-      <td class="mono" style="color:var(--dim)">${esc(JSON.stringify(e.payload))}</td>`;
-    body.append(tr);
-  }
-  t.append(body);
+function showGate(){
+  clearInterval(pushPoll);
+  $('#gate').classList.remove('hide');$('#app').classList.add('hide');
+  $('#pin').value='';
+  startPush();
 }
-
-async function loadAll() {
-  try {
-    await Promise.all([loadState(), loadTasks(), loadRules(), loadEvents()]);
-  } catch (e) { if (e.message !== 'unauthorised') console.error(e); }
-}
-
-// Beim Laden prüfen, ob die Sitzung noch gilt.
-fetch('/api/state').then(r => {
-  if (r.ok) { $('#gate').hidden = true; $('#app').hidden = false; loadAll(); }
+$('#use-pin').addEventListener('click',()=>{
+  clearInterval(pushPoll);
+  $('#gate-push').classList.add('hide');$('#gate-pin').classList.remove('hide');$('#pin').focus();
 });
+$('#use-push').addEventListener('click',()=>{
+  $('#gate-pin').classList.add('hide');$('#gate-push').classList.remove('hide');startPush();
+});
+async function login(){
+  const pin=$('#pin').value.trim();
+  if(pin.length<4){$('#gate-msg').textContent='Sechs Ziffern.';return}
+  try{
+    await api('/api/login',{method:'POST',body:JSON.stringify({pin})});
+    await enter();
+  }catch(e){
+    $('#gate-msg').textContent='Stimmt nicht. Nach fünf Versuchen schaltet sich der Server ab.';
+    $('#pin').value='';$('#pin').focus();
+  }
+}
+$('#gate-go').addEventListener('click',login);
+$('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+
+async function enter(){
+  clearInterval(pushPoll);
+  $('#gate').classList.add('hide');$('#app').classList.remove('hide');
+  await reload();
+}
+
+/* ── Zustand ─────────────────────────────────────────────────────── */
+let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null,tab='tasks';
+
+async function refresh(){S=await api('/api/state');paintHeader();paintAction();paintCapline()}
+async function loadSurface(){
+  if(tab==='tasks') tasks=(await api('/api/tasks')).tasks;
+  else if(tab==='rules') rules=(await api('/api/rules')).rules;
+  else if(tab==='events') events=(await api('/api/events?limit=250')).events;
+  else if(tab==='inbox') inbox=await api('/api/inbox');
+  else if(tab==='review') review=await api('/api/review?scope='+(review?.scope||'day'));
+}
+async function reload(){await refresh();await loadSurface();render()}
+
+function paintHeader(){
+  const v=S.values||{};
+  $('#hchips').replaceChildren(
+    el('span',{class:'chip'},'KAPAZITÄT ',el('b',{},fmt(v.capacity?.value))),
+    el('span',{class:'chip'},'LAST ',el('b',{},fmt(v.load_index?.value))),
+    el('span',{class:S.loadLevel==='L0'?'chip':'chip warn'},S.loadLevel||'–'),
+    S.focus?el('span',{class:'chip on',id:'focus-chip'},'FOKUS ',
+      el('b',{class:'mono'},S.focus.elapsedMinutes+'/'+S.focus.plannedMinutes+' min')):null,
+    S.configLocked?el('span',{class:'chip warn',title:'R-010'},'REGELWERK ZU'):null,
+    S.weightsCalibrated?null:el('span',{class:'chip',title:'Gewichte noch geschätzt'},'UNGEEICHT'));
+  const used=S.metaMinutesToday||0,cap=S.metaBudgetMinutes||12;
+  $('#budget-fill').style.width=Math.min(100,(used/cap)*100)+'%';
+  $('#budget').classList.toggle('over',used>=cap);
+  $('#budget-txt').textContent=used+'/'+cap;
+}
+
+/* ── Die eine Handlung ───────────────────────────────────────────────
+   Dieselbe Rangfolge wie auf dem Telefon: Eine feuernde Regel schlägt
+   alles, dann das Laufende, dann der Vorschlag, dann das Zerlegen. */
+function paintAction(){
+  const box=$('#act');box.className='panel accent';
+  const kids=[];
+  const running=(S.running||[])[0],d=S.decision,next=(S.startable||[])[0],split=(S.atomize||[])[0];
+
+  if(d){
+    kids.push(el('div',{class:'eyebrow'},'JETZT'),el('h1',{},d.title),
+      el('div',{class:'row',style:'margin:.6rem 0 0'},
+        el('span',{class:'stamp'},d.ruleId),
+        d.deficit?el('span',{class:'stamp'},d.deficit):null));
+    if(d.rationale) kids.push(el('p',{class:'why'},d.rationale));
+    kids.push(el('div',{class:'row'},
+      el('button',{class:'btn primary grow',onclick:()=>respond(d.id,'accepted')},'Verstanden'),
+      el('button',{class:'btn',onclick:()=>respond(d.id,'deferred')},'Später'),
+      el('button',{class:'btn quiet',onclick:()=>respond(d.id,'rejected')},'Passt nicht')));
+    if(running) kids.push(el('p',{class:'faint',style:'margin-top:.9rem'},'Läuft daneben: '+running.title));
+  }else if(running){
+    box.className='panel calm';
+    kids.push(el('div',{class:'eyebrow'},'LÄUFT'),el('h1',{},running.title));
+    if(S.focus) kids.push(el('p',{class:'mono',style:'color:var(--calm);margin-top:.4rem'},
+      S.focus.elapsedMinutes+' von '+S.focus.plannedMinutes+' min'));
+    kids.push(el('div',{class:'row'},
+      el('button',{class:'btn primary grow',onclick:()=>act(running.id,'complete')},'Erledigt'),
+      el('button',{class:'btn',onclick:()=>act(running.id,'release')},'Zurücklegen')));
+  }else if(next){
+    kids.push(el('div',{class:'eyebrow'},'JETZT'),el('h1',{},next.title),
+      el('div',{class:'row',style:'margin:.6rem 0 0'},
+        el('span',{class:'stamp'},'START '+next.activationEnergy+'/10'),
+        next.decayAt?el('span',{class:'stamp'},dueLabel(next.decayAt)):null));
+    kids.push(el('div',{class:'row'},
+      el('button',{class:'btn primary grow',onclick:()=>act(next.id,'start')},'Anfangen'),
+      el('button',{class:'btn',onclick:()=>act(next.id,'complete')},'Erledigt')));
+  }else if(split){
+    kids.push(el('div',{class:'eyebrow'},'ZERLEGEN'),el('h1',{},split.title),
+      el('p',{class:'why'},split.reason),
+      el('div',{class:'row'},
+        el('button',{class:'btn primary',onclick:()=>atomizeDialog(split)},'In Schritte zerlegen')));
+  }else{
+    box.className='panel';
+    kids.push(el('div',{class:'eyebrow'},'NICHTS ANLIEGEND'),el('h1',{},'Ruhig gerade.'),
+      el('p',{style:'margin-top:.6rem'},'Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.'));
+  }
+  if(S.nextStep) kids.push(el('p',{class:'faint',style:'margin-top:1rem'},
+    S.nextStep.label+' · '+new Date(S.nextStep.at).toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'})+' — '+S.nextStep.anchor));
+  box.replaceChildren(...kids);
+}
+
+function dueLabel(iso){
+  const diff=new Date(iso)-new Date();
+  if(diff<0) return 'ÜBERFÄLLIG';
+  const h=Math.round(diff/36e5);
+  return h<24?('IN '+h+' H'):('IN '+Math.round(h/24)+' T');
+}
+async function respond(id,response){
+  try{await api('/api/decisions/'+id,{method:'POST',body:JSON.stringify({response})})}catch(e){}
+  await reload();
+}
+async function act(id,verb){
+  try{await api('/api/tasks/'+id+'/'+verb,{method:'POST'});await reload()}catch(e){toast(e.message)}
+}
+
+/* ── Kapazitätslinie ─────────────────────────────────────────────────
+   Dasselbe Instrument wie auf dem Telefon: eine Achse von leicht nach
+   schwer, jede offene Aufgabe ein Punkt, die Kapazität als Marke. Was
+   links davon liegt, ist heute erreichbar. Eine Messung, kein Urteil. */
+function paintCapline(){
+  const cap=S.values?.capacity?.value??50, W=320, pad=10;
+  const x=ae=>pad+((ae-1)/9)*(W-2*pad);
+  const mark=x(cap/10);
+  const open=[...(S.startable||[]),...(S.running||[])];
+  const parts=['<line class="axis" x1="'+pad+'" y1="48" x2="'+(W-pad)+'" y2="48"/>',
+    '<line class="m" x1="'+mark+'" y1="32" x2="'+mark+'" y2="54"/>',
+    '<text x="'+pad+'" y="66">LEICHT</text>',
+    '<text x="'+mark+'" y="66" text-anchor="middle" style="fill:var(--signal)">HIER</text>',
+    '<text x="'+(W-pad)+'" y="66" text-anchor="end">SCHWER</text>'];
+  const seen={};
+  for(const t of open){
+    const cx=x(t.activationEnergy), k=Math.round(cx);
+    const dy=(seen[k]=(seen[k]||0)+1)-1;
+    const cls=t.state==='active'?'dnow':(cx<=mark?'din':'dout');
+    parts.push('<circle class="'+cls+'" cx="'+cx+'" cy="'+(36-dy*9)+'" r="4"><title>'+
+      String(t.title).replace(/[<&>]/g,'')+' — Start '+t.activationEnergy+'/10</title></circle>');
+  }
+  $('#capline').innerHTML=parts.join('');
+  $('#cap-label').textContent='KAPAZITÄT '+cap;
+  const n=(S.startable||[]).length;
+  $('#cap-note').textContent=n
+    ? n+' startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.'
+    : 'Heute liegt nichts unter der Linie. Zerlegen hilft mehr als Anlauf nehmen.';
+}
+
+/* ── Erfassen ────────────────────────────────────────────────────── */
+async function saveCapture(){
+  const box=$('#cap-text'), text=box.value.trim();
+  if(!text) return;
+  box.value='';
+  try{await api('/api/capture',{method:'POST',body:JSON.stringify({text})});toast('Erfasst.')}
+  catch(e){box.value=text;toast(e.message)}
+  await reload();
+}
+$('#cap-save').addEventListener('click',saveCapture);
+$('#cap-text').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();saveCapture()}
+});
+$('#checkin-btn').addEventListener('click',()=>checkinDialog());
+
+/* ── Reiter ──────────────────────────────────────────────────────── */
+$('#tabs').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-tab]');
+  if(!b) return;
+  tab=b.dataset.tab;
+  document.querySelectorAll('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  await loadSurface();render();
+});
+function render(){
+  if(!S) return;
+  $('#c-inbox').textContent=S.inboxCount?' '+S.inboxCount:'';
+  $('#surface').replaceChildren(({tasks:viewTasks,inbox:viewInbox,state:viewState,
+    rules:viewRules,review:viewReview,events:viewEvents})[tab]());
+}
+
+function viewTasks(){
+  const cap=S.values?.capacity?.value??50;
+  const groups=[['Läuft',tasks.filter(t=>t.state==='active')],
+    ['In Reichweite',tasks.filter(t=>t.state==='ready'&&t.activationEnergy<=cap/10)],
+    ['Nicht in Reichweite',tasks.filter(t=>t.state==='ready'&&t.activationEnergy>cap/10)],
+    ['Zerlegt',tasks.filter(t=>t.state==='blocked')],
+    ['Erledigt',tasks.filter(t=>t.state==='done').slice(0,30)]];
+  $('#c-tasks').textContent=' '+tasks.filter(t=>t.state==='ready'||t.state==='active').length;
+  const frag=document.createDocumentFragment();
+  frag.append(el('div',{class:'row',style:'margin:0 0 1rem'},
+    el('button',{class:'btn primary',onclick:()=>taskDialog()},'Neue Aufgabe')));
+  for(const [name,list] of groups){
+    if(!list.length) continue;
+    frag.append(el('div',{class:'sec'},
+      el('span',{class:'eyebrow'},name+' · '+list.length),el('span',{class:'line'})));
+    for(const t of list) frag.append(taskRow(t,cap));
+  }
+  if(!tasks.length) frag.append(el('p',{},'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.'));
+  return frag;
+}
+function taskRow(t,cap){
+  const reach=t.activationEnergy<=cap/10;
+  const cls=t.state==='active'?'run':t.state==='done'?'done':reach?'reach':'';
+  const acts=[];
+  if(t.state==='active'){
+    acts.push(el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
+      el('button',{class:'btn',onclick:()=>act(t.id,'release')},'Zurücklegen'));
+  }else if(t.state==='ready'){
+    acts.push(el('button',{class:'btn primary',onclick:()=>act(t.id,'start')},'Anfangen'),
+      el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),
+      el('button',{class:'btn quiet',onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen'));
+  }
+  return el('div',{class:'item '+cls},el('span',{class:'bar'}),
+    el('div',{},el('div',{class:'title'},t.title),
+      el('div',{class:'meta'},
+        el('span',{},'START '+t.activationEnergy+'/10'),
+        el('span',{},'SOG '+t.salience),
+        el('span',{},'FOLGEN '+t.stakes),
+        t.decayAt?el('span',{class:'due'},dueLabel(t.decayAt)):null,
+        t.parentId?el('span',{},'TEILSCHRITT'):null)),
+    el('div',{class:'acts'},acts));
+}
+
+function viewInbox(){
+  const frag=document.createDocumentFragment();
+  if(!inbox.notes.length){frag.append(el('p',{},'Nichts zu sortieren.'));return frag}
+  frag.append(el('div',{class:'sec'},
+    el('span',{class:'eyebrow'},'Unsortiert · '+inbox.notes.length),el('span',{class:'line'})));
+  for(const n of inbox.notes){
+    frag.append(el('div',{class:'item'},el('span',{class:'bar'}),
+      el('div',{},el('div',{class:'title'},n.text||''),
+        el('div',{class:'meta'},
+          el('span',{},new Date(n.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
+          el('span',{},String(n.via||'').toUpperCase()))),
+      el('div',{class:'acts'},
+        el('button',{class:'btn primary',onclick:()=>taskDialog(n.text)},'Sortieren'))));
+  }
+  return frag;
+}
+
+function viewState(){
+  const frag=document.createDocumentFragment();
+  frag.append(el('p',{style:'margin-bottom:1rem'},
+    'Jeder Wert lässt sich aufklappen. Ohne die Herleitung ist eine Zahl nicht überprüfbar (G2).'));
+  for(const [id,v] of Object.entries(S.values||{})){
+    const terms=(S.breakdown||{})[id]||[];
+    frag.append(el('div',{class:'value'+(terms.length?' can':''),
+      onclick:e=>{if(terms.length) e.currentTarget.classList.toggle('open')}},
+      el('div',{class:'head'},el('span',{},v.label),el('span',{class:'num'},fmt(v.value))),
+      el('div',{class:'track'},el('span',{class:'fill',
+        style:'width:'+Math.max(0,Math.min(100,v.value??0))+'%'})),
+      terms.length?el('div',{class:'terms'},...terms.map(t=>el('div',{class:'term'},
+        el('b',{},t.label),
+        el('span',{},(t.contribution>0?'+':'')+Math.round(t.contribution))))):null,
+      terms.length?el('div',{class:'faint',style:'font-size:.68rem;margin-top:.3rem'},'Aufklappen für die Formel'):null));
+  }
+  frag.append(el('div',{class:'row'},
+    el('button',{class:'btn primary',onclick:checkinDialog},'Check-in'),
+    S.focus?el('button',{class:'btn',onclick:endFocusDialog},'Fokus beenden')
+           :el('button',{class:'btn',onclick:focusDialog},'Fokus starten')));
+  if(S.regimeDescription) frag.append(el('p',{class:'why',style:'margin-top:1rem'},S.regimeDescription));
+  return frag;
+}
+
+function viewRules(){
+  $('#c-rules').textContent=' '+rules.length;
+  const frag=document.createDocumentFragment();
+  if(S.configLocked) frag.append(el('div',{class:'panel',style:'margin-bottom:1rem;border-color:var(--caution)'},
+    el('span',{class:'stamp'},'R-010'),
+    el('h2',{style:'margin:.5rem 0'},'Regelwerk heute zu'),
+    el('p',{},S.metaMinutesToday+' Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.')));
+  for(const r of rules){
+    frag.append(el('div',{class:'item'},
+      el('span',{class:'bar',style:r.shadow?'background:var(--info)':''}),
+      el('div',{},el('div',{class:'title'},r.title),
+        el('div',{class:'meta'},el('span',{},r.id),
+          r.deficit?el('span',{},r.deficit):null,
+          el('span',{},String(r.severity||'').toUpperCase()),
+          r.shadow?el('span',{style:'color:var(--info)'},'SCHATTEN'):null,
+          r.overridden?el('span',{style:'color:var(--signal)'},'GEÄNDERT'):null),
+        el('p',{class:'why',style:'margin-top:.4rem'},r.rationale||'')),
+      el('div',{class:'acts'},
+        el('button',{class:'btn',disabled:S.configLocked,onclick:()=>ruleDialog(r)},'YAML'))));
+  }
+  return frag;
+}
+
+function viewReview(){
+  const frag=document.createDocumentFragment();
+  frag.append(el('div',{class:'row',style:'margin:0 0 1rem'},
+    ...['day','week','month','quarter'].map(sc=>el('button',{
+      class:'btn'+(review?.scope===sc?' primary':''),
+      onclick:async()=>{review=await api('/api/review?scope='+sc);render()},
+    },({day:'Tag',week:'Woche',month:'Monat',quarter:'Quartal'})[sc]))));
+  if(!review){frag.append(el('p',{},'Umfang wählen.'));return frag}
+  for(const m of review.metrics)
+    frag.append(el('div',{class:'value'},
+      el('div',{class:'head'},el('span',{},m.label),el('span',{class:'num'},m.value)),
+      el('p',{class:'faint',style:'margin-top:.25rem'},m.derivation)));
+  if(review.verdicts?.length){
+    frag.append(el('div',{class:'sec',style:'margin-top:1.2rem'},
+      el('span',{class:'eyebrow'},'Regeln'),el('span',{class:'line'})));
+    for(const v of review.verdicts)
+      frag.append(el('div',{class:'ev'},el('span',{class:'k'},v.ruleId),
+        el('span',{class:'t'},v.verdict),el('span',{class:'p',title:v.reason},v.reason)));
+  }
+  return frag;
+}
+
+function viewEvents(){
+  const frag=document.createDocumentFragment();
+  frag.append(el('p',{style:'margin-bottom:.8rem'},
+    'Nur lesend. Ereignisse werden angehängt, nie überschrieben — eine Korrektur ist ein neues Ereignis.'));
+  for(const e of events)
+    frag.append(el('div',{class:'ev'},
+      el('span',{class:'t'},new Date(e.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
+      el('span',{class:'k'},e.type),
+      el('span',{class:'p',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))));
+  return frag;
+}
+
+/* ── Blätter ─────────────────────────────────────────────────────── */
+function sheet(title,body,actions){
+  const d=$('#dlg');
+  d.replaceChildren(el('h2',{},title),body,
+    el('div',{class:'row'},...actions,
+      el('button',{class:'btn quiet',onclick:()=>d.close()},'Abbrechen')));
+  d.showModal();
+  const first=d.querySelector('input,textarea');
+  if(first) setTimeout(()=>first.focus(),30);
+  return d;
+}
+function dial(label,hint,low,high,value,min=1,max=5){
+  const out=el('span',{class:'val mono'},String(value));
+  const input=el('input',{type:'range',min,max,value,step:1,
+    oninput:e=>{out.textContent=e.target.value}});
+  const box=el('div',{class:'dial'},
+    el('div',{class:'head'},el('label',{},label),out),
+    hint?el('p',{class:'faint'},hint):null,input,
+    el('div',{class:'ends'},el('span',{},low),el('span',{},high)));
+  box.value=()=>Number(input.value);
+  return box;
+}
+
+function checkinDialog(){
+  const e=dial('Energie',null,'leer','voll',3),f=dial('Fokus',null,'zerstreut','klar',3),
+    m=dial('Stimmung',null,'unten','oben',3),
+    s=dial('Reizbedarf','Wie sehr zieht es gerade nach Input?','ruhig','stark',3);
+  sheet('Check-in',el('div',{},
+    el('p',{style:'margin-bottom:1rem'},'Vier Regler, ungefähr reicht. Genauigkeit kostet hier mehr, als sie bringt.'),
+    e,f,m,s),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      await api('/api/checkin',{method:'POST',body:JSON.stringify({
+        energy:e.value(),focus:f.value(),mood:m.value(),stimNeed:s.value()})});
+      $('#dlg').close();toast('Eingetragen.');await reload();
+    }},'Übernehmen')]);
+}
+
+function focusDialog(){
+  const cap=S.values?.capacity?.value??50;
+  const suggested=cap<35?15:cap<70?25:45;
+  const running=(S.running||[])[0];
+  const title=el('input',{type:'text',value:running?.title||'',placeholder:'Woran?'});
+  const min=dial('Geplante Dauer','Vorschlag aus der Kapazität ('+cap+'): '+suggested+' Minuten. Ein kurzes Fenster, das hält, ist mehr wert als ein langes, das reißt.',
+    '5 min','120 min',suggested,5,120);
+  sheet('Fokus starten',el('div',{},
+    el('div',{class:'field'},el('label',{},'Ziel'),title),min),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      await api('/api/focus',{method:'POST',body:JSON.stringify({
+        title:title.value.trim(),taskId:running?.id||null,minutes:min.value()})});
+      $('#dlg').close();await reload();
+    }},'Starten')]);
+}
+
+function endFocusDialog(){
+  const crumb=el('textarea',{placeholder:'Wo genau warst du? Ein Satz reicht.'});
+  sheet('Fokus beenden',el('div',{},
+    el('p',{style:'margin-bottom:.8rem'},'Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.'),
+    crumb),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      await api('/api/focus',{method:'DELETE',body:JSON.stringify({breadcrumb:crumb.value.trim()})});
+      $('#dlg').close();await reload();
+    }},'Beenden')]);
+}
+
+function taskDialog(prefill){
+  const title=el('textarea',{placeholder:'Was ist zu tun?'});
+  if(prefill) title.value=prefill;
+  const ae=dial('Wie schwer fällt der Start?','Nicht wie lang es dauert. Nur der Anfang.','sofort','große Hürde',5,1,10);
+  const st=dial('Was kostet es, wenn es liegenbleibt?','Folgen, nicht Wichtigkeit.','nichts','viel',5,1,10);
+  const sa=dial('Wie sehr zieht es?','Sog, nicht Pflicht.','gar nicht','stark',5,1,10);
+  const due=el('input',{type:'datetime-local'});
+  sheet('Aufgabe anlegen',el('div',{},
+    el('div',{class:'field'},el('label',{},'Titel'),title),ae,st,sa,
+    el('div',{class:'field'},el('label',{},'Ab wann tut es weh? (optional)'),due)),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      const text=title.value.trim();
+      if(!text){toast('Ohne Titel geht es nicht.');return}
+      await api('/api/tasks',{method:'POST',body:JSON.stringify({
+        title:text,activationEnergy:ae.value(),stakes:st.value(),salience:sa.value(),
+        decayAt:due.value?new Date(due.value).toISOString():null})});
+      $('#dlg').close();toast('Angelegt.');await reload();
+    }},'Anlegen')]);
+}
+
+function atomizeDialog(cand){
+  const rows=el('div',{});
+  const add=(t='',e=2)=>{
+    rows.append(el('div',{class:'field',style:'display:flex;gap:.5rem;align-items:end'},
+      el('div',{style:'flex:1'},el('label',{},'Schritt'),
+        el('input',{type:'text',value:t,placeholder:'Erster kleiner Schritt'})),
+      el('div',{},el('label',{},'Start'),
+        el('input',{type:'number',min:1,max:10,value:e,style:'width:5rem'}))));
+  };
+  add();add();
+  sheet('Zerlegen: '+cand.title,el('div',{},
+    el('p',{style:'margin-bottom:.9rem'},'Der erste Schritt muss so klein sein, dass er heute in Reichweite liegt. Alles andere darf größer bleiben.'),
+    rows,el('button',{class:'btn quiet',onclick:()=>add()},'+ Schritt')),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      const steps=[...rows.querySelectorAll('.field')].map(f=>({
+        title:f.querySelector('input[type=text]').value.trim(),
+        energy:Number(f.querySelector('input[type=number]').value)||2})).filter(s=>s.title);
+      if(!steps.length){toast('Mindestens ein Schritt.');return}
+      await api('/api/tasks/'+cand.taskId+'/atomize',{method:'POST',body:JSON.stringify({steps})});
+      $('#dlg').close();toast('Zerlegt.');await reload();
+    }},'Übernehmen')]);
+}
+
+function ruleDialog(rule){
+  const code=el('textarea',{class:'code',spellcheck:'false'});
+  code.value=rule.yaml||'';
+  sheet(rule.id,el('div',{},
+    el('p',{style:'margin-bottom:.8rem'},'Jede gespeicherte Änderung läuft sieben Tage stumm mit — dieselbe Zusage wie im Editor am Telefon. Ungültiges wird abgelehnt, nicht übersprungen.'),
+    code),[
+    el('button',{class:'btn primary',onclick:async()=>{
+      try{
+        await api('/api/rules/'+rule.id,{method:'PUT',body:JSON.stringify({yaml:code.value})});
+        $('#dlg').close();toast('Gespeichert — läuft sieben Tage stumm mit.');
+        rules=(await api('/api/rules')).rules;render();
+      }catch(e){toast(e.message)}
+    }},'Speichern')]);
+}
+
+function helpDialog(){
+  const keys=[['n','Erfassen'],['c','Check-in'],['f','Fokus starten oder beenden'],
+    ['a','Neue Aufgabe'],['g','Angefangenes erledigen'],['1 … 6','Reiter wechseln'],
+    ['r','Neu laden'],['?','Diese Übersicht'],['Esc','Schließen']];
+  sheet('Tastenkürzel',el('div',{class:'keys'},
+    ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[]);
+}
+$('#help-btn').addEventListener('click',helpDialog);
+
+$('#stop-btn').addEventListener('click',async()=>{
+  if(!confirm('Server beenden? Danach ist diese Seite nicht mehr erreichbar.')) return;
+  try{await api('/api/stop',{method:'POST'})}catch(e){}
+  document.body.innerHTML='<div style="display:grid;place-items:center;min-height:100vh">'+
+    '<p style="color:var(--dim)">Der Server ist aus. Die App auf dem Telefon startet ihn wieder.</p></div>';
+});
+
+/* ── Tastatur ────────────────────────────────────────────────────────
+   Das kann ein Schreibtisch und eine Hand nicht. Ohne Kürzel bleibt das
+   hier eine Webseite; mit ihnen ist es ein Werkzeug. */
+addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey) return;
+  if($('#dlg').open) return;
+  const tabs=['tasks','inbox','state','rules','review','events'];
+  if(e.key>='1'&&e.key<='6'){
+    const b=document.querySelector('#tabs button[data-tab="'+tabs[Number(e.key)-1]+'"]');
+    if(b) b.click();
+    return;
+  }
+  switch(e.key){
+    case 'n': e.preventDefault(); $('#cap-text').focus(); break;
+    case 'c': checkinDialog(); break;
+    case 'f': S?.focus?endFocusDialog():focusDialog(); break;
+    case 'a': taskDialog(); break;
+    case 'r': reload(); break;
+    case '?': helpDialog(); break;
+    case 'g': {const run=(S?.running||[])[0]; if(run) act(run.id,'complete'); break}
+  }
+});
+
+/* ── Takt ────────────────────────────────────────────────────────────
+   Zwei verschiedene Dinge: Die Fokusuhr läuft im Sekundentakt weiter,
+   ohne den Server zu fragen. Der Zustand wird alle 20 Sekunden geholt —
+   häufiger wäre Last ohne Erkenntnis, seltener fühlte es sich tot an. */
+setInterval(()=>{
+  if(!S?.focus) return;
+  const chip=$('#focus-chip b');
+  if(!chip) return;
+  chip.textContent=Math.floor((Date.now()-new Date(S.focus.startedAt))/60000)+'/'+S.focus.plannedMinutes+' min';
+},1000);
+setInterval(()=>{
+  if(!$('#app').classList.contains('hide')&&!$('#dlg').open) refresh().catch(()=>{});
+},20000);
+
+/* Schon angemeldet? Dann direkt hinein, sonst die Freigabe anbieten. */
+api('/api/state').then(async data=>{
+  S=data;
+  $('#gate').classList.add('hide');$('#app').classList.remove('hide');
+  paintHeader();paintAction();paintCapline();
+  await loadSurface();render();
+}).catch(()=>showGate());
 </script>

@@ -232,6 +232,32 @@ void main() {
           reason: 'Ausgehender Netzwerkzugriff gefunden:\n${hits.join("\n")}');
     });
 
+    test('der Expertenmodus startet nur mit der App, nie von selbst', () {
+      // ADR-0005 §3b erlaubt genau einen Weg: den, der laeuft, wenn der
+      // Nutzer die App oeffnet. Ein Start aus einem Dienst, einem Empfaenger
+      // oder beim Hochfahren waere ein Port, der aufgeht, ohne dass jemand
+      // davon weiss.
+      final starters = appSources()
+          .where((f) => f.readAsStringSync().contains('expertModeProvider.notifier).start()'))
+          .map((f) => f.path)
+          .toList();
+      for (final path in starters) {
+        expect(
+          path.endsWith('platform/intent_handler.dart') ||
+              path.endsWith('screens/expert_screen.dart'),
+          isTrue,
+          reason: '$path startet den Server — erlaubt sind nur der '
+              'App-Start und der Schalter im Expertenmodus',
+        );
+      }
+      // Und der BootReceiver darf ihn nicht kennen.
+      expect(
+        File('android/app/src/main/kotlin/de/axiom/axiom_app/BootReceiver.kt')
+            .readAsStringSync(),
+        isNot(contains('Expert')),
+      );
+    });
+
     test('genau eine Datei darf etwas ins Netz schicken', () {
       // mDNS sendet — damit ist es die einzige Stelle, an der AXIOM von
       // sich aus ein Paket verschickt. Die Zusage aus ADR-0005 bleibt

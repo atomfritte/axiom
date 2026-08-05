@@ -781,6 +781,92 @@ object AlarmScheduler {
     private const val PREFS = "axiom_alarms"
     private const val KEY_DRIFT = "last_drift_ms"
 
+    /**
+     * Spiegelt jeden geplanten Alarm, damit er einen Neustart überlebt.
+     *
+     * Android verwirft beim Booten alle Alarme. Der BootReceiver konnte
+     * vorher nur die drei Tages-Check-ins wiederherstellen, weil er sie
+     * fest verdrahtet kannte. Alles andere — Ankererinnerungen, Abendgrenze,
+     * Schlafeintrag — war nach einem Neustart still weg. Genau die
+     * Erinnerungen also, die einen Termin retten sollen, und genau der
+     * Fehlermodus, der nicht auffällt: Es kommt einfach nichts.
+     *
+     * Der Termin selbst steht in der Datenbank, an die Kotlin nicht
+     * herankommt. Also merkt sich der Planer, was er geplant hat.
+     */
+    private fun remember(
+        context: Context,
+        id: Int,
+        atMillis: Long,
+        title: String,
+        body: String,
+        channel: String,
+        route: String?,
+    ) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val all = org.json.JSONObject(prefs.getString("all", "{}") ?: "{}")
+            all.put(
+                id.toString(),
+                org.json.JSONObject()
+                    .put("at", atMillis)
+                    .put("title", title)
+                    .put("body", body)
+                    .put("channel", channel)
+                    .put("route", route ?: org.json.JSONObject.NULL),
+            )
+            prefs.edit().putString("all", all.toString()).apply()
+        } catch (e: Throwable) {
+            // Der Alarm ist trotzdem gesetzt. Nur der Neustart-Schutz fehlt.
+        }
+    }
+
+    private fun forget(context: Context, id: Int) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val all = org.json.JSONObject(prefs.getString("all", "{}") ?: "{}")
+            all.remove(id.toString())
+            prefs.edit().putString("all", all.toString()).apply()
+        } catch (e: Throwable) {
+        }
+    }
+
+    /**
+     * Setzt alle gemerkten Alarme neu — nach einem Neustart oder Update.
+     *
+     * Vergangene fallen dabei weg: Eine Erinnerung an einen Termin von
+     * gestern nachzureichen wäre schlimmer als sie zu verlieren.
+     */
+    fun restoreAll(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val all = try {
+            org.json.JSONObject(prefs.getString("all", "{}") ?: "{}")
+        } catch (e: Throwable) {
+            return 0
+        }
+        val now = System.currentTimeMillis()
+        val kept = org.json.JSONObject()
+        var restored = 0
+        for (key in all.keys()) {
+            val entry = all.optJSONObject(key) ?: continue
+            val at = entry.optLong("at")
+            if (at <= now) continue
+            kept.put(key, entry)
+            schedule(
+                context = context,
+                id = key.toIntOrNull() ?: continue,
+                atMillis = at,
+                title = entry.optString("title"),
+                body = entry.optString("body"),
+                channel = entry.optString("channel", "axiom_nudge"),
+                route = entry.optString("route").takeIf { it.isNotEmpty() && it != "null" },
+            )
+            restored++
+        }
+        prefs.edit().putString("all", kept.toString()).apply()
+        return restored
+    }
+
     fun schedule(
         context: Context,
         id: Int,
@@ -790,6 +876,7 @@ object AlarmScheduler {
         channel: String,
         route: String? = null,
     ): Boolean {
+        remember(context, id, atMillis, title, body, channel, route)
         val alarms = context.getSystemService(AlarmManager::class.java)
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("id", id)
@@ -823,6 +910,7 @@ object AlarmScheduler {
     }
 
     fun cancel(context: Context, id: Int): Boolean {
+        forget(context, id)
         val alarms = context.getSystemService(AlarmManager::class.java)
         val pending = PendingIntent.getBroadcast(
             context, id,

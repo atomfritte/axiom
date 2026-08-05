@@ -1395,4 +1395,18 @@ const Map<String, String> kEnglish = {
       'This is not a punishment, it is the point: building a system is always more stimulating than the task it was built for.',
   'Verstanden':
       'Understood',
+  'FREIGABE ANGEFRAGT':
+      'APPROVAL REQUESTED',
+  'Steht dieselbe Zahl auf dem Bildschirm, vor dem du sitzt?':
+      'Is the same number on the screen you are sitting at?',
+  'Wenn nicht, hat jemand anders angefragt. Dann ablehnen — das kostet nichts außer einem zweiten Versuch.':
+      'If not, someone else asked. Then decline — it costs nothing but a second attempt.',
+  'Stimmt überein':
+      'Numbers match',
+  'Stimmt nicht':
+      'Does not match',
+  'Mitstarten, wenn AXIOM aufgeht':
+      'Start together with AXIOM',
+  'Nicht beim Hochfahren und nicht ohne die App — nur, wenn du sie öffnest. Anmeldung, dauerhafte Anzeige und die Abschaltung nach dreißig Minuten Leerlauf bleiben.':
+      'Not at boot and not without the app — only when you open it. Sign-in, the persistent display and the shutdown after thirty idle minutes all stay.',
 };

@@ -237,7 +237,7 @@ ausdrücklich revidiert wurde:
 | Schuldbasierte Erinnerungen und Formulierungen | erzeugt Vermeidung statt Handlung |
 | Endlose Konfigurierbarkeit, Einstellungs-Wildwuchs | D3 |
 | Ausgehende Netzwerkverbindungen jeder Art | ADR-0005: AXIOM lauscht, ruft nie |
-| Expertenmodus mit Autostart oder ohne PIN | ein offener Port mit Gesundheitsdaten |
+| Expertenmodus ohne Anmeldung, oder Start beim Hochfahren / aus einem Dienst | ein offener Port mit Gesundheitsdaten. Mitstarten **mit der App** ist erlaubt und abschaltbar (ADR-0005 §3b) |
 | Regeleditor ohne Schattenzeit oder ohne Pflicht-`rationale` | wäre reines Meta-Work-Vehikel (D3, R1) |
 | Microservices, Multi-User, Rollen/Rechte | kein Anwendungsfall |
 | UI-Redesign, bevor S1–S3 laufen | klassische Ausweichbaustelle |
