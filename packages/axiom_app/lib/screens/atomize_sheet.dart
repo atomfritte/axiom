@@ -82,10 +82,15 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
     setState(() => _saving = true);
 
     final runtime = await ref.read(runtimeProvider.future);
+    // Der Rest ist eine Stufe leichter als das Ganze — aber nie unter 1.
+    // Bei einer Aufgabe mit Energie 1 kam hier vorher 0 heraus, und der
+    // Wertebereich von `Task` ist 1..10: Das Zerlegen brach genau in dem
+    // Moment ab, in dem der erste Schritt schon getippt war [D2].
+    final restEnergy = (_task.activationEnergy - 1).clamp(1, 10);
     final steps = <({String title, int energy})>[
       (title: first, energy: _firstEnergy),
       if (_rest.text.trim().isNotEmpty)
-        (title: _rest.text.trim(), energy: _task.activationEnergy - 1),
+        (title: _rest.text.trim(), energy: restEnergy),
     ];
 
     await runtime.atomize(parent: _task, steps: steps);

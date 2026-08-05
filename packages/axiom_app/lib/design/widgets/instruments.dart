@@ -311,14 +311,22 @@ final class SectionLabel extends StatelessWidget {
           // Flexible mit Ellipse: Ohne das erzeugt ein langer Zusatz rechts
           // negativen Restplatz fuer den Trennstrich — und ein Expanded mit
           // negativem Raum ist ein Ueberlauf, kein Umbruch.
+          //
+          // Die Gewichte sind nicht kosmetisch: Beide Kinder sind flexibel
+          // und teilten den freien Platz sonst haelftig — „NICHT IN
+          // REICHWEITE · 3" verlor dann seine Zahl an einen Strich, der
+          // nichts sagt. Die Beschriftung bekommt den Vorrang, der Strich
+          // den Rest, und bei sehr grosser Schrift kuerzt weiterhin die
+          // Ellipse statt zu ueberlaufen.
           Flexible(
+            flex: 12,
             child: Text(text.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall),
           ),
           const SizedBox(width: Space.md),
-          Expanded(child: Container(height: 1, color: p.rule)),
+          Expanded(flex: 1, child: Container(height: 1, color: p.rule)),
           if (trailing != null) ...[
             const SizedBox(width: Space.md),
             trailing!,

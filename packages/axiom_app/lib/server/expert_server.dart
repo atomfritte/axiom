@@ -97,6 +97,22 @@ final class _AuthRequest {
       now.difference(at) > const Duration(seconds: 90);
 }
 
+/// Eine Eingabe aus dem Netz, die sich nicht übernehmen lässt.
+///
+/// **Warum abgelehnt und nicht repariert.** Ein unbekannter Zustandsname,
+/// ein unlesbares Datum, ein Schritt ohne Titel — nichts davon lässt sich
+/// raten. Es stillschweigend zu übergehen ist die teuerste Variante: Der
+/// Aufrufer glaubt dann, seine Angabe sei angekommen, und die Datenbank
+/// enthält etwas anderes als der Bildschirm zeigt.
+///
+/// Zahlen sind der Sonderfall: Ein Regler, der über seinen Bereich hinaus
+/// gerutscht ist, lässt sich zurückholen (`_clamp`) — ein Name, den es
+/// nicht gibt, nicht.
+final class _Invalid implements Exception {
+  final String message;
+  _Invalid(this.message);
+}
+
 /// Wie lange der Server ohne Anfrage weiterläuft.
 const Duration kExpertIdleTimeout = Duration(minutes: 30);
 
@@ -218,10 +234,20 @@ final class ExpertServer {
     await for (final request in server) {
       try {
         await _handle(request);
+      } on _Invalid catch (e) {
+        // Eine abgelehnte Eingabe ist ein Ergebnis, kein Serverfehler: Sie
+        // nennt ihren Grund und hat nichts geändert.
+        _json(request, 400, {'error': e.message});
       } on Object catch (e) {
         // Ein Fehler in einer Anfrage darf den Server nicht mitnehmen —
         // sonst ist der Expertenmodus nach dem ersten Tippfehler weg.
-        _json(request, 500, {'error': '$e'});
+        //
+        // Den Wortlaut bekommt nur eine angemeldete Sitzung. Hier liegen
+        // Gesundheitsdaten, und eine Ausnahmemeldung führt gern den Wert
+        // mit, an dem sie scheiterte — ohne Anmeldung gibt es deshalb nur,
+        // *dass* etwas schiefging.
+        _json(request, 500,
+            {'error': _authorised(request) ? '$e' : 'Verarbeitungsfehler'});
       }
       await request.response.close().catchError((_) {});
     }
@@ -315,18 +341,22 @@ final class ExpertServer {
         return _json(request, 200, await _state(runtime));
 
       case ('GET', ['api', 'tasks']):
+        final tasks = await runtime.store.tasks();
+        final counts = _childCounts(tasks);
         return _json(request, 200, {
-          'tasks': (await runtime.store.tasks()).map(_task).toList(),
+          'tasks': [for (final task in tasks) _task(task, counts)],
         });
 
       case ('POST', ['api', 'tasks']):
         final body = await _body(request);
         final task = await runtime.createTask(
-          title: (body['title'] as String?)?.trim() ?? '',
+          // Ohne Titel entstand bisher eine namenlose Aufgabe, die in jeder
+          // Liste steht und in keiner erkennbar ist.
+          title: _requiredText(body, 'title', max: 500),
           activationEnergy: _clamp(body['activationEnergy'], 1, 10, 5),
           salience: _clamp(body['salience'], 1, 10, 3),
           stakes: _clamp(body['stakes'], 1, 10, 3),
-          decayAt: _date(body['decayAt']),
+          decayAt: _date(body, 'decayAt'),
         );
         onChanged();
         return _json(request, 200, _task(task));
@@ -337,6 +367,26 @@ final class ExpertServer {
       case ('GET', ['api', 'rules']):
         return _json(request, 200, await _rules(runtime));
 
+      // ── Der Wortschatz, aus dem eine Regel besteht ───────────────────
+      //
+      // Damit der Browser führen kann statt raten zu lassen: Welche
+      // Variablen es gibt, was sie bedeuten, welche Operatoren zu ihnen
+      // passen. Alles daraus ist aus `RuleVocabulary` abgeleitet, nichts
+      // abgeschrieben — eine zweite, handgepflegte Liste driftet ab, und
+      // genau dieser Fehler stand schon einmal im Regelvalidator: Eine im
+      // Wortschatz ergänzte Variable galt dort als unbekannt, und die
+      // Regel, die sie benutzte, wurde nicht geladen.
+      case ('GET', ['api', 'vocabulary']):
+        return _json(request, 200, _vocabulary());
+
+      // Steht vor dem allgemeinen Regelzweig: „preview" ist ein fester
+      // Pfad, keine Regel-ID. Ein POST auf eine ID gibt es nicht — sonst
+      // müsste diese Reihenfolge zusätzlich geprüft werden.
+      case ('POST', ['api', 'rules', 'preview']):
+        final body = await _body(request);
+        return _json(request, 200,
+            await _preview(runtime, _requiredText(body, 'yaml', max: 20000)));
+
       case ('PUT', ['api', 'rules', final id]):
         return _putRule(request, runtime, id);
 
@@ -346,8 +396,11 @@ final class ExpertServer {
         return _json(request, 200, {'ok': true});
 
       case ('GET', ['api', 'events']):
+        // Gedeckelt, nicht ungeprüft übernommen: `take(-1)` wirft, und eine
+        // Million angeforderter Zeilen wäre eine Anfrage, die das Telefon
+        // beschäftigt, bis der Browser aufgibt.
         final limit =
-            int.tryParse(request.uri.queryParameters['limit'] ?? '') ?? 200;
+            _clamp(request.uri.queryParameters['limit'], 1, 1000, 200);
         final events = await runtime.store.query();
         return _json(request, 200, {
           'events': events.reversed.take(limit).map(_event).toList(),
@@ -355,11 +408,8 @@ final class ExpertServer {
 
       case ('POST', ['api', 'capture']):
         final body = await _body(request);
-        final text = (body['text'] as String?)?.trim() ?? '';
-        if (text.isEmpty) {
-          return _json(request, 400, {'error': 'Kein Text'});
-        }
-        await runtime.capture(text, via: 'expert');
+        await runtime.capture(_requiredText(body, 'text', max: 4000),
+            via: 'expert');
         onChanged();
         return _json(request, 200, {'ok': true});
 
@@ -404,15 +454,30 @@ final class ExpertServer {
         if (raw is! List || raw.isEmpty) {
           return _json(request, 400, {'error': 'Keine Schritte'});
         }
-        final steps = <({String title, int energy})>[];
-        for (final entry in raw) {
-          if (entry is! Map) continue;
-          final title = (entry['title'] as String?)?.trim() ?? '';
-          if (title.isEmpty) continue;
-          steps.add((title: title, energy: _clamp(entry['energy'], 1, 10, 2)));
+        // Eine Zerlegung in mehr als zwanzig Schritte ist ein Projektplan,
+        // und der ist selbst wieder eine Aufgabe mit hoher
+        // Aktivierungsenergie (M2, D2).
+        if (raw.length > 20) {
+          throw _Invalid('Höchstens 20 Schritte je Zerlegung, '
+              'angefragt: ${raw.length}');
         }
-        if (steps.isEmpty) {
-          return _json(request, 400, {'error': 'Keine gültigen Schritte'});
+        final steps = <({String title, int energy})>[];
+        for (var i = 0; i < raw.length; i++) {
+          // Ein übersprungener Schritt wäre der schlimmste Ausgang: Die
+          // Aufgabe gilt danach als zerlegt, und der Teil, den es wirklich
+          // braucht, fehlt — ohne dass irgendwo etwas steht.
+          final entry = raw[i];
+          if (entry is! Map) {
+            throw _Invalid('Schritt ${i + 1} ist kein Eintrag mit "title"');
+          }
+          final title = entry['title'];
+          if (title is! String || title.trim().isEmpty) {
+            throw _Invalid('Schritt ${i + 1} hat keinen Titel');
+          }
+          steps.add((
+            title: title.trim(),
+            energy: _clamp(entry['energy'], 1, 10, 2),
+          ));
         }
         final children = await runtime.atomize(parent: task, steps: steps);
         onChanged();
@@ -436,6 +501,11 @@ final class ExpertServer {
         if (response == null) {
           return _json(request, 400, {'error': 'Unbekannte Antwort: $name'});
         }
+        // Eine Rueckmeldung auf eine Phantom-ID verzerrt die
+        // Befolgungsquote im Wochenreview — still, und genau deshalb teuer.
+        if (!await runtime.store.hasDecision(id)) {
+          return _json(request, 404, {'error': 'Entscheidung nicht gefunden'});
+        }
         await runtime.store.setDecisionResponse(id, response);
         await runtime.record(EventType.decisionFeedback,
             payload: {'decision_id': id, 'response': response.name});
@@ -455,7 +525,7 @@ final class ExpertServer {
               : _clamp(body['compensation'], 1, 5, 3),
           recovery:
               body['recovery'] == null ? null : _clamp(body['recovery'], 1, 5, 3),
-          slot: (body['slot'] as String?) ?? 'expert',
+          slot: _text(body, 'slot', max: 40) ?? 'expert',
         );
         onChanged();
         return _json(request, 200, {'ok': true});
@@ -464,9 +534,17 @@ final class ExpertServer {
       case ('POST', ['api', 'focus']):
         final body = await _body(request);
         final minutes = _clamp(body['minutes'], 5, 180, 25);
+        final anchorId = _text(body, 'taskId', max: 64);
+        // Ein Fokusfenster an einer Aufgabe, die es nicht gibt, laesst sich
+        // spaeter niemandem zuordnen: Es zaehlt Zeit auf einen Anker, den
+        // keine Auswertung wiederfindet.
+        if (anchorId != null &&
+            !(await runtime.store.tasks()).any((t) => t.id == anchorId)) {
+          return _json(request, 404, {'error': 'Aufgabe nicht gefunden'});
+        }
         final session = await runtime.startFocus(
-          taskId: body['taskId'] as String?,
-          taskTitle: (body['title'] as String?)?.trim(),
+          taskId: anchorId,
+          taskTitle: _text(body, 'title', max: 500),
           planned: Duration(minutes: minutes),
         );
         onChanged();
@@ -480,7 +558,7 @@ final class ExpertServer {
         final body = await _body(request);
         await runtime.endFocus(
           running,
-          breadcrumb: (body['breadcrumb'] as String?)?.trim(),
+          breadcrumb: _text(body, 'breadcrumb', max: 2000),
         );
         onChanged();
         return _json(request, 200, {'ok': true});
@@ -488,10 +566,12 @@ final class ExpertServer {
       // ── Eingang ──────────────────────────────────────────────────────
       case ('GET', ['api', 'inbox']):
         final notes = await runtime.store.query(types: {EventType.capture});
-        final sorted = (await runtime.store.tasks())
-            .where((t) => t.state == TaskState.inbox)
-            .map(_task)
-            .toList();
+        final all = await runtime.store.tasks();
+        final inboxCounts = _childCounts(all);
+        final sorted = [
+          for (final task in all)
+            if (task.state == TaskState.inbox) _task(task, inboxCounts),
+        ];
         return _json(request, 200, {
           'notes': notes.reversed
               .take(100)
@@ -698,44 +778,62 @@ final class ExpertServer {
     if (task == null) return _json(request, 404, {'error': 'Unbekannt: $id'});
 
     final body = await _body(request);
-    final state = body['state'] as String?;
+    final state = _text(body, 'state', max: 20);
 
     // Zustandswechsel gehen über die Laufzeit, nicht über den Speicher:
     // Sie erzeugen Events, und die Events sind die Wahrheit.
     if (state != null && state != task.state.name) {
-      switch (state) {
-        case 'done':
+      // Ein unbekannter Name wurde bisher stumm zum bisherigen Zustand.
+      // Der Aufrufer sah eine 200 und glaubte, der Wechsel sei passiert.
+      final target = TaskState.values.where((s) => s.name == state).firstOrNull;
+      if (target == null) {
+        throw _Invalid('Unbekannter Zustand: $state. Möglich sind '
+            '${TaskState.values.map((s) => s.name).join(", ")}');
+      }
+      switch (target) {
+        case TaskState.done:
           await runtime.completeTask(task);
-        case 'dropped':
+        case TaskState.dropped:
           await runtime.dropTask(task);
-        case 'active':
+        case TaskState.active:
           await runtime.startTask(task);
-        default:
-          await runtime.store.upsertTask(task.copyWith(
-            state: TaskState.values.firstWhere((s) => s.name == state,
-                orElse: () => task.state),
-          ));
+        case TaskState.ready:
+          // Zurück in den Bestand — über die Laufzeit, damit auch dieser
+          // Weg ein Ereignis hinterlässt und ein daran hängendes
+          // Fokusfenster mitgeschlossen wird.
+          await runtime.releaseTask(task);
+        case TaskState.inbox || TaskState.blocked:
+          // Für diese beiden gibt es keinen Laufzeitweg. Sie sind
+          // Ablagezustände ohne Folgewirkung.
+          await runtime.store.upsertTask(task.copyWith(state: target));
       }
     }
 
     final updated = (await runtime.store.tasks()).firstWhere((t) => t.id == id);
     await runtime.store.upsertTask(updated.copyWith(
-      title: (body['title'] as String?)?.trim(),
+      // Ein leerer Titel wäre kein „unverändert", sondern eine Aufgabe
+      // ohne Namen — `copyWith` unterscheidet nur gegen null.
+      title: _text(body, 'title', max: 500),
+      // Hier stand `_int` ohne Bereichsgrenze. Die Domänentypen sichern
+      // 1..10 per `assert`, und `assert` ist im Release-Build aus: Eine
+      // Aktivierungsenergie von 999 lief bis in die Datenbank durch und
+      // verzerrte jeden Auswahl-Score, ohne dass irgendwo ein Fehler stand.
       activationEnergy: body.containsKey('activationEnergy')
-          ? _int(body['activationEnergy'], updated.activationEnergy)
+          ? _clamp(body['activationEnergy'], 1, 10, updated.activationEnergy)
           : null,
       salience: body.containsKey('salience')
-          ? _int(body['salience'], updated.salience)
+          ? _clamp(body['salience'], 1, 10, updated.salience)
           : null,
       stakes: body.containsKey('stakes')
-          ? _int(body['stakes'], updated.stakes)
+          ? _clamp(body['stakes'], 1, 10, updated.stakes)
           : null,
-      decayAt: _date(body['decayAt']),
+      decayAt: _date(body, 'decayAt'),
     ));
     onChanged();
 
-    final result = (await runtime.store.tasks()).firstWhere((t) => t.id == id);
-    return _json(request, 200, _task(result));
+    final after = await runtime.store.tasks();
+    final result = after.firstWhere((t) => t.id == id);
+    return _json(request, 200, _task(result, _childCounts(after)));
   }
 
   Future<void> _putRule(
@@ -744,7 +842,7 @@ final class ExpertServer {
     String id,
   ) async {
     final body = await _body(request);
-    final yaml = (body['yaml'] as String?) ?? '';
+    final yaml = _requiredText(body, 'yaml', max: 20000);
 
     // Erst prüfen, dann speichern. Eine ungültige Regel abzulehnen ist der
     // ganze Punkt: Eine stumm übersprungene wäre schlimmer als ein Fehler.
@@ -767,6 +865,17 @@ final class ExpertServer {
             'IDs werden nie wiederverwendet.',
       });
     }
+    // Dieselbe Prüfung wie in der Vorschau. Was dort ohne Fehler dasteht,
+    // muss hier durchgehen — und was dort einen Fehler nennt, darf hier
+    // nicht gespeichert werden. Zwei verschiedene Urteile über dieselbe
+    // Regel wären schlimmer als gar keine Vorschau.
+    final checked = _check(rule);
+    if (checked.errors.isNotEmpty) {
+      return _json(request, 400, {
+        'error': 'Regel ungültig',
+        'issues': checked.errors,
+      });
+    }
 
     final existing = runtime.store.ruleOverride(id);
     final now = runtime.clock.nowLocal();
@@ -787,20 +896,346 @@ final class ExpertServer {
     });
   }
 
+  // ── Wortschatz ────────────────────────────────────────────────────────
+
+  /// Alles, was in einer Regel vorkommen darf — abgeleitet, nicht getippt.
+  ///
+  /// Jeder Eintrag hier stammt aus [RuleVocabulary]. Eine zweite Liste im
+  /// Server würde beim nächsten Zusatz im Kern auseinanderlaufen, und der
+  /// Editor böte dann entweder etwas an, das die Engine nicht kennt, oder
+  /// verschwiege etwas, das sie kann. Beides fällt erst auf, wenn eine
+  /// Regel nicht lädt.
+  static Map<String, Object?> _vocabulary() => {
+        'numerics': [
+          for (final v in RuleVocabulary.numerics)
+            {
+              'id': v.id,
+              'label': v.label,
+              'meaning': v.meaning,
+              'highIsTense': v.highIsTense,
+              // Der Regler im Browser braucht die Grenzen. Ohne sie rät er
+              // 0..100 und liegt bei jeder anderen Skala daneben.
+              'min': v.min,
+              'max': v.max,
+            },
+        ],
+        'symbolics': [
+          for (final v in RuleVocabulary.symbolics)
+            {
+              'id': v.id,
+              'label': v.label,
+              'meaning': v.meaning,
+              'values': v.values,
+            },
+        ],
+        'events': [
+          for (final e in RuleVocabulary.events)
+            {
+              'id': e.id,
+              'label': e.label,
+              // Der Wortschatz führt zu Ereignissen keinen eigenen
+              // Erklärtext. Der eine Satz, der hier zählt, gilt für alle
+              // gleich und steht in der DSL-Dokumentation.
+              'meaning': 'Zählt für „seit einem Ereignis" und „Anzahl heute".',
+            },
+        ],
+        'actions': [
+          for (final a in RuleVocabulary.actions)
+            {
+              // Der Token, nicht der Dart-Name: So steht die Aktion im YAML,
+              // und nur so lässt sich das, was der Editor auswählt, wieder
+              // einlesen.
+              'type': a.type.token,
+              'label': a.label,
+              'meaning': a.meaning,
+              'params': a.params,
+            },
+        ],
+        'severities': [
+          for (final spec in RuleVocabulary.severities)
+            {
+              'id': spec.value.name,
+              'label': spec.label,
+              'meaning': spec.meaning,
+            },
+        ],
+        'deficits': [
+          for (final spec in RuleVocabulary.deficits)
+            {'id': spec.id, 'label': spec.label},
+        ],
+        'operators': {
+          'numeric': [
+            for (final op in RuleVocabulary.operatorLabels.keys) op.token,
+          ],
+          'symbolic': [
+            for (final op in RuleVocabulary.symbolicOperators) op.token,
+          ],
+        },
+        // Die Beschriftungen dazu, damit der Browser „mindestens" nicht
+        // selbst erfindet.
+        'operatorLabels': {
+          for (final entry in RuleVocabulary.operatorLabels.entries)
+            entry.key.token: entry.value,
+        },
+      };
+
+
+
+  /// Variablennamen, die die Engine auflösen kann.
+  ///
+  /// Abgeleitet aus [RuleVocabulary], wie im Regelvalidator. Dort stand
+  /// einmal eine handgepflegte Zweitliste — sie driftete ab, und eine
+  /// gültige Regel galt als ungültig, mit einer Meldung, die nach einem
+  /// Tippfehler aussah statt nach einer Lücke im Werkzeug.
+  static final Set<String> _knownVariables = {
+    for (final v in RuleVocabulary.numerics) v.id,
+    for (final v in RuleVocabulary.symbolics) v.id,
+    // Kein Variablenname, sondern ein eigener Knotentyp — der
+    // Bedingungsbaum meldet ihn trotzdem als referenziert.
+    'time_between',
+  };
+
+  // ── Vorschau ──────────────────────────────────────────────────────────
+
+  /// Dieselbe Aussage, die der Editor auf dem Telefon beim Tippen gibt.
+  ///
+  /// Lädt sie? Was fehlt noch? Träfe sie mit dem Zustand von *jetzt* zu —
+  /// und woran scheitert sie sonst? Das ist der Unterschied zwischen einem
+  /// Texteingabefeld und einem Werkzeug: Wer nachrechnen kann, muss nicht
+  /// glauben (G2).
+  ///
+  /// Antwortet mit 200, auch wenn die Regel nicht lädt. Die Ungültigkeit
+  /// ist hier das Ergebnis, nicht der Fehler — gespeichert wird ohnehin
+  /// nichts, das passiert erst beim PUT.
+  Future<Map<String, Object?>> _preview(
+    AxiomRuntime runtime,
+    String yaml,
+  ) async {
+    final errors = <String>[];
+    final warnings = <String>[];
+
+    final parsed = YamlRuleSource({'vorschau': yaml}).parse();
+    for (final issue in parsed.issues) {
+      errors.add('${issue.ruleId}: ${issue.message}');
+    }
+    if (parsed.rules.isEmpty && errors.isEmpty) {
+      errors.add('Kein Regeleintrag gefunden. Erwartet wird eine Liste mit '
+          'genau einer Regel.');
+    }
+    if (parsed.rules.length > 1) {
+      errors.add('Genau eine Regel je Vorschau, gefunden: '
+          '${parsed.rules.length}');
+    }
+
+    final rule = parsed.rules.length == 1 ? parsed.rules.single : null;
+    if (rule != null) {
+      final checked = _check(rule);
+      errors.addAll(checked.errors);
+      warnings.addAll(checked.warnings);
+    }
+
+    if (rule == null || errors.isNotEmpty) {
+      return {
+        'ok': false,
+        'errors': errors,
+        'warnings': warnings,
+        'firesNow': false,
+        'failedAt': null,
+        'explanation': 'Die Regel lädt so noch nicht: ${errors.first}',
+      };
+    }
+
+    final ctx = await runtime.currentContext();
+    final bool fires;
+    final String? failedAt;
+    try {
+      fires = rule.when.eval(ctx);
+      failedAt = fires ? null : _failingPart(rule.when, ctx);
+    } on ConditionError catch (e) {
+      // Sollte nach der Prüfung oben nicht mehr vorkommen. Falls doch, ist
+      // die Meldung der Bedingung selbst die beste, die es gibt.
+      return {
+        'ok': false,
+        'errors': [e.message],
+        'warnings': warnings,
+        'firesNow': false,
+        'failedAt': null,
+        'explanation': 'Die Bedingung lässt sich nicht auswerten: ${e.message}',
+      };
+    }
+
+    final action = RuleVocabulary.action(rule.then.type)?.label ??
+        rule.then.type.token;
+    return {
+      'ok': true,
+      'errors': const <String>[],
+      'warnings': warnings,
+      'firesNow': fires,
+      'failedAt': failedAt,
+      'explanation': fires
+          ? 'Trifft mit dem Zustand von jetzt zu und würde auslösen: $action.'
+          : 'Trifft mit dem Zustand von jetzt nicht zu — es fehlt: '
+              '${failedAt ?? "unklar"}.',
+    };
+  }
+
+  /// Was an einer geladenen Regel noch nicht stimmt.
+  ///
+  /// Getrennt nach Fehler und Hinweis, und die Trennlinie ist immer
+  /// dieselbe: Ein **Fehler** heißt, die Regel würde später stumm nicht
+  /// funktionieren — eine unbekannte Variable wirft erst in dem Moment, in
+  /// dem die Regel hätte feuern sollen. Ein **Hinweis** heißt, sie
+  /// funktioniert, ist aber unfertig. Sichtbar unfertig ist besser als
+  /// stumm fehlend (CLAUDE.md).
+  static ({List<String> errors, List<String> warnings}) _check(Rule rule) {
+    final errors = <String>[];
+    final warnings = <String>[];
+
+    for (final name in rule.when.referencedVariables) {
+      if (name.startsWith('event:')) {
+        final event = name.substring('event:'.length);
+        if (RuleVocabulary.event(event) == null) {
+          warnings.add('Das Ereignis „$event" steht nicht im Wortschatz. '
+              'Gibt es den Typ nicht, wird es nie gezählt.');
+        }
+        continue;
+      }
+      if (!_knownVariables.contains(name)) {
+        errors.add('Unbekannte Variable: $name');
+      }
+    }
+
+    // Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund,
+    // warum solche Apps wieder gelöscht werden (R2). Der Editor auf dem
+    // Telefon lässt sie deshalb ebenfalls nicht speichern.
+    if (rule.cooldown.minInterval.inMinutes < 1) {
+      errors.add('Ohne Mindestabstand meldet sich die Regel beliebig oft.');
+    }
+    if (rule.rationale.trim().length < 40) {
+      warnings.add('Die Begründung ist kurz. Sie erscheint im '
+          'Systeminspektor und muss in einem halben Jahr noch erklären, '
+          'warum es diese Regel gibt.');
+    }
+    if (rule.deficit == null) {
+      warnings.add('Kein Bezug auf D1 bis D12. Eine Regel ohne '
+          'Defizitbezug ist verdächtig.');
+    } else if (!RuleVocabulary.deficits.any((d) => d.id == rule.deficit)) {
+      errors.add('Unbekanntes Defizit: ${rule.deficit}');
+    }
+    if (!rule.translatedLanguages.contains('en')) {
+      warnings.add('Keine englische Fassung (title_en, rationale_en). In '
+          'der englischen Oberfläche erscheint der deutsche Text.');
+    }
+    if (rule.severity == Severity.enforce) {
+      warnings.add(RuleVocabulary.severities
+          .firstWhere((s) => s.value == Severity.enforce)
+          .meaning);
+    }
+    if (!rule.isShadow) {
+      warnings.add('Gespeichert läuft die Regel zuerst sieben Tage stumm '
+          'mit, unabhängig von der gewählten Aktion.');
+    }
+    return (errors: errors, warnings: warnings);
+  }
+
+  /// Der Teil der Bedingung, an dem es gerade scheitert.
+  ///
+  /// Bei `all` der erste Zweig, der nicht hält — er ist der, den man ändern
+  /// müsste. Bei `any` hält keiner, also werden alle genannt: Einer allein
+  /// wäre eine willkürliche Auswahl.
+  static String? _failingPart(Condition condition, EvalContext ctx) {
+    if (condition.eval(ctx)) return null;
+    if (condition is AllOf) {
+      for (final child in condition.children) {
+        final failing = _failingPart(child, ctx);
+        if (failing != null) return failing;
+      }
+    }
+    if (condition is AnyOf) {
+      return 'keins davon: '
+          '${condition.children.map((c) => _describe(c, ctx)).join(" / ")}';
+    }
+    return _describe(condition, ctx);
+  }
+
+  /// Eine Bedingung mit ihrem Istwert daneben — in Worten des Wortschatzes.
+  ///
+  /// „capacity lt 40" sagt nichts, „Kapazität kleiner als 40 (jetzt 62)"
+  /// sagt alles. Die Beschriftungen kommen aus [RuleVocabulary], damit im
+  /// Browser dasselbe steht wie im Editor auf dem Telefon.
+  static String _describe(Condition condition, EvalContext ctx) {
+    String label(CompareOp o) => RuleVocabulary.operatorLabels[o] ?? o.token;
+
+    switch (condition) {
+      case NumericCompare(:final variable, :final op, :final value):
+        return '${RuleVocabulary.labelFor(variable)} ${label(op)} $value '
+            '(jetzt ${ctx.numeric(variable) ?? "unbekannt"})';
+      case SymbolicCompare(:final variable, :final op, :final value):
+        final now = ctx.symbolic(variable);
+        return '${RuleVocabulary.labelFor(variable)} '
+            '${op == CompareOp.eq ? "ist" : "ist nicht"} '
+            '${_symbolLabel(variable, value)} '
+            '(jetzt ${now == null ? "unbekannt" : _symbolLabel(variable, now)})';
+      case TimeBetween(:final fromMinutes, :final toMinutes):
+        final now = ctx.localNow;
+        return 'Uhrzeit zwischen ${_hhmm(fromMinutes)} und '
+            '${_hhmm(toMinutes)} (jetzt ${_hhmm(now.hour * 60 + now.minute)})';
+      case MinutesSince(:final eventType, :final op, :final minutes):
+        final since = ctx.minutesSince(eventType);
+        return 'Minuten seit „${RuleVocabulary.labelFor(eventType)}" '
+            '${label(op)} $minutes (jetzt ${since ?? "noch nie"})';
+      case CountToday(:final eventType, :final op, :final count):
+        return '„${RuleVocabulary.labelFor(eventType)}" heute ${label(op)} '
+            '$count (jetzt ${ctx.countToday(eventType)})';
+      case NotCond(:final child):
+        return 'nicht (${_describe(child, ctx)})';
+      case AllOf(:final children):
+        return children.map((c) => _describe(c, ctx)).join(' und ');
+      case AnyOf(:final children):
+        return children.map((c) => _describe(c, ctx)).join(' oder ');
+    }
+  }
+
+  /// Beschriftung eines symbolischen Werts, sonst der Wert selbst.
+  static String _symbolLabel(String variable, String value) {
+    final symbolic = RuleVocabulary.symbolic(variable);
+    if (symbolic == null) return value;
+    // Der EvalContext liefert die Laststufe in Grossbuchstaben, der
+    // Wortschatz fuehrt sie so, wie sie im YAML steht.
+    for (final entry in symbolic.values.entries) {
+      if (entry.key.toLowerCase() == value.toLowerCase()) return entry.value;
+    }
+    return value;
+  }
+
+  static String _hhmm(int minutes) =>
+      '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
+      '${(minutes % 60).toString().padLeft(2, '0')}';
+
   // ── Abbildung nach JSON ───────────────────────────────────────────────
 
   Future<Map<String, Object?>> _state(AxiomRuntime runtime) async {
     final snapshot = await runtime.evaluate();
     final state = snapshot.state;
+    final counts = _childCounts(snapshot.tasks);
+    // Die Werte kommen aus dem Auswertungskontext, nicht aus dem
+    // Zustandsvektor allein: `meta_minutes_today` gehoert zum
+    // RuntimeContext (G4) und steht nicht im Vektor. Ueber `state.numeric`
+    // kam dafuer `null` heraus — eine Zahl ohne Zahl, die die Oberflaeche
+    // trotzdem rendert. Der Kontext kennt beide Quellen, und was er nicht
+    // aufloesen kann, faellt hier ganz heraus: Ein fehlender Eintrag ist
+    // ehrlicher als ein leerer.
+    final ctx = await runtime.currentContext();
     return {
       'at': snapshot.at.toIso8601String(),
       'values': {
         for (final variable in RuleVocabulary.numerics)
-          variable.id: {
-            'label': variable.label,
-            'value': state.numeric(variable.id),
-            'confidence': state.confidenceOf(variable.id),
-          },
+          if (ctx.numeric(variable.id) != null)
+            variable.id: {
+              'label': variable.label,
+              'value': ctx.numeric(variable.id),
+              'confidence': ctx.confidenceOf(variable.id),
+            },
       },
       'loadLevel': state.loadLevel.name.toUpperCase(),
       'regime': snapshot.regime.headline,
@@ -823,11 +1258,13 @@ final class ExpertServer {
             },
       // Damit der Browser dieselbe Mechanik anbieten kann wie das Telefon:
       // erst das Laufende, sonst der Vorschlag.
-      'running': snapshot.tasks
-          .where((t) => t.state == TaskState.active)
-          .map(_task)
-          .toList(),
-      'startable': snapshot.startable.map(_task).toList(),
+      'running': [
+        for (final task in snapshot.tasks)
+          if (task.state == TaskState.active) _task(task, counts),
+      ],
+      'startable': [
+        for (final task in snapshot.startable) _task(task, counts),
+      ],
       'atomize': snapshot.atomizeCandidates
           .map((c) => {
                 'taskId': c.task.id,
@@ -923,7 +1360,33 @@ final class ExpertServer {
     };
   }
 
-  Map<String, Object?> _task(Task task) => {
+  /// Teilschritte je Elternaufgabe.
+  ///
+  /// Der Browser soll den Fortschritt einer zerlegten Aufgabe zeigen
+  /// können, ohne die Liste selbst zu durchsuchen — zweimal dieselbe
+  /// Zählung ist zweimal die Gelegenheit, sie unterschiedlich zu machen.
+  static Map<String, ({int total, int done})> _childCounts(List<Task> tasks) {
+    final counts = <String, ({int total, int done})>{};
+    for (final task in tasks) {
+      final parent = task.parentId;
+      if (parent == null) continue;
+      final current = counts[parent] ?? (total: 0, done: 0);
+      counts[parent] = (
+        total: current.total + 1,
+        done: current.done + (task.state == TaskState.done ? 1 : 0),
+      );
+    }
+    return counts;
+  }
+
+  /// [counts] aus [_childCounts]. Fehlt es, sind die Zahlen 0 — nie `null`:
+  /// Ein Feld, das mal da ist und mal nicht, muss im Browser jedes Mal
+  /// geprüft werden.
+  Map<String, Object?> _task(
+    Task task, [
+    Map<String, ({int total, int done})> counts = const {},
+  ]) =>
+      {
         'id': task.id,
         'title': task.title,
         'activationEnergy': task.activationEnergy,
@@ -933,6 +1396,8 @@ final class ExpertServer {
         'decayAt': task.decayAt?.toIso8601String(),
         'parentId': task.parentId,
         'breadcrumb': task.breadcrumb,
+        'childCount': counts[task.id]?.total ?? 0,
+        'doneCount': counts[task.id]?.done ?? 0,
       };
 
   Map<String, Object?> _event(Event event) => {
@@ -960,8 +1425,39 @@ final class ExpertServer {
       ..write(jsonEncode(body));
   }
 
-  static int _int(Object? value, int fallback) =>
-      value is num ? value.toInt() : fallback;
+  /// Pflichttext aus dem Rumpf.
+  ///
+  /// Fehlt er, ist er leer oder ist er gar kein Text, wird die Anfrage
+  /// abgelehnt. Der Grund steht dabei: Eine Aufgabe ohne Titel steht in
+  /// jeder Liste und ist in keiner wiederzuerkennen, und ein stumm auf
+  /// „" gesetzter Titel löscht den vorhandenen.
+  static String _requiredText(
+    Map<String, Object?> body,
+    String field, {
+    required int max,
+  }) {
+    final value = body[field];
+    if (value is! String) {
+      throw _Invalid('Feld "$field" fehlt oder ist kein Text');
+    }
+    final text = value.trim();
+    if (text.isEmpty) throw _Invalid('Feld "$field" ist leer');
+    if (text.length > max) {
+      throw _Invalid('Feld "$field" ist zu lang: ${text.length} Zeichen, '
+          'erlaubt sind $max');
+    }
+    return text;
+  }
+
+  /// Wie [_requiredText], nur darf das Feld fehlen. Steht es da, gelten
+  /// dieselben Bedingungen — „vorhanden, aber leer" ist keine Auslassung,
+  /// sondern eine Eingabe, und eine ungültige.
+  static String? _text(
+    Map<String, Object?> body,
+    String field, {
+    required int max,
+  }) =>
+      body[field] == null ? null : _requiredText(body, field, max: max);
 
   /// Eine Zahl aus dem Netz, auf den erlaubten Bereich gebracht.
   ///
@@ -981,8 +1477,25 @@ final class ExpertServer {
     return n < min ? min : (n > max ? max : n);
   }
 
-  static DateTime? _date(Object? value) =>
-      value is String ? DateTime.tryParse(value) : null;
+  /// Ein Datum aus dem Netz. Fehlt das Feld, bleibt es leer.
+  ///
+  /// **Warum ein unlesbares Datum abgelehnt wird.** Bisher wurde es still
+  /// verworfen. Die Aufgabe stand danach ohne Frist da, der Auswahl-Score
+  /// rechnete mit dem halben Druck (`_decayPressure` liefert 0.5 statt bis
+  /// zu 2.0) — und nirgends stand ein Fehler. Ein Tippfehler im Datum
+  /// verschob damit lautlos die Reihenfolge des ganzen Tages.
+  static DateTime? _date(Map<String, Object?> body, String field) {
+    final value = body[field];
+    if (value == null) return null;
+    if (value is! String) {
+      throw _Invalid('"$field" erwartet ein Datum als Text');
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      throw _Invalid('"$field" ist kein lesbares Datum: $value');
+    }
+    return parsed;
+  }
 
   /// Die Adresse im eigenen Netz — ohne sie müsste man sie am Telefon
   /// nachschlagen, und dann benutzt es niemand.

@@ -80,6 +80,44 @@ void main() {
       expect(found.map((c) => c.task.id), isNot(contains('p1')));
     });
 
+    test('ein zu groß geratener Teilschritt wird selbst angeboten', () {
+      // Der Kern von D2: Ist der erste Schritt immer noch zu groß,
+      // passiert nichts — es sei denn, er laesst sich weiter zerlegen.
+      final parent = taskOf(id: 'p1', ae: 9, state: TaskState.blocked);
+      final step = taskOf(id: 'c1', ae: 5, stakes: 3, parentId: 'p1');
+      final found = atomizer.candidates(
+        tasks: [parent, step],
+        capacity: 30,
+        now: now,
+        createdAt: {'p1': now, 'c1': now},
+      );
+      expect(found.map((c) => c.task.id), contains('c1'));
+    });
+
+    test('außer Reichweite genügt als Grund — ohne Frist, ohne Alter', () {
+      final found = atomizer.candidates(
+        tasks: [taskOf(ae: 5, stakes: 3, salience: 3)],
+        capacity: 30,
+        now: now,
+        createdAt: {'t1': now},
+      );
+      expect(found.single.reason, AtomizeReason.outOfReach);
+    });
+
+    test('erledigte Teilschritte halten die Klammer nicht mehr zurück', () {
+      // Sonst gilt eine Aufgabe für immer als „schon zerlegt", auch wenn
+      // von der Zerlegung nichts mehr offen ist.
+      final parent = taskOf(id: 'p1', ae: 9);
+      final done = taskOf(id: 'c1', ae: 2, parentId: 'p1', state: TaskState.done);
+      final found = atomizer.candidates(
+        tasks: [parent, done],
+        capacity: 40,
+        now: now,
+        createdAt: {'p1': now, 'c1': now},
+      );
+      expect(found.map((c) => c.task.id), contains('p1'));
+    });
+
     test('nur ready — nicht erledigte oder verworfene', () {
       for (final state in [TaskState.done, TaskState.dropped, TaskState.inbox]) {
         final found = atomizer.candidates(
@@ -105,6 +143,39 @@ void main() {
         createdAt: {'urgent': now, 'heavy': now},
       );
       expect(found.first.task.id, 'urgent');
+    });
+  });
+
+  group('Zerlegen auf Zuruf — jede Ebene, ohne Bedingung [D2]', () {
+    test('auch ein blockiertes Elternteil lässt sich weiter zerlegen', () {
+      final candidate = atomizer.candidateFor(
+        task: taskOf(state: TaskState.blocked),
+        capacity: 40,
+        now: now,
+      );
+      expect(candidate.task.id, 't1');
+      expect(candidate.targetEnergy, greaterThanOrEqualTo(1));
+    });
+
+    test('auch eine startbare Aufgabe — der Nutzer entscheidet', () {
+      final candidate = atomizer.candidateFor(
+        task: taskOf(ae: 2, stakes: 3),
+        capacity: 80,
+        now: now,
+      );
+      expect(candidate.reason, AtomizeReason.chosen);
+    });
+
+    test('eine laufende Aufgabe gilt nicht als außer Reichweite', () {
+      // `isStartable` zieht den Zustand mit hinein; die Begruendung darf
+      // das nicht, sonst steht bei einer laufenden Aufgabe „liegt ueber
+      // der Kapazitaet".
+      final candidate = atomizer.candidateFor(
+        task: taskOf(ae: 2, stakes: 3, state: TaskState.active),
+        capacity: 80,
+        now: now,
+      );
+      expect(candidate.reason, AtomizeReason.chosen);
     });
   });
 
@@ -191,6 +262,21 @@ void main() {
       // Sonst erzeugt jeder Teilschritt denselben Druck wie das Ganze.
       expect(children[0].stakes, lessThan(parent.stakes));
       expect(children[1].stakes, lessThan(children[0].stakes));
+    });
+
+    test('eine Aufgabe mit Energie 1 lässt sich zerlegen', () {
+      // Der Rest wird als „eine Stufe leichter" abgeleitet, und bei 1 kam
+      // dabei 0 heraus — ausserhalb des Wertebereichs von Task.
+      var counter = 0;
+      final children = atomizer.split(
+        parent: taskOf(ae: 1),
+        steps: [
+          (title: 'erster Handgriff', energy: 1),
+          (title: 'der Rest', energy: 0),
+        ],
+        nextId: () => 'c${counter++}',
+      );
+      expect(children.last.activationEnergy, 1);
     });
 
     test('Kinder sind sofort startbar, nicht im Eingang', () {

@@ -149,19 +149,52 @@ p{color:var(--dim);font-size:.9rem}
 .tabs button:hover{color:var(--ink)}
 .tabs .count{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-left:.3rem}
 
-.item{display:grid;grid-template-columns:3px 1fr auto;gap:.85rem;align-items:start;
-  padding:.8rem 0;border-bottom:1px solid var(--rule)}
+/* Die Einrückung ist die Eltern-Kind-Kette. Sie wächst in rem und damit mit
+   der Textgröße mit; die Tiefe wird beim Zeichnen gedeckelt, sonst bliebe bei
+   2,4-facher Schrift für den Titel nichts mehr übrig. */
+.item{display:grid;grid-template-columns:3px minmax(0,1fr) auto;gap:.85rem;align-items:start;
+  padding:.8rem 0;padding-left:calc(var(--depth,0) * 1.1rem);border-bottom:1px solid var(--rule)}
 .item:last-child{border-bottom:0}
 .item .bar{width:3px;align-self:stretch;border-radius:2px;background:var(--rule);min-height:2.1rem}
-.item.reach .bar{background:var(--signal)}
-.item.run .bar{background:var(--calm)}
-.item .title{font-size:.94rem}
+/* Dringlichkeit als Rampe — der Abstand zu decayAt, sonst nichts. Keine
+   Ampel: Es gibt hier kein Gut und kein Schlecht, nur nah und fern (R7).
+   Ohne Frist und jenseits von drei Tagen bleibt der Strich neutral. */
+.item[data-due=over] .bar{background:var(--caution)}
+.item[data-due=day] .bar{background:var(--signal)}
+.item[data-due=days] .bar{background:color-mix(in srgb,var(--signal) 45%,var(--rule))}
+.item .title{font-size:.94rem;overflow-wrap:anywhere}
+.item.run .title{color:var(--calm)}
 .item.done .title{color:var(--faint);text-decoration:line-through}
 .meta{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.2rem}
 .meta span{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint)}
-.meta .due{color:var(--caution)}
+.meta .due{color:var(--dim)}
+.item[data-due=over] .meta .due{color:var(--caution)}
 .acts{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end}
 .acts .btn{padding:.32rem .58rem;font-size:.77rem}
+
+/* ── Filterzeile und Umschalter ───────────────────────────────────────
+   Drei Filter, kein Baukasten. Jeder weitere wäre eine Entscheidung mehr
+   vor der Arbeit statt in ihr (G1, D3). */
+.filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 1rem}
+.filters input[type=search]{flex:1 1 12rem;min-width:7rem;width:auto}
+.tog{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.09em;padding:.42rem .6rem;
+  border:1px solid var(--rule);border-radius:3px;color:var(--faint);white-space:nowrap}
+.tog[aria-pressed=true]{border-color:var(--signal);color:var(--signal)}
+.tog:hover{color:var(--ink)}
+
+/* ── Regeleditor ───────────────────────────────────────────────────── */
+.ed{display:grid;gap:1.35rem}
+.step{display:grid;gap:.5rem}
+.pick{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
+.pick .btn{padding:.32rem .6rem;font-size:.78rem}
+.cond{border:1px solid var(--rule);border-radius:5px;padding:.6rem .7rem;
+  background:var(--raised);margin-bottom:.5rem}
+.cond.grp{background:transparent;border-style:dashed}
+.cond .top{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem}
+.cond .fields{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.cond .now{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-top:.45rem}
+.slim{width:auto;max-width:100%;min-width:5rem}
+.hint{color:var(--faint);font-size:.78rem}
 
 .dial{margin:0 0 1.05rem}
 .dial .head{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem}
@@ -175,7 +208,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   border-radius:50%;background:var(--signal);border:2px solid var(--panel)}
 input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--signal);
   border:2px solid var(--panel)}
-input[type=text],input[type=number],input[type=password],input[type=datetime-local],textarea,select{
+input[type=text],input[type=number],input[type=password],input[type=datetime-local],
+input[type=search],input[type=time],textarea,select{
   background:var(--raised);border:1px solid var(--rule);border-radius:4px;padding:.5rem .65rem;width:100%}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--signal)}
 label{display:block;font-size:.8rem;color:var(--dim);margin-bottom:.3rem}
@@ -329,11 +363,21 @@ const el=(t,a={},...kids)=>{
     else if(k.startsWith('on')) n.addEventListener(k.slice(2),v);
     else n.setAttribute(k,v===true?'':v);
   }
-  for(const k of kids.flat()) if(k!==null&&k!==undefined&&k!==false)
+  // Tief flach klopfen: Ein Baustein, der eine Liste zurückgibt, soll sich
+  // wie ein einzelnes Kind einsetzen lassen — sonst steht irgendwann
+  // "[object Object]" in der Oberfläche.
+  for(const k of kids.flat(Infinity)) if(k!==null&&k!==undefined&&k!==false)
     n.append(k.nodeType?k:document.createTextNode(String(k)));
   return n;
 };
 const fmt=n=>(n===null||n===undefined)?'–':String(n);
+
+/* `replaceChildren` filtert null NICHT — es macht daraus einen Textknoten
+   mit dem Wort "null". Zwei weggelassene Chips standen deshalb als
+   "nullnull" in der Kopfzeile. Der el()-Helfer filtert; diese Funktion
+   zieht dieselbe Regel fuer alles nach, was direkt ersetzt wird. */
+const put=(node,...kids)=>node.replaceChildren(
+  ...kids.flat(Infinity).filter(k=>k!==null&&k!==undefined&&k!==false));
 let toastTimer;
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),3200)}
@@ -343,7 +387,13 @@ async function api(path,opts={}){
     headers:opts.body?{'Content-Type':'application/json'}:{},...opts});
   if(res.status===401){showGate();throw new Error('401')}
   const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+  if(!res.ok){
+    // Die Einzelmeldungen mitschleppen: Bei einer abgelehnten Regel steht in
+    // `issues`, WAS nicht stimmt — „Regel ungültig" allein hilft niemandem.
+    const err=new Error(data.error||('HTTP '+res.status));
+    err.data=data;
+    throw err;
+  }
   return data;
 }
 
@@ -444,11 +494,18 @@ async function enter(){
 
 /* ── Zustand ─────────────────────────────────────────────────────── */
 let S=null,tasks=[],rules=[],events=[],inbox={notes:[],tasks:[]},review=null,tab='tasks';
+let ruleIssues=[];
 
 async function refresh(){S=await api('/api/state');paintHeader();paintAction();paintCapline()}
 async function loadSurface(){
   if(tab==='tasks') tasks=(await api('/api/tasks')).tasks;
-  else if(tab==='rules') rules=(await api('/api/rules')).rules;
+  else if(tab==='rules'){
+    const data=await api('/api/rules');
+    rules=data.rules;
+    // Abgelehnte Einträge sichtbar machen: Eine stumm übersprungene Regel
+    // ist schlimmer als eine, die laut fehlschlägt.
+    ruleIssues=data.issues||[];
+  }
   else if(tab==='events') events=(await api('/api/events?limit=250')).events;
   else if(tab==='inbox') inbox=await api('/api/inbox');
   else if(tab==='review') review=await api('/api/review?scope='+(review?.scope||'day'));
@@ -457,7 +514,7 @@ async function reload(){await refresh();await loadSurface();render()}
 
 function paintHeader(){
   const v=S.values||{};
-  $('#hchips').replaceChildren(
+  put($('#hchips'),
     el('span',{class:'chip'},'KAPAZITÄT ',el('b',{},fmt(v.capacity?.value))),
     el('span',{class:'chip'},'LAST ',el('b',{},fmt(v.load_index?.value))),
     el('span',{class:S.loadLevel==='L0'?'chip':'chip warn'},S.loadLevel||'–'),
@@ -518,7 +575,7 @@ function paintAction(){
   }
   if(S.nextStep) kids.push(el('p',{class:'faint',style:'margin-top:1rem'},
     S.nextStep.label+' · '+new Date(S.nextStep.at).toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'})+' — '+S.nextStep.anchor));
-  box.replaceChildren(...kids);
+  put(box,kids);
 }
 
 function dueLabel(iso){
@@ -591,33 +648,151 @@ $('#tabs').addEventListener('click',async e=>{
 function render(){
   if(!S) return;
   $('#c-inbox').textContent=S.inboxCount?' '+S.inboxCount:'';
-  $('#surface').replaceChildren(({tasks:viewTasks,inbox:viewInbox,state:viewState,
+  put($('#surface'),({tasks:viewTasks,inbox:viewInbox,state:viewState,
     rules:viewRules,review:viewReview,events:viewEvents})[tab]());
 }
 
+/* ── Aufgaben ────────────────────────────────────────────────────────
+   Ein Baum, keine Liste. `parentId` legt der Atomizer beim Zerlegen an —
+   damit ist die Kette Eltern → Kind schon da, sie war nur nie zu sehen.
+   Das IST die Projektfunktion: Ein eigener Projekt-Typ wäre eine zweite
+   Ordnungsachse und damit Meta-Work-Treibstoff (D3).
+
+   Die Reihenfolge ist die der Auswahl und nicht verstellbar. Drei Filter,
+   sonst keine — jeder weitere ist eine Entscheidung vor der Arbeit statt
+   in ihr (G1). Sie hängen am Browser, nicht am Gerät: Es ist eine
+   Eigenschaft dieses Bildschirms, nicht des Nutzers. */
+const tprefs={
+  q:localStorage.getItem('axiom.tasks.q')||'',
+  reach:localStorage.getItem('axiom.tasks.reach')==='1',
+  overdue:localStorage.getItem('axiom.tasks.overdue')==='1',
+  done:localStorage.getItem('axiom.tasks.done')==='1'};
+function setTPref(key,value){
+  tprefs[key]=value;
+  localStorage.setItem('axiom.tasks.'+key,
+    value===true?'1':value===false?'0':String(value));
+}
+
 function viewTasks(){
-  const cap=S.values?.capacity?.value??50;
-  const groups=[['Läuft',tasks.filter(t=>t.state==='active')],
-    ['In Reichweite',tasks.filter(t=>t.state==='ready'&&t.activationEnergy<=cap/10)],
-    ['Nicht in Reichweite',tasks.filter(t=>t.state==='ready'&&t.activationEnergy>cap/10)],
-    ['Zerlegt',tasks.filter(t=>t.state==='blocked')],
-    ['Erledigt',tasks.filter(t=>t.state==='done').slice(0,30)]];
-  $('#c-tasks').textContent=' '+tasks.filter(t=>t.state==='ready'||t.state==='active').length;
   const frag=document.createDocumentFragment();
-  frag.append(el('div',{class:'row',style:'margin:0 0 1rem'},
-    el('button',{class:'btn primary',onclick:()=>taskDialog()},'Neue Aufgabe')));
-  for(const [name,list] of groups){
-    if(!list.length) continue;
-    frag.append(el('div',{class:'sec'},
-      el('span',{class:'eyebrow'},name+' · '+list.length),el('span',{class:'line'})));
-    for(const t of list) frag.append(taskRow(t,cap));
-  }
-  if(!tasks.length) frag.append(el('p',{},'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.'));
+  const list=el('div',{id:'tasklist'});
+  frag.append(taskFilters(),list);
+  fillTasks(list);
   return frag;
 }
-function taskRow(t,cap){
-  const reach=t.activationEnergy<=cap/10;
-  const cls=t.state==='active'?'run':t.state==='done'?'done':reach?'reach':'';
+/* Nur die Liste neu zeichnen, nicht die Zeile darüber: Sonst verliert das
+   Suchfeld beim zweiten Buchstaben den Fokus. */
+function renderTaskList(){const box=$('#tasklist');if(box) fillTasks(box)}
+
+function taskFilters(){
+  const tog=(key,label,title)=>el('button',{class:'tog',title,
+    'aria-pressed':tprefs[key]?'true':'false',
+    onclick:e=>{
+      setTPref(key,!tprefs[key]);
+      e.currentTarget.setAttribute('aria-pressed',tprefs[key]?'true':'false');
+      renderTaskList();
+    }},label);
+  return el('div',{class:'filters'},
+    el('button',{class:'btn primary',onclick:()=>taskDialog()},'Neue Aufgabe'),
+    el('input',{type:'search',value:tprefs.q,placeholder:'Suchen','aria-label':'Aufgaben durchsuchen',
+      oninput:e=>{setTPref('q',e.target.value);renderTaskList()}}),
+    tog('reach','IN REICHWEITE','Nur was unter der Kapazität von heute liegt'),
+    tog('overdue','ÜBERFÄLLIG','Nur was seinen Zeitpunkt überschritten hat'),
+    tog('done','ERLEDIGTE','Erledigtes mit anzeigen'));
+}
+
+function fillTasks(box){
+  const cap=S.values?.capacity?.value??50;
+  const inReach=t=>t.activationEnergy<=cap/10;
+  const overdue=t=>!!t.decayAt&&new Date(t.decayAt).getTime()<Date.now();
+
+  const byId=new Map(tasks.map(t=>[t.id,t]));
+  const kids=new Map(),roots=[];
+  for(const t of tasks){
+    const parent=t.parentId&&t.parentId!==t.id&&byId.has(t.parentId)?t.parentId:null;
+    if(parent){
+      if(!kids.has(parent)) kids.set(parent,[]);
+      kids.get(parent).push(t);
+    }else roots.push(t);
+  }
+  $('#c-tasks').textContent=' '+tasks.filter(t=>t.state==='ready'||t.state==='active').length;
+
+  const q=tprefs.q.trim().toLowerCase();
+  const hits=t=>{
+    if(t.state==='dropped') return false;
+    if(t.state==='done'&&!tprefs.done) return false;
+    if(q&&!String(t.title||'').toLowerCase().includes(q)) return false;
+    if(tprefs.reach&&!(inReach(t)&&t.state!=='done')) return false;
+    if(tprefs.overdue&&!overdue(t)) return false;
+    return true;
+  };
+  /* Ein Treffer zieht seine Eltern mit. Ohne die Kette stünde ein Schritt
+     ohne das, wozu er gehört — und genau das soll der Baum zeigen. */
+  const keep=new Set(),seen=new Set();
+  const mark=t=>{
+    if(seen.has(t.id)) return false;
+    seen.add(t.id);
+    let below=false;
+    for(const c of kids.get(t.id)||[]) if(mark(c)) below=true;
+    const ok=hits(t)||below;
+    if(ok) keep.add(t.id);
+    return ok;
+  };
+  roots.forEach(mark);
+
+  /* Ein Elternteil rückt dorthin, wo sein bester Schritt steht: Sonst
+     rutschte die zerlegte Aufgabe ans Ende und ihr startbarer erster
+     Schritt mit ihr. */
+  const rank=t=>t.state==='active'?0:t.state==='ready'?(inReach(t)?1:2)
+    :t.state==='blocked'?3:4;
+  const best=new Map();
+  const bestOf=t=>{
+    if(best.has(t.id)) return best.get(t.id);
+    best.set(t.id,rank(t));
+    let r=rank(t);
+    for(const c of kids.get(t.id)||[]) r=Math.min(r,bestOf(c));
+    best.set(t.id,r);
+    return r;
+  };
+  const order=(a,b)=>bestOf(a)-bestOf(b)||a.activationEnergy-b.activationEnergy
+    ||String(a.title).localeCompare(String(b.title),'de');
+
+  const out=document.createDocumentFragment();
+  const drawn=new Set();
+  const emit=(t,depth)=>{
+    if(!keep.has(t.id)||drawn.has(t.id)) return;
+    drawn.add(t.id);
+    const children=(kids.get(t.id)||[]).slice().sort(order);
+    out.append(taskRow(t,cap,depth,children));
+    for(const c of children) emit(c,depth+1);
+  };
+  for(const t of roots.slice().sort(order)) emit(t,0);
+
+  if(!tasks.length){
+    out.append(el('p',{},'Nichts eingetragen. Was du links erfasst, landet zuerst im Eingang.'));
+  }else if(!keep.size){
+    out.append(el('p',{},'Nichts passt zu dieser Auswahl.'),
+      el('div',{class:'row'},el('button',{class:'btn quiet',onclick:()=>{
+        setTPref('q','');setTPref('reach',false);setTPref('overdue',false);setTPref('done',false);
+        render();
+      }},'Filter zurücksetzen')));
+  }
+  put(box,out);
+}
+
+/* Vier Stufen, abgeleitet aus einem Abstand — nicht aus einer Meinung über
+   die Aufgabe. Erledigtes bleibt neutral: Eine Frist, die nicht mehr läuft,
+   misst nichts mehr. */
+function dueRamp(t){
+  if(!t.decayAt||t.state==='done'||t.state==='dropped') return null;
+  const hours=(new Date(t.decayAt).getTime()-Date.now())/36e5;
+  return hours<0?'over':hours<24?'day':hours<72?'days':null;
+}
+
+function taskRow(t,cap,depth,children){
+  const cls=['item'];
+  if(t.state==='active') cls.push('run');
+  if(t.state==='done') cls.push('done');
   const acts=[];
   if(t.state==='active'){
     acts.push(el('button',{class:'btn primary',onclick:()=>act(t.id,'complete')},'Erledigt'),
@@ -627,14 +802,24 @@ function taskRow(t,cap){
       el('button',{class:'btn',onclick:()=>act(t.id,'complete')},'Erledigt'),
       el('button',{class:'btn quiet',onclick:()=>atomizeDialog({taskId:t.id,title:t.title})},'Zerlegen'));
   }
-  return el('div',{class:'item '+cls},el('span',{class:'bar'}),
+  // Gezählt wird auf dem Gerät: Zweimal dieselbe Zählung wäre zweimal die
+  // Gelegenheit, sie unterschiedlich zu machen. Die Liste hier zählt nur,
+  // solange der Server die Zahlen nicht mitliefert.
+  const total=t.childCount===undefined?children.length:t.childCount;
+  const doneKids=t.doneCount===undefined
+    ?children.filter(c=>c.state==='done').length:t.doneCount;
+  return el('div',{class:cls.join(' '),'data-due':dueRamp(t),
+    style:'--depth:'+Math.min(depth,6)},
+    el('span',{class:'bar'}),
     el('div',{},el('div',{class:'title'},t.title),
       el('div',{class:'meta'},
         el('span',{},'START '+t.activationEnergy+'/10'),
         el('span',{},'SOG '+t.salience),
         el('span',{},'FOLGEN '+t.stakes),
         t.decayAt?el('span',{class:'due'},dueLabel(t.decayAt)):null,
-        t.parentId?el('span',{},'TEILSCHRITT'):null)),
+        total?el('span',{},'TEILSCHRITTE '+doneKids+' VON '+total):null,
+        t.state==='ready'&&!(t.activationEnergy<=cap/10)
+          ?el('span',{},'NICHT IN REICHWEITE'):null)),
     el('div',{class:'acts'},acts));
 }
 
@@ -681,11 +866,18 @@ function viewState(){
 
 function viewRules(){
   $('#c-rules').textContent=' '+rules.length;
+  if(editor) return viewEditor();
   const frag=document.createDocumentFragment();
-  if(S.configLocked) frag.append(el('div',{class:'panel',style:'margin-bottom:1rem;border-color:var(--caution)'},
-    el('span',{class:'stamp'},'R-010'),
-    el('h2',{style:'margin:.5rem 0'},'Regelwerk heute zu'),
-    el('p',{},S.metaMinutesToday+' Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.')));
+  if(S.configLocked) frag.append(lockPanel());
+  if(ruleIssues.length) frag.append(el('div',{class:'panel',
+    style:'margin-bottom:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
+    el('span',{class:'eyebrow'},'NICHT GELADEN'),
+    el('p',{style:'margin-top:.4rem'},
+      'Diese Einträge hat der Kern abgelehnt. Sie laufen nicht mit — abgelehnt ist besser als stumm übersprungen.'),
+    ruleIssues.map(i=>el('p',{class:'mono',style:'font-size:.78rem;margin-top:.3rem'},'· '+i))));
+  frag.append(el('div',{class:'filters'},
+    el('button',{class:'btn primary',disabled:S.configLocked,
+      onclick:()=>openEditor(null)},'Neue Regel')));
   for(const r of rules){
     frag.append(el('div',{class:'item'},
       el('span',{class:'bar',style:r.shadow?'background:var(--info)':''}),
@@ -694,12 +886,36 @@ function viewRules(){
           r.deficit?el('span',{},r.deficit):null,
           el('span',{},String(r.severity||'').toUpperCase()),
           r.shadow?el('span',{style:'color:var(--info)'},'SCHATTEN'):null,
-          r.overridden?el('span',{style:'color:var(--signal)'},'GEÄNDERT'):null),
-        el('p',{class:'why',style:'margin-top:.4rem'},r.rationale||'')),
+          r.shadowDaysLeft?el('span',{style:'color:var(--info)'},'NOCH '+r.shadowDaysLeft+' TAGE STUMM'):null,
+          (r.edited||r.overridden)?el('span',{style:'color:var(--signal)'},'GEÄNDERT'):null),
+        // Ohne Begründung wäre die Regel eine Behauptung (G2). Sie steht
+        // im YAML, das der Server ohnehin mitliefert.
+        el('p',{class:'why',style:'margin-top:.4rem'},rationaleOf(r))),
       el('div',{class:'acts'},
-        el('button',{class:'btn',disabled:S.configLocked,onclick:()=>ruleDialog(r)},'YAML'))));
+        el('button',{class:'btn',disabled:S.configLocked,
+          onclick:()=>openEditor(r)},'Bearbeiten'))));
   }
   return frag;
+}
+
+/* Der Deckel greift. Sachlich, mit Regel-ID, ohne Vorwurf — dieselben Worte
+   wie im Editor am Telefon. */
+function lockPanel(){
+  return el('div',{class:'panel',style:'margin-bottom:1rem;border-color:var(--caution)'},
+    el('span',{class:'stamp'},'R-010'),
+    el('h2',{style:'margin:.5rem 0'},'Regelwerk heute zu'),
+    el('p',{},(S.metaMinutesToday||0)+' von '+(S.metaBudgetMinutes||12)+
+      ' Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.'),
+    el('p',{class:'why',style:'margin-top:.7rem'},
+      'Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.'));
+}
+
+function rationaleOf(rule){
+  if(rule._rationale===undefined){
+    try{rule._rationale=String(parseRuleDraft(rule.yaml||'').rationale||'')}
+    catch(e){rule._rationale=String(rule.condition||'')}
+  }
+  return rule._rationale;
 }
 
 function viewReview(){
@@ -739,7 +955,7 @@ function viewEvents(){
 /* ── Blätter ─────────────────────────────────────────────────────── */
 function sheet(title,body,actions){
   const d=$('#dlg');
-  d.replaceChildren(el('h2',{},title),body,
+  put(d,el('h2',{},title),body,
     el('div',{class:'row'},...actions,
       el('button',{class:'btn quiet',onclick:()=>d.close()},'Abbrechen')));
   d.showModal();
@@ -843,19 +1059,829 @@ function atomizeDialog(cand){
     }},'Übernehmen')]);
 }
 
-function ruleDialog(rule){
-  const code=el('textarea',{class:'code',spellcheck:'false'});
-  code.value=rule.yaml||'';
-  sheet(rule.id,el('div',{},
-    el('p',{style:'margin-bottom:.8rem'},'Jede gespeicherte Änderung läuft sieben Tage stumm mit — dieselbe Zusage wie im Editor am Telefon. Ungültiges wird abgelehnt, nicht übersprungen.'),
-    code),[
-    el('button',{class:'btn primary',onclick:async()=>{
-      try{
-        await api('/api/rules/'+rule.id,{method:'PUT',body:JSON.stringify({yaml:code.value})});
-        $('#dlg').close();toast('Gespeichert — läuft sieben Tage stumm mit.');
-        rules=(await api('/api/rules')).rules;render();
-      }catch(e){toast(e.message)}
-    }},'Speichern')]);
+/* ── Regeleditor ─────────────────────────────────────────────────────
+   Dasselbe wie am Telefon, nur mit Platz. Der Wortschatz kommt aus der
+   Engine (/api/vocabulary) — der Editor bietet deshalb nur an, was sie
+   versteht, statt eine Regel bauen zu lassen, die beim Laden abgelehnt
+   wird. Jede Änderung wird gegen den Zustand von JETZT ausgewertet: Wer
+   nachrechnen kann, muss nicht glauben (G2).
+
+   Was er nicht tut: Er schreibt nicht nach rules/. Die Änderung liegt als
+   Overlay in der Datenbank und lässt sich als YAML zurückkopieren. Und er
+   lässt keine Regel sofort sprechen — sieben Tage stumm, ohne Ausnahme. */
+let editor=null,vocab=null,vocabError=false,previewTimer=null;
+let refPreview=null,refProblems=null,refSave=null;
+
+async function openEditor(rule){
+  if(S.configLocked) return;
+  if(!vocab&&!vocabError){
+    try{vocab=await api('/api/vocabulary')}catch(e){vocabError=true}
+  }
+  const draft=rule?draftOf(rule):newDraft();
+  if(vocabError&&draft.mode!=='yaml'){draft.mode='yaml';draft.raw=yamlOrRaw(draft)}
+  editor=draft;
+  render();previewSoon();
+}
+function closeEditor(){clearTimeout(previewTimer);editor=null;render()}
+
+function draftOf(rule){
+  try{
+    const d=parseRuleDraft(rule.yaml||'');
+    d.edited=!!(rule.edited||rule.overridden);
+    return d;
+  }catch(e){
+    // Lieber roh als gar nicht: Eine Regel, die dieser Editor nicht
+    // darstellen kann, bleibt trotzdem bearbeitbar.
+    const d=newDraft();
+    d.id=rule.id;d.isNew=false;d.edited=!!(rule.edited||rule.overridden);
+    d.mode='yaml';d.raw=rule.yaml||'';d.parseError=e.message;
+    return d;
+  }
+}
+function yamlOrRaw(d){try{return ruleYaml(d)}catch(e){return d.raw||''}}
+
+/* Neue Regeln bekommen Nummern ab R-200. Darunter liegt das mitgelieferte
+   Regelwerk; würde der Editor dort hineinvergeben, kollidierte die nächste
+   ausgelieferte Regel mit einer selbst geschriebenen. */
+function newDraft(){
+  const used=rules.map(r=>parseInt(String(r.id).replace('R-',''),10))
+    .filter(n=>Number.isFinite(n)&&n>=200);
+  const next=used.length?Math.max(...used)+1:200;
+  return {id:'R-'+String(next).padStart(3,'0'),isNew:true,edited:false,mode:'guided',
+    title:'',rationale:'',deficit:null,severity:'nudge',priority:50,
+    cooldownMinutes:120,maxPerDay:0,backoff:false,
+    action:'notify',params:{},enabled:true,
+    extra:{titles:{},rationales:{}},
+    root:{t:'group',any:false,negated:false,children:[newLeaf()]},
+    raw:null,preview:null,parseError:null};
+}
+function newLeaf(){
+  const leaf={t:'leaf',kind:'number',negated:false,variable:'capacity',
+    event:'checkin',op:'lt',number:40,symbol:'',from:'22:00',to:'05:00'};
+  switchKind(leaf,'number');
+  return leaf;
+}
+/* Beim Wechsel der Art gleich passende Voreinstellungen setzen: Sonst
+   stünde dort ein Operator, den die neue Art nicht kennt — und die Regel
+   liesse sich erst nach einem weiteren, unerklärten Schritt speichern. */
+function switchKind(f,kind){
+  const numerics=(vocab&&vocab.numerics)||[],symbolics=(vocab&&vocab.symbolics)||[],
+    evts=(vocab&&vocab.events)||[];
+  f.kind=kind;
+  if(kind==='number'){f.variable=(numerics[0]||{id:'capacity'}).id;f.op='lt';f.number=40}
+  else if(kind==='choice'){
+    const first=symbolics[0];
+    f.variable=first?first.id:'load_level';
+    f.symbol=first?(Object.keys(first.values||{})[0]||''):'L2';
+    f.op='eq';
+  }else if(kind==='since'){f.event=(evts[0]||{id:'checkin'}).id;f.op='gte';f.number=120}
+  else if(kind==='count'){f.event=(evts[0]||{id:'checkin'}).id;f.op='lt';f.number=1}
+}
+
+function redraw(){render();previewSoon()}
+
+const section=(title,...kids)=>el('div',{class:'step'},
+  el('div',{class:'sec'},el('span',{class:'eyebrow'},title),el('span',{class:'line'})),
+  kids);
+
+function viewEditor(){
+  const d=editor;
+  refPreview=el('div',{class:'panel'});
+  refProblems=el('div',{});
+  refSave=el('button',{class:'btn primary',onclick:saveRule},'Speichern');
+  const frag=document.createDocumentFragment();
+  frag.append(el('div',{class:'filters'},
+    el('button',{class:'btn quiet',onclick:closeEditor},'Zurück'),
+    el('span',{class:'stamp'},d.id),
+    d.isNew?el('span',{class:'faint'},'Neue Nummer — Nummern werden nie wiederverwendet.'):null,
+    el('span',{class:'spacer'}),
+    el('button',{class:'tog','aria-pressed':d.mode==='guided'?'true':'false',
+      onclick:()=>setMode('guided')},'GEFÜHRT'),
+    el('button',{class:'tog','aria-pressed':d.mode==='yaml'?'true':'false',
+      onclick:()=>setMode('yaml')},'YAML')));
+  if(d.parseError) frag.append(el('p',{class:'why'},
+    'Geführt lässt sich diese Regel hier nicht darstellen: '+d.parseError+
+    ' Der Text steht unverändert darunter.'));
+  if(vocabError) frag.append(el('p',{class:'why'},
+    'Der Wortschatz der Engine ist gerade nicht abrufbar. Geführt geht deshalb nicht, der rohe Text schon.'));
+  frag.append(d.mode==='yaml'?editorYaml():editorGuided());
+  frag.append(refPreview,refProblems,shadowPanel(),
+    el('div',{class:'row'},refSave,
+      el('button',{class:'btn quiet',onclick:closeEditor},'Verwerfen'),
+      (!d.isNew&&d.edited)
+        ?el('button',{class:'btn quiet',onclick:resetRule},'Änderung zurücknehmen'):null));
+  refreshVerdict();
+  return frag;
+}
+
+function editorYaml(){
+  const d=editor;
+  const code=el('textarea',{class:'code',spellcheck:'false','aria-label':'Regel als YAML',
+    oninput:e=>{d.raw=e.target.value;previewSoon();refreshVerdict()}});
+  code.value=d.raw||'';
+  return el('div',{class:'ed'},
+    el('p',{class:'hint'},'Genau diese Form liegt auch in rules/ — der Editor ist keine Einbahnstraße.'),
+    code);
+}
+
+function editorGuided(){
+  const d=editor;
+  return el('div',{class:'ed'},
+    // Reihenfolge nach dem tatsächlichen Vorgehen: Man hat zuerst einen
+    // Gedanken, baut ihn, und dann fällt einem ein, wie man ihn nennt und
+    // begründet. Die Begründung nach dem Bau zu schreiben ist leichter —
+    // man sieht, was man gebaut hat.
+    section('Wie sie heißt',
+      textField(d.title,'Kurz und in deiner Sprache',v=>{d.title=v}),
+      el('p',{class:'hint'},'Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.')),
+    section('Wann sie zutrifft',groupCard(d.root,0,null)),
+    section('Was dann passiert',actionPicker(d)),
+    section('Warum es sie gibt',
+      rationaleField(d),
+      el('p',{class:'hint'},'Pflichtfeld. Jede Ausgabe nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.'),
+      el('div',{class:'eyebrow',style:'margin-top:.5rem'},'WORAUF SIE EINZAHLT'),
+      deficitPicker(d)),
+    section('Wie laut',
+      severityPicker(d),
+      stepper('Mindestabstand',[15,30,60,120,240,480,1440],d.cooldownMinutes,'min',
+        v=>{d.cooldownMinutes=v},
+        'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.'),
+      stepper('Höchstens pro Tag',[0,1,2,3,5,10],d.maxPerDay,'mal',
+        v=>{d.maxPerDay=v},'Eine harte Obergrenze zusätzlich zum Abstand.','kein Limit'),
+      stepper('Rang bei Gleichstand',[10,30,50,70,90],d.priority,'',
+        v=>{d.priority=v},
+        'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.'),
+      el('div',{class:'pick',style:'margin-top:.6rem'},
+        el('button',{class:'tog','aria-pressed':d.enabled?'true':'false',
+          onclick:()=>{d.enabled=!d.enabled;redraw()}},'REGEL AKTIV'),
+        el('button',{class:'tog','aria-pressed':d.backoff?'true':'false',
+          title:'Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt',
+          onclick:()=>{d.backoff=!d.backoff;redraw()}},'ABSTAND VERDOPPELN')),
+      el('p',{class:'hint'},'Ausgeschaltet bleibt die Regel erhalten, wird aber nicht ausgewertet.')),
+    (Object.keys(d.extra.titles).length||Object.keys(d.extra.rationales).length)
+      ?el('p',{class:'hint'},'Die englischen Fassungen bleiben unverändert erhalten.'):null);
+}
+
+function textField(value,placeholder,set){
+  return el('input',{type:'text',value:value||'',placeholder,
+    oninput:e=>{set(e.target.value);previewSoon();refreshVerdict()}});
+}
+function rationaleField(d){
+  const box=el('textarea',{style:'min-height:6.5rem',
+    placeholder:'Was diese Regel verhindern oder auslösen soll',
+    oninput:e=>{d.rationale=e.target.value;previewSoon();refreshVerdict()}});
+  box.value=d.rationale||'';
+  return box;
+}
+function numberField(value,min,max,set){
+  return el('input',{type:'number',min,max,value,style:'width:6.5rem',
+    oninput:e=>{set(Number(e.target.value));previewSoon();refreshVerdict()}});
+}
+function timeField(value,set){
+  return el('input',{type:'time',value:value||'00:00',style:'width:8.5rem',
+    oninput:e=>{set(e.target.value);previewSoon();refreshVerdict()}});
+}
+function sel(items,value,onChange,label){
+  const box=el('select',{class:'slim','aria-label':label||'',
+    onchange:e=>onChange(e.target.value)});
+  for(const it of items){
+    const option=el('option',{value:String(it.v)},it.l||String(it.v));
+    if(String(it.v)===String(value)) option.selected=true;
+    box.append(option);
+  }
+  return box;
+}
+function stepper(label,steps,value,unit,set,meaning,zeroLabel){
+  return el('div',{style:'margin-top:.3rem'},
+    el('label',{},label),
+    el('div',{class:'pick'},steps.map(s=>el('button',
+      {class:'btn'+(s===value?' primary':''),onclick:()=>{set(s);redraw()}},
+      s===0&&zeroLabel?zeroLabel:(unit?s+' '+unit:String(s))))),
+    meaning?el('p',{class:'hint',style:'margin-top:.35rem'},meaning):null);
+}
+
+function deficitPicker(d){
+  const list=(vocab&&vocab.deficits)||[];
+  if(!list.length) return el('p',{class:'hint'},'Keine Liste abrufbar. Ohne Zuordnung ist eine Regel verdächtig.');
+  return el('div',{class:'pick'},list.map(x=>el('button',
+    {class:'btn'+(d.deficit===x.id?' primary':''),
+     onclick:()=>{d.deficit=d.deficit===x.id?null:x.id;redraw()}},
+    x.id+' · '+x.label)));
+}
+function severityPicker(d){
+  const list=((vocab&&vocab.severities)||[]);
+  const shown=list.length?list:[{id:d.severity,label:d.severity}];
+  const current=list.find(s=>s.id===d.severity);
+  return [el('div',{class:'pick'},shown.map(s=>el('button',
+    {class:'btn'+(d.severity===s.id?' primary':''),
+     onclick:()=>{d.severity=s.id;redraw()}},String(s.label||s.id).toUpperCase()))),
+    current&&current.meaning?el('p',{class:'hint'},current.meaning):null];
+}
+function actionPicker(d){
+  const list=(vocab&&vocab.actions)||[];
+  const spec=list.find(a=>a.type===d.action);
+  const kids=[sel(list.length?list.map(a=>({v:a.type,l:a.label})):[{v:d.action,l:d.action}],
+    d.action,v=>{d.action=v;redraw()},'Was die Regel auslöst')];
+  if(spec&&spec.meaning) kids.push(el('p',{class:'hint'},spec.meaning));
+  // Welche Angaben eine Aktion braucht, sagt die Engine — sonst wäre die
+  // Liste hier eine zweite Wahrheit, die still veraltet.
+  const declared=(spec&&spec.params)||(d.action==='notify'?{text:'Was dort stehen soll'}:{});
+  for(const [name,label] of Object.entries(declared)){
+    kids.push(el('label',{style:'margin-top:.5rem'},label+' (optional)'),
+      textField(d.params[name]===undefined?'':String(d.params[name]),name,v=>{
+        const text=v.trim();
+        if(!text) delete d.params[name];
+        // Zahlen als Zahlen: `max_seconds: "15"` läse die Engine als Text.
+        else d.params[name]=/^-?\d+$/.test(text)?Number(text):text;
+      }));
+  }
+  const rest=Object.keys(d.params).filter(k=>!(k in declared));
+  if(rest.length) kids.push(el('p',{class:'hint'},
+    'Unverändert übernommen: '+rest.map(k=>k+': '+scalarYaml(d.params[k])).join(', ')));
+  return kids;
+}
+
+/* ── Bedingungsbaum ──────────────────────────────────────────────────
+   „nicht" ist ein Schalter an der Bedingung, keine dritte Sorte Knoten:
+   Eine Ebene weniger im Baum ist eine Entscheidung weniger beim Lesen. */
+function groupCard(g,depth,onRemove){
+  const box=el('div',{class:'cond grp'});
+  box.append(el('div',{class:'top'},
+    el('button',{class:'tog','aria-pressed':g.any?'false':'true',
+      onclick:()=>{g.any=false;redraw()}},'ALLE'),
+    el('button',{class:'tog','aria-pressed':g.any?'true':'false',
+      onclick:()=>{g.any=true;redraw()}},'EINE VON'),
+    notToggle(g),
+    onRemove?el('button',{class:'btn quiet',onclick:onRemove},'Gruppe entfernen'):null));
+  g.children.forEach((child,i)=>{
+    const remove=()=>{g.children.splice(i,1);redraw()};
+    box.append(child.t==='group'
+      ?groupCard(child,depth+1,remove)
+      :leafCard(child,(depth===0&&g.children.length===1)?null:remove));
+  });
+  box.append(el('div',{class:'pick'},
+    el('button',{class:'btn quiet',onclick:()=>{g.children.push(newLeaf());redraw()}},'+ Bedingung'),
+    // Verschachtelung bis zur dritten Ebene: Drei sind lesbar, vier sind
+    // ein Programm.
+    depth<2?el('button',{class:'btn quiet',onclick:()=>{
+      g.children.push({t:'group',any:!g.any,negated:false,children:[newLeaf()]});redraw();
+    }},'+ Gruppe'):null));
+  return box;
+}
+function notToggle(node){
+  return el('button',{class:'tog','aria-pressed':node.negated?'true':'false',
+    onclick:()=>{node.negated=!node.negated;redraw()}},'NICHT');
+}
+function leafCard(f,onRemove){
+  const kinds=[{v:'number',l:'Zahl'},{v:'choice',l:'Auswahl'},{v:'time',l:'Uhrzeit'},
+    {v:'since',l:'Seit einem Ereignis'},{v:'count',l:'Anzahl heute'}];
+  const box=el('div',{class:'cond'});
+  box.append(el('div',{class:'top'},
+    sel(kinds,f.kind,v=>{switchKind(f,v);redraw()},'Art der Bedingung'),
+    notToggle(f),
+    onRemove?el('button',{class:'btn quiet',onclick:onRemove},'Entfernen'):null));
+  box.append(el('div',{class:'fields'},leafFields(f)));
+  const meaning=leafMeaning(f);
+  if(meaning) box.append(el('p',{class:'now'},meaning));
+  const actual=leafActual(f);
+  if(actual!==null) box.append(el('p',{class:'now'},'jetzt: '+actual));
+  return box;
+}
+function leafFields(f){
+  const numerics=(vocab&&vocab.numerics)||[],symbolics=(vocab&&vocab.symbolics)||[],
+    evts=(vocab&&vocab.events)||[];
+  if(f.kind==='number'){
+    // Grenzen kommen aus dem Wortschatz: geraten läge jede andere Skala daneben.
+    const spec=numerics.find(v=>v.id===f.variable)||{};
+    return [
+      sel(numerics.map(v=>({v:v.id,l:v.label})),f.variable,v=>{f.variable=v;redraw()},'Größe'),
+      sel(opItems(false),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+      numberField(f.number,spec.min===undefined?0:spec.min,
+        spec.max===undefined?100:spec.max,v=>{f.number=v})];
+  }
+  if(f.kind==='choice'){
+    const spec=symbolics.find(s=>s.id===f.variable);
+    const values=spec?Object.entries(spec.values||{}):[];
+    return [
+      sel(symbolics.map(v=>({v:v.id,l:v.label})),f.variable,v=>{
+        f.variable=v;
+        const next=symbolics.find(s=>s.id===v);
+        f.symbol=next?(Object.keys(next.values||{})[0]||''):'';
+        redraw();
+      },'Größe'),
+      sel(opItems(true),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+      values.map(([key,label])=>el('button',
+        {class:'btn'+(f.symbol===key?' primary':''),
+         onclick:()=>{f.symbol=key;redraw()}},label))];
+  }
+  if(f.kind==='time') return [
+    el('span',{class:'hint'},'von'),timeField(f.from,v=>{f.from=v}),
+    el('span',{class:'hint'},'bis'),timeField(f.to,v=>{f.to=v})];
+  return [
+    sel(evts.map(v=>({v:v.id,l:v.label})),f.event,v=>{f.event=v;redraw()},'Ereignis'),
+    sel(opItems(false),f.op,v=>{f.op=v;redraw()},'Vergleich'),
+    numberField(f.number,0,f.kind==='since'?1440:50,v=>{f.number=v}),
+    el('span',{class:'hint'},f.kind==='since'?'Minuten':'mal heute')];
+}
+/* Welche Operatoren es gibt und wie sie heißen, sagt die Engine. Die Liste
+   hier ist nur die Rückfallebene, solange der Wortschatz nicht da ist —
+   und zugleich die Menge der Schlüssel, an denen der Leser einen Vergleich
+   im YAML erkennt. */
+const OPS={lt:'kleiner als',lte:'höchstens',gte:'mindestens',gt:'größer als',
+  eq:'genau',ne:'nicht'};
+function opItems(symbolic){
+  const source=(vocab&&vocab.operators)||{};
+  const labels=(vocab&&vocab.operatorLabels)||{};
+  const raw=(symbolic?source.symbolic:source.numeric)||
+    (symbolic?['eq','ne']:Object.keys(OPS));
+  return raw.map(o=>typeof o==='string'
+    ?{v:o,l:labels[o]||OPS[o]||o}
+    :{v:o.id||o.op||o.token,l:o.label||labels[o.id]||OPS[o.id]||o.id});
+}
+function leafMeaning(f){
+  const find=(list,id)=>((vocab&&vocab[list])||[]).find(x=>x.id===id);
+  if(f.kind==='number') return (find('numerics',f.variable)||{}).meaning||'';
+  if(f.kind==='choice') return (find('symbolics',f.variable)||{}).meaning||'';
+  if(f.kind==='time') return 'Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.';
+  if(f.kind==='since') return 'Ein Ereignis, das nie eintrat, gilt als unendlich lange her.';
+  return '';
+}
+/* Was gerade tatsächlich anliegt — die halbe Miete beim Regelschreiben.
+   Zahlen kommen aus dem Zustand, den die Kopfzeile ohnehin zeigt. */
+function leafActual(f){
+  if(f.kind==='number'){
+    const v=(S.values||{})[f.variable];
+    return v&&v.value!==null&&v.value!==undefined?String(v.value):null;
+  }
+  if(f.kind==='choice') return f.variable==='load_level'?(S.loadLevel||null):null;
+  if(f.kind==='time') return new Date().toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'});
+  return null;
+}
+
+/* ── Vorschau, Probleme, Speichern ───────────────────────────────── */
+function previewSoon(){
+  clearTimeout(previewTimer);
+  const d=editor;
+  if(!d) return;
+  previewTimer=setTimeout(async()=>{
+    const yaml=currentYaml();
+    if(yaml===null){d.preview=null;d.previewError=null;refreshVerdict();return}
+    try{
+      const result=await api('/api/rules/preview',{method:'POST',body:JSON.stringify({yaml})});
+      if(editor!==d) return;
+      d.preview=result;d.previewError=null;
+    }catch(e){
+      // Eine Vorschau, die den Server nicht erreicht, ist kein Urteil über
+      // die Regel — sie darf das Speichern deshalb nicht sperren. Geprüft
+      // wird beim Speichern ohnehin, und Abgelehntes wird nicht gespeichert.
+      if(editor!==d) return;
+      d.preview=null;d.previewError=e.message;
+    }
+    refreshVerdict();
+  },400);
+}
+function refreshVerdict(){
+  if(!editor) return;
+  if(refPreview) put(refPreview,previewKids());
+  if(refProblems) put(refProblems,problemKids());
+  if(refSave) refSave.disabled=!canSave();
+}
+function previewKids(){
+  const p=editor.preview;
+  const head=el('span',{class:'eyebrow'},'MIT DEM ZUSTAND VON JETZT');
+  if(editor.previewError) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},
+    'Die Vorschau ist gerade nicht erreichbar ('+editor.previewError+'). Beim Speichern wird trotzdem geprüft.')];
+  if(!p) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},'Wird geprüft …')];
+  const kids=[head];
+  if(p.ok===false){
+    kids.push(el('p',{style:'margin-top:.4rem;color:var(--caution)'},
+      'So lässt sich die Regel nicht laden. Was fehlt, steht darunter.'));
+  }else{
+    kids.push(el('h2',{style:'margin:.4rem 0'},
+      p.firesNow?'Sie würde jetzt feuern.':'Sie würde jetzt nicht feuern.'));
+    if(p.explanation) kids.push(el('p',{class:'why'},p.explanation));
+    // Der erklärende Satz nennt die scheiternde Stelle bereits. Nur wenn er
+    // fehlt, steht sie hier für sich.
+    else if(!p.firesNow&&p.failedAt) kids.push(el('p',{class:'mono',style:'font-size:.8rem'},
+      'Es scheitert an: '+p.failedAt));
+  }
+  for(const w of p.warnings||[]) kids.push(el('p',{class:'faint',style:'margin-top:.4rem'},w));
+  return kids;
+}
+function problemKids(){
+  const list=clientProblems();
+  const p=editor.preview;
+  if(p&&p.ok===false) for(const e of p.errors||[]) if(list.indexOf(e)<0) list.push(e);
+  if(!list.length) return [];
+  return [el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
+    el('span',{class:'eyebrow'},'FEHLT NOCH'),
+    list.map(x=>el('p',{style:'margin-top:.4rem'},'· '+x)))];
+}
+/* Dieselben Pflichten wie im Validator, nur früher. `rationale` und
+   `cooldown` sind keine Formalien: ohne Begründung ist eine Ausgabe nicht
+   nachvollziehbar (G2), ohne Abstand entsteht Meldungsflut (R2). */
+function clientProblems(){
+  const d=editor,out=[];
+  if(d.mode==='yaml'){
+    if(!String(d.raw||'').trim()) out.push('Der Text ist leer.');
+    return out;
+  }
+  if(String(d.title||'').trim().length<3)
+    out.push('Der Titel fehlt. Er steht später in der Meldung.');
+  if(String(d.rationale||'').trim().length<40)
+    out.push('Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.');
+  if(!(d.cooldownMinutes>=1))
+    out.push('Ohne Abstand meldet sich die Regel beliebig oft.');
+  try{condMap(d.root)}catch(e){out.push(e.message)}
+  return out;
+}
+function canSave(){
+  if(!editor) return false;
+  if(currentYaml()===null) return false;
+  if(clientProblems().length) return false;
+  const p=editor.preview;
+  return !(p&&p.ok===false);
+}
+function currentYaml(){
+  const d=editor;
+  if(!d) return null;
+  if(d.mode==='yaml') return d.raw||'';
+  try{return ruleYaml(d)}catch(e){return null}
+}
+function setMode(mode){
+  const d=editor;
+  if(!d||mode===d.mode) return;
+  if(mode==='yaml'){
+    const yaml=currentYaml();
+    if(yaml===null){toast('Erst vervollständigen — der Entwurf ergibt noch kein YAML.');return}
+    d.raw=yaml;d.mode='yaml';
+  }else{
+    if(vocabError){toast('Ohne den Wortschatz der Engine geht geführt nicht.');return}
+    let parsed;
+    try{parsed=parseRuleDraft(d.raw||'')}
+    catch(e){toast('Der Text lässt sich nicht lesen: '+e.message);return}
+    // Die Nummer bleibt, was sie war: IDs werden nicht umgebogen.
+    parsed.id=d.id;parsed.isNew=d.isNew;parsed.edited=d.edited;
+    parsed.preview=d.preview;parsed.mode='guided';
+    editor=parsed;
+  }
+  redraw();
+}
+function shadowPanel(){
+  return el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--info) 50%,var(--rule))'},
+    el('span',{class:'eyebrow'},'SIEBEN TAGE STUMM'),
+    el('p',{style:'margin-top:.5rem'},
+      'Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.'));
+}
+async function saveRule(){
+  const d=editor,yaml=currentYaml();
+  if(yaml===null||!canSave()) return;
+  try{
+    await api('/api/rules/'+encodeURIComponent(d.id),
+      {method:'PUT',body:JSON.stringify({yaml})});
+    editor=null;
+    toast('Gespeichert — läuft sieben Tage stumm mit.');
+    await reload();
+  }catch(e){
+    const issues=(e.data&&e.data.issues)||[];
+    if(issues.length){d.preview={ok:false,errors:issues};refreshVerdict()}
+    toast(issues.length?issues[0]:e.message);
+  }
+}
+async function resetRule(){
+  const d=editor;
+  if(!confirm('Die eigene Fassung von '+d.id+' entfernen? Danach gilt wieder die mitgelieferte Regel; eine selbst geschriebene verschwindet. Die Nummer wird nicht wiederverwendet.')) return;
+  try{
+    await api('/api/rules/'+encodeURIComponent(d.id),{method:'DELETE'});
+    editor=null;toast('Zurückgenommen.');await reload();
+  }catch(e){toast(e.message)}
+}
+
+/* ── YAML, so viel wie das Regelwerk braucht ─────────────────────────
+   Kein allgemeiner Parser: Blockabbildungen, Blocklisten, Fließformen und
+   gefaltete Textblöcke — genau die Formen, die in rules/ vorkommen. Mehr
+   wäre eine zweite Baustelle; weniger reichte nicht, um eine geladene
+   Regel wieder geführt darzustellen.
+
+   Geschrieben wird in derselben Form wie ruleToYaml in axiom_data: Ein
+   Export soll sich nicht daran erkennen lassen, dass er aus dem Browser
+   kommt — er muss nach rules/ zurückkopiert werden können. */
+function ruleYaml(d){
+  let out='- id: '+d.id+'\n  title: '+quoteYaml(d.title)+'\n';
+  for(const [lang,text] of Object.entries(d.extra.titles||{}))
+    out+='  title_'+lang+': '+quoteYaml(text)+'\n';
+  if(d.deficit) out+='  deficit: '+d.deficit+'\n';
+  out+=foldedYaml('rationale',d.rationale);
+  for(const [lang,text] of Object.entries(d.extra.rationales||{}))
+    out+=foldedYaml('rationale_'+lang,text);
+  out+='  when:\n'+condYaml(condMap(d.root),4);
+  out+='  then:\n    action: '+d.action+'\n';
+  if(Object.keys(d.params||{}).length) out+='    params: '+flowYaml(d.params)+'\n';
+  out+='  priority: '+d.priority+'\n  severity: '+d.severity+'\n';
+  const cooldown={minutes:d.cooldownMinutes};
+  if(d.maxPerDay) cooldown.max_per_day=d.maxPerDay;
+  if(d.backoff) cooldown.backoff='exponential';
+  out+='  cooldown: '+flowYaml(cooldown)+'\n  enabled: '+(d.enabled?'true':'false')+'\n';
+  return out;
+}
+function condMap(n){
+  if(n.t==='group'){
+    if(!n.children.length) throw new Error('Eine Gruppe braucht mindestens eine Bedingung.');
+    const built=n.children.map(condMap);
+    // Eine Gruppe mit einem Kind ist im YAML unnötig — im Editor bleibt sie
+    // trotzdem, damit „eine zweite hinzufügen" ein Klick bleibt.
+    const inner=built.length===1?built[0]:(n.any?{any:built}:{all:built});
+    return n.negated?{not:inner}:inner;
+  }
+  const number=Number(n.number);
+  let inner;
+  if(n.kind==='number'||n.kind==='since'||n.kind==='count'){
+    if(!Number.isFinite(number)) throw new Error('Eine Zahl fehlt.');
+  }
+  if(n.kind==='number') inner={[n.variable]:{[n.op]:number}};
+  else if(n.kind==='choice'){
+    if(!n.symbol) throw new Error('Ein Wert fehlt.');
+    inner={[n.variable]:{[n.op]:n.symbol}};
+  }else if(n.kind==='time'){
+    if(!/^\d{2}:\d{2}$/.test(String(n.from))||!/^\d{2}:\d{2}$/.test(String(n.to)))
+      throw new Error('Uhrzeit im Format 22:00 angeben.');
+    inner={time_between:[n.from,n.to]};
+  }else if(n.kind==='since') inner={minutes_since:{event:n.event,[n.op]:Math.round(number)}};
+  else inner={count_today:{event:n.event,[n.op]:Math.round(number)}};
+  return n.negated?{not:inner}:inner;
+}
+function condYaml(node,indent){
+  const pad=' '.repeat(indent);
+  const key=Object.keys(node)[0],value=node[key];
+  if(key==='all'||key==='any'){
+    let out=pad+key+':\n';
+    for(const child of value) out+=pad+'  - '+condYaml(child,indent+4).replace(/^\s+/,'');
+    return out;
+  }
+  if(key==='not') return pad+'not:\n'+condYaml(value,indent+2);
+  if(key==='time_between') return pad+'time_between: ['+value.map(scalarYaml).join(', ')+']\n';
+  return pad+key+': '+flowYaml(value)+'\n';
+}
+function flowYaml(map){
+  return '{ '+Object.entries(map).map(([k,v])=>k+': '+scalarYaml(v)).join(', ')+' }';
+}
+function scalarYaml(value){
+  if(typeof value==='number'||typeof value==='boolean') return String(value);
+  if(Array.isArray(value)) return '['+value.map(scalarYaml).join(', ')+']';
+  const text=String(value);
+  // Unquotiert nur, wo YAML es garantiert wieder als Text liest.
+  return /^[A-Za-z][A-Za-z0-9_.-]*$/.test(text)?text:quoteYaml(text);
+}
+const quoteYaml=text=>'"'+String(text).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+/* Gefalteter Block, Umbruch bei 72 Zeichen — `>-` statt `>`, sonst käme
+   der Text mit einem Zeilenumbruch zurück, den niemand geschrieben hat. */
+function foldedYaml(key,text){
+  const words=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+  let out='  '+key+': >-\n',line='   ';
+  for(const word of words){
+    if(line.length+word.length+1>72){out+=line+'\n';line='   '}
+    line+=' '+word;
+  }
+  if(line.trim()) out+=line+'\n';
+  return out;
+}
+
+function parseRuleDraft(text){
+  const doc=yamlParse(text);
+  const node=Array.isArray(doc)?doc[0]:doc;
+  if(!node||typeof node!=='object') throw new Error('Keine Regel gefunden.');
+  const extra={titles:{},rationales:{}};
+  for(const key of Object.keys(node)){
+    if(key.startsWith('title_')) extra.titles[key.slice(6)]=String(node[key]);
+    if(key.startsWith('rationale_')) extra.rationales[key.slice(10)]=String(node[key]);
+  }
+  const cooldown=node.cooldown||{},then=node.then||{};
+  return {
+    id:String(node.id||''),isNew:false,edited:false,mode:'guided',
+    title:String(node.title||''),rationale:String(node.rationale||''),
+    deficit:node.deficit?String(node.deficit):null,
+    severity:String(node.severity||'nudge'),
+    priority:typeof node.priority==='number'?node.priority:50,
+    cooldownMinutes:typeof cooldown.minutes==='number'?cooldown.minutes:120,
+    maxPerDay:typeof cooldown.max_per_day==='number'?cooldown.max_per_day:0,
+    backoff:String(cooldown.backoff||'')==='exponential',
+    action:String(then.action||'notify'),
+    params:Object.assign({},then.params||{}),
+    enabled:node.enabled!==false,
+    extra,root:rootNode(node.when),raw:null,preview:null,parseError:null};
+}
+/* Der Wurzelknoten ist immer eine Gruppe — auch bei einer einzelnen
+   Bedingung. So ist „eine zweite hinzufügen" ein Klick und kein Umbau. */
+function rootNode(when){
+  if(!when||typeof when!=='object') throw new Error('Der Wenn-Teil fehlt.');
+  const node=condNode(when,false);
+  return node.t==='group'?node:{t:'group',any:false,negated:false,children:[node]};
+}
+function condNode(map,negated){
+  if(!map||typeof map!=='object') throw new Error('Eine Bedingung ist leer.');
+  const key=Object.keys(map)[0];
+  const value=map[key];
+  if(key==='not') return condNode(value,!negated);
+  if(key==='all'||key==='any') return {t:'group',any:key==='any',negated,
+    children:(value||[]).map(child=>condNode(child,false))};
+  const leaf=newLeaf();
+  leaf.negated=negated;
+  if(key==='time_between'){
+    leaf.kind='time';
+    leaf.from=String((value||[])[0]||'00:00');
+    leaf.to=String((value||[])[1]||'00:00');
+    return leaf;
+  }
+  if(key==='minutes_since'||key==='count_today'){
+    const op=opOf(value);
+    leaf.kind=key==='minutes_since'?'since':'count';
+    leaf.event=String(value.event||'checkin');
+    leaf.op=op;leaf.number=Number(value[op]);
+    return leaf;
+  }
+  const op=opOf(value);
+  const raw=value[op];
+  const symbolic=((vocab&&vocab.symbolics)||[]).some(s=>s.id===key);
+  if(symbolic||typeof raw!=='number'){
+    leaf.kind='choice';leaf.variable=key;leaf.op=op;leaf.symbol=String(raw);
+  }else{
+    leaf.kind='number';leaf.variable=key;leaf.op=op;leaf.number=raw;
+  }
+  return leaf;
+}
+function opOf(value){
+  if(!value||typeof value!=='object') throw new Error('Ein Vergleich fehlt.');
+  const op=Object.keys(value).find(k=>OPS[k]!==undefined);
+  if(!op) throw new Error('Unbekannter Vergleich in: '+Object.keys(value).join(', '));
+  return op;
+}
+
+function yamlParse(src){
+  const lines=String(src).replace(/\t/g,'  ').split('\n').map(raw=>{
+    const trimmed=raw.trim();
+    return {raw,indent:raw.search(/\S/),blank:trimmed===''||trimmed[0]==='#'};
+  });
+  let i=0;
+  const skip=()=>{while(i<lines.length&&lines[i].blank) i++};
+  const isItem=line=>{
+    const t=cutComment(line.raw).trim();
+    return t==='-'||t.startsWith('- ');
+  };
+
+  function value(min){
+    skip();
+    if(i>=lines.length) return null;
+    const line=lines[i];
+    if(line.indent<min) return null;
+    return isItem(line)?seq(line.indent):map(line.indent);
+  }
+  function seq(indent){
+    const arr=[];
+    for(;;){
+      skip();
+      if(i>=lines.length) break;
+      const line=lines[i];
+      if(line.indent!==indent||!isItem(line)) break;
+      const rest=cutComment(line.raw).trim().slice(1).trim();
+      if(rest===''){i++;arr.push(value(indent+1));continue}
+      if(/^[^\s#{}[\]"',]+\s*:(\s|$)/.test(rest)){
+        // Der Eintrag beginnt eine Abbildung in derselben Zeile.
+        lines[i]={raw:' '.repeat(indent+2)+rest,indent:indent+2,blank:false};
+        arr.push(map(indent+2));
+      }else{i++;arr.push(flowParse(rest))}
+    }
+    return arr;
+  }
+  function map(indent){
+    const obj={};
+    for(;;){
+      skip();
+      if(i>=lines.length) break;
+      const line=lines[i];
+      if(line.indent<indent) break;
+      if(isItem(line)&&line.indent===indent) break;
+      if(line.indent>indent) throw new Error('Die Einrückung passt nicht: '+line.raw.trim());
+      const text=cutComment(line.raw).trim();
+      const m=text.match(/^([^:\s]+)\s*:\s*(.*)$/);
+      if(!m) throw new Error('Kein Schlüssel: '+text);
+      const key=m[1],rest=m[2].trim();
+      i++;
+      if(rest===''){
+        skip();
+        const next=lines[i];
+        obj[key]=(next&&next.indent===indent&&isItem(next))?seq(indent):value(indent+1);
+      }else if(/^[|>][-+]?$/.test(rest)){
+        obj[key]=blockScalar(indent,rest);
+      }else obj[key]=flowParse(rest);
+    }
+    return obj;
+  }
+  function blockScalar(parentIndent,style){
+    const folded=style[0]==='>';
+    const parts=[];
+    let base=null;
+    while(i<lines.length){
+      const line=lines[i];
+      if(line.raw.trim()===''){parts.push('');i++;continue}
+      if(line.indent<=parentIndent) break;
+      if(base===null) base=line.indent;
+      parts.push(line.raw.slice(base).replace(/\s+$/,''));
+      i++;
+    }
+    while(parts.length&&parts[parts.length-1]==='') parts.pop();
+    if(!folded) return parts.join('\n');
+    let out='';
+    for(const part of parts){
+      if(part==='') out+='\n';
+      else out+=(out&&!out.endsWith('\n')?' ':'')+part;
+    }
+    return out;
+  }
+  return value(0);
+}
+/* Ein `#` beginnt einen Kommentar nur am Zeilenanfang oder nach einem
+   Leerzeichen — und nie innerhalb von Anführungszeichen. */
+function cutComment(text){
+  let quote=null;
+  for(let k=0;k<text.length;k++){
+    const c=text[k];
+    if(quote){if(c===quote) quote=null;continue}
+    if(c==='"'||c==="'"){quote=c;continue}
+    if(c==='#'&&(k===0||/\s/.test(text[k-1]))) return text.slice(0,k);
+  }
+  return text;
+}
+function flowParse(text){
+  const source=cutComment(text).trim();
+  return readValue(source,0)[0];
+}
+function readValue(s,p){
+  p=skipSpace(s,p);
+  const c=s[p];
+  if(c==='{'){
+    const obj={};
+    p++;
+    for(;;){
+      p=skipSpace(s,p);
+      if(p>=s.length) throw new Error('Klammer nicht geschlossen: '+s);
+      if(s[p]==='}'){p++;break}
+      let key;
+      [key,p]=readKey(s,p);
+      p=skipSpace(s,p);
+      if(s[p]!==':') throw new Error('Doppelpunkt fehlt: '+s);
+      p++;
+      let v;
+      [v,p]=readValue(s,p);
+      obj[key]=v;
+      p=skipSpace(s,p);
+      if(s[p]===',') p++;
+    }
+    return [obj,p];
+  }
+  if(c==='['){
+    const arr=[];
+    p++;
+    for(;;){
+      p=skipSpace(s,p);
+      if(p>=s.length) throw new Error('Klammer nicht geschlossen: '+s);
+      if(s[p]===']'){p++;break}
+      let v;
+      [v,p]=readValue(s,p);
+      arr.push(v);
+      p=skipSpace(s,p);
+      if(s[p]===',') p++;
+    }
+    return [arr,p];
+  }
+  if(c==='"'||c==="'") return readQuoted(s,p);
+  let end=p;
+  while(end<s.length&&',}]'.indexOf(s[end])<0) end++;
+  return [plainScalar(s.slice(p,end).trim()),end];
+}
+function readKey(s,p){
+  if(s[p]==='"'||s[p]==="'") return readQuoted(s,p);
+  let end=p;
+  while(end<s.length&&s[end]!==':') end++;
+  return [s.slice(p,end).trim(),end];
+}
+function readQuoted(s,p){
+  const quote=s[p++];
+  let out='';
+  while(p<s.length){
+    const c=s[p];
+    if(c==='\\'&&quote==='"'){out+=s[p+1]==='n'?'\n':s[p+1];p+=2;continue}
+    if(c===quote){p++;break}
+    out+=c;p++;
+  }
+  return [out,p];
+}
+const skipSpace=(s,p)=>{while(p<s.length&&/\s/.test(s[p])) p++;return p};
+function plainScalar(text){
+  if(text===''||text==='null'||text==='~') return null;
+  if(text==='true') return true;
+  if(text==='false') return false;
+  if(/^-?\d+(\.\d+)?$/.test(text)) return Number(text);
+  return text;
 }
 
 function helpDialog(){

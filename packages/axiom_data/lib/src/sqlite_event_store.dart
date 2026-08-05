@@ -546,6 +546,19 @@ final class SqliteEventStore implements EventStore {
     );
   }
 
+  /// Gibt es diese Entscheidung ueberhaupt?
+  ///
+  /// **Warum das gebraucht wird.** Eine Rueckmeldung ist die einzige Zahl,
+  /// an der sich eine Regel messen laesst — die Befolgungsquote im
+  /// Wochenreview haengt daran. Kommt sie auf eine ID, die es nie gab,
+  /// zaehlt der Rueckblick eine Antwort auf einen Vorschlag, den niemand
+  /// bekommen hat. Das ist kein Absturz, sondern eine still falsche Zahl,
+  /// und die ist teurer.
+  Future<bool> hasDecision(String id) async {
+    final rows = _db.select('SELECT 1 FROM decisions WHERE id = ? LIMIT 1', [id]);
+    return rows.isNotEmpty;
+  }
+
   Future<void> setDecisionResponse(String id, DecisionResponse response) async {
     _db.execute('UPDATE decisions SET response = ? WHERE id = ?',
         [response.name, id]);
@@ -710,9 +723,18 @@ final class SqliteEventStore implements EventStore {
           // wiederherzustellen loescht die Aufgabe faktisch, und zwar
           // stumm beim naechsten Wiederaufbau.
           final reason = e.payload['reason'] as String?;
-          final back = reason == 'released' || reason == 'superseded';
+          // `steps_done` gehoert dazu: Eine Aufgabe, deren Teilschritte
+          // alle erledigt sind, geht in den Bestand zurueck. Ohne den
+          // Eintrag hier musste die Laufzeit sie als `released` tarnen —
+          // und der Ereignisstrom behauptete dann, sie sei aufgegeben
+          // worden. Ein Strom, der etwas anderes erzaehlt als das, was
+          // passiert ist, ist die teuerste Art von Fehler in einem System,
+          // dessen Projektionen aus ihm entstehen.
+          const back = {'released', 'superseded', 'steps_done'};
           byId[id] = byId[id]?.copyWith(
-                state: back ? TaskState.ready : TaskState.dropped,
+                state: back.contains(reason)
+                    ? TaskState.ready
+                    : TaskState.dropped,
               ) ??
               byId[id]!;
         default:

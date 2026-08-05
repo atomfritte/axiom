@@ -185,6 +185,150 @@ void main() {
       expect(find.text('JETZT'), findsOneWidget);
       expect(find.text('Ordner holen'), findsOneWidget);
     });
+
+    testWidgets('ein Teilschritt lässt sich weiter zerlegen — beliebig tief',
+        (tester) async {
+      // Der gemeldete Fehler: Wer zerlegt und merkt, dass der erste
+      // Schritt immer noch zu gross ist, muss weiter zerlegen koennen.
+      // Sonst passiert genau das, was D2 beschreibt: nichts.
+      final parent = await heavyTask();
+      final steps = await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Belege zusammensuchen', energy: 6)],
+      );
+
+      final deeper = await h.runtime.atomize(
+        parent: steps.single,
+        steps: [(title: 'Schuhkarton auf den Tisch', energy: 1)],
+      );
+      final againDeeper = await h.runtime.atomize(
+        parent: deeper.single,
+        steps: [(title: 'Deckel abnehmen', energy: 1)],
+      );
+
+      final tasks = await h.store.tasks();
+      expect(
+        tasks.firstWhere((t) => t.id == againDeeper.single.id).title,
+        'Deckel abnehmen',
+      );
+      // Jede Ebene bleibt als Klammer erhalten, keine geht verloren.
+      expect(
+        tasks.where((t) => t.state == TaskState.blocked).map((t) => t.title),
+        containsAll(<String>['Belege zusammensuchen', 'Schuhkarton auf den Tisch']),
+      );
+    });
+
+    testWidgets('eine zerlegte Aufgabe steht nicht neben ihren Schritten',
+        (tester) async {
+      final parent = await heavyTask();
+      await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Ordner holen', energy: 1)],
+      );
+      final snapshot = await h.runtime.evaluate();
+
+      expect(snapshot.startable.map((t) => t.id), isNot(contains(parent.id)));
+      expect(
+        snapshot.atomizeCandidates.map((c) => c.task.id),
+        isNot(contains(parent.id)),
+      );
+    });
+
+    testWidgets('ein zu groß geratener Teilschritt wird zum Zerlegen angeboten',
+        (tester) async {
+      final parent = await heavyTask();
+      final steps = await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Belege zusammensuchen', energy: 7)],
+      );
+      final snapshot = await h.runtime.evaluate();
+
+      expect(
+        snapshot.atomizeCandidates.map((c) => c.task.id),
+        contains(steps.single.id),
+      );
+    });
+
+    testWidgets('sind alle Schritte erledigt, kommt die Klammer zurück',
+        (tester) async {
+      // Nicht automatisch erledigt: Beim Zerlegen wird die erste Handlung
+      // benannt, nicht das Ganze. Und nicht ewig blockiert: Dann waere sie
+      // faktisch geloescht.
+      final parent = await heavyTask();
+      final steps = await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Ordner holen', energy: 1)],
+      );
+      await h.runtime.completeTask(steps.single);
+
+      final after = (await h.store.tasks()).firstWhere((t) => t.id == parent.id);
+      expect(after.state, TaskState.ready);
+      expect(after.state, isNot(TaskState.done));
+    });
+
+    testWidgets('solange ein Schritt offen ist, bleibt die Klammer zu',
+        (tester) async {
+      final parent = await heavyTask();
+      final steps = await h.runtime.atomize(
+        parent: parent,
+        steps: [
+          (title: 'Ordner holen', energy: 1),
+          (title: 'Belege sortieren', energy: 3),
+        ],
+      );
+      await h.runtime.completeTask(steps.first);
+
+      final after = (await h.store.tasks()).firstWhere((t) => t.id == parent.id);
+      expect(after.state, TaskState.blocked);
+    });
+
+    testWidgets('die zurückgekehrte Klammer übersteht den Wiederaufbau',
+        (tester) async {
+      // Projektionen sind aus `events` neu aufbaubar — sonst ist der
+      // Zustandswechsel beim naechsten Wiederaufbau still weg.
+      final parent = await heavyTask();
+      final steps = await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Ordner holen', energy: 1)],
+      );
+      await h.runtime.completeTask(steps.single);
+      await h.store.rebuildProjections();
+
+      final after = (await h.store.tasks()).firstWhere((t) => t.id == parent.id);
+      expect(after.state, TaskState.ready);
+    });
+
+    testWidgets('auch eine Aufgabe mit Startenergie 1 lässt sich zerlegen',
+        (tester) async {
+      // Der abgeleitete Rest war „eine Stufe leichter" — bei 1 also 0, und
+      // damit ausserhalb des Wertebereichs von Task.
+      final task = await h.runtime.createTask(
+        title: 'Kurz lüften',
+        activationEnergy: 1,
+        salience: 5,
+        stakes: 5,
+      );
+      final candidate = await h.runtime.atomizeCandidateFor(task);
+      await pumpPhone(tester, h.wrap(const Scaffold()));
+      final context = tester.element(find.byType(Scaffold));
+      showAtomizeSheet(context, candidate).ignore();
+      await tester.pumpAndSettle();
+
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.first, 'Fenster aufmachen');
+      await tester.enterText(fields.last, 'Der Rest');
+      await tester.pumpAndSettle();
+      // Das Blatt scrollt; ein Tipp ins Leere bliebe sonst stumm.
+      await tester.ensureVisible(find.text('Übernehmen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Übernehmen'));
+      await tester.pumpAndSettle();
+
+      final children =
+          (await h.store.tasks()).where((t) => t.parentId == task.id).toList();
+      expect(children, hasLength(2));
+      expect(children.every((c) => c.activationEnergy >= 1), isTrue);
+    });
   });
 
   // ── M11 Review ────────────────────────────────────────────────────────

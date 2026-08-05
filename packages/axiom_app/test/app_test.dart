@@ -204,6 +204,47 @@ void main() {
       expect(find.text('Zurücklegen'), findsOneWidget);
     });
 
+    testWidgets('jede offene Aufgabe lässt sich von hier aus zerlegen',
+        (tester) async {
+      // Ohne diesen Weg gibt es nur den einen, den AXIOM von sich aus
+      // anbietet — und ein Teilschritt, der immer noch zu gross ist, faellt
+      // dann durch jedes Raster [D2].
+      h.completeOnboarding();
+      await h.runtime.createTask(
+        title: 'Wohnung streichen', activationEnergy: 9, salience: 5,
+        stakes: 5);
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      expect(find.text('Zerlegen'), findsOneWidget);
+      await tester.tap(find.text('Zerlegen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Was ist die allererste Handlung?'), findsOneWidget);
+    });
+
+    testWidgets('eine zerlegte Aufgabe bleibt sichtbar und zerlegbar',
+        (tester) async {
+      // Vorher stand sie nirgends: nicht bei „In Reichweite", nicht bei
+      // „Nicht in Reichweite", nicht bei „Erledigt". Wer seinen Bestand
+      // nicht sieht, fuehrt daneben eine zweite Liste im Kopf [D9].
+      h.completeOnboarding();
+      final parent = await h.runtime.createTask(
+        title: 'Steuerunterlagen sortieren', activationEnergy: 9,
+        salience: 5, stakes: 5);
+      await h.runtime.atomize(
+        parent: parent,
+        steps: [(title: 'Ordner holen', energy: 1)],
+      );
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      expect(find.text('Steuerunterlagen sortieren'), findsOneWidget);
+      expect(find.text('ZERLEGT · 1'), findsOneWidget);
+      expect(find.text('SCHRITTE OFFEN: 1'), findsOneWidget);
+      // Sie steht nicht neben ihren eigenen Schritten zur Wahl (G1) …
+      expect(find.text('Anfangen'), findsOneWidget);
+      // … laesst sich aber weiter zerlegen.
+      expect(find.text('Zerlegen'), findsNWidgets(2));
+    });
+
     testWidgets('sortiert nach der Formel und bietet keinen zweiten Maßstab',
         (tester) async {
       h.completeOnboarding();

@@ -66,7 +66,30 @@ final class EventVariable {
   final String id;
   final String label;
 
-  const EventVariable(this.id, this.label);
+  /// Wofuer das Ereignis steht. Ohne das steht im Editor eine Liste von
+  /// Bezeichnern, und man waehlt nach Klang statt nach Bedeutung.
+  final String meaning;
+
+  const EventVariable(this.id, this.label, [this.meaning = '']);
+}
+
+/// Eingriffstiefe einer Regel — mit dem Satz, der erklaert, was sie tut.
+@immutable
+final class SeveritySpec {
+  final Severity value;
+  final String label;
+  final String meaning;
+
+  const SeveritySpec(this.value, this.label, this.meaning);
+}
+
+/// Ein Defizit aus docs/01-PROFIL-DEFIZITE.md.
+@immutable
+final class DeficitSpec {
+  final String id;
+  final String label;
+
+  const DeficitSpec(this.id, this.label);
 }
 
 /// Was eine Regel ausloest, und welche Angaben sie dafuer braucht.
@@ -182,19 +205,64 @@ abstract final class RuleVocabulary {
   /// Nicht alle Event-Typen stehen hier: Interne Buchungen wie
   /// `decision_emitted` oder `meta_usage` wuerden nur Rauschen anbieten.
   static const List<EventVariable> events = [
-    EventVariable('checkin', 'Check-in'),
-    EventVariable('capture', 'Erfassung'),
-    EventVariable('task_completed', 'Aufgabe erledigt'),
-    EventVariable('task_started', 'Aufgabe begonnen'),
-    EventVariable('focus_start', 'Fokus gestartet'),
-    EventVariable('focus_end', 'Fokus beendet'),
-    EventVariable('sensation_slot', 'Reiz-Slot'),
-    EventVariable('impulse_intercepted', 'Impuls abgefangen'),
-    EventVariable('body_prompt', 'Körpersignal quittiert'),
-    EventVariable('sleep_window', 'Schlaf eingetragen'),
-    EventVariable('signal_incident', 'Vorfall'),
-    EventVariable('review_completed', 'Review abgeschlossen'),
-    EventVariable('med_intake', 'Einnahme'),
+    EventVariable('checkin', 'Check-in',
+        'Vier Regler von Hand eingetragen.'),
+    EventVariable('capture', 'Erfassung',
+        'Etwas festgehalten, egal über welchen Weg.'),
+    EventVariable('task_completed', 'Aufgabe erledigt',
+        'Eine Aufgabe abgeschlossen.'),
+    EventVariable('task_started', 'Aufgabe begonnen',
+        'Eine Aufgabe begonnen.'),
+    EventVariable('focus_start', 'Fokus gestartet',
+        'Ein Fokusfenster geöffnet.'),
+    EventVariable('focus_end', 'Fokus beendet',
+        'Ein Fokusfenster geschlossen — geplant oder abgebrochen.'),
+    EventVariable('sensation_slot', 'Reiz-Slot',
+        'Ein Reiz-Slot eingelöst.'),
+    EventVariable('impulse_intercepted', 'Impuls abgefangen',
+        'Eine Wartezeit vor einem Impuls durchgehalten.'),
+    EventVariable('body_prompt', 'Körpersignal quittiert',
+        'Ein Körpersignal quittiert — getrunken, bewegt, gegessen.'),
+    EventVariable('sleep_window', 'Schlaf eingetragen',
+        'Eine Nacht eingetragen oder aus Health Connect übernommen.'),
+    EventVariable('signal_incident', 'Vorfall',
+        'Ein emotionaler Vorfall festgehalten.'),
+    EventVariable('review_completed', 'Review abgeschlossen',
+        'Ein Rückblick abgeschlossen.'),
+    EventVariable('med_intake', 'Einnahme',
+        'Eine Einnahme protokolliert. Nur Protokoll, nie Empfehlung.'),
+  ];
+
+  /// Die vier Eingriffstiefen.
+  ///
+  /// Standen bis hierher doppelt: privat im Regeleditor der App und noch
+  /// einmal im Expertenmodus. Genau die Drift, gegen die dieser Wortschatz
+  /// gebaut ist — eine Bedeutung, die an zwei Stellen gepflegt wird, ist
+  /// nach dem zweiten Nachdenken an einer Stelle falsch.
+  static const List<SeveritySpec> severities = [
+    SeveritySpec(Severity.info, 'Info', 'Erscheint nur im Rückblick.'),
+    SeveritySpec(Severity.nudge, 'Anstoß', 'Still, wegwischbar.'),
+    SeveritySpec(Severity.intervene, 'Intervention',
+        'Sichtbar, erwartet eine Antwort.'),
+    SeveritySpec(Severity.enforce, 'Verbindlich',
+        'Verändert Systemverhalten. Nur für Regeln, die du im ruhigen '
+        'Zustand selbst verbindlich gesetzt hast.'),
+  ];
+
+  /// Die Defizite, auf die eine Regel einzahlen kann.
+  static const List<DeficitSpec> deficits = [
+    DeficitSpec('D1', 'Kompensationskosten'),
+    DeficitSpec('D2', 'Startbarriere'),
+    DeficitSpec('D3', 'Meta-Work-Falle'),
+    DeficitSpec('D4', 'Zeitwahrnehmung'),
+    DeficitSpec('D5', 'Reizhunger'),
+    DeficitSpec('D6', 'Hyperfokus'),
+    DeficitSpec('D7', 'Körperwahrnehmung'),
+    DeficitSpec('D8', 'Schlaf'),
+    DeficitSpec('D9', 'Erfassungslücke'),
+    DeficitSpec('D10', 'Emotionale Spitzen'),
+    DeficitSpec('D11', 'Kontextwechsel'),
+    DeficitSpec('D12', 'Langfristziele'),
   ];
 
   static const List<ActionSpec> actions = [

@@ -103,9 +103,9 @@
     not count towards it — only configuration, analysis and browsing.
   # Vorher stand hier `minutes_since: { event: meta_usage, lt: 1 }`. Es gibt
   # keinen Ereignistyp `meta_usage` — die Nutzungszeit wird in einer eigenen
-  # Tabelle gefuehrt, nicht als Event. Die Bedingung war damit nie erfuellbar,
+  # Tabelle geführt, nicht als Event. Die Bedingung war damit nie erfüllbar,
   # und G4 hat nie gefeuert. Ausgerechnet das Gesetz, das dieses Projekt vor
-  # sich selbst schuetzen soll.
+  # sich selbst schützen soll.
   when:
     meta_minutes_today: { gte: 12 }
   then:

@@ -1409,4 +1409,12 @@ const Map<String, String> kEnglish = {
       'Start together with AXIOM',
   'Nicht beim Hochfahren und nicht ohne die App — nur, wenn du sie öffnest. Anmeldung, dauerhafte Anzeige und die Abschaltung nach dreißig Minuten Leerlauf bleiben.':
       'Not at boot and not without the app — only when you open it. Sign-in, the persistent display and the shutdown after thirty idle minutes all stay.',
+  'Zerlegen':
+      'Split',
+  'Zerlegt · {0}':
+      'Split · {0}',
+  'SCHRITTE OFFEN: {0}':
+      'STEPS OPEN: {0}',
+  'Diese Aufgaben sind durch ihre Teilschritte vertreten. Sie kommen zurück, sobald kein Schritt mehr offen ist.':
+      'These tasks are represented by their steps. They come back once no step is open any more.',
 };

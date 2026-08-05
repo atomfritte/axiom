@@ -398,11 +398,13 @@ final class AxiomRuntime {
     // verloren. Es weiterlaufen zu lassen hiesse, Zeit auf etwas zu buchen,
     // das es nicht mehr gibt.
     await _closeFocusFor(task, exit: 'completed');
+    await _reopenParentIfStepsDone(task);
   }
   Future<void> dropTask(Task task) async {
     await store.upsertTask(task.copyWith(state: TaskState.dropped));
     await record(EventType.taskAbandoned,
         payload: {'task_id': task.id, 'reason': 'manual'});
+    await _reopenParentIfStepsDone(task);
   }
   /// Beginnt eine Aufgabe — und zwar genau eine.
   ///
@@ -475,11 +477,30 @@ final class AxiomRuntime {
         now: clock.nowLocal(),
         createdAt: await store.taskCreationTimes(),
       );
+  /// Der Zerlegungsauftrag für eine bestimmte Aufgabe — auf Zuruf.
+  ///
+  /// Für den Weg, den der Nutzer selbst wählt: Jede offene Aufgabe lässt
+  /// sich zerlegen, auch ein Teilschritt, auch eine, die AXIOM von sich aus
+  /// nicht angeboten hätte. Der erste Schritt muss klein genug sein, und wie
+  /// tief das führt, entscheidet nicht die Formel [D2].
+  Future<AtomizeCandidate> atomizeCandidateFor(Task task) async =>
+      _atomizer.candidateFor(
+        task: task,
+        capacity: await _capacityNow(),
+        now: clock.nowLocal(),
+        createdAt: (await store.taskCreationTimes())[task.id],
+      );
   /// Zerlegt eine Aufgabe in die vom Nutzer benannten Schritte.
   ///
   /// Das Elternteil wird blockiert, nicht gelöscht: Es bleibt als Klammer
   /// erhalten, verschwindet aber aus der Auswahl, damit es nicht doppelt
-  /// erscheint.
+  /// erscheint — neben seinen eigenen Schritten wäre es eine Wahl, und
+  /// genau die soll die Zerlegung ersparen (G1).
+  ///
+  /// `blocked` heißt hier: **vertreten durch die eigenen Schritte**, nicht
+  /// stillgelegt. Zerlegen bleibt möglich (die Schritte waren zu grob),
+  /// und sobald kein Schritt mehr offen ist, kommt die Klammer zurück —
+  /// siehe [_reopenParentIfStepsDone].
   Future<List<Task>> atomize({
     required Task parent,
     required List<({String title, int energy})> steps,
@@ -513,12 +534,48 @@ final class AxiomRuntime {
           'decay_at': child.decayAt!.toUtc().toIso8601String(),
       });
     }
+    // Lief die Aufgabe gerade, endet damit auch ihr Fokusfenster: Die
+    // Arbeit geht an den ersten Schritt über, und Zeit auf eine Klammer zu
+    // buchen, an der niemand mehr sitzt, wäre eine Messung ohne Gegenstand.
+    await _closeFocusFor(parent, exit: 'split');
     await store.upsertTask(parent.copyWith(state: TaskState.blocked));
     await record(EventType.taskSplit, payload: {
       'parent_id': parent.id,
       'child_ids': children.map((c) => c.id).toList(),
     });
     return children;
+  }
+  /// Die Klammer kommt zurück, wenn kein Schritt mehr offen ist.
+  ///
+  /// **Warum zurück in den Bestand und nicht automatisch erledigt.** Beim
+  /// Zerlegen wird die allererste Handlung benannt und der Rest höchstens
+  /// grob. Aus „Ordner auf den Tisch gelegt" folgt nicht „Steuererklärung
+  /// erledigt". Eine Aufgabe still zu schließen, die es noch gibt, ist der
+  /// teuerste Fehler dieses Systems: Man merkt es, wenn die Frist vorbei
+  /// ist, und danach traut man dem Bestand nicht mehr [D9]. Der umgekehrte
+  /// Fehler kostet einen Tipp — wer fertig ist, hakt die Klammer ab.
+  ///
+  /// Ewig blockiert stehen bleiben darf sie ebensowenig: Dann wäre sie
+  /// weder startbar noch sichtbar noch zerlegbar, also faktisch gelöscht.
+  ///
+  /// Erklärbar bleibt es, weil der Übergang an genau einer Bedingung hängt
+  /// und ein Ereignis schreibt (G2): kein offener Teilschritt mehr.
+  Future<void> _reopenParentIfStepsDone(Task step) async {
+    final parentId = step.parentId;
+    if (parentId == null) return;
+    final all = await store.tasks();
+    final parent = all.where((t) => t.id == parentId).firstOrNull;
+    if (parent == null || parent.state != TaskState.blocked) return;
+    if (hasOpenSteps(all, parentId)) return;
+    await store.upsertTask(parent.copyWith(state: TaskState.ready));
+    // Eigener Grund, keine Tarnung als `released`: Eine Aufgabe, deren
+    // Teilschritte alle erledigt sind, wurde nicht zurueckgelegt. Der
+    // Ereignisstrom ist die Wahrheit dieses Systems — was dort steht, muss
+    // stimmen, auch wenn zwei Faelle dieselbe Folge haben.
+    await record(EventType.taskAbandoned, payload: {
+      'task_id': parent.id,
+      'reason': 'steps_done',
+    });
   }
   // ── Zeitanker (M3) ────────────────────────────────────────────────────
   Future<Anchor> createAnchor({

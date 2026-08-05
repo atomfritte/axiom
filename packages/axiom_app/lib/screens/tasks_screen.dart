@@ -26,6 +26,7 @@ import '../i18n/i18n.dart';
 import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
+import 'atomize_sheet.dart';
 
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
@@ -67,11 +68,22 @@ class _Body extends ConsumerWidget {
         sorted((t) => t.state == TaskState.ready && t.isStartable(capacity));
     final outOfReach =
         sorted((t) => t.state == TaskState.ready && !t.isStartable(capacity));
+    // Zerlegte Aufgaben standen hier bisher nirgends. Damit war die
+    // Klammer nach dem Zerlegen unsichtbar: nicht auffindbar, nicht
+    // abschließbar, nicht weiter zerlegbar — und wer seinen Bestand nicht
+    // sieht, führt daneben eine zweite Liste im Kopf [D9].
+    final split = sorted((t) => t.state == TaskState.blocked);
     final done = sorted((t) => t.state == TaskState.done);
+
+    /// Wie viele Teilschritte einer Aufgabe stehen noch aus?
+    int openSteps(Task parent) => snapshot.tasks
+        .where((t) => t.parentId == parent.id && isTaskOpen(t))
+        .length;
 
     if (snapshot.tasks.every((t) =>
         t.state != TaskState.active &&
         t.state != TaskState.ready &&
+        t.state != TaskState.blocked &&
         t.state != TaskState.done)) {
       return const _Empty();
     }
@@ -116,6 +128,22 @@ class _Body extends ConsumerWidget {
           const SizedBox(height: Space.xl),
         ],
 
+        if (split.isNotEmpty) ...[
+          SectionLabel(context.t('Zerlegt · {0}', [split.length])),
+          // Keine Mahnung, eine Einordnung: Die Aufgabe ist durch ihre
+          // Schritte vertreten, deshalb steht sie nicht bei der Auswahl.
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.sm),
+            child: Text(
+              context.t('Diese Aufgaben sind durch ihre Teilschritte vertreten. Sie kommen zurück, sobald kein Schritt mehr offen ist.'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          for (final task in split)
+            _Row(task: task, capacity: capacity, openSteps: openSteps(task)),
+          const SizedBox(height: Space.xl),
+        ],
+
         if (done.isNotEmpty) ...[
           SectionLabel(context.t('Erledigt · {0}', [done.length])),
           for (final task in done.take(20))
@@ -129,7 +157,15 @@ class _Body extends ConsumerWidget {
 class _Row extends ConsumerWidget {
   final Task task;
   final int capacity;
-  const _Row({required this.task, required this.capacity});
+
+  /// Offene Teilschritte — nur bei zerlegten Aufgaben gesetzt.
+  final int openSteps;
+
+  const _Row({
+    required this.task,
+    required this.capacity,
+    this.openSteps = 0,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -137,6 +173,7 @@ class _Row extends ConsumerWidget {
     final now = ref.watch(nowProvider);
     final running = task.state == TaskState.active;
     final done = task.state == TaskState.done;
+    final split = task.state == TaskState.blocked;
     final reachable = task.isStartable(capacity);
 
     final accent = switch (true) {
@@ -202,6 +239,12 @@ class _Row extends ConsumerWidget {
                                       ? p.caution
                                       : p.inkFaint),
                             ),
+                          if (split)
+                            Text(
+                              context.t('SCHRITTE OFFEN: {0}', [openSteps]),
+                              style: monoStyle(context,
+                                  size: 10.5, color: p.info),
+                            ),
                         ],
                       ),
                     ],
@@ -227,6 +270,16 @@ class _Row extends ConsumerWidget {
                         child: Text(context.t('Zurücklegen')),
                       ),
                     ),
+                  ] else if (split) ...[
+                    // Kein „Anfangen": Die Aufgabe ist durch ihre Schritte
+                    // vertreten, und sie neben ihnen zur Wahl zu stellen
+                    // wäre genau die Doppelung, die das Zerlegen auflöst.
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _act(ref, (r) => r.completeTask(task)),
+                        child: Text(context.t('Erledigt')),
+                      ),
+                    ),
                   ] else ...[
                     Expanded(
                       flex: 2,
@@ -245,11 +298,31 @@ class _Row extends ConsumerWidget {
                   ],
                 ],
               ),
+              const SizedBox(height: Space.sm),
+              // Zerlegen geht immer und auf jeder Ebene — auch bei einem
+              // Teilschritt, der sich als immer noch zu groß herausstellt,
+              // und auch bei einer Aufgabe, die AXIOM von sich aus nicht
+              // angeboten hätte. Die Hürde liegt am Anfang; wo sie liegt,
+              // weiß nur der Nutzer [D2].
+              OutlinedButton.icon(
+                onPressed: () => _splitIt(context, ref),
+                icon: Icon(Icons.call_split, size: 18, color: p.signal),
+                label: Text(context.t('Zerlegen')),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// Oeffnet das Zerlegen-Blatt fuer genau diese Aufgabe.
+  Future<void> _splitIt(BuildContext context, WidgetRef ref) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    final candidate = await runtime.atomizeCandidateFor(task);
+    if (!context.mounted) return;
+    await showAtomizeSheet(context, candidate);
+    refreshAxiom(ref);
   }
 
   Future<void> _act(

@@ -615,9 +615,13 @@ class _EmptyState extends ConsumerWidget {
           ),
           if (blocked) ...[
             const SizedBox(height: Space.lg),
+            // Ziel ist die Aufgabenliste, nicht der Eingang: Dort steht,
+            // was außer Reichweite liegt, und dort führt jede Zeile ihren
+            // eigenen Weg ins Zerlegen. Der Eingang enthält Erfasstes —
+            // dort war nichts zu zerlegen, und der Weg endete im Nichts.
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
+                MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
               ),
               icon: Icon(Icons.call_split, size: 18, color: p.signal),
               label: Text(context.t('Aufgabe zerlegen')),
