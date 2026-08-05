@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
@@ -29,7 +30,9 @@ class InterceptScreen extends ConsumerWidget {
     final active = ref.watch(snapshotProvider).value?.activeIntercept;
     final stats = ref.watch(interceptStatsProvider).value ?? const [];
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'intercept',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Bremse'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -71,6 +74,7 @@ class InterceptScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 

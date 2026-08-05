@@ -134,6 +134,63 @@ void main() {
         afterFirst.map((t) => '${t.id}:${t.state.name}:${t.activationEnergy}'),
       );
     });
+
+    test('eine Zerlegung überlebt den Wiederaufbau', () async {
+      // Der teuerste Datenverlust, den es hier gab: Teilschritte standen
+      // nur in der Projektion, nie im Ereignisstrom. Ein Wiederaufbau —
+      // auch der nach einem Vault-Import — hat sie ersatzlos verworfen.
+      // Zerlegen ist der haeufigste Weg, wie eine Aufgabe in Reichweite
+      // kommt; sie danach nicht mehr zu finden ist das Gegenteil davon.
+      await store.append(evt(EventType.taskCreated, payload: {
+        'task_id': 'p1',
+        'title': 'Steuer',
+        'ae': 8,
+        'state': 'ready',
+      }));
+      for (final (id, title) in [('c1', 'Ordner holen'), ('c2', 'Sortieren')]) {
+        await store.append(evt(EventType.taskCreated, payload: {
+          'task_id': id,
+          'title': title,
+          'ae': 2,
+          'state': 'ready',
+          'parent_id': 'p1',
+        }));
+      }
+      await store.append(evt(EventType.taskSplit, payload: {
+        'parent_id': 'p1',
+        'child_ids': ['c1', 'c2'],
+      }));
+
+      await store.rebuildProjections();
+      final tasks = await store.tasks();
+
+      expect(tasks.map((t) => t.id).toSet(), {'p1', 'c1', 'c2'});
+      // Der Eltern-Bezug muss mitkommen, sonst stehen die Schritte als
+      // lose Aufgaben da und die Elternaufgabe wirkt grundlos unerledigt.
+      expect(tasks.firstWhere((t) => t.id == 'c1').parentId, 'p1');
+      // Und die zerlegte Aufgabe darf nicht wieder als startbar erscheinen.
+      expect(tasks.firstWhere((t) => t.id == 'p1').state, TaskState.blocked);
+    });
+
+    test('zurückgelegt ist nicht verworfen', () async {
+      // `taskAbandoned` traegt den Grund. Wer eine Aufgabe zuruecklegt
+      // oder durch eine andere verdraengt, hat sie nicht weggeworfen —
+      // sie beim Wiederaufbau als verworfen zu fuehren loescht sie
+      // faktisch, und zwar stumm.
+      await store.append(evt(EventType.taskCreated, payload: {
+        'task_id': 'r1',
+        'title': 'Angefangen',
+        'ae': 3,
+        'state': 'ready',
+      }));
+      await store.append(evt(EventType.taskStarted, payload: {'task_id': 'r1'}));
+      await store.append(evt(EventType.taskAbandoned,
+          payload: {'task_id': 'r1', 'reason': 'released'}));
+
+      await store.rebuildProjections();
+      final task = (await store.tasks()).firstWhere((t) => t.id == 'r1');
+      expect(task.state, TaskState.ready);
+    });
   });
 
   group('Meta-Guard (M12)', () {
@@ -266,6 +323,47 @@ void _schemaGuard() {
         () => SqliteEventStore.open(path, clock: FakeClock(DateTime(2026))),
         throwsA(isA<StateError>()),
       );
+    });
+
+    test('jede Schemaversion hat ihren eigenen Migrationsblock', () {
+      // Der Fehler, den das verhindert: `rule_overrides` stand im
+      // `current < 5`-Zweig, waehrend kSchemaVersion schon auf 6 stand.
+      // Eine Bestandsdatenbank auf Stand 5 lief daran vorbei, bekam die
+      // Tabelle nie und wurde danach als Stand 6 markiert. Auf einem frisch
+      // installierten Geraet war davon nichts zu merken.
+      final source = File('lib/src/sqlite_event_store.dart').readAsStringSync();
+      final blocks = RegExp(r'if \(current < (\d+)\)')
+          .allMatches(source)
+          .map((m) => int.parse(m.group(1)!))
+          .toSet();
+      expect(blocks, {for (var v = 1; v <= kSchemaVersion; v++) v},
+          reason: 'Für jede Version von 1 bis $kSchemaVersion muss es genau '
+              'einen Migrationsblock geben');
+    });
+
+    test('eine Bestandsdatenbank bekommt neue Tabellen nachgereicht',
+        () async {
+      // Der Fall, der auf dem Geraet passiert und im Test sonst nie: Die
+      // Datei existiert schon, mit einer aelteren Schemaversion.
+      final path = '${dir.path}/alt.db';
+      final clock = FakeClock(DateTime(2026));
+      SqliteEventStore.open(path, clock: clock).close();
+      sqlite3.open(path)
+        ..execute('DROP TABLE IF EXISTS rule_overrides;')
+        ..execute('PRAGMA user_version = 5;')
+        ..dispose();
+
+      final store = SqliteEventStore.open(path, clock: clock);
+      final db = sqlite3.open(path);
+      final tables = db
+          .select("SELECT name FROM sqlite_master WHERE type='table';")
+          .map((r) => r['name'])
+          .toList();
+      db.dispose();
+      expect(tables, contains('rule_overrides'),
+          reason: 'Sonst bricht der Regeleditor auf genau den Geräten, auf '
+              'denen AXIOM schon lief');
+      store.close();
     });
 
     test('eine Datei derselben Fassung bleibt unveraendert', () async {

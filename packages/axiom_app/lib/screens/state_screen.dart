@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import 'checkin_sheet.dart';
 import '../i18n/i18n.dart';
@@ -23,7 +24,9 @@ class StateScreen extends ConsumerWidget {
     final snapshot = ref.watch(snapshotProvider);
     final p = context.axiom;
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'state',
+      child: Scaffold(
       appBar: AppBar(
         title: Text(context.t('Zustand')),
         actions: [
@@ -114,6 +117,7 @@ class StateScreen extends ConsumerWidget {
           );
         },
       ),
+    ),
     );
   }
 }

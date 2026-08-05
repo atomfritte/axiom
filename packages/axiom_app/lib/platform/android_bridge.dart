@@ -437,17 +437,27 @@ abstract final class AndroidBridge {
   /// Der reibungsärmste Erfassungskanal, den das Gerät bietet: Stift ziehen,
   /// schreiben, fertig — ohne Entsperren. Genau das Zeitfenster von wenigen
   /// Sekunden, in dem der Gedanke noch existiert [D9].
-  static Future<List<String>> pullPendingMemos() async {
+  /// Liest die wartenden Notizen, **ohne** sie zu löschen.
+  ///
+  /// Der Gegenpart ist [ackPendingMemos]. Beides zusammen in einem Aufruf
+  /// zu erledigen war der Fehler: Schlägt das Speichern danach fehl — und
+  /// dieser Aufruf verschluckt jeden Fehler zu einer leeren Liste —, ist
+  /// der erfasste Gedanke weg [D9].
+  static Future<List<String>> peekPendingMemos() async {
     if (!isSupported) return const [];
     try {
       final result = await _channel
-          .invokeListMethod<String>('pullPendingMemos')
+          .invokeListMethod<String>('peekPendingMemos')
           .timeout(_timeout);
       return result ?? const [];
     } on Object {
       return const [];
     }
   }
+
+  /// Löscht die ersten [count] Notizen — die, die sicher gespeichert sind.
+  static Future<bool> ackPendingMemos(int count) =>
+      _invoke('ackPendingMemos', {'count': count});
 
   // ── Intern ────────────────────────────────────────────────────────────
 

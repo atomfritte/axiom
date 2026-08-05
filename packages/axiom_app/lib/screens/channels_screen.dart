@@ -17,6 +17,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
 import '../i18n/i18n.dart';
@@ -28,7 +29,10 @@ class ChannelsScreen extends ConsumerStatefulWidget {
   ConsumerState<ChannelsScreen> createState() => _ChannelsScreenState();
 }
 
-class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
+class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<ChannelsScreen> {
+  @override
+  String get metaScreen => 'channels';
+
   bool _presence = false;
 
   /// Steht nur da, wenn der Schalter nicht hält, was er soll. Dann aber

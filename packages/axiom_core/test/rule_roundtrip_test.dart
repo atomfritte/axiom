@@ -70,18 +70,26 @@ void main() {
   });
 
   group('Wortschatz deckt ab, was die Engine kennt', () {
-    test('jede numerische Variable ist im Zustandsvektor aufloesbar', () {
-      final state = StateVector(
-        at: DateTime.utc(2026),
-        capacity: 50,
-        focusDebt: 10,
-        sensationNeed: 40,
-        loadIndex: 20,
-        regulation: 60,
-        sleepDebt: 15,
+    test('jede numerische Variable ist auswertbar', () {
+      // Geprueft wird gegen den Auswertungskontext, nicht gegen den
+      // Zustandsvektor allein: Nicht jede Variable misst den Nutzer.
+      // `meta_minutes_today` misst die App selbst (G4) und kommt aus dem
+      // Laufzeitkontext — im Zustandsvektor waere sie fehl am Platz.
+      final ctx = StateEvalContext(
+        state: StateVector(
+          at: DateTime.utc(2026),
+          capacity: 50,
+          focusDebt: 10,
+          sensationNeed: 40,
+          loadIndex: 20,
+          regulation: 60,
+          sleepDebt: 15,
+        ),
+        clock: FakeClock(DateTime.utc(2026)),
+        runtime: const RuntimeContext(),
       );
       for (final variable in RuleVocabulary.numerics) {
-        expect(state.numeric(variable.id), isNotNull,
+        expect(ctx.numeric(variable.id), isNotNull,
             reason: '${variable.id} steht im Editor, aber die Engine '
                 'kennt sie nicht');
       }

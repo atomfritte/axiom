@@ -264,7 +264,19 @@ final class SqliteEventStore implements EventStore {
           dur_min   INTEGER NOT NULL DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_med_taken ON med_entries(taken_at);
+      ''');
+    }
 
+    // Eigener Block, nicht am Ende von v5 angehaengt.
+    //
+    // Genau daran ist es schon einmal gescheitert: Die Tabelle stand im
+    // `current < 5`-Zweig, `kSchemaVersion` stand aber auf 6. Eine
+    // Bestandsdatenbank auf Stand 5 lief an dem Zweig vorbei, bekam die
+    // Tabelle nie — und wurde anschliessend als Stand 6 markiert. Der
+    // Regeleditor brach dann auf einem Geraet, auf dem alles frisch
+    // installiert funktionierte.
+    if (current < 6) {
+      _db.execute('''
         -- Im Geraet bearbeitete Regeln.
         --
         -- Overlay-Semantik wie rules/personal: gleiche ID ueberschreibt die
@@ -651,9 +663,21 @@ final class SqliteEventStore implements EventStore {
       EventType.taskStarted,
       EventType.taskCompleted,
       EventType.taskAbandoned,
+      // Ohne das kommt eine zerlegte Aufgabe als startbar zurueck, obwohl
+      // ihre Teilschritte offen sind — und steht dann doppelt zur Wahl.
+      EventType.taskSplit,
     });
     final byId = <String, Task>{};
     for (final e in events) {
+      // taskSplit traegt kein `task_id`, sondern `parent_id` — die
+      // Waechterzeile darunter haette es sonst stumm verworfen.
+      if (e.type == EventType.taskSplit) {
+        final parent = e.payload['parent_id'] as String?;
+        if (parent != null && byId[parent] != null) {
+          byId[parent] = byId[parent]!.copyWith(state: TaskState.blocked);
+        }
+        continue;
+      }
       final id = e.payload['task_id'] as String?;
       if (id == null) continue;
       switch (e.type) {
@@ -671,13 +695,26 @@ final class SqliteEventStore implements EventStore {
               (s) => s.name == e.payload['state'],
               orElse: () => TaskState.inbox,
             ),
+            // Ohne den Eltern-Bezug verlieren zerlegte Teilschritte ihre
+            // Zugehoerigkeit: Sie stehen dann als lose Aufgaben da, und die
+            // Elternaufgabe wirkt unerledigt ohne erkennbaren Grund.
+            parentId: e.payload['parent_id'] as String?,
           );
         case EventType.taskStarted:
           byId[id] = byId[id]?.copyWith(state: TaskState.active) ?? byId[id]!;
         case EventType.taskCompleted:
           byId[id] = byId[id]?.copyWith(state: TaskState.done) ?? byId[id]!;
         case EventType.taskAbandoned:
-          byId[id] = byId[id]?.copyWith(state: TaskState.dropped) ?? byId[id]!;
+          // Nicht jedes „abandoned" ist ein Verwerfen. Zuruecklegen und
+          // Verdraengen sind Rueckwege in den Bestand — sie als verworfen
+          // wiederherzustellen loescht die Aufgabe faktisch, und zwar
+          // stumm beim naechsten Wiederaufbau.
+          final reason = e.payload['reason'] as String?;
+          final back = reason == 'released' || reason == 'superseded';
+          byId[id] = byId[id]?.copyWith(
+                state: back ? TaskState.ready : TaskState.dropped,
+              ) ??
+              byId[id]!;
         default:
           break;
       }

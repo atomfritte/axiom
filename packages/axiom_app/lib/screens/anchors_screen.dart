@@ -16,6 +16,7 @@ import '../design/tokens.dart';
 import '../design/widgets/anchor_chain.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/system_sync.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
@@ -27,7 +28,9 @@ class AnchorsScreen extends ConsumerWidget {
     final snapshot = ref.watch(snapshotProvider);
     final now = ref.watch(nowProvider);
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'anchors',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Anker'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -65,6 +68,7 @@ class AnchorsScreen extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: Text(context.t('Termin')),
       ),
+    ),
     );
   }
 

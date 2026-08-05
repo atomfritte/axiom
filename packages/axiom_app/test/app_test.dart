@@ -6,12 +6,16 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:axiom_app/app.dart';
 import 'package:axiom_app/design/widgets/capacity_line.dart';
 import 'package:axiom_app/design/widgets/instruments.dart';
 import 'package:axiom_app/screens/capture_sheet.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
+import 'package:axiom_app/screens/rule_editor_screen.dart';
+import 'package:axiom_app/screens/channels_screen.dart';
+import 'package:axiom_app/state/runtime.dart';
 import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/state_screen.dart';
@@ -246,6 +250,65 @@ void main() {
       await pumpPhone(tester, h.wrap(const NowScreen()));
       expect(find.text('JETZT'), findsOneWidget);
       expect(find.text('Anfangen').evaluate().length, lessThanOrEqualTo(1));
+    });
+  });
+
+  group('G4 — Selbstbegrenzung', () {
+    testWidgets('der Regeleditor macht zu, wenn das Budget aufgebraucht ist',
+        (tester) async {
+      // Das wichtigste Gesetz dieses Projekts war reine Dekoration:
+      // `isConfigLocked()` gab es, aufgerufen hat sie niemand, und die
+      // Nutzungszeit wurde nur auf zwei Bildschirmen gebucht. Das
+      // Hauptrisiko ist nicht technisches Scheitern, sondern dass das Bauen
+      // des Systems zur Prokrastination wird (R1).
+      h.completeOnboarding();
+      expect(await h.runtime.isConfigLocked(), isFalse);
+
+      await h.store.logUsage('rules', kMetaBudget + const Duration(minutes: 1));
+      expect(await h.runtime.isConfigLocked(), isTrue);
+
+      await pumpPhone(tester, h.wrap(Builder(
+        builder: (context) => TextButton(
+          onPressed: () => showRuleEditor(context),
+          child: const Text('auf'),
+        ),
+      )));
+      await tester.tap(find.text('auf'));
+      await tester.pumpAndSettle();
+
+      // Kein Editor, sondern die Begruendung — mit Regel-ID (G2).
+      expect(find.text('Regelwerk heute zu'), findsOneWidget);
+      expect(find.textContaining('R-010'), findsWidgets);
+      // Und ohne Vorwurf.
+      expect(find.textContaining('keine Strafe'), findsOneWidget);
+    });
+
+    test('jeder Bildschirm, auf dem man sich verliert, zählt mit', () {
+      // Gebucht wurde vorher nur auf zwei Bildschirmen. Wer im Regeleditor,
+      // im Systemcheck oder im Expertenmodus versackte, verbrauchte kein
+      // Budget — und der Deckel griff nie. Ein Deckel, der nicht misst, ist
+      // keiner.
+      const timed = [
+        'check_screen', 'channels_screen', 'expert_screen',
+        'rule_editor_screen', 'system_screen', 'review_screen',
+        'state_screen', 'vault_screen', 'signal_screen',
+        'anchors_screen', 'sensation_screen', 'intercept_screen',
+        'tasks_screen',
+      ];
+      for (final name in timed) {
+        final source = File('lib/screens/$name.dart').readAsStringSync();
+        expect(
+          source.contains('MetaTimed') || source.contains('logScreenTime'),
+          isTrue,
+          reason: '$name bucht keine Zeit auf das Meta-Work-Budget',
+        );
+      }
+
+      // Und das Gegenstueck: Erfassung darf nie mitzaehlen (G1).
+      for (final name in ['capture_sheet', 'now_screen']) {
+        final source = File('lib/screens/$name.dart').readAsStringSync();
+        expect(source, isNot(contains('MetaTimed')), reason: name);
+      }
     });
   });
 

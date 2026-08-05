@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
 import '../i18n/i18n.dart';
@@ -30,7 +31,9 @@ class SensationScreen extends ConsumerWidget {
     final snapshot = ref.watch(snapshotProvider);
     final channels = ref.watch(channelsProvider).value ?? const [];
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'sensation',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Reiz'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -70,6 +73,7 @@ class SensationScreen extends ConsumerWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

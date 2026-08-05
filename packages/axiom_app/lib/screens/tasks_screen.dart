@@ -23,6 +23,7 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../i18n/i18n.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
 
@@ -33,13 +34,16 @@ class TasksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(snapshotProvider);
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'tasks',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Aufgaben'))),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
         data: (snap) => _Body(snapshot: snap),
       ),
+    ),
     );
   }
 }

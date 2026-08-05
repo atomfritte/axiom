@@ -85,11 +85,20 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
       }
 
       // Schnelleinstellung und künftig S-Pen-Memos.
-      for (final memo in await AndroidBridge.pullPendingMemos()) {
+      //
+      // Erst lesen, dann speichern, dann bestätigen. Was hier scheitert,
+      // bleibt liegen und kommt beim nächsten Start wieder — ein Gedanke
+      // darf nicht daran verlorengehen, dass die Datenbank kurz nicht da
+      // war [D9].
+      final memos = await AndroidBridge.peekPendingMemos();
+      var stored = 0;
+      for (final memo in memos) {
         if (memo.trim().isNotEmpty) {
           await runtime.capture(memo.trim(), via: 'quicktile');
         }
+        stored++;
       }
+      if (stored > 0) await AndroidBridge.ackPendingMemos(stored);
 
       final action = await _invokeString('launchAction');
       if (!mounted) return;

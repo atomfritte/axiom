@@ -23,6 +23,7 @@ import 'package:path_provider/path_provider.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
@@ -31,7 +32,9 @@ class VaultScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'vault',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Daten'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -45,6 +48,7 @@ class VaultScreen extends ConsumerWidget {
           _MedSection(),
         ],
       ),
+    ),
     );
   }
 }

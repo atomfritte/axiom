@@ -101,8 +101,13 @@
     drive. Tuning the system is always more stimulating than the task it was
     built for. Without a hard limit AXIOM becomes the symptom. Capture does
     not count towards it — only configuration, analysis and browsing.
+  # Vorher stand hier `minutes_since: { event: meta_usage, lt: 1 }`. Es gibt
+  # keinen Ereignistyp `meta_usage` — die Nutzungszeit wird in einer eigenen
+  # Tabelle gefuehrt, nicht als Event. Die Bedingung war damit nie erfuellbar,
+  # und G4 hat nie gefeuert. Ausgerechnet das Gesetz, das dieses Projekt vor
+  # sich selbst schuetzen soll.
   when:
-    minutes_since: { event: meta_usage, lt: 1 }
+    meta_minutes_today: { gte: 12 }
   then:
     action: lock_config
     params:

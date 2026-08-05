@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/meta_time.dart';
+
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
@@ -31,7 +33,10 @@ class CheckScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckScreenState extends ConsumerState<CheckScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, MetaTimed<CheckScreen> {
+  @override
+  String get metaScreen => 'check';
+
   Map<String, Object?> _values = const {};
   bool _channelAlive = false;
   bool _loading = true;

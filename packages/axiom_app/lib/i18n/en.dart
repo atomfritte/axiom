@@ -1383,4 +1383,16 @@ const Map<String, String> kEnglish = {
       'For „axiom.local" to resolve, AXIOM answers name queries on the local network. The packet goes to an address no router forwards, carries only this device’s name and IP, and runs only while the server runs. On shutdown the name is withdrawn.',
   'Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:':
       'If the name does not resolve — some networks block multicast:',
+  'Zeit im System heute':
+      'Time in the system today',
+  'Minuten in AXIOM selbst, ohne Erfassung. Die einzige Zahl hier, die nicht den Nutzer misst, sondern die App — G4.':
+      'Minutes inside AXIOM itself, capture excluded. The only number here that measures the app rather than the person — G4.',
+  'Regelwerk heute zu':
+      'Rulebook closed for today',
+  '{0} Minuten im System sind heute verbraucht. Regeln zu schreiben ist ab jetzt bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen — und eine Regel abschalten geht weiterhin.':
+      '{0} minutes in the system are used up today. Writing rules is closed until tomorrow. Capture, work and looking things up stay open — and switching a rule off still works.',
+  'Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.':
+      'This is not a punishment, it is the point: building a system is always more stimulating than the task it was built for.',
+  'Verstanden':
+      'Understood',
 };

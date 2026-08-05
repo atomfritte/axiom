@@ -327,6 +327,10 @@ final class AxiomRuntime {
               : 'none',
       minutesSinceByEvent: minutesSince,
       countTodayByEvent: countToday,
+      // Ohne diesen Wert kann keine Regel formulieren, dass das
+      // Meta-Work-Budget aufgebraucht ist — und G4 bliebe eine
+      // Absichtserklaerung (CLAUDE.md nennt es das wichtigste Gesetz).
+      metaMinutesToday: (await store.usageToday(clock.nowLocal())).inMinutes,
     );
   }
   /// Erzeugt die Begruendung: Regeltext plus die konkreten Zustandswerte,
@@ -485,8 +489,29 @@ final class AxiomRuntime {
       steps: steps,
       nextId: () => newUlid(clock.nowUtc()),
     );
+    // Jeder Teilschritt bekommt ein eigenes taskCreated — nicht nur einen
+    // Eintrag in der Projektion.
+    //
+    // Vorher standen die Kinder ausschliesslich in `tasks`, und der
+    // taskSplit-Eintrag nannte nur ihre IDs. Ein Wiederaufbau aus dem
+    // Ereignisstrom hat sie damit ersatzlos verloren — und genau das ist
+    // die Zusage, die dieses System traegt: Projektionen sind aus `events`
+    // neu aufbaubar. Eine Zerlegung ist der haeufigste Weg, wie eine
+    // Aufgabe in Reichweite kommt (D2); sie zu verlieren ist der teuerste
+    // Datenverlust, den es hier gibt.
     for (final child in children) {
       await store.upsertTask(child);
+      await record(EventType.taskCreated, payload: {
+        'task_id': child.id,
+        'title': child.title,
+        'ae': child.activationEnergy,
+        'salience': child.salience,
+        'stakes': child.stakes,
+        'state': child.state.name,
+        'parent_id': parent.id,
+        if (child.decayAt != null)
+          'decay_at': child.decayAt!.toUtc().toIso8601String(),
+      });
     }
     await store.upsertTask(parent.copyWith(state: TaskState.blocked));
     await record(EventType.taskSplit, payload: {
@@ -857,6 +882,12 @@ final class AxiomRuntime {
       store.logUsage(screen, duration, countsToBudget: countsToBudget);
   /// Konfiguration ist gesperrt, wenn das Tagesbudget aufgebraucht ist.
   /// Nicht als Strafe — als Schutz vor der Meta-Work-Falle (D3).
+  /// Ist die Konfiguration gesperrt, weil das Tagesbudget aufgebraucht ist?
+  ///
+  /// Die Sperre gilt fuer Konfiguration, nicht fuer Erfassung, nicht fuer
+  /// die Daten und nicht fuer den Zustand. Wer am Limit ist, soll trotzdem
+  /// arbeiten, exportieren und nachsehen koennen — gedeckelt wird das
+  /// Schrauben am System selbst (D3, R1).
   Future<bool> isConfigLocked() async =>
       (await store.usageToday(clock.nowLocal())) >= kMetaBudget;
   bool get onboardingDone => store.setting('onboarding_done') == 'true';

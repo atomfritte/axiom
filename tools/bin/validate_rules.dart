@@ -183,17 +183,18 @@ void main(List<String> args) {
   stdout.writeln('Regelwerk gueltig.');
 }
 
-/// Bekannte Variablen der Regel-DSL. Siehe docs/04-REGELWERK.md §2.
-const _knownVariables = {
-  'capacity',
-  'focus_debt',
-  'sensation_need',
-  'load_index',
-  'regulation',
-  'sleep_debt',
-  'load_level',
-  'active_slot',
-  'weekday',
+/// Bekannte Variablen der Regel-DSL — abgeleitet, nicht abgeschrieben.
+///
+/// Hier stand eine handgepflegte Zweitliste. Sie ist genau das geworden, was
+/// eine Zweitliste wird: Sie driftete ab. Eine im Wortschatz ergaenzte
+/// Variable galt dem Validator als unbekannt, und die Regel, die sie
+/// benutzte, wurde nicht geladen — mit einer Fehlermeldung, die nach einem
+/// Tippfehler in der Regel aussah statt nach einer Luecke im Werkzeug.
+final _knownVariables = <String>{
+  for (final v in RuleVocabulary.numerics) v.id,
+  for (final v in RuleVocabulary.symbolics) v.id,
+  // Kein Variablenname, sondern ein eigener Knotentyp — der Bedingungsbaum
+  // meldet ihn trotzdem als referenziert.
   'time_between',
 };
 

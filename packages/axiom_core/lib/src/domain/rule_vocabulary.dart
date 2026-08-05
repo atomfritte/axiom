@@ -94,6 +94,13 @@ abstract final class RuleVocabulary {
   /// damit man sie ohne Umrechnen vergleichen kann.
   static const List<NumericVariable> numerics = [
     NumericVariable(
+      id: 'meta_minutes_today',
+      label: 'Zeit im System heute',
+      meaning: 'Minuten in AXIOM selbst, ohne Erfassung. Die einzige Zahl '
+          'hier, die nicht den Nutzer misst, sondern die App — G4.',
+      highIsTense: true,
+    ),
+    NumericVariable(
       id: 'capacity',
       label: 'Kapazität',
       meaning: 'Wie viel exekutive Reserve heute da ist. Hoch heißt: es geht '

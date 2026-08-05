@@ -27,20 +27,91 @@ import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../i18n/i18n.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
+import '../state/runtime.dart';
 import '../state/rule_draft.dart';
 
+/// Öffnet den Regeleditor — es sei denn, das Tagesbudget ist aufgebraucht.
+///
+/// **Warum hier gesperrt wird.** G4 ist laut CLAUDE.md das wichtigste Gesetz
+/// dieses Projekts: AXIOM rationiert seine eigene Konfiguration. Das größte
+/// Risiko ist nicht, dass die App zu wenig kann, sondern dass ihr Ausbau zur
+/// Prokrastination wird (R1). Der Regeleditor ist die Stelle, an der das am
+/// leichtesten passiert — er ist interessanter als jede Aufgabe, für die er
+/// gebaut wurde.
+///
+/// Die Sperre stand bisher nur in der Roadmap. `isConfigLocked()` gab es,
+/// aufgerufen hat sie niemand.
+///
+/// **Was nicht gesperrt wird.** Erfassen, Arbeiten, Nachsehen, Exportieren —
+/// und das Abschalten einer Regel. Eine falsch feuernde Regel bis morgen
+/// laufen zu lassen wäre Schadensbegrenzung durch Nichtstun; abschalten ist
+/// keine Meta-Arbeit, sondern das Gegenteil.
 Future<void> showRuleEditor(
   BuildContext context, {
   Rule? existing,
   bool overridesShipped = false,
-}) =>
-    Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (_) => RuleEditorScreen(
-        existing: existing,
-        overridesShipped: overridesShipped,
+}) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final runtime = await container.read(runtimeProvider.future);
+  if (await runtime.isConfigLocked()) {
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (_) => const _BudgetReached(),
+    );
+    return;
+  }
+  if (!context.mounted) return;
+  await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder: (_) => RuleEditorScreen(
+      existing: existing,
+      overridesShipped: overridesShipped,
+    ),
+  ));
+}
+
+/// Der Deckel greift. Sachlich, mit Regel-ID, ohne Vorwurf.
+class _BudgetReached extends StatelessWidget {
+  const _BudgetReached();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    // Scrollbar, wie jedes Blatt: Bei grosser Schrift passt der Text sonst
+    // nicht, und dann faehrt ausgerechnet die Begruendung unten hinaus.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(Space.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RuleStamp(ruleId: 'R-010', color: p.info),
+          const SizedBox(height: Space.lg),
+          Text(context.t('Regelwerk heute zu'),
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: Space.md),
+          Text(
+            context.t('{0} Minuten im System sind heute verbraucht. Regeln zu schreiben ist ab jetzt bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen — und eine Regel abschalten geht weiterhin.', [kMetaBudget.inMinutes]),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            context.t('Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.xl),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.t('Verstanden')),
+          ),
+        ],
       ),
-    ));
+    );
+  }
+}
 
 class RuleEditorScreen extends ConsumerStatefulWidget {
   final Rule? existing;
@@ -56,7 +127,10 @@ class RuleEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<RuleEditorScreen> createState() => _RuleEditorScreenState();
 }
 
-class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
+class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTimed<RuleEditorScreen> {
+  @override
+  String get metaScreen => 'rules';
+
   late final _title = TextEditingController(text: widget.existing?.title ?? '');
   late final _rationale =
       TextEditingController(text: widget.existing?.rationale.trim() ?? '');

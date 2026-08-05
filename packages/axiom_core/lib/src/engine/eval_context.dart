@@ -16,10 +16,20 @@ final class RuntimeContext {
   /// Anzahl Events je Typ seit lokalem Tagesbeginn.
   final Map<String, int> countTodayByEvent;
 
+  /// Heute in AXIOM verbrachte Minuten, ohne Erfassung.
+  ///
+  /// Gehört hierher und nicht in den Zustandsvektor: Das ist kein
+  /// abgeleiteter Zustand des Nutzers, sondern eine Beobachtung über die
+  /// App selbst. G4 braucht sie trotzdem als Bedingung — ohne sie kann
+  /// keine Regel formulieren, dass das Budget aufgebraucht ist, und die
+  /// Selbstbegrenzung bliebe eine Absichtserklärung.
+  final int metaMinutesToday;
+
   const RuntimeContext({
     this.activeSlot = 'none',
     this.minutesSinceByEvent = const {},
     this.countTodayByEvent = const {},
+    this.metaMinutesToday = 0,
   });
 }
 
@@ -35,7 +45,9 @@ final class StateEvalContext implements EvalContext {
   });
 
   @override
-  num? numeric(String variable) => state.numeric(variable);
+  num? numeric(String variable) => variable == 'meta_minutes_today'
+      ? runtime.metaMinutesToday
+      : state.numeric(variable);
 
   @override
   String? symbolic(String variable) => switch (variable) {

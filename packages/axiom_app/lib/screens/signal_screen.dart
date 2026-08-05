@@ -22,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
@@ -36,7 +37,9 @@ class SignalScreen extends ConsumerWidget {
     final delta = ref.watch(hindsightProvider).value;
     final p = context.axiom;
 
-    return Scaffold(
+    return MetaTimedScope(
+      screen: 'signal',
+      child: Scaffold(
       appBar: AppBar(title: Text(context.t('Vorfälle'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -97,6 +100,7 @@ class SignalScreen extends ConsumerWidget {
         icon: const Icon(Icons.bolt),
         label: Text(context.t('Vorfall')),
       ),
+    ),
     );
   }
 }

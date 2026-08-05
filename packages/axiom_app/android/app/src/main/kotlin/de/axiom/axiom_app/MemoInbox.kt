@@ -20,19 +20,53 @@ object MemoInbox {
     private const val PREFS = "axiom_memos"
     private const val KEY = "pending"
 
+    @Synchronized
     fun add(context: Context, text: String) {
         if (text.isBlank()) return
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val array = JSONArray(prefs.getString(KEY, "[]"))
         array.put(text)
-        prefs.edit().putString(KEY, array.toString()).apply()
+        // `commit`, nicht `apply`: Der Schreiber ist oft ein Receiver oder
+        // eine Kachel, deren Prozess unmittelbar danach beendet werden darf.
+        // `apply` schreibt im Hintergrund — und was dann noch im Puffer
+        // liegt, ist weg.
+        prefs.edit().putString(KEY, array.toString()).commit()
     }
 
-    /** Gibt alle wartenden Notizen zurück und leert die Ablage. */
-    fun drain(context: Context): List<String> {
+    /**
+     * Gibt die wartenden Notizen zurück — **ohne** sie zu löschen.
+     *
+     * Vorher gab es hier ein `drain`, das in einem Zug las und leerte. Das
+     * ist genau ein Schritt zu früh: Die Dart-Seite speichert erst danach,
+     * und schlägt das fehl — Zeitüberschreitung des Kanals, Prozessende,
+     * geschlossene Datenbank —, ist der Gedanke weg. Ohne Meldung, denn
+     * `pullPendingMemos` gibt bei jedem Fehler eine leere Liste zurück.
+     *
+     * Zwischen Einfall und Notiz liegen wenige Sekunden, und was in dieser
+     * Zeit nicht sicher liegt, ist verloren [D9]. Deshalb erst bestätigen,
+     * dann löschen.
+     */
+    @Synchronized
+    fun peek(context: Context): List<String> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val array = JSONArray(prefs.getString(KEY, "[]"))
-        prefs.edit().remove(KEY).apply()
         return (0 until array.length()).map { array.getString(it) }
+    }
+
+    /**
+     * Entfernt die ersten [count] Notizen — die, die bestätigt wurden.
+     *
+     * Nicht alles: Zwischen `peek` und `ack` kann eine neue Notiz
+     * dazugekommen sein, und die wurde nie gespeichert.
+     */
+    @Synchronized
+    fun ack(context: Context, count: Int): Int {
+        if (count <= 0) return 0
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val array = JSONArray(prefs.getString(KEY, "[]"))
+        val rest = JSONArray()
+        for (i in count until array.length()) rest.put(array.getString(i))
+        prefs.edit().putString(KEY, rest.toString()).commit()
+        return minOf(count, array.length())
     }
 }

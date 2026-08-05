@@ -15,6 +15,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../i18n/i18n.dart';
 import '../server/expert_server.dart';
+import '../state/meta_time.dart';
 import '../state/providers.dart';
 
 class ExpertScreen extends ConsumerStatefulWidget {
@@ -25,7 +26,10 @@ class ExpertScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpertScreenState extends ConsumerState<ExpertScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, MetaTimed<ExpertScreen> {
+  @override
+  String get metaScreen => 'expert';
+
   bool _busy = false;
 
   @override

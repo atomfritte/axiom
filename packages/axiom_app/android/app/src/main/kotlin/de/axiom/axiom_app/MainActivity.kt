@@ -200,7 +200,13 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
 
-                    "pullPendingMemos" -> result.success(MemoInbox.drain(this))
+                    // Zwei Schritte statt einem: lesen, speichern lassen,
+                    // dann erst loeschen. Siehe MemoInbox.peek.
+                    "peekPendingMemos" -> result.success(MemoInbox.peek(this))
+
+                    "ackPendingMemos" -> result.success(
+                        MemoInbox.ack(this, call.argument<Int>("count") ?: 0)
+                    )
 
                     // Dauerhafte Anzeige im Benachrichtigungsbereich.
                     "presenceStart" -> result.success(
