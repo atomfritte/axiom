@@ -5,35 +5,61 @@
 /// Kapazitaet am teuersten ist (G1). Die vollstaendige Liste bleibt
 /// erreichbar, ist aber nie der Standardweg.
 ///
-/// **Was die Reichweitenkante hier geaendert hat.** Vorher standen auf diesem
+/// **Was die Hoehe hier geaendert hat.** Vorher standen auf diesem
 /// Schirm bis zu zwoelf Karten untereinander, fast jede mit farbigem Rahmen:
 /// die Handlung, die Streifen, die Hinweise, die Kapazitaetsleiste, der
 /// Zustand. Zehn gerahmte Kaesten sind ein Gitter, und ein Gitter hat keine
 /// Ordnung — alles ist gleich weit weg, und jede Flaeche sieht aus wie ein
 /// Angebot. Formal stand dort eine Handlung; gelesen wurde eine Auswahl.
 ///
-/// Jetzt teilt die Kante den Schirm in zwei Zonen:
+/// Jetzt unterscheiden sich zwei Ebenen in ihrer Hoehe:
 ///
-///  * **Darueber** liegt, was heute in die Hand geht: Kopfzeile, die wenigen
-///    Streifen, die den Vorschlag mitbestimmen — und **genau eine erhobene
-///    Karte**, die Handlung. Sie ist die einzige Flaeche des Schirms mit
-///    Griffhoehe ([Shadows.reachable]).
-///  * **Darunter** beginnt die Mulde: alles, was da ist und heute nicht die
+///  * **Erhoben** liegt genau eine Karte: die Handlung. Sie ist die einzige
+///    Flaeche des Schirms mit Griffhoehe ([Shadows.reachable]); ueber ihr
+///    stehen nur die Kopfzeile und die wenigen Streifen, die den Vorschlag
+///    mitbestimmen — flach auf dem Grund.
+///  * **Eingelassen** liegt die Mulde: alles, was da ist und heute nicht die
 ///    Handlung ist — Bestand, Eingang, Anker, Rueckblick, Vorfaelle,
 ///    Werkzeuge, Koerper. Ohne Karten, ohne Ausgrauen, in vollem
 ///    Textkontrast, und **in immer derselben Reihenfolge**. Was hier liegt,
 ///    ist nicht weniger wert, es ist weiter weg.
 ///
-/// **Kein Messwert steht auf diesem Schirm zweimal.** Zuerst fiel die
-/// Kapazitaetsleiste weg — sie zeigte dieselbe Zahl wie die Kante, nur ein
-/// zweites Mal und mit eigener Skala. Uebrig blieben drei `InstrumentBar`
-/// unten in der Mulde: Kapazitaet, Kompensationslast, Reizbedarf, jede mit
-/// aufklappbarer Herleitung — dieselben drei, die einen Reiter weiter auf
-/// „Zustand" stehen. „Reichweite heute 61" und „Kapazitaet 61" standen drei
-/// Zentimeter auseinander. Auch die sind weg. Ein Messwert hat einen Ort;
-/// zwei Anzeigen desselben Werts lesen sich als zwei Aussagen (R7), und auf
-/// diesem Schirm ist jede davon ein zweites Angebot neben der einen
-/// Handlung (G1).
+/// **Warum hier keine Reichweitenkante mehr steht.** Sie stand zwischen
+/// Handlung und Mulde und behauptete damit, was darunter liegt, liege heute
+/// ausserhalb der Reichweite. Darunter lag aber das Menue — und dessen erste
+/// Zeile meldet „3 startbar · 2 heute ausserhalb der Reichweite". Etwas, das
+/// ausdruecklich *startbar* heisst, stand damit unter dem Horizont der
+/// Erreichbarkeit. Zwei Fingertipps weiter, auf der Aufgabenliste, trennt
+/// dieselbe Kante korrekt „In Reichweite · 2" von „Nicht in Reichweite · 1".
+/// Eine Form, die zwei Bildschirme weiter das Gegenteil sagt, ist kein
+/// Zeichen mehr, sondern ein Kasten.
+///
+/// Die beiden Bedeutungen sind jetzt getrennt:
+///
+///  * Die **Mulde** heisst ueberall dasselbe — *eingelassen: da, aber nicht
+///    die Handlung*. Das gilt hier fuer das Menue und auf der Aufgabenliste
+///    fuer Wartendes, Anderswo-Liegendes, Zerlegtes und Erledigtes
+///    gleichermassen; „nicht in Reichweite" ist dort einer von fuenf
+///    Abschnitten, nicht die Bedeutung der Flaeche.
+///  * Die **Kante** steht nur dort, wo unmittelbar unter ihr **nach der
+///    Kapazitaet sortiert** wird. Das ist genau ein Ort: die Aufgabenliste.
+///    Dort misst sie, hier haette sie nur dekoriert.
+///
+/// Abgesetzt wird das Menue deshalb von der Mulde selbst: Lichtlippe aussen,
+/// Schattenlippe innen, der Boden faellt sichtbar ab — ohne dass eine
+/// Beschriftung etwas ueber Reichweite behauptet, das fuer ein Menue nicht
+/// stimmt.
+///
+/// **Kein Messwert steht auf diesem Schirm zweimal — und die Kapazitaet
+/// keinmal.** Zuerst fiel die Kapazitaetsleiste weg; dann die drei
+/// `InstrumentBar` unten in der Mulde (Kapazitaet, Kompensationslast,
+/// Reizbedarf), die dieselben drei waren, die einen Reiter weiter auf
+/// „Zustand" stehen; zuletzt mit der Kante die Zeile „Reichweite heute 61".
+/// Ein Messwert hat einen Ort, und der Ort ist „Zustand"; zwei Anzeigen
+/// desselben Werts lesen sich als zwei Aussagen (R7), und auf diesem Schirm
+/// ist jede davon ein zweites Angebot neben der einen Handlung (G1). Was die
+/// Reichweite fuer den Bestand bedeutet, sagt die Zeile „Aufgaben" in Worten
+/// — an der Stelle, an der man etwas damit anfangen kann.
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -143,36 +169,87 @@ class NowScreen extends ConsumerWidget {
                       ],
                       const SizedBox(height: Space.xl),
                       _PrimaryAction(snapshot: snap),
+                      // Der Abstand, den vorher die Reichweitenkante
+                      // mitbrachte. Die Mulde beginnt danach mit ihrer
+                      // eigenen Lichtlippe — das ist die Absetzung, und sie
+                      // behauptet nichts über Reichweite (siehe Kopf).
+                      const SizedBox(height: Space.xl),
                     ],
                   ),
                 ),
-                // Der Horizont. Seine Zahl ist die Kapazität — sinkt sie,
-                // sinkt mehr vom Tag unter die Kante, ganz ohne einen Satz
-                // darüber (G1, R7).
-                ReachEdge(capacity: snap.state.capacity),
                 _Below(snapshot: snap, inboxCount: inbox.length),
               ],
             ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: const _CaptureButton(),
+    );
+  }
+}
+
+/// Der Erfassungsknopf — das Einzige auf diesem Schirm, das ueber allem liegt.
+///
+/// **Er lag vorher auf dem Text, nicht darueber.** Hier stand
+/// `FloatingActionButton.extended` mit `elevation: 0`, begruendet damit, die
+/// Griffhoehe gehoere der einen Handlung (G1). Das Ergebnis war ein flacher
+/// Streifen, der die Zeile darunter mitten im Wort abschnitt: In sechs von
+/// 39 Referenzbildern stand „Vertiefung mit Zeitdeckel und Ausstiegsanker"
+/// halb unter dem Knopf. Etwas, das aussieht wie ein Zeichenfehler, ist die
+/// erste Bemerkung, die ein Fremder macht — vor jeder Gestaltungsfrage.
+///
+/// **Warum die Erhebung nicht von Material kommt.** Dessen Stufe 6 zeichnet
+/// mit `colorScheme.shadow`, und das ist reines Schwarz: im Hellen ein
+/// harter Ring um den Knopf, im Dunkeln unsichtbar. Der Schatten kommt
+/// deshalb aus der Palette ([Shadows.reachable]) — derselbe, den die
+/// Handlungskarte traegt.
+///
+/// **Zwei erhobene Flaechen widersprechen G1 nicht.** Die Karte ist erhoben,
+/// *weil* sie die Handlung ist. Der Knopf ist es, weil er physisch ueber dem
+/// Text liegt, und was ueber etwas liegt, muss das zeigen. Die Traeger
+/// bleiben unterscheidbar: Die Karte ist eine Flaeche mit Titel und Knoepfen,
+/// der Erfassungsknopf eine Pille am Rand, die auf jedem Stand desselben
+/// Schirms an derselben Stelle steht.
+class _CaptureButton extends StatelessWidget {
+  const _CaptureButton();
+
+  /// Der Radius, den Material 3 dem erweiterten Knopf gibt. Der Schatten
+  /// muss ihn kennen, sonst steht ein Rechteck hinter einer runden Form.
+  static const _shape = BorderRadius.all(Radius.circular(16));
+
+  /// Der Freiraum, den der Knopf um sich herum freihaelt.
+  ///
+  /// **Ein Schatten allein reicht im Dunkeln nicht.** Er ist dort schwarz auf
+  /// fast schwarzem Grund und damit unsichtbar — nachgesehen im Referenzbild,
+  /// nicht geschaetzt. Uebrig blieb genau der Eindruck, der behoben werden
+  /// sollte: „…Zeitdeckel und Au" endet hart an einer orangen Kante.
+  ///
+  /// Der Knopf traegt deshalb einen schmalen Rand in der Farbe des Grundes.
+  /// Der Text laeuft darunter aus, statt die Kante zu beruehren — im Dunkeln
+  /// wie im Hellen, ohne dass die Flaeche als Kasten auffaellt.
+  static const _clearance = Space.xs + 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Container(
+      padding: const EdgeInsets.all(_clearance),
+      decoration: BoxDecoration(
+        color: p.base,
+        borderRadius:
+            BorderRadius.circular(_shape.topLeft.x + _clearance),
+        boxShadow: Shadows.reachable(p),
+      ),
+      child: FloatingActionButton.extended(
         onPressed: () => showCaptureSheet(context),
-        backgroundColor: context.axiom.signal,
+        backgroundColor: p.signal,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        // Material gibt einem FAB Stufe 6 mit reinschwarzem Schatten (der
-        // Schattenton kommt aus `ThemeData.shadowColor`, nicht aus der
-        // Palette, und laesst sich am Knopf nicht setzen). Auf dem warmen
-        // Grund dieser Palette las sich das als harter schwarzer Ring um den
-        // Knopf, nicht als Hoehe.
-        //
-        // Ohne Erhebung: Die Griffhoehe dieses Schirms gehoert der einen
-        // Handlung (G1). Der Erfassungsknopf ist immer da, hebt sich durch
-        // seine Farbe deutlich genug ab und muss nicht zusaetzlich schweben.
+        // Die Erhebung malt der Rahmen darum, nicht Material.
         elevation: 0,
         focusElevation: 0,
         hoverElevation: 0,
         highlightElevation: 0,
+        shape: const RoundedRectangleBorder(borderRadius: _shape),
         icon: const Icon(Icons.add),
         label: Text(context.t('Erfassen')),
       ),
@@ -233,7 +310,12 @@ class _Header extends ConsumerWidget {
         // Der Hinweis bleibt, bis geeicht ist — er verschwindet nicht
         // ausgerechnet dann, wenn er relevant wird.
         if (baseline != null &&
-            baseline.status == BaselineStatus.collecting)
+            baseline.status == BaselineStatus.collecting) ...[
+          // Bei 1,6-facher Schrift stiessen „Montag 3. August" und die
+          // Plakette aneinander — zwei Angaben ohne Fuge lesen sich als
+          // eine. Der Abstand steht hier und nicht in der Plakette, damit
+          // er verschwindet, sobald sie es tut.
+          const SizedBox(width: Space.md),
           // Flexible mit Ellipse: Bei grosser Schrift ist die Marke breiter
           // als der Platz, den die Begruessung uebrig laesst.
           Flexible(
@@ -255,6 +337,7 @@ class _Header extends ConsumerWidget {
                       size: 12.5, weight: FontWeight.w600, color: p.info)),
             ),
           ),
+        ],
       ],
     );
   }
@@ -600,11 +683,18 @@ class _TaskCard extends ConsumerWidget {
     );
   }
 
+  /// Frist in Worten.
+  ///
+  /// Hier stand „ÜBERFÄLLIG / IN 3 H / IN 3 T" in Versalien. Zehn
+  /// Grossbuchstaben neben der Plakette „Start 2/10" lesen sich als zwei
+  /// Stimmen auf derselben Zeile, und die Wortform faellt dabei weg — man
+  /// liest Buchstabe fuer Buchstabe. „In 3 T" war ausserdem eine Abkuerzung,
+  /// die niemand braucht: Die Plakette hat Platz fuer das Wort.
   static String _until(BuildContext context, DateTime when, DateTime now) {
     final diff = when.difference(now);
-    if (diff.isNegative) return context.t('ÜBERFÄLLIG');
-    if (diff.inHours < 24) return context.t('IN {0} H', [diff.inHours]);
-    return context.t('IN {0} T', [diff.inDays]);
+    if (diff.isNegative) return context.t('Überfällig');
+    if (diff.inHours < 24) return context.t('In {0} h', [diff.inHours]);
+    return context.t('In {0} Tagen', [diff.inDays]);
   }
 }
 
@@ -633,7 +723,10 @@ class _AtomizeCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _ActionLabel(context.t('ZU GROSS FÜR HEUTE'),
+                // War Versalien. Achtzehn Grossbuchstaben ueber der
+                // groessten Zeile des Schirms — und die Marke steht hier
+                // dort, wo sonst „Jetzt" steht.
+                child: _ActionLabel(context.t('Zu groß für heute'),
                     color: p.info),
               ),
               if (rule != null) RuleStamp(ruleId: rule!.id, color: p.info),
@@ -697,8 +790,11 @@ class _EmptyState extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ActionLabel(
+            // War Versalien — als einzige der drei Marken hier. „Nichts in
+            // Reichweite" und „Nichts anliegend" standen schon in normaler
+            // Schreibweise daneben.
             waiting
-                ? context.t('ALLES WARTET')
+                ? context.t('Alles wartet')
                 : blocked
                     ? context.t('Nichts in Reichweite')
                     : context.t('Nichts anliegend'),
@@ -902,8 +998,13 @@ class _Below extends ConsumerWidget {
       // Vollflaechig: Die Mulde ist der Boden des Schirms, nicht ein
       // weiterer Kasten darauf.
       radius: BorderRadius.zero,
+      // Unten so viel Luft, dass die letzte Zeile neben dem
+      // Erfassungsknopf frei bleibt und nicht darunter verschwindet. Er ist
+      // 56 px hoch, sitzt 16 px über dem Rand und hält 6 px Freiraum —
+      // zusammen 78. Der Rest ist Reserve für angehobene Schrift: Der Knopf
+      // wächst mit, die Zahl hier nicht.
       padding: const EdgeInsets.fromLTRB(
-          Space.lg, Space.lg, Space.lg, Space.huge * 2),
+          Space.lg, Space.lg, Space.lg, Space.huge * 2 + Space.xxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

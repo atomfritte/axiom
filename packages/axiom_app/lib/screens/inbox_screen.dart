@@ -87,8 +87,11 @@ class _EmptyInbox extends StatelessWidget {
   const _EmptyInbox();
 
   @override
+  // War Versalien. Der leere Eingang ist der Schirm, auf dem jemand zum
+  // ersten Mal liest, wofuer es ihn gibt — und gesperrte Versalien sind
+  // genau dort am teuersten.
   Widget build(BuildContext context) => EmptyState(
-        label: context.t('EINGANG LEER'),
+        label: context.t('Eingang leer'),
         headline: context.t('Nichts zu sortieren.'),
         body: context.t('Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.'),
       );
@@ -132,8 +135,10 @@ class _NoteCard extends StatelessWidget {
             color: p.panel,
             borderRadius: BorderRadius.circular(Radii.panel),
           ),
+          // Ein Wort, das jemand liest — keine Roh-Ausgabe. Es lief in
+          // Schreibmaschine, weil das hier einmal fuer alles galt.
           child: Text(context.t('Verwerfen'),
-              style: monoStyle(context, size: 12, color: p.inkDim)),
+              style: Theme.of(context).textTheme.bodySmall),
         ),
         child: Panel(
           onTap: onTriage,
@@ -164,12 +169,19 @@ class _NoteCard extends StatelessWidget {
                       spacing: Space.sm,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
+                        // Ein Zeitstempel ist ein Messwert, kein Text zum
+                        // Abtippen. In Schreibmaschine war „3.8. 10:30"
+                        // dreimal der auffaelligste Ton auf dem Schirm —
+                        // lauter als jede Notiz, um die es hier geht.
+                        // Tabellenziffern halten die Spalte genauso.
                         Text(
                           '${at.day}.${at.month}. '
                           '${at.hour.toString().padLeft(2, "0")}:'
                           '${at.minute.toString().padLeft(2, "0")}',
-                          style:
-                              monoStyle(context, size: 11, color: p.inkFaint),
+                          style: readingStyle(context,
+                              size: 12.5,
+                              weight: FontWeight.w400,
+                              color: p.inkFaint),
                         ),
                         // Das Alter, sobald es eines ist.
                         //
@@ -181,19 +193,38 @@ class _NoteCard extends StatelessWidget {
                         if (ageDays != null)
                           Text(
                             context.t('seit {0} Tagen', [ageDays]),
-                            style: monoStyle(context,
-                                size: 11, color: p.caution),
+                            style: readingStyle(context,
+                                size: 12.5,
+                                weight: FontWeight.w400,
+                                color: p.caution),
                           ),
                       ],
                     ),
+                    // Derselbe Weg wie „Zerlegen ›" auf der Aufgabenliste,
+                    // und deshalb dieselbe Form: Wort und Pfeil, kein
+                    // Rahmen, Fliesstextgrad. Vorher neun gesperrte
+                    // Versalien in 10,5 px Schreibmaschine — der lauteste
+                    // Ton auf dem Schirm fuer den leisesten Weg.
+                    //
+                    // `Flexible` mit Ellipse: Der Pfeil ist 16 px breit und
+                    // waechst nicht mit der Schrift, das Wort schon. Bei
+                    // 360 px und 2,4-fach lief die Zeile deshalb 9,8 px nach
+                    // rechts hinaus (`robustness_test.dart`, Eintrag
+                    // „inbox_screen.dart:189").
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(context.t('SORTIEREN'),
-                            style: monoStyle(context,
-                                size: 10.5,
-                                weight: FontWeight.w600,
-                                color: p.signal)),
+                        Flexible(
+                          child: Text(context.t('Sortieren'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                      color: p.signal,
+                                      fontWeight: FontWeight.w600)),
+                        ),
                         Icon(Icons.chevron_right, size: 16, color: p.signal),
                       ],
                     ),
@@ -224,17 +255,15 @@ class _TaskRow extends ConsumerWidget {
       child: Panel(
         padding: const EdgeInsets.symmetric(
             horizontal: Space.lg, vertical: Space.md),
+        // Hier stand links ein 3-px-Streifen, gruen bei erreichbar und grau
+        // sonst. Zwei Dinge stimmten daran nicht: Er faerbte einen Messwert
+        // (Startenergie gegen Kapazitaet) gruen — und gruen heisst „gut",
+        // also eine Note (R7). Und dieselbe Bauform ist auf der
+        // Aufgabenliste schon einmal weggefallen, weil ein Streifen an jeder
+        // Zeile ein Gitter durch die Liste zieht. Was der Streifen sagen
+        // sollte, sagt die Zeile darunter in Worten.
         child: Row(
           children: [
-            Container(
-              width: 3,
-              height: 32,
-              decoration: BoxDecoration(
-                color: reachable ? p.calm : p.rule,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: Space.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,13 +271,21 @@ class _TaskRow extends ConsumerWidget {
                   Text(task.title,
                       style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 2),
+                  // Stand als roher Dart-String da und lief damit an der
+                  // Uebersetzung vorbei: In der englischen Oberflaeche
+                  // erschien „Start 3/10 · heute zu hoch" auf Deutsch, und
+                  // kein Test haette es gemeldet — `i18n_test` sieht nur
+                  // `context.t(…)`. „Heute zu hoch" ist ausserdem eine
+                  // Wertung; gemessen wird gegen die heutige Kapazitaet.
                   Text(
                     reachable
-                        ? 'Start ${task.activationEnergy}/10 · in Reichweite'
-                        : 'Start ${task.activationEnergy}/10 · heute zu hoch',
-                    style: monoStyle(context,
-                        size: 10.5,
-                        color: reachable ? p.calm : p.inkFaint),
+                        ? context.t('Start {0}/10 · in Reichweite',
+                            [task.activationEnergy])
+                        : context.t(
+                            'Start {0}/10 · über der heutigen Kapazität',
+                            [task.activationEnergy]),
+                    style: readingStyle(context,
+                        size: 12.5, weight: FontWeight.w400, color: p.inkDim),
                   ),
                 ],
               ),
@@ -340,7 +377,10 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('SORTIEREN'), style: Theme.of(context).textTheme.labelSmall),
+            // War Versalien — und `labelSmall` ist die Abschnittsmarke, die
+            // seit dem Umbau ohnehin in normaler Schreibweise steht.
+            Text(context.t('Sortieren'),
+                style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _title,
@@ -353,7 +393,11 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
               label: context.t('Wie schwer fällt der Start?'),
               hint: context.t('Nicht wie lang es dauert. Nur der Anfang.'),
               value: _ae,
-              low: 'sofort',
+              // Drei Skalenenden standen als rohe Zeichenketten da und
+              // liefen damit an der Uebersetzung vorbei — in der englischen
+              // Oberflaeche stand „sofort … high barrier". `i18n_test` sieht
+              // nur `context.t(…)` und konnte es nicht melden.
+              low: context.t('sofort'),
               high: context.t('große Hürde'),
               onChanged: (v) => setState(() => _ae = v),
             ),
@@ -362,8 +406,8 @@ class _TriageSheetState extends ConsumerState<_TriageSheet> {
               label: context.t('Was kostet es, wenn es liegenbleibt?'),
               hint: context.t('Folgen, nicht Wichtigkeit.'),
               value: _stakes,
-              low: 'nichts',
-              high: 'viel',
+              low: context.t('nichts'),
+              high: context.t('viel'),
               onChanged: (v) => setState(() => _stakes = v),
             ),
             const SizedBox(height: Space.xl),
@@ -441,12 +485,15 @@ class _Dial extends StatelessWidget {
                         color: value == i ? p.signal : p.rule,
                       ),
                     ),
+                    // Die gewaehlte Stufe — ein Messwert, und der laeuft in
+                    // der Hausschrift mit Tabellenziffern. In
+                    // Schreibmaschine und 11 px stand sie unter der Grenze,
+                    // ab der eine Ziffer gelesen statt erkannt wird.
                     child: value == i
                         ? Center(
                             child: Text('$i',
-                                style: monoStyle(context,
-                                    size: 11,
-                                    weight: FontWeight.w600,
+                                style: readingStyle(context,
+                                    size: 12.5,
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onPrimary)),
@@ -471,14 +518,20 @@ class _Dial extends StatelessWidget {
 /// auf dem Blatt, und die häufigen Fälle sind ohnehin „heute", „morgen"
 /// und „diese Woche". Wer ein echtes Datum braucht, bekommt es hinter dem
 /// letzten Griff.
-class _Deadline extends StatelessWidget {
+///
+/// **Die Uhr kommt aus dem Zyklus, nicht aus `DateTime.now()`.** Hier stand
+/// sie zweimal frei im Widget. Damit rechnete das Blatt an der Engine
+/// vorbei: Im Test steht die Uhr auf einem festen Wert, und „heute" wäre
+/// dort ein anderer Tag gewesen als in jeder Regel, die denselben Tag
+/// bewertet. Dieselbe Begründung wie an `_NoteCard.now`.
+class _Deadline extends ConsumerWidget {
   final DateTime? value;
   final ValueChanged<DateTime?> onChanged;
   const _Deadline({required this.value, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(nowProvider);
     final today = DateTime(now.year, now.month, now.day, 23, 59);
     final options = <(String, DateTime?)>[
       (context.t('offen'), null),
@@ -508,7 +561,7 @@ class _Deadline extends StatelessWidget {
                 onSelected: (_) => onChanged(at),
               ),
             ActionChip(
-              label: Text(_custom(context)),
+              label: Text(_custom(context, now)),
               onPressed: () async {
                 final picked = await showDatePicker(
                   context: context,
@@ -529,10 +582,9 @@ class _Deadline extends StatelessWidget {
   }
 
   /// Zeigt das gewählte Datum, sobald es keiner der Voreinstellungen ist.
-  String _custom(BuildContext context) {
+  String _custom(BuildContext context, DateTime now) {
     final v = value;
     if (v == null) return context.t('Datum …');
-    final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day, 23, 59);
     for (final preset in [
       today,

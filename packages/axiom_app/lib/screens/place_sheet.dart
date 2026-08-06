@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme.dart';
 import '../design/tokens.dart';
+import '../design/widgets/instruments.dart';
 import '../i18n/i18n.dart';
 import '../state/providers.dart';
 
@@ -28,13 +29,12 @@ Future<void> showPlaceSheet(
   BuildContext context, {
   required String? current,
   required List<String> known,
-}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _PlaceSheet(current: current, known: known),
-    );
+}) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  builder: (_) => _PlaceSheet(current: current, known: known),
+);
 
 class _PlaceSheet extends ConsumerStatefulWidget {
   final String? current;
@@ -78,15 +78,21 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('Ort'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.sm),
             Text(
-              context.t('Der Ort entscheidet, was hier vorgeschlagen wird. Ohne Ort steht alles zur Auswahl — es wird nichts ausgeblendet, was du nicht selbst eingeschaltet hast.'),
-              style: Theme.of(context).textTheme.bodySmall,
+              context.t('Ort'),
+              style: Theme.of(context).textTheme.labelSmall,
             ),
-            const SizedBox(height: Space.lg),
+            const SizedBox(height: Space.md),
 
+            // **Die Auswahl steht oben, die Begruendung darunter.**
+            //
+            // Hier stand der Erklaerabsatz vor der ersten Zeile. Bei 360 px
+            // und 2,4-facher Schrift sind das zehn Zeilen — der ganze
+            // Bildschirm, bevor ueberhaupt etwas Waehlbares kommt. Das Blatt
+            // hat aber ein Versprechen: ein Tipp hierher, ein Tipp auf den
+            // Eintrag (G1). Nichts ist versteckt, nur spaeter: „Kein Ort"
+            // und „Büro" erklaeren sich selbst; *warum* der Ort etwas
+            // aendert, liest man einmal — und dann nie wieder.
             _Choice(
               label: context.t('Kein Ort'),
               selected: widget.current == null,
@@ -95,14 +101,17 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
             for (final place in widget.known)
               _Choice(
                 label: place,
-                selected: widget.current != null &&
+                selected:
+                    widget.current != null &&
                     place.toLowerCase() == widget.current!.toLowerCase(),
                 onTap: () => _pick(place),
               ),
 
             const SizedBox(height: Space.lg),
-            Text(context.t('Anderer Ort'),
-                style: Theme.of(context).textTheme.labelSmall),
+            Text(
+              context.t('Anderer Ort'),
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
             const SizedBox(height: Space.sm),
             TextField(
               controller: _entry,
@@ -111,26 +120,42 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
                 isDense: true,
                 hintText: context.t('Baumarkt, Büro, Zuhause …'),
               ),
+              // Damit der Knopf darunter mitbekommt, ob etwas dasteht.
+              onChanged: (_) => setState(() {}),
               onSubmitted: (value) =>
                   value.trim().isEmpty ? null : _pick(value.trim()),
             ),
             const SizedBox(height: Space.md),
+            // Der Knopf war immer bedienbar und tat bei leerem Feld nichts:
+            // Das `null` stand *im* Rueckruf statt an seiner Stelle. Ein
+            // Knopf, der auf einen Tipp nicht reagiert, liest sich als
+            // kaputte App — jetzt ist er sichtbar aus, bis etwas dasteht.
             FilledButton(
-              onPressed: () =>
-                  _entry.text.trim().isEmpty ? null : _pick(_entry.text.trim()),
+              onPressed: _entry.text.trim().isEmpty
+                  ? null
+                  : () => _pick(_entry.text.trim()),
               child: Text(context.t('Setzen')),
             ),
-            const SizedBox(height: Space.lg),
+
+            const SizedBox(height: Space.xl),
+            Text(
+              context.t(
+                'Der Ort entscheidet, was hier vorgeschlagen wird. Ohne Ort steht alles zur Auswahl — es wird nichts ausgeblendet, was du nicht selbst eingeschaltet hast.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: Space.md),
             // War komplett in Schreibmaschine gesetzt, weil ein
             // Broadcast-Name darin vorkommt. Der Name ist ein Wort in einem
             // Satz — der Satz ist Fliesstext und wird gelesen, nicht
             // abgetippt. Wer ihn tatsaechlich abtippt, findet ihn auch so.
             Text(
-              context.t('Eine Geräteroutine kann das auch: Broadcast de.atomfritte.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.'),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: p.inkFaint),
+              context.t(
+                'Eine Geräteroutine kann das auch: Broadcast de.atomfritte.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.',
+              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: p.inkFaint),
             ),
           ],
         ),
@@ -176,20 +201,28 @@ class _Choice extends StatelessWidget {
               ),
             ),
             padding: const EdgeInsets.symmetric(
-                horizontal: Space.lg, vertical: Space.lg),
+              horizontal: Space.lg,
+              vertical: Space.lg,
+            ),
             child: Row(
               children: [
+                // Mitwachsend: Ein 20-px-Punkt neben 41-px-Schrift sieht aus
+                // wie ein Rest, und getroffen wird er auch schlechter.
+                // [scaledHeight] deckelt bei gut dem Doppelten, damit er bei
+                // 2,4-fach nicht zur Scheibe wird.
                 Icon(
                   selected
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
-                  size: 20,
+                  size: scaledHeight(context, 20),
                   color: selected ? p.signal : p.inkFaint,
                 ),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text(label,
-                      style: Theme.of(context).textTheme.bodyLarge),
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ),
               ],
             ),
@@ -213,10 +246,13 @@ ChipThemeData _chipLook(BuildContext context) {
     showCheckmark: false,
     side: BorderSide.none,
     labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.ink),
-    secondaryLabelStyle:
-        Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.signal),
+    secondaryLabelStyle: Theme.of(
+      context,
+    ).textTheme.bodyMedium!.copyWith(color: p.signal),
     padding: const EdgeInsets.symmetric(
-        horizontal: Space.md, vertical: Space.sm),
+      horizontal: Space.md,
+      vertical: Space.sm,
+    ),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(Radii.control),
     ),
@@ -255,11 +291,17 @@ class PlaceChips extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(context.t('Geht das nur an einem Ort?'),
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          context.t('Geht das nur an einem Ort?'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: Space.xs),
-        Text(context.t('Nur nötig, wenn die Aufgabe woanders nicht geht. Kein Standortzugriff — nur ein Name.'),
-            style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          context.t(
+            'Nur nötig, wenn die Aufgabe woanders nicht geht. Kein Standortzugriff — nur ein Name.',
+          ),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: Space.md),
         ChipTheme(
           data: _chipLook(context),
@@ -275,7 +317,8 @@ class PlaceChips extends StatelessWidget {
               for (final place in options)
                 ChoiceChip(
                   label: Text(place),
-                  selected: value != null &&
+                  selected:
+                      value != null &&
                       place.toLowerCase() == value!.toLowerCase(),
                   onSelected: (_) => onChanged(place),
                 ),
@@ -317,8 +360,7 @@ Future<String?> _askForPlace(BuildContext context) async {
           child: Text(context.t('Abbrechen')),
         ),
         TextButton(
-          onPressed: () =>
-              Navigator.of(context).pop(controller.text.trim()),
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
           child: Text(context.t('Übernehmen')),
         ),
       ],

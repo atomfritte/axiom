@@ -175,7 +175,14 @@ class _BreadcrumbCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('ZULETZT STEHENGEBLIEBEN'),
+          // Hier stand `ZULETZT STEHENGEBLIEBEN` — dreiundzwanzig
+          // Grossbuchstaben am Stueck. Die Marke gehoert zur Notiz, die man
+          // beim Wiedereinstieg zuerst sucht, und gesperrte Versalien sind
+          // genau dort am teuersten: Die Wortform faellt weg, man liest
+          // Buchstabe fuer Buchstabe. `labelSmall` traegt die Auszeichnung
+          // seit der Typografiereform selbst (13,5 px, w600, leicht
+          // gesperrt); der Text muss nicht mehr schreien.
+          Text(context.t('Zuletzt stehengeblieben'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(crumb, style: Theme.of(context).textTheme.bodyLarge),
@@ -316,7 +323,9 @@ class _RunningPane extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(session.hasAnchor ? context.t('LÄUFT AUF') : context.t('LÄUFT'),
+              // War `LÄUFT AUF` / `LÄUFT`. Dieselbe Umstellung wie ueberall:
+              // normale Schreibweise, die Auszeichnung kommt aus der Rolle.
+              Text(session.hasAnchor ? context.t('Läuft auf') : context.t('Läuft'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.md),
               Text(
@@ -438,14 +447,20 @@ class _VerdictCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    // Die vier Urteile standen in gesperrten Versalien: `GESCHÜTZT`,
+    // `HINWEIS`, `UNTERBRECHUNG`, `JETZT BEENDEN`. Ausgerechnet hier war das
+    // die falsche Lautstaerke — `JETZT BEENDEN` in Versalien liest sich als
+    // Anweisung, und das Urteil des Governors ist eine Ablesung mit
+    // Begruendung, kein Befehl (G3). Vier Zeilen, eine Regel: normale
+    // Schreibweise, Farbe bleibt.
     final (label, color) = switch (verdict.action) {
-      FocusAction.protect => (context.t('GESCHÜTZT'), p.calm),
+      FocusAction.protect => (context.t('Geschützt'), p.calm),
       // Zwei der vier Zweige liefen frueher nicht durch die Uebersetzung:
       // Im Tupel eines `switch` steht das Literal nicht hinter `Text(`, und
       // genau daran hat der Waechter sie vorbeigelassen.
-      FocusAction.gentleNudge => (context.t('HINWEIS'), p.info),
-      FocusAction.clearInterrupt => (context.t('UNTERBRECHUNG'), p.signal),
-      FocusAction.hardStop => (context.t('JETZT BEENDEN'), p.caution),
+      FocusAction.gentleNudge => (context.t('Hinweis'), p.info),
+      FocusAction.clearInterrupt => (context.t('Unterbrechung'), p.signal),
+      FocusAction.hardStop => (context.t('Jetzt beenden'), p.caution),
     };
 
     return Panel(
@@ -508,7 +523,9 @@ class _BreadcrumbSheetState extends State<_BreadcrumbSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.t('WIEDEREINSTIEG'),
+              // War `WIEDEREINSTIEG` — vierzehn Versalien ueber der Frage,
+              // die man nach einem Fokusblock mit leerem Kopf beantwortet.
+              Text(context.t('Wiedereinstieg'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.md),
               // Vorher stand hier `FocusGovernor.breadcrumbPrompt(...)`: ein

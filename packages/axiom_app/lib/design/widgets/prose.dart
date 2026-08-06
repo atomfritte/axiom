@@ -362,12 +362,29 @@ class ProseView extends StatefulWidget {
   /// Sprungmarken: Blockindex → Schlüssel, den der Aufrufer anspringen kann.
   final Map<int, GlobalKey> anchors;
 
+  /// Etwas, das **zwischen** zwei Blöcken erscheint — heute das
+  /// Inhaltsverzeichnis eines Kapitels.
+  ///
+  /// **Warum das hier hineingehört und nicht daneben.** Die Sprungmarken
+  /// standen vorher als eigenes Widget über der ganzen Ansicht, also über
+  /// dem Kapiteltitel: Man las das Inhaltsverzeichnis eines Kapitels, dessen
+  /// Namen man noch nicht kannte. Sie gehören hinter den Einstieg (Titel und
+  /// erster Absatz) und vor die erste Zwischenüberschrift. Dafür muss der
+  /// Einschub durch dieselbe Blockliste laufen — zwei `ProseView`
+  /// nebeneinander hätten zwei Bildbuchhaltungen und zwei Marken-Zuordnungen.
+  final Widget? interlude;
+
+  /// Vor welchem Block [interlude] steht. Ausserhalb des Bereichs: nirgends.
+  final int? interludeBefore;
+
   const ProseView({
     super.key,
     required this.blocks,
     this.onChapter,
     this.imageBase = 'assets/help/',
     this.anchors = const {},
+    this.interlude,
+    this.interludeBefore,
   });
 
   @override
@@ -472,11 +489,14 @@ class _ProseViewState extends State<ProseView> {
 
   @override
   Widget build(BuildContext context) {
+    final interlude = widget.interlude;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < widget.blocks.length; i++)
+        for (var i = 0; i < widget.blocks.length; i++) ...[
+          if (interlude != null && i == widget.interludeBefore) interlude,
           _keyed(i, _block(context, widget.blocks[i])),
+        ],
       ],
     );
   }
@@ -491,38 +511,68 @@ class _ProseViewState extends State<ProseView> {
     final text = Theme.of(context).textTheme;
 
     switch (block) {
+      // **Die drei Ebenen mussten auseinanderrücken.**
+      //
+      // Hier standen 22 / 18,5 / 16,5 px — bei einem Fliesstext von 17 px.
+      // Der Kapiteltitel war damit vier Punkt groesser als ein Absatz und
+      // dreieinhalb groesser als seine eigenen Zwischenueberschriften: Auf
+      // dem Schirm sahen „Zustand" und „Die sechs Werte" gleich aus, und ein
+      // Kapitel hatte kein Gesicht. Jetzt 34 / 22 / 18,5 — dieselbe Leiter,
+      // die das Onboarding fuehrt, damit die Hilfe nicht wie ein zweites
+      // Programm aussieht.
       case ProseHeading(:final level, :final spans):
-        final style = switch (level) {
-          1 => text.headlineMedium,
-          2 => text.titleLarge,
-          _ => text.titleMedium,
-        };
-        return Padding(
-          padding: EdgeInsets.only(
-            top: level == 1 ? 0 : Space.xl,
-            bottom: level == 1 ? Space.lg : Space.sm,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text.rich(_inline(context, spans, style)),
-              ),
-              // Nur die zweite Ebene bekommt den Strich: Er gliedert das
-              // Kapitel, und ein Strich unter jeder Zwischenüberschrift
-              // gliedert nichts mehr.
-              if (level == 2) ...[
-                const SizedBox(height: Space.sm),
+        final heading = Semantics(
+          header: true,
+          child: Text.rich(_inline(
+            context,
+            spans,
+            switch (level) {
+              1 => text.displayMedium,
+              2 => text.headlineMedium,
+              _ => text.titleLarge,
+            },
+          )),
+        );
+
+        // Der Kapiteltitel — er beginnt die Seite und braucht darueber
+        // nichts als den Rand der Liste.
+        if (level == 1) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: Space.lg),
+            child: heading,
+          );
+        }
+
+        // **Der Strich liegt jetzt ueber der Ueberschrift, nicht darunter.**
+        // Darunter klebte er an dem, was folgte — vor einer Tabelle las er
+        // sich als deren Oberkante — und trennte die Ueberschrift von dem
+        // Abschnitt darueber, zu dem sie nicht gehoert. Ein Abschnittsstrich
+        // gehoert an den Anfang des Abschnitts.
+        if (level == 2) {
+          return Padding(
+            padding: const EdgeInsets.only(top: Space.xxl, bottom: Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Container(height: 1, color: p.rule),
+                const SizedBox(height: Space.lg),
+                heading,
               ],
-            ],
-          ),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: Space.xl, bottom: Space.sm),
+          child: heading,
         );
 
       case ProseParagraph(:final spans):
+        // Zeilenabstand 1,5 bei 17 px sind 25,5 px je Zeile. Ein
+        // Absatzabstand von 12 px lag darunter — die Absaetze klebten
+        // aneinander und der Text las sich als eine Wand.
         return Padding(
-          padding: const EdgeInsets.only(bottom: Space.md),
+          padding: const EdgeInsets.only(bottom: Space.lg),
           child: Text.rich(_inline(context, spans, text.bodyLarge)),
         );
 
@@ -530,31 +580,56 @@ class _ProseViewState extends State<ProseView> {
         // Die Spalte für Punkt und Zahl wächst mit der Schrift. Fest gesetzt
         // schneidet sie bei 2,4-facher Textgröße die Ziffer ab — und eine
         // Aufzählung ohne Nummern ist keine mehr.
-        final marker = MediaQuery.textScalerOf(
-          context,
-        ).scale(ordered ? 26 : 16);
+        final scaler = MediaQuery.textScalerOf(context);
+        final marker = scaler.scale(ordered ? 26 : 22);
+        // Die Mitte der ersten Zeile: Zeilenhoehe ist 1,5 × Schriftgrad.
+        final firstLine = scaler.scale(text.bodyLarge?.fontSize ?? 17) * 1.5;
         return Padding(
-          padding: const EdgeInsets.only(bottom: Space.md),
+          padding: const EdgeInsets.only(bottom: Space.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (var n = 0; n < items.length; n++)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: Space.sm),
+                  // Ein mehrzeiliger Aufzaehlungspunkt mit 8 px Abstand zum
+                  // naechsten laeuft mit ihm zusammen — die Aufzaehlung wird
+                  // wieder zum Absatz. Der Abstand zwischen zwei Punkten muss
+                  // groesser sein als der zwischen zwei Zeilen desselben.
+                  padding: const EdgeInsets.only(bottom: Space.md),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
                         width: marker,
-                        child: Text(
-                          ordered ? '${n + 1}.' : '·',
-                          // War Monospace. Eine Aufzaehlungsnummer ist keine
-                          // Codestelle — sie muss nur untereinander stehen,
-                          // und dafuer sind Tabellenziffern da.
-                          style: readingStyle(context,
-                              size: 15, weight: FontWeight.w500,
-                              color: p.inkFaint),
-                        ),
+                        child: ordered
+                            // War Monospace. Eine Aufzaehlungsnummer ist keine
+                            // Codestelle — sie muss nur untereinander stehen,
+                            // und dafuer sind Tabellenziffern da.
+                            ? Text('${n + 1}.',
+                                style: readingStyle(context,
+                                    size: 15, weight: FontWeight.w500,
+                                    color: p.inkFaint))
+                            // Hier stand ein Mittelpunkt „·" in 15 px. Der ist
+                            // in dieser Schrift ein Fleck von zwei Pixeln und
+                            // sass an der Oberkante der Zeile — man sah ihn
+                            // nicht, sondern ahnte ihn. Jetzt derselbe Strich,
+                            // den das Onboarding fuehrt, auf der optischen
+                            // Mitte der ersten Zeile.
+                            : Padding(
+                                padding: EdgeInsets.only(
+                                    top: firstLine / 2 - 1),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    width: scaler.scale(10),
+                                    height: 1.5,
+                                    decoration: BoxDecoration(
+                                      color: p.inkFaint,
+                                      borderRadius: BorderRadius.circular(1),
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ),
                       Expanded(
                         child: Text.rich(
@@ -569,41 +644,71 @@ class _ProseViewState extends State<ProseView> {
         );
 
       case ProseQuote(:final spans):
+        // Ein Zitat ist in diesen Kapiteln ein Merksatz, keine Fussnote —
+        // es stand kleiner und blasser da als der Text, den es zuspitzt.
+        // Jetzt im Fliesstextgrad, und mit Innenabstand ringsum statt eng
+        // an der Kante.
         return Container(
           width: double.infinity,
-          margin: const EdgeInsets.only(bottom: Space.md),
-          padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.md, Space.md),
+          margin: const EdgeInsets.only(top: Space.sm, bottom: Space.lg),
+          padding: const EdgeInsets.all(Space.lg),
           decoration: BoxDecoration(
             color: p.panel,
             borderRadius: const BorderRadius.horizontal(
-                right: Radius.circular(Radii.control)),
+                right: Radius.circular(Radii.panel)),
             border: Border(left: BorderSide(color: p.signal, width: 2)),
           ),
-          child: Text.rich(_inline(context, spans, text.bodyMedium)),
+          child: Text.rich(_inline(context, spans, text.bodyLarge)),
         );
 
+      // **Das Gitter ist weg.** `TableBorder.all` zog um jede Zelle eine
+      // Haarlinie: Aussenrahmen, Senkrechte, Waagerechte. Zehn Zeilen davon
+      // sind ein Gitter, und ein Gitter hat keine Ordnung — genau die
+      // Begruendung, aus der die Karten ihren Rahmen verloren haben. Uebrig
+      // bleibt die eine Linie, die etwas trennt: die zwischen zwei Zeilen.
+      // Die Spalten trennt der Zwischenraum.
       case ProseTable(:final rows):
         final columns = rows.fold(0, (max, r) => math.max(max, r.length));
         if (columns == 0) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.only(bottom: Space.md),
+          padding: const EdgeInsets.only(top: Space.sm, bottom: Space.lg),
           child: Table(
-            border: TableBorder.all(color: p.rule),
+            border: TableBorder(horizontalInside: BorderSide(color: p.rule)),
+            defaultVerticalAlignment: TableCellVerticalAlignment.top,
+            // **Die erste Spalte ist so breit, wie ihr Inhalt braucht.**
+            // Gleiche Spalten sahen auf dem Papier ordentlich aus und
+            // verteilten den Platz falsch: In „Die vier Laststufen" nahm
+            // „L0" die halbe Breite, waehrend die Erklaerung daneben in vier
+            // Zeilen umbrach. Gedeckelt bei 45 %, damit eine lange
+            // Beschriftung nicht die Spalte daneben erdrueckt.
+            columnWidths: const {
+              0: MinColumnWidth(
+                IntrinsicColumnWidth(),
+                FractionColumnWidth(0.45),
+              ),
+            },
             children: [
               for (var r = 0; r < rows.length; r++)
                 TableRow(
                   children: [
                     for (var c = 0; c < columns; c++)
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Space.sm,
-                          vertical: Space.sm,
+                        padding: EdgeInsets.only(
+                          // Ohne Senkrechte traegt der Zwischenraum die
+                          // Spaltentrennung; die letzte Spalte braucht ihn
+                          // nicht.
+                          right: c < columns - 1 ? Space.lg : 0,
+                          top: Space.md,
+                          bottom: Space.md,
                         ),
                         child: Text.rich(
                           _inline(
                             context,
                             c < rows[r].length ? rows[r][c] : const [],
-                            r == 0 ? text.labelSmall : text.bodySmall,
+                            // Die Tabellen tragen hier den Kern des Kapitels
+                            // — die sechs Messwerte, die vier Laststufen.
+                            // In 14 px lasen sie sich wie ein Nachsatz.
+                            r == 0 ? text.labelSmall : text.bodyMedium,
                           ),
                         ),
                       ),
@@ -673,7 +778,18 @@ class _ProseViewState extends State<ProseView> {
   }
 }
 
-/// Ein Bild mit Rahmen und Unterschrift.
+/// Ein Bild mit Unterschrift — als Karte, nicht als gerahmtes Feld.
+///
+/// **Warum Schatten statt Rahmen.** Ein Bildschirmfoto ist ein Gegenstand im
+/// Text: Es liegt darauf, es steht nicht darin. Der Haarlinienrahmen von
+/// vorher sagte „hier ist ein Kasten"; [Shadows.resting] sagt „hier hoert die
+/// Flaeche auf, und sie liegt oben" — dieselbe Aussage, die jede Karte der
+/// App trifft. Im Dunkeln uebernimmt das Kantenlicht, weil ein Schatten auf
+/// fast schwarzem Grund nichts sagt.
+///
+/// Die Flaeche darunter ist [AxiomPalette.panel] und nicht durchsichtig:
+/// Bis das Bild dekodiert ist, steht sonst ein Loch im Text, und die Zeile
+/// darunter springt, sobald es fertig ist.
 class _ProseFigure extends StatelessWidget {
   final String asset;
   final String caption;
@@ -689,7 +805,10 @@ class _ProseFigure extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return Padding(
-      padding: const EdgeInsets.only(top: Space.sm, bottom: Space.lg),
+      // Ein Bild unterbricht den Lesefluss. Es braucht darueber mehr Luft
+      // als zwischen zwei Absaetzen, sonst wirkt es an den Text davor
+      // angeklebt.
+      padding: const EdgeInsets.only(top: Space.lg, bottom: Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -697,8 +816,10 @@ class _ProseFigure extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: kProseImageMaxWidth),
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(color: p.rule),
+                color: p.panel,
+                border: p.isDark ? Border.all(color: p.rim) : null,
                 borderRadius: BorderRadius.circular(Radii.panel),
+                boxShadow: Shadows.resting(p),
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.asset(
@@ -722,7 +843,7 @@ class _ProseFigure extends StatelessWidget {
             ),
           ),
           if (caption.isNotEmpty) ...[
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.md),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: kProseImageMaxWidth),
               child: Text(

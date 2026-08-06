@@ -27,8 +27,8 @@ const Map<String, String> kEnglish = {
   'Anker ändern':
       'Edit anchor',
   'Anlauf {0} h': 'Run-up {0} h',
-  'AUF': 'ON',
-  'AUSLÖSEN': 'TRIGGER',
+  'Auf': 'Up',
+  'Auslösen': 'Trigger',
   'AXIOM': 'AXIOM',
   'AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, und das ganze Konzept ist wertlos.':
       'AXIOM works to the minute. Otherwise Android puts apps to sleep — then '
@@ -161,7 +161,7 @@ const Map<String, String> kEnglish = {
       'Afterwards',
   'Daten alt':
       'Stale data',
-  'DEINE FRAGEN': 'YOUR QUESTIONS',
+  'Deine Fragen': 'Your questions',
   'Die ersten 14 Tage':
       'The first 14 days',
   'Damals: {0}/5': 'At the time: {0}/5',
@@ -190,7 +190,6 @@ const Map<String, String> kEnglish = {
           'regularly can be prepared for.',
   'Der Ort entscheidet, was hier vorgeschlagen wird. Ohne Ort steht alles zur Auswahl — es wird nichts ausgeblendet, was du nicht selbst eingeschaltet hast.':
       'The place decides what gets suggested here. Without a place everything is available — nothing is hidden that you did not switch on yourself.',
-  'Der Rest, grob — kommt später dran': 'The rest, roughly — for later',
   'Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.':
       'What makes this different: it does not ask what you want to do — it '
           'asks what state you are in. What is out of reach today is not shown '
@@ -270,7 +269,7 @@ const Map<String, String> kEnglish = {
       'Three short check-ins a day, plus sleep and movement from the device. '
           'Together that makes six readings.',
   'Drei\nSystemrechte.': 'Three\npermissions.',
-  'EINGANG LEER': 'INBOX EMPTY',
+  'Eingang leer': 'Inbox empty',
   'EINNAHME': 'INTAKE',
   'Einordnung':
       'Where this stands',
@@ -360,7 +359,7 @@ const Map<String, String> kEnglish = {
           'in is what the system is for.',
   'Geeicht':
       'Calibrated',
-  'GESCHÜTZT': 'PROTECTED',
+  'Geschützt': 'Protected',
   'Gab es Erhaltungsmodus-Tage? Was ging voraus?':
       'Were there maintenance-mode days? What came before them?',
   'Gedeckt.': 'Covered.',
@@ -394,7 +393,7 @@ const Map<String, String> kEnglish = {
   'Hat nie gefeuert. Entweder ist die Bedingung zu eng oder die Regel überflüssig.':
       'Never fired. Either the condition is too narrow or the rule is '
           'redundant.',
-  'HINWEIS': 'NOTICE',
+  'Hinweis': 'Notice',
   'Health Connect ist eine Schnittstelle des Geräts. AXIOM liest nur und ruft nichts von sich aus auf. Solange der Expertenmodus läuft, sind diese Werte im lokalen Netz abrufbar.':
       'Health Connect is an interface of the device. AXIOM only reads and '
           'never calls out on its own. While expert mode is running, these '
@@ -418,7 +417,7 @@ const Map<String, String> kEnglish = {
       'In hindsight',
   'Import':
       'Import',
-  'INS BETT': 'TO BED',
+  'Ins Bett': 'To bed',
   'Im Benachrichtigungsbereich bleiben': 'Stay in the notification shade',
   'Im Normalbereich.': 'In the normal range.',
   'Impulse abgefangen': 'Impulses intercepted',
@@ -432,7 +431,7 @@ const Map<String, String> kEnglish = {
       'Has load come down? Show it, do not claim it.',
   'Ist es die Sache oder das Gefühl?': 'Is it the thing or the feeling?',
   'JETZT': 'NOW',
-  'JETZT BEENDEN': 'END NOW',
+  'Jetzt beenden': 'End now',
   'Jetzt': 'Now',
   'Jetzt abgleichen': 'Sync now',
   'Jetzt einplanen': 'Schedule it now',
@@ -442,11 +441,11 @@ const Map<String, String> kEnglish = {
   'Jetzt nichts Neues zusätzlich aufnehmen. Bestehendes eher abgeben als erweitern.':
       'Take on nothing new right now. Hand existing things off rather than '
           'adding to them.',
-  'KANAL': 'CHANNEL',
+  'Kanal': 'Channel',
   'KAPAZITÄT {0}': 'CAPACITY {0}',
   'Keine Anker':
       'No anchors',
-  'KEINE TRIGGER': 'NO TRIGGERS',
+  'Keine Trigger': 'No triggers',
   'Konflikt':
       'Conflict',
   'Kalt duschen': 'Cold shower',
@@ -495,8 +494,7 @@ const Map<String, String> kEnglish = {
   'Laufendes abschließen': 'Finish what is running',
   'Letzte 7 Tage': 'Last 7 days',
   'Los geht’s': 'Get started',
-  'LÄUFT': 'RUNNING',
-  'LÄUFT AUF': 'RUNNING ON',
+  'Läuft auf': 'Running on',
   'Läuft': 'Running',
   'Läuft.': 'Running.',
   'Läuft. Benachrichtigungen sind stumm.':
@@ -575,8 +573,8 @@ const Map<String, String> kEnglish = {
       'Only needed if the task does not work elsewhere. No location access — just a name.',
   'Nächste Woche: höchstens drei Vorhaben.': 'Next week: three plans at most.',
   'Nächte': 'nights',
-  'ODER EINE DIESER FORMEN': 'OR ONE OF THESE SHAPES',
-  'ODER EINE VORLAGE': 'OR A TEMPLATE',
+  'Oder eine dieser Formen': 'Or one of these shapes',
+  'Oder eine Vorlage': 'Or a template',
   'ORT': 'PLACE',
   'Offen · {0}': 'Open · {0}',
   'Oft ein anderer als der gefühlte.':
@@ -641,10 +639,10 @@ const Map<String, String> kEnglish = {
   'S-Pen': 'S Pen',
   'Schema v{0} · {1} Regeln':
       'Schema v{0} · {1} rules',
-  'SCHLAF': 'SLEEP',
+  'Schlaf': 'Sleep',
   'So wird gerechnet':
       'How this is calculated',
-  'SORTIEREN': 'SORT',
+  'Sortieren': 'Sort',
   'START FEHLGESCHLAGEN': 'STARTUP FAILED',
   'START {0}/10': 'START {0}/10',
   'Streichen':
@@ -696,7 +694,7 @@ const Map<String, String> kEnglish = {
   'System': 'System',
   'Tag {0}':
       'Day {0}',
-  'TRIGGER': 'TRIGGERS',
+  'Trigger': 'Trigger',
   'Tag': 'Daily',
   'Tage': 'days',
   'Tageslimit dieser Regel erreicht': 'daily limit for this rule reached',
@@ -713,8 +711,7 @@ const Map<String, String> kEnglish = {
   'Trigger entfernen': 'Remove trigger',
   'Trigger speichern': 'Save trigger',
   'Trigger · {0}': 'Triggers · {0}',
-  'UND DANN? (OPTIONAL)': 'AND THEN? (OPTIONAL)',
-  'UNTERBRECHUNG': 'INTERRUPTION',
+  'Unterbrechung': 'Interruption',
   'Umgekehrte Richtung: Eine Routine sagt AXIOM, wo du bist. „WLAN Büro verbunden" ist genauer als jeder Kreis auf der Karte — und kostet keine Standortberechtigung.':
       'The other direction: a routine tells AXIOM where you are. “Office Wi-Fi connected” is more precise than any circle on a map — and costs no location permission.',
   'Ungedeckter Bedarf sucht sich den schnellsten Kanal.':
@@ -734,11 +731,11 @@ const Map<String, String> kEnglish = {
       'Under System → Capture you will find every route into the app: widget, '
           'ongoing notification with direct input, quick setting, S Pen and '
           'voice. Pick whichever actually works for you.',
-  'VERDIENT': 'EARNED',
+  'Verdient': 'Earned',
   'VORFALL': 'INCIDENT',
   'Vorlauf {0} min':
       'Lead time {0} min',
-  'VORSCHLAG': 'SUGGESTION',
+  'Vorschlag': 'Suggestion',
   'Verbrauchte Konzentrationszeit seit heute früh.':
       'Concentration time spent since this morning.',
   'Verlauf · {0}': 'History · {0}',
@@ -757,14 +754,12 @@ const Map<String, String> kEnglish = {
   'Vorbei.': 'Past.',
   'Vorfall': 'Incident',
   'Vorfälle': 'Incidents',
-  'WARTEZEIT LÄUFT': 'WAITING PERIOD RUNNING',
-  'WARTEZEIT VORBEI': 'WAITING PERIOD OVER',
   'WARUM ES DIESE REGEL GIBT': 'WHY THIS RULE EXISTS',
   'Was vorher passieren muss':
       'What has to happen first',
   'Was zu tun ist':
       'What to do',
-  'WIEDEREINSTIEG': 'RE-ENTRY',
+  'Wiedereinstieg': 'Re-entry',
   'Wann setzt es bei dir ein?': 'When does it set in for you?',
   'War schon': 'Already was',
   'Wartezeit läuft': 'Waiting period running',
@@ -844,11 +839,12 @@ const Map<String, String> kEnglish = {
   'Zeitdeckel':
       'Time cap',
   'ZERLEGEN': 'SPLIT',
-  'ZIEL ≤ {0}': 'TARGET ≤ {0}',
+  'Die Marke bei {0} ist die heutige Reichweite.':
+      'The mark at {0} is today\u2019s reach.',
   'Zu eng':
       'Too narrow',
-  'ZU GROSS FÜR HEUTE': 'TOO BIG FOR TODAY',
-  'ZULETZT STEHENGEBLIEBEN': 'WHERE YOU LEFT OFF',
+  'Zu groß für heute': 'Too big for today',
+  'Zuletzt stehengeblieben': 'Where you left off',
   'Zeigt die nächste Handlung dauerhaft — auch auf dem Sperrbildschirm. Mit einem Tipp auf „Erfassen" tippst du direkt in die Benachrichtigung, ohne zu entsperren und ohne die App zu öffnen.':
       'Shows the next action permanently — on the lock screen too. Tap '
           '“Capture” and you type straight into the notification, without '
@@ -933,7 +929,7 @@ const Map<String, String> kEnglish = {
       '{0}: blocks are capped at {1} min.',
   '{0}: {1} von 100{2}{3}': '{0}: {1} out of 100{2}{3}',
   '{0}:{1} übrig': '{0}:{1} left',
-  'ÜBERFÄLLIG': 'OVERDUE',
+  'Überfällig': 'Overdue',
   'Über 1,0: AXIOM kostet mehr Zeit, als es einbringt. Dann wird zurückgebaut, nicht optimiert — Module abschalten, Regeln streichen.':
       'Above 1.0: AXIOM costs more time than it returns. Then it gets cut '
           'back, not tuned — switch modules off, delete rules.',
@@ -1326,9 +1322,9 @@ const Map<String, String> kEnglish = {
   'Textgröße': 'Text size',
   'Helligkeit': 'Brightness',
   'Farbschema': 'Colour scheme',
-  'AUTO': 'AUTO',
-  'DUNKEL': 'DARK',
-  'HELL': 'LIGHT',
+  'Automatisch': 'Automatic',
+  'Dunkel': 'Dark',
+  'Hell': 'Light',
 
   // Bezeichnungen der Aufzaehlungen. Sie laufen ueber eine Variable durch
   // die Uebersetzung (context.t(size.label)) und sind deshalb im Quelltext
@@ -1352,8 +1348,8 @@ const Map<String, String> kEnglish = {
   'Start {0}/10': 'Start {0}/10',
   'ohne Anker': 'no anchor',
   'Ausgelöst durch:': 'Triggered by:',
-  'IN {0} H': 'IN {0} H',
-  'IN {0} T': 'IN {0} D',
+  'In {0} h': 'In {0} h',
+  'In {0} Tagen': 'In {0} days',
   'abgeschaltet': 'switched off',
 
   // Wochentage und Monate. Bewusst hier und nicht ueber `intl`: Es sind
@@ -1436,8 +1432,7 @@ const Map<String, String> kEnglish = {
       'Start energy above today’s capacity ({0}). Breaking them down brings them within reach.',
   'Erledigt · {0}':
       'Done · {0}',
-  'NICHTS EINGETRAGEN':
-      'NOTHING ON FILE',
+  'Nichts eingetragen': 'Nothing on file',
   'Keine Aufgaben.':
       'No tasks.',
   'Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.':
@@ -1676,10 +1671,10 @@ const Map<String, String> kEnglish = {
   'wartet auf: {0} und {1}': 'waiting for: {0} and {1}',
   'wartet auf: {0} und {1} weitere': 'waiting for: {0} and {1} more',
   'eine andere Aufgabe': 'another task',
-  'HÄLT {0} AUF · HEBEL ×{1}': 'HOLDS UP {0} · LEVERAGE ×{1}',
+  'Hält {0} auf · Hebel ×{1}': 'Holds up {0} · leverage ×{1}',
   'Was anderes aufhält, zählt mehr: Wert × (1 + 0,35 × log2(1 + aufgehaltene)). Drei aufgehaltene heben den Wert um 70 %, nicht um 200 %.':
       'What holds up other work counts for more: value × (1 + 0.35 × log2(1 + held up)). Three held up raise the value by 70 %, not by 200 %.',
-  'ALLES WARTET': 'EVERYTHING IS WAITING',
+  'Alles wartet': 'Everything is waiting',
   'Alles Offene hängt an etwas anderem.': 'Everything open hangs on something else.',
   'Jede offene Aufgabe wartet auf einen Blocker, der selbst noch aussteht. Die Aufgabenliste zeigt, worauf.':
       'Every open task waits on a blocker that is itself still open. The task list shows on what.',
@@ -1737,4 +1732,39 @@ const Map<String, String> kEnglish = {
   'Stufen': 'Levels',
   'mehr zeigen': 'show more',
   'weniger zeigen': 'show less',
+
+  // ── Was vorher als roher Dart-String an der Uebersetzung vorbeilief ──
+  //
+  // Diese Saetze standen als Literal direkt in einem `Text(...)` — auf
+  // Englisch erschienen sie deutsch, und kein Test konnte es sehen, weil der
+  // Scanner nur `context.t('…')` kennt. Beim Umbau des Eingangs und der
+  // Ankerkette sind sie durch die Uebersetzung gefuehrt worden; ab hier
+  // faellt eine fehlende Fassung auf.
+  'Start {0}/10 · in Reichweite': 'Start {0}/10 · within reach',
+  // Vorher „Start x/10 · heute zu hoch". „Zu hoch" ist eine Wertung der
+  // Aufgabe; gemessen wird die heutige Kapazitaet, nicht die Aufgabe (R7).
+  'Start {0}/10 · über der heutigen Kapazität':
+      'Start {0}/10 · above today’s capacity',
+  'sofort': 'right away',
+  'viel': 'a lot',
+  // Ankerkette: „jetzt" und die Restzeit bis zum Aufbruch.
+  'jetzt': 'now',
+  'in {0} h': 'in {0} h',
+  '{0} h': '{0} h',
+
+  // ── Regelinspektor: was ein Schweregrad tut ─────────────────────────
+  //
+  // Vorher standen dort die Bezeichner `Nudge`, `Intervene`, `Enforce` —
+  // englische Fachwoerter in der deutschen Oberflaeche, die nichts erklaeren.
+  // Jetzt steht da, was die Regel tatsaechlich macht, in beiden Sprachen.
+  'läuft stumm mit': 'runs silently',
+  'nur im Rückblick': 'in review only',
+  'stiller Hinweis': 'quiet hint',
+  'sichtbare Meldung': 'visible notice',
+  'greift ein': 'intervenes',
+
+  // Vorfaelle: der Satz unter der Haeufungsliste. Er sagt, dass die Liste
+  // keine Rangfolge ist — genau das ist der Punkt (R7, D10).
+  'Gezählt, nicht gewichtet — die Reihenfolge ist immer dieselbe.':
+      'Counted, not weighted — the order is always the same.',
 };

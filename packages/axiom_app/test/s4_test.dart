@@ -1,6 +1,7 @@
 /// Verhaltenstests für Stufe 4: Vorfälle, Wirkfenster, Datentresor.
 library;
 
+import 'package:axiom_app/design/tokens.dart';
 import 'package:axiom_app/screens/signal_screen.dart';
 import 'package:axiom_app/screens/vault_screen.dart';
 import 'package:axiom_core/axiom_core.dart';
@@ -131,6 +132,74 @@ void main() {
       await pumpPhone(tester, h.wrap(const SignalScreen()));
       expect(find.textContaining('Häufungen'), findsOneWidget);
       expect(find.text('Zurückweisung'), findsWidgets);
+    });
+
+    testWidgets('eine Häufung ist eine Zählung, keine Rangliste',
+        (tester) async {
+      // **Das Designgesetz dieses Schirms.** Hier stand ein gefuellter
+      // Balken je Klasse, dessen Skalenmaximum die haeufigste Klasse war —
+      // eine Rangliste eigener Kraenkungen, in der die schmerzhafteste
+      // Klasse den ersten Platz und den laengsten Balken bekommt. R7 sagt,
+      // eine Zaehlung ist ein Messwert und kein Rang; D10 sagt, warum das
+      // hier teuer ist.
+      //
+      // Alles zur selben Uhrzeit: So wird keine Nachbetrachtung faellig und
+      // keine Klasse steht zusaetzlich in der Karte oben.
+      for (var i = 0; i < 3; i++) {
+        await h.runtime.logIncident(
+          intensity: 2,
+          triggerClass: TriggerClass.overload,
+        );
+      }
+      await h.runtime.logIncident(
+        intensity: 2,
+        triggerClass: TriggerClass.criticism,
+      );
+      await pumpPhone(tester, h.wrap(const SignalScreen()));
+
+      // Nach Haeufigkeit sortiert stuende „Überlastung" (3) oben und
+      // „Kritik" (1) darunter. Gezeigt wird die Reihenfolge der Auswahl
+      // beim Erfassen — und in der kommt Kritik zuerst.
+      final kritik = tester.getTopLeft(find.text('Kritik').first).dy;
+      final ueberlastung =
+          tester.getTopLeft(find.text('Überlastung').first).dy;
+      expect(kritik, lessThan(ueberlastung));
+
+      // Und die Anzahl steht als Zahl da, nicht als Laenge.
+      expect(find.text('3'), findsWidgets);
+      expect(find.text('1'), findsWidgets);
+    });
+
+    testWidgets('der Erfassen-Knopf trägt nicht die Aufmerksamkeitsfarbe',
+        (tester) async {
+      // Kupfer ist in diesem Modul die Farbe des Vorfalls. Auf dem Knopf,
+      // mit dem man ihn festhaelt, sagt sie „Achtung" ueber das
+      // Festhalten — dabei ist genau das die eine Handlung, die dieser
+      // Schirm anbietet (G1).
+      await pumpPhone(tester, h.wrap(const SignalScreen()));
+      final fab = tester.widget<FloatingActionButton>(
+        find.byType(FloatingActionButton),
+      );
+      expect(fab.backgroundColor, AxiomPalette.dark.signal);
+      expect(fab.backgroundColor, isNot(AxiomPalette.dark.caution));
+    });
+
+    testWidgets('die letzte Zeile liegt nicht unter dem Knopf',
+        (tester) async {
+      // Der schwebende Knopf lag auf dem Text: Die Liste endete unter ihm,
+      // und der letzte Satz stand halb verdeckt da. Ein Fehler, der wie ein
+      // Absturz aussieht.
+      await h.runtime.logIncident(
+        intensity: 3,
+        triggerClass: TriggerClass.rejection,
+      );
+      await pumpPhone(tester, h.wrap(const SignalScreen()));
+      await tester.drag(find.byType(ListView), const Offset(0, -3000));
+      await tester.pumpAndSettle();
+
+      final letzte = tester.getRect(find.textContaining('deutet nichts'));
+      final knopf = tester.getRect(find.byType(FloatingActionButton));
+      expect(letzte.bottom, lessThanOrEqualTo(knopf.top));
     });
 
     testWidgets('grenzt sich von Deutung und Behandlung ab', (tester) async {

@@ -16,7 +16,10 @@ import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../i18n/i18n.dart';
 
-Future<bool> showCheckinSheet(BuildContext context, {String slot = 'manual'}) async =>
+Future<bool> showCheckinSheet(
+  BuildContext context, {
+  String slot = 'manual',
+}) async =>
     await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -68,85 +71,130 @@ class _CheckinSheetState extends ConsumerState<_CheckinSheet> {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-            Space.lg, Space.lg, Space.lg, Space.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.t('Check-in'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.xs),
-            Text(
-              _isEvening ? context.t('Wie war der Tag?') : context.t('Wie ist der Stand?'),
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: Space.xs),
-            Text(context.t('Vier Regler. Ungefähr reicht.'),
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: Space.xl),
-            _Scale(
-              label: context.t('Energie'),
-              low: 'leer',
-              high: 'voll',
-              value: _energy,
-              onChanged: (v) => setState(() => _energy = v),
-            ),
-            _Scale(
-              label: context.t('Fokus'),
-              low: 'zerstreut',
-              high: 'klar',
-              value: _focus,
-              onChanged: (v) => setState(() => _focus = v),
-            ),
-            _Scale(
-              label: context.t('Stimmung'),
-              low: 'gereizt',
-              high: 'gelassen',
-              value: _mood,
-              onChanged: (v) => setState(() => _mood = v),
-            ),
-            _Scale(
-              label: context.t('Reizhunger'),
-              low: 'ruhig',
-              high: 'kribbelig',
-              value: _stim,
-              onChanged: (v) => setState(() => _stim = v),
-            ),
-            if (_isEvening) ...[
-              const SizedBox(height: Space.xs),
-              Divider(color: p.rule),
-              const SizedBox(height: Space.lg),
-              _Scale(
-                label: context.t('Kraftaufwand für Struktur'),
-                low: context.t('lief nebenbei'),
-                high: context.t('ständig nachgehalten'),
-                value: _compensation,
-                onChanged: (v) => setState(() => _compensation = v),
+      // **Die Handlung bleibt stehen, der Inhalt rollt darunter durch.**
+      //
+      // Dieses Blatt hat ein Zeitbudget: Ein Check-in soll unter fuenfzehn
+      // Sekunden dauern (G1). Bei 360 px und 2,4-facher Schrift standen vier
+      // Regler und ihre Beschriftungen auf gut zwei Bildschirmen, und
+      // „Fertig" lag hinter allen. Wer die Schrift hochstellt, zahlte damit
+      // nicht mehr Platz, sondern mehr Zeit — und ein Check-in, der dreimal
+      // so lange dauert, wird ausgelassen.
+      //
+      // `Flexible` statt fester Hoehe: Passt der Inhalt, ist das Blatt so
+      // hoch wie er, und es aendert sich nichts. Passt er nicht, rollt er
+      // unter dem Abschluss durch. Dieselbe Bauart tragen das Schlaf-,
+      // Erfassungs- und Zerlegeblatt.
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.lg,
+                Space.lg,
+                Space.md,
               ),
-              _Scale(
-                label: context.t('Erholung hat gewirkt'),
-                low: context.t('gar nicht'),
-                high: 'deutlich',
-                value: _recovery,
-                onChanged: (v) => setState(() => _recovery = v),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.t('Check-in'),
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    _isEvening
+                        ? context.t('Wie war der Tag?')
+                        : context.t('Wie ist der Stand?'),
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    context.t('Vier Regler. Ungefähr reicht.'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.xl),
+                  _Scale(
+                    label: context.t('Energie'),
+                    low: 'leer',
+                    high: 'voll',
+                    value: _energy,
+                    onChanged: (v) => setState(() => _energy = v),
+                  ),
+                  _Scale(
+                    label: context.t('Fokus'),
+                    low: 'zerstreut',
+                    high: 'klar',
+                    value: _focus,
+                    onChanged: (v) => setState(() => _focus = v),
+                  ),
+                  _Scale(
+                    label: context.t('Stimmung'),
+                    low: 'gereizt',
+                    high: 'gelassen',
+                    value: _mood,
+                    onChanged: (v) => setState(() => _mood = v),
+                  ),
+                  _Scale(
+                    label: context.t('Reizhunger'),
+                    low: 'ruhig',
+                    high: 'kribbelig',
+                    value: _stim,
+                    onChanged: (v) => setState(() => _stim = v),
+                  ),
+                  if (_isEvening) ...[
+                    const SizedBox(height: Space.xs),
+                    Divider(color: p.rule),
+                    const SizedBox(height: Space.lg),
+                    _Scale(
+                      label: context.t('Kraftaufwand für Struktur'),
+                      low: context.t('lief nebenbei'),
+                      high: context.t('ständig nachgehalten'),
+                      value: _compensation,
+                      onChanged: (v) => setState(() => _compensation = v),
+                    ),
+                    _Scale(
+                      label: context.t('Erholung hat gewirkt'),
+                      low: context.t('gar nicht'),
+                      high: 'deutlich',
+                      value: _recovery,
+                      onChanged: (v) => setState(() => _recovery = v),
+                    ),
+                  ],
+                ],
               ),
-            ],
-            const SizedBox(height: Space.sm),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: Text(context.t('Fertig')),
             ),
-            const SizedBox(height: Space.xs),
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(context.t('Jetzt nicht')),
-              ),
+          ),
+          // Die Haarlinie sagt: darueber geht es weiter. Sie steht nur da,
+          // wenn ein Abschluss darunter steht — ein Strich, der nichts
+          // trennt, waere das Lineal, das dieser Entwurf gerade abgeschafft
+          // hat.
+          Container(height: 1, color: p.rule),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.md,
+              Space.lg,
+              Space.md,
             ),
-          ],
-        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: Text(context.t('Fertig')),
+                ),
+                const SizedBox(height: Space.xs),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(context.t('Jetzt nicht')),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

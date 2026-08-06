@@ -170,23 +170,63 @@ void main() {
       expect(raised, 1);
     });
 
-    testWidgets('die Reichweitenkante trennt beide Schirme', (tester) async {
-      // Sie ist keine Verzierung: Über ihr steht, was heute in die Hand
-      // geht, unter ihr, was da ist und heute nicht. Ohne sie ist die
-      // Mulde nur eine zweite Farbe.
+    testWidgets('die Reichweitenkante steht nur, wo an ihr gemessen wird',
+        (tester) async {
+      // Die Kante behauptet etwas: Was unter ihr liegt, liegt heute
+      // außerhalb der Reichweite. Auf der Aufgabenliste stimmt das — dort
+      // stehen darunter genau die Aufgaben, deren Startenergie über der
+      // Kapazität liegt, samt der Zahl. Auf „Jetzt" stand darunter das
+      // Menü, und dessen erste Zeile meldet „3 startbar · 2 heute außerhalb
+      // der Reichweite". Etwas ausdrücklich Startbares lag damit unter dem
+      // Horizont der Erreichbarkeit — zwei Fingertipps von der Stelle
+      // entfernt, an der dieselbe Form das Gegenteil sagt. Eine Form mit
+      // zwei Bedeutungen ist kein Zeichen mehr, sondern ein Kasten.
+      //
+      // Die Mulde bleibt auf beiden Schirmen. Sie heißt überall dasselbe:
+      // eingelassen — da, aber nicht die Handlung. Auf der Aufgabenliste
+      // liegt darin nicht nur Unerreichbares, sondern auch Wartendes,
+      // Zerlegtes und Erledigtes; „nicht in Reichweite" ist dort ein
+      // Abschnitt, nicht die Bedeutung der Fläche.
       h.completeOnboarding();
       await h.runtime.createTask(
         title: 'Wohnung streichen', activationEnergy: 9, salience: 5,
         stakes: 5);
 
       await pumpPhone(tester, h.wrap(const NowScreen()));
-      expect(find.byType(ReachEdge), findsOneWidget);
+      expect(find.byType(ReachEdge), findsNothing);
       expect(find.byType(Well), findsOneWidget);
       await unmount(tester);
 
       await pumpPhone(tester, h.wrap(const TasksScreen()));
       expect(find.byType(ReachEdge), findsOneWidget);
       expect(find.byType(Well), findsOneWidget);
+    });
+
+    testWidgets('der Erfassungsknopf liegt über der Liste, nicht darauf',
+        (tester) async {
+      // Er stand mit `elevation: 0` da — begründet damit, die Griffhöhe
+      // gehöre der einen Handlung. Praktisch lag er damit flach auf dem
+      // Text und schnitt die Zeile darunter mitten im Wort ab: In sechs von
+      // 39 Referenzbildern stand „Vertiefung mit Zeitdeckel und
+      // Ausstiegsanker" halb unter dem Knopf. Was wie ein Zeichenfehler
+      // aussieht, schlägt jedes Gestaltungsargument.
+      //
+      // Geprüft wird die Wirkung, nicht die Zahl: Was über anderem liegt,
+      // muss Höhe zeigen. Material zeichnet seine Stufe mit reinem Schwarz
+      // — im Hellen ein harter Ring, im Dunkeln unsichtbar —, deshalb
+      // kommt der Schatten aus der Palette.
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      final box = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: find.byType(FloatingActionButton),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      expect((box.decoration as BoxDecoration).boxShadow, isNotEmpty);
     });
 
     testWidgets('ein Messwert steht an genau einem Ort', (tester) async {
@@ -197,9 +237,13 @@ void main() {
       // Zentimeter auseinander. Zwei Anzeigen desselben Messwerts lesen sich
       // als zwei Aussagen (R7), und jede davon ist auf diesem Schirm ein
       // zweites Angebot neben der einen Handlung (G1).
+      //
+      // Zuletzt fiel auch die Kante — mit ihr die Zahl. „Jetzt" zeigt jetzt
+      // gar keinen Messwert mehr; was die Reichweite für den Bestand
+      // bedeutet, sagt die Zeile „Aufgaben" in Worten.
       h.completeOnboarding();
       await pumpPhone(tester, h.wrap(const NowScreen()));
-      expect(find.byType(ReachEdge), findsOneWidget);
+      expect(find.byType(ReachEdge), findsNothing);
       expect(find.byType(InstrumentBar), findsNothing);
       await unmount(tester);
 

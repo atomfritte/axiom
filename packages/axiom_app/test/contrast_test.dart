@@ -124,7 +124,156 @@ const double kBadgeFloor = 3.9;
 /// Deckkraft der Tönung hinter einer Stufenplakette.
 const double kBadgeTint = 0.18;
 
+/// Deckkraft der Tönung hinter einem **gewählten Chip**.
+///
+/// Zweiter Ort desselben Musters, und einer, den die Plakettenprüfung oben
+/// nicht erfasst: Der gewählte Formenchip im Zerlegen-Blatt
+/// (`atomize_sheet.dart`, `_ShapeChip`) liegt in der Mulde, nicht auf `base`
+/// oder `panel` — sein Grund ist `signal` mit 16 % über [AxiomPalette.well],
+/// seine Schrift dieselbe Signalfarbe voll deckend.
+const double kChipTint = 0.16;
+
+/// Der heutige Stand für Signaltext auf Signaltönung in der Mulde.
+///
+/// **Nachgerechnet ist auch das ein Befund.** In den drei hellen Fassungen
+/// außer `contrast` liegt der Wert unter AA: `instrument/light` 3,73:1,
+/// `workbench/light` 3,82:1, `muted/light` 3,88:1. Der Grund ist derselbe
+/// wie bei [kBadgeFloor] — Vorder- und Hintergrund sind derselbe Farbton —,
+/// nur zusätzlich verschärft durch die Mulde: Sie zieht dem hellen Grund
+/// 4 % Licht ab und dem Abstand damit ein Stück.
+///
+/// Der Chip ist eine Auswahl, kein Fließtext, und er trägt neben der Farbe
+/// einen 1,5 px starken Rand in derselben Signalfarbe — gewählt oder nicht
+/// ist also auch ohne den Textkontrast zu sehen. Trotzdem steht hier eine
+/// Zahl und keine Ausnahme: Der Text **wird** gelesen, und wer die Tönung
+/// kräftiger macht oder den Text auf `ink` setzt, hebt sie. Ratsche, keine
+/// Zusage — sie darf sinken.
+const double kChipFloor = 3.7;
+
+/// Der heutige Stand für die Umrandung eines Eingabefelds.
+///
+/// **Der dritte Befund, und der praktischste.** Ein leeres Textfeld ist in
+/// dieser Oberfläche gefüllt (`fillColor: panel`) und von einer Haarlinie in
+/// [AxiomPalette.rule] umrandet. Steht es in einem Blatt, ist der Grund
+/// ringsum ebenfalls `panel` — dann trägt allein die Haarlinie die Aussage
+/// „hier kann man schreiben". Sie kommt in keiner der acht Fassungen über
+/// **2,16:1**, im Regelfall liegt sie bei 1,3 bis 1,6:1, und in der Werkbank
+/// gegen den Grund bei 1,21:1 — dem schlechtesten Wert der Palette. WCAG 1.4.11
+/// verlangt für die Grenze eines Bedienelements 3:1, und anders als bei
+/// einem Knopf gibt es hier keine Beschriftung, die das auffängt: Vor der
+/// ersten Eingabe steht dort nur ein Hinweistext in [AxiomPalette.inkFaint].
+///
+/// Zu beheben wäre das in `tokens.dart` (kräftigere `rule`) oder in
+/// `theme.dart` (eigener, kräftigerer `enabledBorder` nur für Felder) — beides
+/// außerhalb dieser Datei. Bis dahin hält die Zahl den Stand fest.
+const double kFieldEdgeFloor = 1.2;
+
+/// Rollen, die im gedämpften Modus heute **heller** sind als in der Vorgabe.
+///
+/// Siehe die Gruppe „Der gedämpfte Modus" unten. Ratsche: Die Menge darf
+/// kleiner werden, nicht größer.
+const _mutedBrighter = <String>{'calm', 'info'};
+
+/// Rollen, die im gedämpften Modus heute **mehr Blau** tragen als in der
+/// Vorgabe. Ebenfalls eine Ratsche, siehe unten.
+const _mutedMoreBlue = <String>{'signal', 'signalDeep', 'calm', 'caution'};
+
+/// Alle zwölf Farbrollen einer Palette, für den Vergleich zweier Schemata.
+const _allRoles = <String>[
+  'base',
+  'panel',
+  'panelRaised',
+  'rule',
+  'ink',
+  'inkDim',
+  'inkFaint',
+  'signal',
+  'signalDeep',
+  'calm',
+  'caution',
+  'info',
+];
+
+Color _anyRole(AxiomPalette p, String name) => switch (name) {
+      'base' => p.base,
+      'panel' => p.panel,
+      'panelRaised' => p.panelRaised,
+      'rule' => p.rule,
+      'signalDeep' => p.signalDeep,
+      _ => _role(p, name),
+    };
+
+/// Relative Leuchtdichte nach WCAG — hier als Maß für „wie hell strahlt das".
+double luminance(Color c) => _luminance(c);
+
 void main() {
+  // ── Der gedämpfte Modus ─────────────────────────────────────────────────
+  //
+  // `tokens.dart` sagt über `darkMuted`: „Diese Fassung nimmt Leuchtdichte
+  // und Blauanteil zurück." Das ist keine Geschmacksfrage, sondern der Grund,
+  // aus dem das Schema existiert (D8, Sleep Gate) — und es stand bisher als
+  // Behauptung im Kommentar, ohne dass es jemand nachgerechnet hätte.
+  //
+  // Nachgerechnet gilt es für acht der zwölf Rollen und für vier nicht.
+  // Die Prüfung hält beides fest: die Zusage für die acht, den Rückstand
+  // namentlich für die vier.
+  group('Der gedämpfte Modus nimmt zurück, was er zurücknehmen soll', () {
+    final plain = AxiomScheme.instrument.palette(Brightness.dark);
+    final muted = AxiomScheme.muted.palette(Brightness.dark);
+
+    test('keine Rolle strahlt heller als in der Vorgabe', () {
+      // Nur die dunkle Fassung: Abends ist der Schirm dunkel, und dort heißt
+      // „heller" tatsächlich „strahlt mehr". Im Hellen wäre dieselbe Zahl
+      // eine Kontrastfrage und keine Leuchtfrage.
+      //
+      // **Befund.** `calm` (#8FA98C gegen #7FA88A) und `info` (#8B9AA0 gegen
+      // #6E90A4) sind heute heller als in der Vorgabe — `info` um ein Fünftel.
+      // Beide sind Zustandsfarben und stehen abends auf jedem Regime-Abzeichen.
+      final brighter = [
+        for (final role in _allRoles)
+          if (luminance(_anyRole(muted, role)) >
+              luminance(_anyRole(plain, role)))
+            role,
+      ];
+      expect(brighter, everyElement(isIn(_mutedBrighter)),
+          reason: 'Neue Rolle heller als in der Vorgabe: $brighter. '
+              'Gedämpft heißt gedämpft — sonst ist es nur ein zweiter '
+              'Farbton (D8).');
+    });
+
+    test('keine Rolle trägt mehr Blau als in der Vorgabe', () {
+      // Blau ist hier kein Farbgeschmack: Der kurzwellige Anteil ist der,
+      // der abends am stärksten gegen das Einschlafen arbeitet. Deshalb der
+      // **absolute** Blaukanal und nicht sein Anteil am Farbton — eine
+      // entsättigte Farbe kann dunkler wirken und trotzdem mehr Blau
+      // abstrahlen.
+      //
+      // **Befund.** Genau das ist passiert: Das gedämpfte Signal #D79A55
+      // trägt B=85 gegen B=61 der Vorgabe #E8A33D — knapp 40 % mehr Blau,
+      // und das auf der größten farbigen Fläche des Schirms (dem
+      // Hauptknopf). Dasselbe bei `signalDeep`, `calm` und `caution`.
+      final moreBlue = [
+        for (final role in _allRoles)
+          if (_anyRole(muted, role).b > _anyRole(plain, role).b) role,
+      ];
+      expect(moreBlue, everyElement(isIn(_mutedMoreBlue)),
+          reason: 'Neue Rolle mit mehr Blau als in der Vorgabe: $moreBlue.');
+    });
+
+    test('die Flächen bleiben dunkler als in der Vorgabe', () {
+      // Die Zusage, die heute ohne Einschränkung gilt: Grund, Karte, erhobene
+      // Karte und Haarlinie sind durchgehend zurückgenommen. Das ist der
+      // größte Teil der abgestrahlten Fläche und damit der Teil, der zählt.
+      for (final role in ['base', 'panel', 'panelRaised', 'rule', 'ink']) {
+        expect(
+          luminance(_anyRole(muted, role)),
+          lessThan(luminance(_anyRole(plain, role))),
+          reason: role,
+        );
+      }
+    });
+  });
+
   group('Textkontrast', () {
     for (final scheme in AxiomScheme.values) {
       for (final brightness in Brightness.values) {
@@ -229,6 +378,32 @@ void main() {
               reason: '$label: die Plakette ist unter den heutigen Stand '
                   'gefallen (Ziel ist $kMinContrast:1, siehe kBadgeFloor):\n'
                   '${tooLow.join("\n")}');
+        });
+
+        test('$label: der gewählte Chip bleibt lesbar', () {
+          // Siehe [kChipFloor]. Zweiter Ort desselben Musters wie die
+          // Stufenplakette, nur in der Mulde statt auf einer Fläche.
+          final tinted = Color.alphaBlend(
+              palette.signal.withValues(alpha: kChipTint), palette.well);
+          expect(
+            contrastRatio(palette.signal, tinted),
+            greaterThanOrEqualTo(kChipFloor),
+            reason: '$label: signal auf signal@$kChipTint über der Mulde '
+                '(Ziel ist $kMinContrast:1, siehe kChipFloor)',
+          );
+        });
+
+        test('$label: die Umrandung eines Eingabefelds ist auffindbar', () {
+          // Siehe [kFieldEdgeFloor]. Ein leeres Feld hat keine Beschriftung,
+          // die für es einspringt — es ist genau seine Umrandung.
+          for (final surface in ['panel', 'base']) {
+            expect(
+              contrastRatio(palette.rule, _surface(palette, surface)),
+              greaterThanOrEqualTo(kFieldEdgeFloor),
+              reason: '$label: rule auf $surface (Ziel sind 3:1 nach '
+                  'WCAG 1.4.11, siehe kFieldEdgeFloor)',
+            );
+          }
         });
 
         test('$label: signalDeep bleibt als Fläche unterscheidbar', () {

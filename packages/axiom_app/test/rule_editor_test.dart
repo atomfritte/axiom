@@ -9,6 +9,7 @@ library;
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_core/axiom_core.dart' as core show Action;
 import 'package:axiom_data/axiom_data.dart';
+import 'package:axiom_app/design/widgets/instruments.dart';
 import 'package:axiom_app/screens/rule_editor_screen.dart';
 import 'package:axiom_app/state/rule_draft.dart';
 import 'package:flutter/material.dart';
@@ -16,14 +17,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'harness.dart';
 
+/// Der ganze Editor auf einmal, ohne Scrollen.
+///
+/// Ein `ListView` baut nur, was in Sichtweite ist — wer Positionen oder
+/// Anzahlen prueft, prueft sonst den Ausschnitt und nicht den Schirm. Die
+/// hohe Ansicht macht jede Abschnittsmarke und jede Karte gleichzeitig
+/// vorhanden.
+Future<void> pumpWholeEditor(WidgetTester tester, TestHarness h) => pumpScaled(
+    tester, h.wrap(const RuleEditorScreen()),
+    size: const Size(412, 4400));
+
 /// Scrollt, bis der Treffer im Baum ist.
 ///
 /// Der Editor ist ein ListView: Was nicht in Sichtweite ist, existiert im
 /// Widget-Baum nicht. Ohne dieses Scrollen prueft der Test nicht die
 /// Abwesenheit einer Zusage, sondern nur die Abwesenheit von Pixeln.
+///
+/// **Gezogen wird am linken Rand, nicht in der Mitte.** Hier stand
+/// `tester.drag(find.byType(ListView).first, …)`, und das setzt den Finger in
+/// die Mitte des Sichtfensters. Trifft er dort das mehrzeilige
+/// Begruendungsfeld, scrollt dessen eigener Textbereich statt der Liste — die
+/// Seite steht still, und der Test meldet ein fehlendes Widget statt eines
+/// fehlgeschlagenen Scrollens. Der Sechs-Pixel-Streifen links liegt im
+/// Innenabstand der Liste: dort ist nie ein Bedienelement.
 Future<Finder> reveal(WidgetTester tester, Finder finder) async {
-  for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
-    await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+  for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+    await tester.dragFrom(const Offset(6, 600), const Offset(0, -400));
     await tester.pumpAndSettle();
   }
   return finder;
@@ -184,6 +203,112 @@ void main() {
       final save = tester.widget<FilledButton>(await saveButton(tester));
       expect(find.text('Sieben Tage stumm'), findsOneWidget);
       expect(save.onPressed, isNotNull);
+    });
+  });
+
+  group('Was der Schirm von sich aus zeigt', () {
+    testWidgets('was fehlt, steht am Feld — nicht erst unten am Knopf',
+        (tester) async {
+      // Die Liste der Lücken stand am Seitenende, hinter allem. Wer sie
+      // las, musste zurückscrollen und raten, welches Feld gemeint war.
+      // `rationale` ist das Feld, an dem G2 hängt — dass es Pflicht ist,
+      // darf man nicht erst beim gescheiterten Speichern erfahren.
+      await pumpWholeEditor(tester, h);
+
+      final atLabel = find.ancestor(
+        of: find.text('Fehlt noch'),
+        matching: find.byType(SectionLabel),
+      );
+      expect(atLabel, findsNWidgets(2),
+          reason: 'Titel und Begründung sind leer — an beiden steht die '
+              'Marke, und einmal steht die Liste unten.');
+
+      await tester.enterText(
+        find.ancestor(
+          of: find.text('Kurz und in deiner Sprache'),
+          matching: find.byType(TextField),
+        ),
+        'Abends nichts Schweres mehr vorschlagen',
+      );
+      await tester.pumpAndSettle();
+      expect(atLabel, findsOneWidget, reason: 'Der Titel reicht jetzt.');
+
+      await tester.enterText(
+        find.ancestor(
+          of: find.text('Was diese Regel verhindern oder auslösen soll'),
+          matching: find.byType(TextField),
+        ),
+        'Was abends noch vorgeschlagen wird, wird nicht mehr angefangen — '
+        'es erzeugt nur Schuld und kostet Schlaf.',
+      );
+      await tester.pumpAndSettle();
+      expect(atLabel, findsNothing,
+          reason: 'Eine geschlossene Lücke steht nicht mehr da — die Marke '
+              'ist eine Messung, keine Rüge.');
+      expect(find.text('Sieben Tage stumm'), findsOneWidget);
+    });
+
+    testWidgets('die Auswertung gehört zur Bedingung, nicht zur Überschrift',
+        (tester) async {
+      // Sie ist das Ergebnis dessen, was in der Karte gebaut wurde — der
+      // halbe Nutzen dieses Editors (G2). Über der Karte sah sie aus wie
+      // ein Hinweis zur Abschnittsmarke.
+      await pumpWholeEditor(tester, h);
+
+      final verdict = find.textContaining('Zustand von jetzt');
+      final card =
+          find.ancestor(of: find.text('Alle'), matching: find.byType(Panel));
+      expect(card, findsOneWidget);
+      expect(find.descendant(of: card, matching: verdict), findsOneWidget,
+          reason: 'Die Auswertung steht in derselben Karte wie die '
+              'Bedingung, die sie auswertet.');
+      expect(tester.getTopLeft(verdict).dy,
+          greaterThan(tester.getTopLeft(find.text('Alle')).dy),
+          reason: 'und unter ihr, nicht darüber');
+    });
+
+    testWidgets('eine Untergruppe steht sichtbar in ihrer Übergruppe',
+        (tester) async {
+      // Ohne diesen Versatz sieht eine verschachtelte Bedingung genauso aus
+      // wie eine gleichrangige — und dann liest niemand mehr, ob „Alle"
+      // oder „Eine von" für sie gilt.
+      await pumpWholeEditor(tester, h);
+      await tester.tap(find.text('Gruppe').first);
+      await tester.pumpAndSettle();
+
+      final leaves = find.byType(DropdownButtonFormField<LeafKind>);
+      expect(leaves, findsNWidgets(2));
+      expect(tester.getTopLeft(leaves.at(1)).dx,
+          greaterThan(tester.getTopLeft(leaves.at(0)).dx),
+          reason: 'Die Bedingung in der Untergruppe liegt weiter innen als '
+              'die daneben.');
+    });
+
+    testWidgets('bei sehr großer Schrift läuft nichts über', (tester) async {
+      // Der dichteste Schirm der App bei der größten zugelassenen Schrift.
+      // Feste Höhen um Text herum sind hier die häufigste Ursache für
+      // abgeschnittene Werte — und ein abgeschnittener Wert ist im
+      // Regeleditor eine falsch gelesene Schwelle. Der Schirm steht nicht in
+      // `robustness_test`, weil er nur über einen Knopf erreichbar ist; also
+      // wird er hier abgerollt.
+      await pumpScaled(tester, h.wrap(const RuleEditorScreen()),
+          textScale: 2.0);
+
+      final errors = <String>[];
+      // `takeException` haelt immer nur einen Fehler — nach jedem Schritt
+      // gefragt, sonst landen alle weiteren als Konsolenausgabe im Nichts.
+      void collect() {
+        final Object? error = tester.takeException();
+        if (error != null) errors.add('$error');
+      }
+
+      collect();
+      for (var i = 0; i < 40; i++) {
+        await tester.dragFrom(const Offset(6, 600), const Offset(0, -300));
+        await tester.pumpAndSettle();
+        collect();
+      }
+      expect(errors, isEmpty, reason: errors.join(' | '));
     });
   });
 

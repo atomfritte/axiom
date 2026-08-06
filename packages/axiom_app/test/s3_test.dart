@@ -54,9 +54,9 @@ void main() {
       h.clock.advance(const Duration(minutes: 20));
       await pumpPhone(tester, h.wrap(const FocusScreen()));
 
-      expect(find.text('LÄUFT AUF'), findsOneWidget);
+      expect(find.text('Läuft auf'), findsOneWidget);
       expect(find.text('Steuerunterlagen'), findsOneWidget);
-      expect(find.text('GESCHÜTZT'), findsOneWidget);
+      expect(find.text('Geschützt'), findsOneWidget);
     });
 
     testWidgets('schützt in der Zeit, statt zu stören', (tester) async {
@@ -78,7 +78,7 @@ void main() {
       h.clock.advance(const Duration(minutes: 95));
       await pumpPhone(tester, h.wrap(const FocusScreen()));
 
-      expect(find.text('UNTERBRECHUNG'), findsOneWidget);
+      expect(find.text('Unterbrechung'), findsOneWidget);
       expect(find.textContaining('in Ordnung'), findsOneWidget);
     });
 
@@ -92,7 +92,7 @@ void main() {
       await h.runtime.endFocus(session, breadcrumb: 'Bei Anlage KAP, Zeile 7');
 
       await pumpPhone(tester, h.wrap(const FocusScreen()));
-      expect(find.text('ZULETZT STEHENGEBLIEBEN'), findsOneWidget);
+      expect(find.text('Zuletzt stehengeblieben'), findsOneWidget);
       expect(find.text('Bei Anlage KAP, Zeile 7'), findsOneWidget);
     });
 
@@ -114,7 +114,7 @@ void main() {
       await pumpPhone(tester, h.wrap(const SensationScreen()));
 
       expect(find.text('Reizbedarf'), findsOneWidget);
-      expect(find.text('VERDIENT'), findsOneWidget);
+      expect(find.text('Verdient'), findsOneWidget);
       expect(find.textContaining('Kanäle'), findsOneWidget);
     });
 
@@ -189,7 +189,7 @@ void main() {
       await h.runtime.startIntercept(trigger);
       await pumpPhone(tester, h.wrap(const InterceptScreen()));
 
-      expect(find.text('WARTEZEIT LÄUFT'), findsOneWidget);
+      expect(find.text('Wartezeit läuft'), findsOneWidget);
       expect(find.text('15 min'), findsOneWidget);
     });
 
@@ -212,7 +212,7 @@ void main() {
       await h.runtime.startIntercept(trigger);
       await pumpPhone(tester, h.wrap(const InterceptScreen()));
 
-      expect(find.text('DEINE FRAGEN'), findsOneWidget);
+      expect(find.text('Deine Fragen'), findsOneWidget);
       expect(find.text('Kannte ich das vor heute?'), findsOneWidget);
     });
 
@@ -236,7 +236,7 @@ void main() {
       h.clock.advance(const Duration(minutes: 20));
       await pumpPhone(tester, h.wrap(const InterceptScreen()));
 
-      expect(find.text('WARTEZEIT VORBEI'), findsOneWidget);
+      expect(find.text('Wartezeit vorbei'), findsOneWidget);
       final button = tester.widget<OutlinedButton>(
         find.widgetWithText(OutlinedButton, 'Mache ich'),
       );
@@ -329,11 +329,26 @@ void main() {
       // hat alles darunter begraben.
       await pumpPhone(tester, h.wrap(const RulesScreen()));
 
-      for (var i = 0; i < 12 && find.text('UNGEEICHT').evaluate().isEmpty; i++) {
+      // Hier stand `find.text('UNGEEICHT')`. Das war zweifach zu eng: Es
+      // verlangte eine bestimmte Schreibweise und einen alleinstehenden
+      // `Text`. Beides ist inzwischen anders — die Marke steht in normaler
+      // Schreibweise und als Abschnitt der Herkunftszeile. Der Test waere
+      // daran zerbrochen, ohne dass eine Regel ihre Marke verloren haette,
+      // und genau das ist das Einzige, was hier zaehlt: dass eine
+      // ungeeichte Regel als solche erkennbar ist (G2). Gesucht wird
+      // deshalb im gezeichneten Absatz, unabhaengig davon, wie er
+      // zusammengesetzt wurde.
+      final mark = find.byWidgetPredicate(
+        (w) =>
+            w is RichText &&
+            w.text.toPlainText().toUpperCase().contains('UNGEEICHT'),
+        description: 'Marke „Ungeeicht"',
+      );
+      for (var i = 0; i < 12 && mark.evaluate().isEmpty; i++) {
         await tester.drag(find.byType(ListView), const Offset(0, -400));
         await tester.pumpAndSettle();
       }
-      expect(find.text('UNGEEICHT'), findsWidgets);
+      expect(mark, findsWidgets);
     });
   });
 

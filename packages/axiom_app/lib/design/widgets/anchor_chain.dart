@@ -16,6 +16,16 @@ import '../theme.dart';
 import '../tokens.dart';
 import '../../i18n/i18n.dart';
 
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „in 2.5 h" ist im Deutschen keine Zahl, sondern ein Tippfehler — und er
+/// stand an der Stelle, die den naechsten Schritt ansagt. Dieselbe Regel wie
+/// in der Herleitungstafel (`instruments.dart`).
+String _decimal(BuildContext context, double value) {
+  final text = value.toStringAsFixed(1);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
+}
+
 @immutable
 final class AnchorChainView extends StatelessWidget {
   final Anchor anchor;
@@ -140,14 +150,30 @@ class _StepRow extends StatelessWidget {
         children: [
           // Zeitspalte mit Tabellenziffern — sie muss untereinander
           // fluchten, und dafuer braucht es keine Schreibmaschine.
-          SizedBox(
-            width: 52,
-            child: Text(
-              AnchorChainView._hhmm(step.at),
-              style: readingStyle(context,
-                  size: 14,
-                  weight: isNext ? FontWeight.w600 : FontWeight.w500,
-                  color: color),
+          //
+          // Hier stand `SizedBox(width: 52)`, ein fester Kasten um Text. Bei
+          // 1,6-facher Schrift passte „13:00" nicht mehr hinein und brach in
+          // zwei Zeilen um — „13:0" ueber „0". Ausgerechnet die Uhrzeit, um
+          // die es in diesem Baustein geht. Die 52 sind jetzt eine
+          // Untergrenze: Bei normaler Schrift bleibt die Spalte, wo sie war,
+          // bei grosser waechst sie mit. Fluchten tut sie weiterhin, weil
+          // Tabellenziffern jede Uhrzeit gleich breit machen.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 52),
+            // Die vier Pixel sind der Abstand zum Zeitstrahl. Bei normaler
+            // Schrift verschwinden sie in der Untergrenze und aendern nichts;
+            // bei grosser sind sie das Einzige, was Uhrzeit und Punkt noch
+            // trennt.
+            child: Padding(
+              padding: const EdgeInsets.only(right: Space.xs),
+              child: Text(
+                AnchorChainView._hhmm(step.at),
+                maxLines: 1,
+                style: readingStyle(context,
+                    size: 14,
+                    weight: isNext ? FontWeight.w600 : FontWeight.w500,
+                    color: color),
+              ),
             ),
           ),
           // Zeitstrahl.
@@ -200,11 +226,17 @@ class _StepRow extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
+                        // Beide Aeste liefen frueher am Uebersetzer vorbei:
+                        // „jetzt" und „in 2.5 h" standen als rohe Literale da
+                        // und blieben damit in der englischen Oberflaeche
+                        // deutsch — samt Dezimalpunkt, den das Deutsche gar
+                        // nicht schreibt.
                         minutes == 0
-                            ? 'jetzt'
+                            ? context.t('jetzt')
                             : minutes < 60
                                 ? context.t('in {0} min', [minutes])
-                                : 'in ${(minutes / 60).toStringAsFixed(1)} h',
+                                : context.t(
+                                    'in {0} h', [_decimal(context, minutes / 60)]),
                         style: readingStyle(context,
                             size: 13, weight: FontWeight.w500,
                             color: p.signal),
@@ -271,10 +303,10 @@ final class NextStepBadge extends StatelessWidget {
         const SizedBox(width: Space.md),
         Text(
           minutes <= 0
-              ? 'jetzt'
+              ? context.t('jetzt')
               : minutes < 60
                   ? context.t('{0} min', [minutes])
-                  : '${(minutes / 60).toStringAsFixed(1)} h',
+                  : context.t('{0} h', [_decimal(context, minutes / 60)]),
           style: readingStyle(context,
               size: 14, color: near ? p.signal : p.inkDim),
         ),

@@ -42,8 +42,12 @@ class SignalScreen extends ConsumerWidget {
       child: Scaffold(
       appBar: AppBar(title: Text(context.t('Vorfälle'))),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-            Space.lg, Space.lg, Space.lg, Space.huge * 2),
+        // Unten so viel Platz, dass die letzte Zeile neben dem Knopf endet
+        // und nicht unter ihm. Ein fester Wert reicht dafuer nicht: Der Knopf
+        // waechst mit der Schrift mit, die Liste tat es nicht — bei grosser
+        // Schrift lag er wieder auf dem Text.
+        padding: EdgeInsets.fromLTRB(
+            Space.lg, Space.lg, Space.lg, _fabClearance(context)),
         children: [
           if (pending.isNotEmpty) ...[
             _PendingCard(incident: pending.first, open: pending.length),
@@ -63,14 +67,26 @@ class SignalScreen extends ConsumerWidget {
               Panel(
                 child: Column(
                   children: [
-                    for (final entry in patterns.entries)
-                      _PatternRow(
-                        triggerClass: entry.key,
-                        count: entry.value,
-                        max: patterns.values.first,
-                      ),
+                    // **Feste Reihenfolge, nicht die des Kerns.**
+                    // `SignalLog.patterns` sortiert absteigend nach Anzahl —
+                    // fuer ein Monatsreview sinnvoll, auf diesem Schirm eine
+                    // Rangliste eigener Kraenkungen. Gezeigt wird deshalb die
+                    // Reihenfolge, in der die Klassen beim Erfassen zur
+                    // Auswahl stehen; sie ist immer dieselbe und sagt nichts
+                    // ueber das Gewicht (R7, D10).
+                    for (final trigger in TriggerClass.values)
+                      if (patterns[trigger] != null)
+                        _PatternCount(
+                          triggerClass: trigger,
+                          count: patterns[trigger]!,
+                        ),
                   ],
                 ),
+              ),
+              const SizedBox(height: Space.sm),
+              Text(
+                context.t('Gezählt, nicht gewichtet — die Reihenfolge ist immer dieselbe.'),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: Space.xl),
             ],
@@ -100,16 +116,59 @@ class SignalScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showIncidentSheet(context),
-        backgroundColor: p.caution,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        icon: const Icon(Icons.bolt),
-        label: Text(context.t('Vorfall')),
+      // **Bernstein, nicht Kupfer.** Der Knopf trug die Aufmerksamkeitsfarbe
+      // dieses Moduls — dieselbe, die den Vorfall selbst markiert. Damit
+      // stand die Farbe „Achtung" auf dem *Erfassen*, und der Schirm sah aus,
+      // als sei das Festhalten das Problem. Erfassen ist die Handlung, die
+      // hier gemeint ist (G1), also traegt sie die Signalfarbe wie jede
+      // andere Haupthandlung der App.
+      //
+      // **Und er schwebt wieder.** Der Schatten kommt aus derselben Quelle
+      // wie bei den Karten: Der Materialvorgabe-Schatten zeichnet auf hellem
+      // Grund einen harten Ring, `Shadows.reachable` nicht. Ohne Erhebung
+      // ueberhaupt lag der Knopf flach auf der Liste — ausgerechnet das eine
+      // Element, das ueber allem liegen soll.
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(Radii.panel),
+          boxShadow: Shadows.reachable(p),
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => showIncidentSheet(context),
+          backgroundColor: p.signal,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          elevation: 0,
+          focusElevation: 0,
+          hoverElevation: 0,
+          highlightElevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Radii.panel),
+          ),
+          icon: const Icon(Icons.bolt),
+          label: Text(context.t('Vorfall')),
+        ),
       ),
     ),
     );
   }
+}
+
+/// Wie viel Platz eine Liste unter ihrer letzten Zeile braucht.
+///
+/// Der schwebende Knopf lag auf dem Text: `FloatingActionButton.extended` ist
+/// 56 px hoch, sitzt 16 px ueber dem Rand — und die Liste endete darunter.
+/// Ein fester Zahlenwert reicht nicht, weil der Knopf mit der Schriftgroesse
+/// waechst; `scaledHeight` zieht ihn mit.
+double _fabClearance(BuildContext context) =>
+    scaledHeight(context, 56) + Space.huge;
+
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „2.5" ist im Deutschen keine Zahl, sondern ein Tippfehler. Dieselbe Regel
+/// wie in der Herleitungstafel (`instruments.dart`).
+String _decimal(BuildContext context, double value) {
+  final text = value.toStringAsFixed(1);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
 }
 
 /// Nichts erfasst — und das eine Aussage, kein Fehler.
@@ -209,8 +268,8 @@ class _HindsightCard extends StatelessWidget {
           const SizedBox(height: Space.sm),
           BigReading(
             value: delta >= 0
-                ? '−${delta.toStringAsFixed(1)}'
-                : '+${(-delta).toStringAsFixed(1)}',
+                ? '−${_decimal(context, delta)}'
+                : '+${_decimal(context, -delta)}',
             unit: context.t('Stufen'),
             valueColor: p.signal,
             size: 32,
@@ -228,68 +287,41 @@ class _HindsightCard extends StatelessWidget {
   }
 }
 
-/// Wie oft ein Auslöser in dreissig Tagen vorkam.
+/// Wie oft ein Auslöser in dreissig Tagen vorkam — **als Zahl, nicht als
+/// Balken.**
 ///
-/// **Zwei Farben, zwei Rollen — und hier gilt die eine.** Kupfer ist in
-/// diesem Modul die Farbe des *Vorfalls*: Es markiert das Erfassen und die
-/// Stärke, die man selbst angibt. Eine Häufung dagegen ist eine **Messung**
-/// über dreissig Tage und trägt deshalb die Messfarbe, wie jeder Wert auf
-/// dem Zustandsschirm auch. Vorher war dieser Balken kupfern und las sich
-/// damit als „das ist zu viel" — eine Note auf einer Zahl (R7).
-class _PatternRow extends StatelessWidget {
+/// Hier stand ein gefüllter Balken je Klasse, dessen Skalenmaximum die
+/// häufigste Klasse war. Das ist die teuerste Grafik, die dieses Modul haben
+/// kann: Es entsteht eine **Rangliste eigener Kränkungen**, in der die
+/// schmerzhafteste Klasse den längsten Balken bekommt — und weil das Maximum
+/// mitläuft, sieht ein einziges zusätzliches Ereignis aus wie eine
+/// Verdopplung. Bei Rejection Sensitivity ist das kein Schönheitsfehler
+/// (D10), und R7 verbietet die Form ohnehin: Eine Zählung ist ein Messwert
+/// und kein Rang.
+///
+/// Was bleibt, ist die Zahl in der Messfarbe — dieselbe Rolle wie jeder Wert
+/// auf dem Zustandsschirm. Kupfer wäre hier die Farbe des Vorfalls und würde
+/// „das ist zu viel" sagen; das ist ein Urteil, kein Messwert.
+class _PatternCount extends StatelessWidget {
   final TriggerClass triggerClass;
   final int count;
-  final int max;
 
-  const _PatternRow({
-    required this.triggerClass,
-    required this.count,
-    required this.max,
-  });
+  const _PatternCount({required this.triggerClass, required this.count});
 
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Space.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(triggerClass.label,
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ),
-              const SizedBox(width: Space.md),
-              Text('$count',
-                  style: readingStyle(context, size: 15, color: p.signal)),
-            ],
+          Expanded(
+            child: Text(triggerClass.label,
+                style: Theme.of(context).textTheme.bodyMedium),
           ),
-          const SizedBox(height: Space.sm),
-          LayoutBuilder(
-            builder: (context, c) => Stack(
-              children: [
-                // Runde Enden wie bei jedem Messbalken der App: Das ist eine
-                // Marke auf einer Skala, kein Fortschritt mit Ziellinie.
-                Container(
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: p.rule,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Container(
-                  height: 4,
-                  width: c.maxWidth * (count / max).clamp(0.0, 1.0),
-                  decoration: BoxDecoration(
-                    color: p.signal,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(width: Space.md),
+          Text('$count',
+              style: readingStyle(context, size: 15, color: p.signal)),
         ],
       ),
     );

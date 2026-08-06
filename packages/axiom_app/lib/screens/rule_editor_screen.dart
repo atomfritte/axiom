@@ -354,7 +354,16 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
           // da ist, nichts Schweres"), baut ihn, und *dann* fällt einem ein,
           // wie man ihn nennt und begründet. Die Begründung nach dem Bau zu
           // schreiben ist außerdem leichter — man sieht, was man gebaut hat.
-          SectionLabel(context.t('Wie sie heißt')),
+          SectionLabel(
+            context.t('Wie sie heißt'),
+            // **Pflicht sieht man jetzt am Feld, nicht erst am Knopf.**
+            // Vorher stand die Liste der Luecken ganz unten, hinter allem;
+            // wer sie las, musste zurueckscrollen und suchen, welches Feld
+            // gemeint war. Die Marke steht dort, wo die Luecke ist, und
+            // verschwindet, sobald sie geschlossen ist — eine Messung, keine
+            // Ruege.
+            trailing: _title.text.trim().length < 3 ? const _Missing() : null,
+          ),
           TextField(
             controller: _title,
             textCapitalization: TextCapitalization.sentences,
@@ -373,23 +382,27 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
           ),
 
           // ── Wann ────────────────────────────────────────────────────
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
           SectionLabel(context.t('Wann sie zutrifft')),
-          // Als eigene Zeile statt als Anhängsel an der Überschrift: Die
-          // Aussage ist der halbe Nutzen dieses Editors und darf nicht auf
-          // drei Wörter gekürzt werden, weil rechts kein Platz ist.
-          _HoldsBadge(holds: holds),
-          const SizedBox(height: Space.sm),
+          // **Die Auswertung steht unter der Bedingung, nicht darüber.**
+          // Sie stand als eigene Zeile über der Karte und sah damit aus wie
+          // ein Hinweis zur Überschrift — dabei ist sie das Ergebnis dessen,
+          // was in der Karte gebaut wurde. Jetzt ist sie ihr Schlussstrich,
+          // abgesetzt durch eine Haarlinie: dieselbe Bildsprache wie die
+          // Herleitungstafel eines Messwerts, wo unter den Termen die Summe
+          // steht. Wer eine Bedingung baut, liest das Ergebnis dort, wo er
+          // ohnehin hinsieht.
           _GroupCard(
             group: _root,
             depth: 0,
             context_: _context,
             onChanged: () => setState(() {}),
             onRemove: null,
+            footer: _HoldsBadge(holds: holds),
           ),
 
           // ── Dann ────────────────────────────────────────────────────
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
           SectionLabel(context.t('Was dann passiert')),
           _ActionPicker(
             value: _action,
@@ -407,8 +420,14 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
           ],
 
           // ── Warum ───────────────────────────────────────────────────
-          const SizedBox(height: Space.xl),
-          SectionLabel(context.t('Warum es sie gibt')),
+          const SizedBox(height: Space.xxl),
+          SectionLabel(
+            context.t('Warum es sie gibt'),
+            // Das Pflichtfeld, an dem G2 haengt. Solange es zu kurz ist,
+            // steht das hier und nicht nur unten in der Liste.
+            trailing:
+                _rationale.text.trim().length < 40 ? const _Missing() : null,
+          ),
           TextField(
             controller: _rationale,
             maxLines: 5,
@@ -432,7 +451,7 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
           // Abschnittsmarken darueber — eine Unterfrage, die groesser stand
           // als die Frage. Die Zuordnung zu einem Defizit ist ohnehin ein
           // eigener Abschnitt, also traegt sie jetzt auch eine Marke.
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
           SectionLabel(context.t('Worauf sie einzahlt')),
           _DeficitPicker(
             value: _deficit,
@@ -440,45 +459,64 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
           ),
 
           // ── Wie laut ────────────────────────────────────────────────
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
           SectionLabel(context.t('Wie laut')),
           _SeverityPicker(
             value: _severity,
             onChanged: (value) => setState(() => _severity = value),
           ),
 
+          // **Eine Frontplatte statt drei.** Die drei Regler standen als
+          // drei gleich aussehende Karten untereinander — drei Kaesten mit
+          // je einer Reihe Plaketten, und dazwischen Luft, die nichts
+          // trennte, weil es nichts zu trennen gab: Abstand, Tagesdeckel und
+          // Rang beantworten dieselbe Frage („wie oft und mit welchem
+          // Vorrang spricht sie"). Zusammen auf einer Platte, getrennt durch
+          // Haarlinien, sind es drei Zeilen eines Instruments statt drei
+          // Karten, die um dieselbe Aufmerksamkeit konkurrieren.
           const SizedBox(height: Space.lg),
-          _Stepper(
-            label: context.t('Mindestabstand'),
-            value: _cooldownMinutes,
-            unit: context.t('min'),
-            steps: const [15, 30, 60, 120, 240, 480, 1440],
-            meaning: context.t(
-              'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.',
+          Panel(
+            padding: const EdgeInsets.all(Space.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Stepper(
+                  label: context.t('Mindestabstand'),
+                  value: _cooldownMinutes,
+                  unit: context.t('min'),
+                  steps: const [15, 30, 60, 120, 240, 480, 1440],
+                  meaning: context.t(
+                    'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.',
+                  ),
+                  onChanged: (value) =>
+                      setState(() => _cooldownMinutes = value),
+                ),
+                const _RowRule(),
+                _Stepper(
+                  label: context.t('Höchstens pro Tag'),
+                  value: _maxPerDay ?? 0,
+                  unit: context.t('mal'),
+                  steps: const [0, 1, 2, 3, 5, 10],
+                  zeroLabel: context.t('kein Limit'),
+                  meaning: context.t(
+                    'Eine harte Obergrenze zusätzlich zum Abstand.',
+                  ),
+                  onChanged: (value) =>
+                      setState(() => _maxPerDay = value == 0 ? null : value),
+                ),
+                const _RowRule(),
+                _Stepper(
+                  label: context.t('Rang bei Gleichstand'),
+                  value: _priority,
+                  unit: '',
+                  steps: const [10, 30, 50, 70, 90],
+                  meaning: context.t(
+                    'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.',
+                  ),
+                  onChanged: (value) => setState(() => _priority = value),
+                ),
+              ],
             ),
-            onChanged: (value) => setState(() => _cooldownMinutes = value),
-          ),
-          const SizedBox(height: Space.md),
-          _Stepper(
-            label: context.t('Höchstens pro Tag'),
-            value: _maxPerDay ?? 0,
-            unit: context.t('mal'),
-            steps: const [0, 1, 2, 3, 5, 10],
-            zeroLabel: context.t('kein Limit'),
-            meaning: context.t('Eine harte Obergrenze zusätzlich zum Abstand.'),
-            onChanged: (value) =>
-                setState(() => _maxPerDay = value == 0 ? null : value),
-          ),
-          const SizedBox(height: Space.md),
-          _Stepper(
-            label: context.t('Rang bei Gleichstand'),
-            value: _priority,
-            unit: '',
-            steps: const [10, 30, 50, 70, 90],
-            meaning: context.t(
-              'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.',
-            ),
-            onChanged: (value) => setState(() => _priority = value),
           ),
 
           const SizedBox(height: Space.lg),
@@ -556,7 +594,10 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
               ),
             ),
 
-          const SizedBox(height: Space.lg),
+          // Dicht am Knopf, nicht in eigener Luft: Was hier steht, ist die
+          // Bedingung des naechsten Tipps — entweder die Zusage oder das,
+          // was ihn noch verhindert.
+          const SizedBox(height: Space.md),
           FilledButton(
             onPressed: problems.isEmpty && !_saving ? _save : null,
             child: Text(context.t('Speichern')),
@@ -652,28 +693,48 @@ class _GroupCard extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
 
+  /// Steht unter den Kindern, abgesetzt durch eine Haarlinie — die
+  /// Schlussfolgerung der Gruppe. Nur die aeusserste hat eine.
+  final Widget? footer;
+
   const _GroupCard({
     required this.group,
     required this.depth,
     required this.context_,
     required this.onChanged,
     required this.onRemove,
+    this.footer,
   });
 
   @override
   Widget build(BuildContext context) {
-    // **Verschachtelung als Tiefe, nicht als Rahmen.** Vorher war jede Ebene
-    // dieselbe Karte, die tieferen mit einem Haarlinienrahmen — drei
-    // ineinandergeschachtelte Kaesten, die alle gleich weit vorn lagen. Wer
-    // eine Gruppe in einer Gruppe liest, muss sehen, was *worin* liegt: Die
-    // aeussere Ebene ist eine Karte, alles darin eine Mulde. Dieselbe
-    // Bildsprache wie die Reichweitenkante — tiefer heisst weiter innen,
-    // nicht weniger wert.
+    final p = context.axiom;
+
+    // **Die Klammer.** Hier stand: die aeussere Ebene eine Karte, jede
+    // tiefere eine Mulde. Auf dem Bild traegt das nicht. Eine Mulde in einer
+    // Mulde hat keinen Kontrast mehr uebrig (im Hellen sind es 4 %), und die
+    // Blattkarten darin lagen dadurch *heller* als ihre eigene Gruppe —
+    // dieselbe Karte las sich oben als vertieft und eine Ebene tiefer als
+    // erhoben. Dazu kam eine Bedeutungskollision: Die Mulde heisst in dieser
+    // App „da, aber heute nicht in Reichweite". Eine verschachtelte Gruppe
+    // ist nichts davon.
+    //
+    // Jetzt traegt eine senkrechte Schiene die Verschachtelung, wie in einer
+    // Gliederung: Sie beginnt unter dem Umschalter und laeuft bis zum Ende
+    // der Gruppe — man sieht damit, *welche* Bedingungen zu „Alle" bzw.
+    // „Eine von" gehoeren und wo die Gruppe aufhoert. Ihre Farbe ist die des
+    // Umschalters: Signal fuer die Verknuepfung, Kupfer, wenn „Nicht" die
+    // ganze Gruppe umkehrt. Damit steht die Klammer in derselben Farbe wie
+    // das Wort, das sie erklaert.
+    final rail = group.negated
+        ? p.caution.withValues(alpha: 0.6)
+        : p.signal.withValues(alpha: 0.5);
+
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Wrap statt Row: Bei grosser Schrift und in der zweiten
-        // Verschachtelungsebene passen Umschalter, NICHT und Schliessen
+        // Verschachtelungsebene passen Umschalter, „Nicht" und Schliessen
         // nicht mehr nebeneinander. Ein ueberlaufender Row schneidet
         // ausgerechnet das Schliessen ab.
         // Abstand `lg` statt `sm`: Die Verknuepfung („Alle / Eine von") und
@@ -711,69 +772,127 @@ class _GroupCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Space.sm),
-        for (var i = 0; i < group.children.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Space.sm),
-            child: switch (group.children[i]) {
-              final DraftGroup child => _GroupCard(
-                group: child,
-                depth: depth + 1,
-                context_: context_,
-                onChanged: onChanged,
-                onRemove: () {
-                  group.children.removeAt(i);
-                  onChanged();
-                },
-              ),
-              final DraftLeaf leaf => _LeafCard(
-                leaf: leaf,
-                context_: context_,
-                onChanged: onChanged,
-                onRemove: group.children.length == 1 && depth == 0
-                    ? null
-                    : () {
+        _Rail(
+          color: rail,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < group.children.length; i++)
+                Padding(
+                  // Eine Untergruppe beginnt mit ihrem eigenen Umschalter,
+                  // und der gehoert zu dem, was unter ihm steht — nicht zu
+                  // der Bedingung darueber. Etwas mehr Luft davor sagt das.
+                  padding: EdgeInsets.only(
+                    top: group.children[i] is DraftGroup ? Space.sm : 0,
+                    bottom: Space.sm,
+                  ),
+                  child: switch (group.children[i]) {
+                    final DraftGroup child => _GroupCard(
+                      group: child,
+                      depth: depth + 1,
+                      context_: context_,
+                      onChanged: onChanged,
+                      onRemove: () {
                         group.children.removeAt(i);
                         onChanged();
                       },
+                    ),
+                    final DraftLeaf leaf => _LeafCard(
+                      leaf: leaf,
+                      context_: context_,
+                      onChanged: onChanged,
+                      onRemove: group.children.length == 1 && depth == 0
+                          ? null
+                          : () {
+                              group.children.removeAt(i);
+                              onChanged();
+                            },
+                    ),
+                  },
+                ),
+              // Die beiden Knoepfe stehen mit *in* der Klammer: Was sie
+              // anlegen, gehoert in diese Gruppe, und die Schiene endet erst
+              // unter ihnen — dort hoert die Gruppe auf.
+              Wrap(
+                spacing: Space.sm,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(context.t('Bedingung')),
+                    onPressed: () {
+                      group.children.add(DraftLeaf());
+                      onChanged();
+                    },
+                  ),
+                  // Verschachtelung nur bis zur dritten Ebene: Drei sind
+                  // lesbar, vier sind ein Programm.
+                  if (depth < 2)
+                    TextButton.icon(
+                      icon: const Icon(Icons.account_tree_outlined, size: 18),
+                      label: Text(context.t('Gruppe')),
+                      onPressed: () {
+                        group.children.add(
+                          DraftGroup(any: !group.any, children: [DraftLeaf()]),
+                        );
+                        onChanged();
+                      },
+                    ),
+                ],
               ),
-            },
+            ],
           ),
-        Wrap(
-          spacing: Space.sm,
-          children: [
-            TextButton.icon(
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(context.t('Bedingung')),
-              onPressed: () {
-                group.children.add(DraftLeaf());
-                onChanged();
-              },
-            ),
-            // Verschachtelung nur bis zur dritten Ebene: Drei sind lesbar,
-            // vier sind ein Programm.
-            if (depth < 2)
-              TextButton.icon(
-                icon: const Icon(Icons.account_tree_outlined, size: 18),
-                label: Text(context.t('Gruppe')),
-                onPressed: () {
-                  group.children.add(
-                    DraftGroup(any: !group.any, children: [DraftLeaf()]),
-                  );
-                  onChanged();
-                },
-              ),
-          ],
         ),
+        if (footer != null) ...[
+          const SizedBox(height: Space.md),
+          Container(height: 1, color: p.rule),
+          const SizedBox(height: Space.md),
+          footer!,
+        ],
       ],
     );
 
+    // Nur die aeusserste Gruppe ist eine Karte. Alles darunter traegt die
+    // Schiene — eine zweite Flaeche waere eine zweite Aussage ueber dieselbe
+    // Verschachtelung.
     if (depth == 0) return Panel(child: content);
-    return Well(
-      padding: const EdgeInsets.all(Space.md),
-      radius: BorderRadius.circular(Radii.control),
-      child: content,
-    );
+    return content;
   }
+}
+
+/// Die Klammer einer Gruppe: eine senkrechte Schiene links der Kinder.
+///
+/// `Stack` statt `IntrinsicHeight`: Die Kinder enthalten Auswahlfelder und
+/// Textfelder, deren Eigenbreite und -hoehe teuer bis undefiniert ist. Ein
+/// vollstaendig positioniertes Kind geht in die Groesse des Stapels nicht
+/// ein — die Schiene bekommt damit die Hoehe der Spalte, ohne dass irgendwer
+/// gemessen wird.
+class _Rail extends StatelessWidget {
+  final Widget child;
+  final Color color;
+
+  const _Rail({required this.child, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 2,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(left: Space.lg),
+        child: child,
+      ),
+    ],
+  );
 }
 
 /// Eine einzelne Bedingung, mit dem Istwert daneben.
@@ -1187,12 +1306,18 @@ class _NumberField extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _Step(icon: Icons.remove, onTap: () => onChanged(_down())),
-          SizedBox(
-            width: 54,
-            child: Text(
-              '$value',
-              textAlign: TextAlign.center,
-              style: readingStyle(context, size: 18, color: p.signal),
+          // Mindestbreite statt fester Breite: „1440" bei 1,4-facher Schrift
+          // passte in 54 px nicht mehr und wurde beschnitten. So bleibt die
+          // Spalte ruhig, solange sie es kann, und gibt nach, wenn sie muss.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 54),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.xs),
+              child: Text(
+                '$value',
+                textAlign: TextAlign.center,
+                style: readingStyle(context, size: 18, color: p.signal),
+              ),
             ),
           ),
           _Step(icon: Icons.add, onTap: () => onChanged(_up())),
@@ -1442,7 +1567,10 @@ class _TimeField extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 56,
+        // Zwei Textzeilen in einem festen 56-px-Kasten: Bei grosser Schrift
+        // wurde die Uhrzeit abgeschnitten — ausgerechnet der Wert. Die Hoehe
+        // waechst jetzt mit der Schrift mit ([scaledHeight]).
+        height: scaledHeight(context, 56),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: p.panel,
@@ -1461,6 +1589,16 @@ class _TimeField extends StatelessWidget {
   }
 }
 
+/// Die Auswertung gegen den Zustand von jetzt — der Schlussstrich der
+/// Bedingung.
+///
+/// **Warum sie lauter gesetzt ist als der Rest.** Sie ist der Grund, aus dem
+/// dieser Editor mehr ist als ein Textfeld: Man sieht beim Bauen, ob die
+/// Regel jetzt zutraefe, statt es zu vermuten (G2). Gesetzt war sie in
+/// `bodyMedium` — kleiner als jede Ueberschrift daneben und in derselben
+/// Groesse wie die Fussnoten. Jetzt Lesegroesse mit einer Zustandsplakette
+/// davor, in der Farbe des Zustands: Wer sie ueberliest, schreibt Schwellen
+/// ins Blaue.
 class _HoldsBadge extends StatelessWidget {
   final bool? holds;
   const _HoldsBadge({required this.holds});
@@ -1485,31 +1623,62 @@ class _HoldsBadge extends StatelessWidget {
         p.caution,
       ),
     };
-    // Die Aussage ist der halbe Nutzen dieses Editors — sie stand in
-    // Schreibmaschine, 12 px. Jetzt Lesegroesse: Wer sie ueberliest, schreibt
-    // Schwellen ins Blaue.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Space.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 18, color: color),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Icon(icon, size: 20, color: color),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: color),
           ),
-          const SizedBox(width: Space.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: color),
-            ),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Die Marke „hier fehlt noch etwas" an einer Abschnittsmarke.
+///
+/// Sie sitzt im `trailing`-Platz von [SectionLabel] und verschwindet, sobald
+/// das Feld reicht. Kupfer, nicht Rot: Aufmerksamkeit, kein Vorwurf — und
+/// dieselbe Farbe wie die Liste unten, damit erkennbar ist, dass beides
+/// dieselbe Aussage macht.
+class _Missing extends StatelessWidget {
+  const _Missing();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: p.caution.withValues(alpha: 0.55)),
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
+      child: Text(
+        context.t('Fehlt noch'),
+        style: sectionStyle(context, color: p.caution),
       ),
     );
   }
+}
+
+/// Haarlinie zwischen zwei Zeilen derselben Frontplatte.
+class _RowRule extends StatelessWidget {
+  const _RowRule();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: Space.lg),
+    child: Container(height: 1, color: context.axiom.rule),
+  );
 }
 
 class _DeficitPicker extends StatelessWidget {
@@ -1643,31 +1812,30 @@ class _Stepper extends StatelessWidget {
     this.zeroLabel,
   });
 
+  /// Eine Zeile, keine Karte mehr — der Rahmen kommt von der Frontplatte,
+  /// auf der alle drei zusammen stehen.
   @override
-  Widget build(BuildContext context) => Panel(
-    padding: const EdgeInsets.all(Space.md),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: Space.md),
-        Wrap(
-          spacing: Space.sm,
-          runSpacing: Space.sm,
-          children: [
-            for (final step in steps)
-              _ValueChip(
-                label: step == 0 && zeroLabel != null
-                    ? zeroLabel!
-                    : '$step $unit'.trim(),
-                selected: step == value,
-                onTap: () => onChanged(step),
-              ),
-          ],
-        ),
-        const SizedBox(height: Space.sm),
-        Text(meaning, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: Space.md),
+      Wrap(
+        spacing: Space.sm,
+        runSpacing: Space.sm,
+        children: [
+          for (final step in steps)
+            _ValueChip(
+              label: step == 0 && zeroLabel != null
+                  ? zeroLabel!
+                  : '$step $unit'.trim(),
+              selected: step == value,
+              onTap: () => onChanged(step),
+            ),
+        ],
+      ),
+      const SizedBox(height: Space.sm),
+      Text(meaning, style: Theme.of(context).textTheme.bodySmall),
+    ],
   );
 }

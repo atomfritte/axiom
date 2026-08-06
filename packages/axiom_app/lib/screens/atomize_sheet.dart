@@ -52,7 +52,6 @@ class _AtomizeSheet extends ConsumerStatefulWidget {
 
 class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
   final _first = TextEditingController();
-  final _rest = TextEditingController();
   final _focus = FocusNode();
   int _firstEnergy = 2;
   StepShape? _shape;
@@ -69,7 +68,6 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
   @override
   void dispose() {
     _first.dispose();
-    _rest.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -82,18 +80,33 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
     setState(() => _saving = true);
 
     final runtime = await ref.read(runtimeProvider.future);
-    // Der Rest ist eine Stufe leichter als das Ganze — aber nie unter 1.
-    // Bei einer Aufgabe mit Energie 1 kam hier vorher 0 heraus, und der
-    // Wertebereich von `Task` ist 1..10: Das Zerlegen brach genau in dem
-    // Moment ab, in dem der erste Schritt schon getippt war [D2].
-    final restEnergy = (_task.activationEnergy - 1).clamp(1, 10);
-    final steps = <({String title, int energy})>[
-      (title: first, energy: _firstEnergy),
-      if (_rest.text.trim().isNotEmpty)
-        (title: _rest.text.trim(), energy: restEnergy),
-    ];
-
-    await runtime.atomize(parent: _task, steps: steps);
+    // **Hier stand ein zweiter Schritt: „Und dann? (optional)".** Ein
+    // Textfeld am Ende des Blattes, das den Rest der Aufgabe grob
+    // aufnehmen sollte; daraus wurde ein zweites Kind mit einer Stufe
+    // weniger Startenergie.
+    //
+    // Es ist ersatzlos raus, und zwar aus zwei Gruenden, die beide aelter
+    // sind als dieses Blatt:
+    //
+    //  1. **Es fragte nach dem Plan.** Genau das schliesst der Kopf dieser
+    //     Datei aus: Die Frage lautet bewusst nicht „In welche Teile
+    //     zerfaellt das?", weil ein Systemizer darauf mit einem
+    //     vollstaendigen Projektplan antwortet — und der ist selbst wieder
+    //     eine Aufgabe mit hoher Aktivierungsenergie (D3). Das Feld stand
+    //     genau dort, wo dieser Reflex am billigsten zu bedienen war.
+    //  2. **Der Rest ist schon gespeichert.** `atomize` loescht die
+    //     Elternaufgabe nicht, sie wird nur blockiert („vertreten durch die
+    //     eigenen Schritte") und kommt zurueck, sobald kein Schritt mehr
+    //     offen ist. Der Rest hiess also ohnehin immer schon so wie die
+    //     Aufgabe — das Feld hat ihn nur ein zweites Mal abgetippt.
+    //
+    // Was damit auch weg ist: die `clamp(1, 10)`-Rechnung fuer die Energie
+    // des Restes, die es nur gab, weil bei einer Aufgabe mit Energie 1
+    // sonst 0 herauskam und `Task` erst ab 1 gilt.
+    await runtime.atomize(
+      parent: _task,
+      steps: [(title: first, energy: _firstEnergy)],
+    );
     await HapticFeedback.mediumImpact();
     refreshAxiom(ref);
     if (mounted) Navigator.of(context).pop(true);
@@ -103,108 +116,168 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return SafeArea(
-      child: SingleChildScrollView(
+      // **Die Handlung bleibt stehen, der Inhalt rollt darunter durch.**
+      //
+      // Das laengste der Blaetter, und ausgerechnet das, das man bei
+      // erschoepfter Startenergie oeffnet. Bei 360 px und 2,4-facher Schrift
+      // sind das mehrere Bildschirme, und „Übernehmen" lag hinter allen —
+      // waehrend das Feld oben den Fokus holt und die Ansicht zu sich zieht.
+      // Wer den ersten Schritt getippt hat, soll ihn nicht suchen muessen
+      // (G1, D2).
+      child: Padding(
         padding: EdgeInsets.only(
-          left: Space.lg,
-          right: Space.lg,
-          top: Space.lg,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + Space.lg,
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('Zerlegen'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.sm),
-            Text(_task.title,
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: Space.md),
-            Text(widget.candidate.explanation,
-                style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: Space.xl),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.lg,
+                  Space.lg,
+                  Space.lg,
+                  Space.md,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.t('Zerlegen'),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    Text(
+                      _task.title,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: Space.md),
+                    Text(
+                      widget.candidate.explanation,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: Space.xl),
 
-            Text(context.t('Was ist die allererste Handlung?'),
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: Space.xs),
-            Text(
-              context.t('Etwas Körperliches, das in zwei Minuten erledigt ist. Nicht der Plan — der erste Handgriff.'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: Space.md),
+                    Text(
+                      context.t('Was ist die allererste Handlung?'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      context.t(
+                        'Etwas Körperliches, das in zwei Minuten erledigt ist. Nicht der Plan — der erste Handgriff.',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: Space.md),
 
-            TextField(
-              controller: _first,
-              focusNode: _focus,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: _shape?.examples ?? context.t('Ordner auf den Tisch legen'),
-              ),
-            ),
-            const SizedBox(height: Space.lg),
+                    TextField(
+                      controller: _first,
+                      focusNode: _focus,
+                      textCapitalization: TextCapitalization.sentences,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText:
+                            _shape?.examples ??
+                            context.t('Ordner auf den Tisch legen'),
+                      ),
+                    ),
+                    const SizedBox(height: Space.lg),
 
-            Text(context.t('ODER EINE DIESER FORMEN'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
-                for (final shape in StepShape.values)
-                  _ShapeChip(
-                    shape: shape,
-                    selected: _shape == shape,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _shape = _shape == shape ? null : shape);
-                      _focus.requestFocus();
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: Space.xl),
+                    // **Der Formenkatalog steht nur da, solange das Feld
+                    // leer ist.**
+                    //
+                    // Sieben Chips ueber vier Zeilen waren der groesste
+                    // einzelne Block des laengsten Blattes der App — und ihr
+                    // ganzer Beitrag ist ein anderer Platzhalter im Feld
+                    // darueber. Wer schon tippt, hat die Antwort; fuer den
+                    // sind sie ab dem ersten Zeichen nur noch Weg zwischen
+                    // Feld und Skala.
+                    //
+                    // Gebraucht werden sie an genau einer Stelle: wenn man
+                    // vor dem leeren Feld sitzt und nicht weiss, was eine
+                    // „erste koerperliche Handlung" ueberhaupt sein soll
+                    // [D2]. Dort bleiben sie vollstaendig stehen. Weggenommen
+                    // ist nicht der Katalog, sondern seine Anwesenheit
+                    // danach.
+                    if (_first.text.trim().isEmpty) ...[
+                      // War `ODER EINE DIESER FORMEN` — dreiundzwanzig
+                      // Versalien auf dem Schirm fuer den schlechtesten Tag.
+                      Text(
+                        context.t('Oder eine dieser Formen'),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      const SizedBox(height: Space.sm),
+                      Wrap(
+                        spacing: Space.sm,
+                        runSpacing: Space.sm,
+                        children: [
+                          for (final shape in StepShape.values)
+                            _ShapeChip(
+                              shape: shape,
+                              selected: _shape == shape,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setState(
+                                  () => _shape = _shape == shape ? null : shape,
+                                );
+                                _focus.requestFocus();
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: Space.xl),
+                    ],
 
-            _EnergyPicker(
-              value: _firstEnergy,
-              target: widget.candidate.targetEnergy,
-              onChanged: (v) => setState(() => _firstEnergy = v),
-            ),
+                    _EnergyPicker(
+                      value: _firstEnergy,
+                      target: widget.candidate.targetEnergy,
+                      onChanged: (v) => setState(() => _firstEnergy = v),
+                    ),
 
-            if (!_isReachable) ...[
-              const SizedBox(height: Space.md),
-              Panel(
-                accent: p.caution.withValues(alpha: 0.45),
-                child: Text(
-                  context.t('Das ist noch zu groß. Ein Schritt, der gerade so passt, passt morgen nicht mehr — dann fängt das Ganze von vorn an. Was wäre der Handgriff davor?'),
-                  style: Theme.of(context).textTheme.bodySmall,
+                    if (!_isReachable) ...[
+                      const SizedBox(height: Space.md),
+                      Panel(
+                        accent: p.caution.withValues(alpha: 0.45),
+                        child: Text(
+                          context.t(
+                            'Das ist noch zu groß. Ein Schritt, der gerade so passt, passt morgen nicht mehr — dann fängt das Ganze von vorn an. Was wäre der Handgriff davor?',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                    // Hier endete das Blatt frueher mit „UND DANN?
+                    // (OPTIONAL)" und einem zweiten Textfeld. Beides ist
+                    // weg; die Begruendung steht bei [_save].
+                  ],
                 ),
               ),
-            ],
-
-            const SizedBox(height: Space.xl),
-            Text(context.t('UND DANN? (OPTIONAL)'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.sm),
-            TextField(
-              controller: _rest,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: context.t('Der Rest, grob — kommt später dran'),
+            ),
+            Container(height: 1, color: p.rule),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.md,
+                Space.lg,
+                Space.md,
               ),
-            ),
-
-            const SizedBox(height: Space.xl),
-            FilledButton(
-              onPressed:
-                  _saving || _first.text.trim().isEmpty ? null : _save,
-              child: Text(context.t('Übernehmen')),
-            ),
-            const SizedBox(height: Space.sm),
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(context.t('Später')),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton(
+                    onPressed: _saving || _first.text.trim().isEmpty
+                        ? null
+                        : _save,
+                    child: Text(context.t('Übernehmen')),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(context.t('Später')),
+                  ),
+                ],
               ),
             ),
           ],
@@ -232,7 +305,9 @@ class _ShapeChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: Space.lg, vertical: Space.md),
+          horizontal: Space.lg,
+          vertical: Space.md,
+        ),
         decoration: BoxDecoration(
           // Ungewaehlt war das hier `panel` mit Haarlinienrahmen — in einem
           // Blatt ist `panel` der Untergrund selbst, also blieb vom Chip nur
@@ -241,21 +316,35 @@ class _ShapeChip extends StatelessWidget {
           color: selected ? p.signal.withValues(alpha: 0.16) : p.well,
           borderRadius: BorderRadius.circular(Radii.control),
           border: Border.all(
-              color: selected ? p.signal : Colors.transparent, width: 1.5),
+            color: selected ? p.signal : Colors.transparent,
+            width: 1.5,
+          ),
         ),
         child: Text(
           shape.label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: selected ? p.signal : p.inkDim,
-              ),
+            color: selected ? p.signal : p.inkDim,
+          ),
         ),
       ),
     );
   }
 }
 
-/// Wie schwer fällt DER erste Schritt? Zeigt die Zielmarke mit an, damit
-/// sichtbar ist, wann die Zerlegung fein genug ist.
+/// Wie schwer fällt DER erste Schritt? Die Kerbe unter der Skala zeigt, wie
+/// weit die heutige Kapazität reicht.
+///
+/// **Warum dort nicht mehr „ZIEL ≤ 2" steht.** Neben einer Zehnerskala war
+/// das eine Prüfung mit Bestehensgrenze — und zwar über eine Zahl, die der
+/// Nutzer eine Sekunde vorher selbst geschätzt hat, auf dem Blatt, das man
+/// bei niedriger Kapazität öffnet. Wer 4 antippt, hat dann nicht gemessen,
+/// sondern verfehlt. Das ist eine Note mit Schwellenwert, und Zustandswerte
+/// sind Messwerte (R7).
+///
+/// Die Kerbe bleibt — sie trägt dieselbe Information ohne Vergleichszeichen
+/// und ohne das Wort „Ziel". Was sie bedeutet, sagt jetzt ein Satz darunter,
+/// und der sagt es über das System („so weit reicht die Kapazität heute")
+/// statt über den Nutzer.
 ///
 /// **Warum hier gefüllt wird und im Check-in nicht.** Die Regler im
 /// Check-in fragen nach einer *Stelle* zwischen zwei benannten Enden; dort
@@ -289,16 +378,14 @@ class _EnergyPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(context.t('Wie schwer fällt dieser Schritt?'),
-                  style: Theme.of(context).textTheme.titleMedium),
-            ),
-            const SizedBox(width: Space.md),
-            Text(context.t('ZIEL ≤ {0}', [target]),
-                style: readingStyle(context, size: 13.5, color: p.inkFaint)),
-          ],
+        // Hier stand ein `Wrap` mit zwei Kindern: links die Frage, rechts
+        // „ZIEL ≤ 2". Der `Wrap` gab es nur, weil die Marke rechts nicht
+        // umbrechen durfte und die Frage links sonst bei 2,4-facher Schrift
+        // auf wenige Zeichen zusammengepresst wurde. Ohne die Marke braucht
+        // die Frage keine Sonderbehandlung mehr — sie ist wieder ein Text.
+        Text(
+          context.t('Wie schwer fällt dieser Schritt?'),
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: Space.md),
         // Fester Schluessel: Die Skala ist der einzige Weg, den Wert zu
@@ -318,12 +405,16 @@ class _EnergyPicker extends StatelessWidget {
                   child: Column(
                     children: [
                       Container(
-                        height: 44,
+                        // 52 wie die Regler im Check-in: dieselbe
+                        // Instrumentenfamilie, also dieselbe Hoehe — und
+                        // Androids Richtlinie sind 48 dp. Die Breite bleibt
+                        // bei zehn Stufen auf einem 360er Schirm knapp; das
+                        // ist der Preis der Zehnerskala und steht im Bericht.
+                        height: 52,
                         margin: EdgeInsets.only(right: i < 10 ? 3 : 0),
                         decoration: BoxDecoration(
                           color: value >= i
-                              ? p.signal
-                                  .withValues(alpha: value == i ? 1 : 0.3)
+                              ? p.signal.withValues(alpha: value == i ? 1 : 0.3)
                               : p.well,
                           // Radius 2 hiess: gefraeste Kante. Auf zehn
                           // Feldern nebeneinander liest sich das als Raster
@@ -347,6 +438,16 @@ class _EnergyPicker extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+        const SizedBox(height: Space.sm),
+        // Die Kerbe braucht einen Satz, sonst ist sie ein Raetsel — und ein
+        // unerklaertes Zeichen unter einer Skala laedt genau die Deutung
+        // ein, die hier nicht gemeint ist. Der Satz nennt die Zahl und sagt,
+        // was AXIOM damit tut; er sagt nichts darueber, ob der gewaehlte
+        // Wert richtig ist (R7, G2).
+        Text(
+          context.t('Die Marke bei {0} ist die heutige Reichweite.', [target]),
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

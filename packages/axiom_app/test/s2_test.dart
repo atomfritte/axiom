@@ -11,6 +11,7 @@ import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'app_test.dart' show findLabel;
 import 'harness.dart';
 
 void main() {
@@ -98,7 +99,7 @@ void main() {
       await heavyTask();
       await pumpPhone(tester, h.wrap(const NowScreen()));
 
-      expect(find.text('ZU GROSS FÜR HEUTE'), findsOneWidget);
+      expect(findLabel('Zu groß für heute'), findsOneWidget);
       expect(find.text('In einen ersten Schritt zerlegen'), findsOneWidget);
       // Kein Vorwurf, keine Fälligkeitsmahnung.
       expect(find.textContaining('überfällig'), findsNothing);
@@ -300,8 +301,20 @@ void main() {
 
     testWidgets('auch eine Aufgabe mit Startenergie 1 lässt sich zerlegen',
         (tester) async {
-      // Der abgeleitete Rest war „eine Stufe leichter" — bei 1 also 0, und
-      // damit ausserhalb des Wertebereichs von Task.
+      // Der Fall, der diesen Test einmal ausgelöst hat, gibt es nicht mehr:
+      // Das Blatt leitete früher einen „Rest" ab, eine Stufe leichter — bei
+      // Startenergie 1 also 0, außerhalb des Wertebereichs von Task.
+      //
+      // Das Feld ist weg, und zwar aus einem besseren Grund als der Rechnung:
+      // `atomize` löscht die Elternaufgabe nicht, sondern blockiert sie
+      // („vertreten durch die eigenen Schritte"), und sie kommt zurück,
+      // sobald kein Schritt mehr offen ist. Der Rest hieß also ohnehin immer
+      // schon so wie die Aufgabe — das Feld ließ ihn ein zweites Mal
+      // abtippen, auf dem Schirm, den man bei erschöpfter Startenergie
+      // öffnet (D2, G1).
+      //
+      // Was der Test weiterhin hält: Startenergie 1 ist kein Sonderfall, und
+      // die Elternaufgabe verschwindet dabei nicht.
       final task = await h.runtime.createTask(
         title: 'Kurz lüften',
         activationEnergy: 1,
@@ -314,9 +327,7 @@ void main() {
       showAtomizeSheet(context, candidate).ignore();
       await tester.pumpAndSettle();
 
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.first, 'Fenster aufmachen');
-      await tester.enterText(fields.last, 'Der Rest');
+      await tester.enterText(find.byType(TextField).first, 'Fenster aufmachen');
       await tester.pumpAndSettle();
       // Das Blatt scrollt; ein Tipp ins Leere bliebe sonst stumm.
       await tester.ensureVisible(find.text('Übernehmen'));
@@ -324,10 +335,17 @@ void main() {
       await tester.tap(find.text('Übernehmen'));
       await tester.pumpAndSettle();
 
-      final children =
-          (await h.store.tasks()).where((t) => t.parentId == task.id).toList();
-      expect(children, hasLength(2));
-      expect(children.every((c) => c.activationEnergy >= 1), isTrue);
+      final alle = await h.store.tasks();
+      final children = alle.where((t) => t.parentId == task.id).toList();
+      expect(children, hasLength(1));
+      expect(children.single.title, 'Fenster aufmachen');
+      expect(children.single.activationEnergy, greaterThanOrEqualTo(1));
+
+      // Die Elternaufgabe steht weiter da — blockiert, nicht gelöscht.
+      final eltern = alle.firstWhere((t) => t.id == task.id);
+      expect(eltern.state, TaskState.blocked,
+          reason: 'Sie ist durch ihren Schritt vertreten und kommt zurück, '
+              'sobald er erledigt ist');
     });
   });
 

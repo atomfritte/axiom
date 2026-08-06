@@ -415,7 +415,16 @@ String _describeWindow(BuildContext context, MedEntry active, DateTime at) {
   return left.inMinutes < 60
       ? context.t('Fenster läuft noch {0} min.', [left.inMinutes])
       : context.t('Fenster läuft noch {0} h.',
-          [(left.inMinutes / 60).toStringAsFixed(1)]);
+          [_decimal(context, left.inMinutes / 60)]);
+}
+
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „noch 2.5 h" ist im Deutschen keine Zahl, sondern ein Tippfehler.
+/// Dieselbe Regel wie in der Herleitungstafel (`instruments.dart`).
+String _decimal(BuildContext context, double value) {
+  final text = value.toStringAsFixed(1);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
 }
 
 class _MedSection extends ConsumerWidget {

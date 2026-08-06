@@ -38,8 +38,12 @@ class AnchorsScreen extends ConsumerWidget {
         data: (snap) => snap.anchors.isEmpty
             ? const _EmptyAnchors()
             : ListView(
-                padding: const EdgeInsets.fromLTRB(
-                    Space.lg, Space.sm, Space.lg, Space.huge * 2),
+                // Unten so viel Platz, dass die letzte Zeile neben dem Knopf
+                // endet und nicht unter ihm. Ein fester Wert reicht dafuer
+                // nicht: Der Knopf waechst mit der Schrift, die Liste tat es
+                // nicht — bei grosser Schrift lag er wieder auf dem Text.
+                padding: EdgeInsets.fromLTRB(
+                    Space.lg, Space.sm, Space.lg, _fabClearance(context)),
                 children: [
                   SectionLabel(context.t('Anstehend · {0}', [snap.anchors.length])),
                   // Der aktive Anker wird **erhoben**, nicht umrandet. Ein
@@ -63,23 +67,33 @@ class AnchorsScreen extends ConsumerWidget {
                 ],
               ),
       ),
-      // Weiche Kante statt Material-Vorgabe: Der voreingestellte Schatten
-      // eines FAB zeichnet auf hellem Grund einen harten dunklen Ring — die
-      // einzige harte Kante auf einem Schirm, der sonst nur weiche hat.
-      // Erhebung kommt hier aus derselben Quelle wie bei den Karten.
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(context, ref, null),
-        backgroundColor: context.axiom.signal,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        elevation: 0,
-        focusElevation: 0,
-        hoverElevation: 0,
-        highlightElevation: 0,
-        shape: RoundedRectangleBorder(
+      // **Er schwebt wieder.** Hier stand „Weiche Kante statt
+      // Material-Vorgabe" und dann `elevation: 0` — der Materialschatten
+      // zeichnet auf hellem Grund tatsaechlich einen harten Ring, und der
+      // musste weg. Weg war danach aber die Erhebung selbst: Der Knopf lag
+      // flach auf der Liste, ausgerechnet das eine Element, das ueber allem
+      // liegen soll. Der Schatten kommt jetzt aus derselben Quelle wie bei
+      // den Karten (`Shadows.reachable`) — weich, warm getoent, und in beiden
+      // Helligkeiten nachgerechnet.
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Radii.panel),
+          boxShadow: Shadows.reachable(context.axiom),
         ),
-        icon: const Icon(Icons.add),
-        label: Text(context.t('Termin')),
+        child: FloatingActionButton.extended(
+          onPressed: () => _edit(context, ref, null),
+          backgroundColor: context.axiom.signal,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          elevation: 0,
+          focusElevation: 0,
+          hoverElevation: 0,
+          highlightElevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Radii.panel),
+          ),
+          icon: const Icon(Icons.add),
+          label: Text(context.t('Termin')),
+        ),
       ),
     ),
     );
@@ -98,6 +112,15 @@ class AnchorsScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Wie viel Platz eine Liste unter ihrer letzten Zeile braucht.
+///
+/// Der schwebende Knopf lag auf dem Text: `FloatingActionButton.extended` ist
+/// 56 px hoch, sitzt 16 px ueber dem Rand — und die Liste endete darunter.
+/// Ein fester Zahlenwert reicht nicht, weil der Knopf mit der Schriftgroesse
+/// waechst; `scaledHeight` zieht ihn mit.
+double _fabClearance(BuildContext context) =>
+    scaledHeight(context, 56) + Space.huge;
 
 class _EmptyAnchors extends StatelessWidget {
   const _EmptyAnchors();

@@ -4,6 +4,14 @@
 ///
 /// Dient zwei Zwecken: visuelle Kontrolle beim Entwickeln und ein Regressions-
 /// netz gegen unbeabsichtigte Layoutaenderungen.
+///
+/// **Eine Runde ansehen, ohne den Bestand anzufassen:**
+///
+///   AXIOM_GOLDEN_DIR=/tmp/schliff \
+///     flutter test test/screenshot_test.dart --update-goldens
+///
+/// Siehe [_shots]. Ein Referenzbild, das niemand angesehen hat, nagelt einen
+/// Fehler fest, statt ihn zu fangen — und `--update-goldens` schreibt sofort.
 @Tags(['golden'])
 library;
 
@@ -32,6 +40,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'harness.dart';
+
+/// Verzeichnis der Referenzbilder — normalerweise `test/screenshots/`.
+///
+/// Ueber `AXIOM_GOLDEN_DIR` umlenkbar, und das ist keine Bequemlichkeit,
+/// sondern die Arbeitsweise: `--update-goldens` schreibt ohne Rueckfrage. Wer
+/// einen Schirm geaendert hat, rendert erst in ein Nebenverzeichnis, sieht
+/// sich jedes Bild an und schreibt den Bestand erst danach fort. Sonst wird
+/// aus dem Netz gegen Regressionen ein Protokoll davon.
+final String _shots =
+    Platform.environment['AXIOM_GOLDEN_DIR'] ?? 'screenshots';
 
 /// Laedt die gebuendelten Schriften — ohne das rendern Goldens in Ahem.
 Future<void> loadAppFonts() async {
@@ -69,7 +87,36 @@ Future<void> loadAppFonts() async {
   }
 }
 
+/// Referenzbilder MIT Schatten.
+///
+/// **Warum das eine eigene Bindung braucht.** `flutter test` benutzt
+/// `AutomatedTestWidgetsFlutterBinding`, und die setzt `disableShadows => true`
+/// — Flutter zeichnet Schatten dann als harte, unweichgezeichnete Rechtecke.
+/// Fuer die meisten Tests ist das richtig: Ein Weichzeichner ist nicht
+/// bitgenau reproduzierbar, und ein Golden, das auf zwei Rechnern verschieden
+/// aussieht, ist wertlos.
+///
+/// Fuer AXIOM war es fatal. Seit dem Umbau traegt der Schatten die halbe
+/// Gestaltung: `Panel` hat keinen Rahmen mehr, sondern Erhebung; die
+/// Reichweitenkante unterscheidet „in Reichweite" von „heute nicht" ueber
+/// Schatten gegen Mulde; `Panel(reachable:)` ist nichts als ein staerkerer
+/// Schatten. In den Referenzbildern stand davon **nichts** — unter jeder Karte
+/// lag stattdessen ein zweiter Kasten mit scharfer Kante. Vier Designer, zwoelf
+/// Juroren und der Nutzer haben damit eine haertere Fassung beurteilt als die,
+/// die auf dem Geraet laeuft. Und eine Schattenregression konnte kein Golden
+/// fangen, weil kein Golden je einen Schatten enthielt.
+///
+/// Der Preis: Diese Bilder sind minimal weniger reproduzierbar als harte
+/// Kanten. Das ist der richtige Tausch — ein Bild, das die Gestaltung nicht
+/// zeigt, prueft die Gestaltung nicht.
+class _ShadowBinding extends AutomatedTestWidgetsFlutterBinding {
+  @override
+  bool get disableShadows => false;
+}
+
 void main() {
+  // Vor allem anderen: Bindungen sind Singletons, die erste gewinnt.
+  _ShadowBinding();
   setUpAll(loadAppFonts);
 
   late TestHarness h;
@@ -111,12 +158,19 @@ void main() {
     Widget widget, {
     Brightness brightness = Brightness.dark,
     AxiomScheme scheme = AxiomScheme.instrument,
+    double textScale = 1.0,
   }) async {
-    await pumpPhone(
-        tester, wrapScheme(widget, brightness: brightness, scheme: scheme));
+    final app = wrapScheme(widget, brightness: brightness, scheme: scheme);
+    if (textScale == 1.0) {
+      await pumpPhone(tester, app);
+    } else {
+      // Ueber `MediaQuery`, nicht ueber das Theme — genau so kommt die
+      // Skalierung in der App an (`app.dart`).
+      await pumpScaled(tester, app, textScale: textScale);
+    }
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('screenshots/$name.png'),
+      matchesGoldenFile('$_shots/$name.png'),
     );
   }
 
@@ -132,7 +186,7 @@ void main() {
     }
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('screenshots/02-onboarding-linie.png'),
+      matchesGoldenFile('$_shots/02-onboarding-linie.png'),
     );
   });
 
@@ -171,6 +225,69 @@ void main() {
   testWidgets('04 jetzt — mit Aufgaben', (tester) async {
     await seedNow();
     await shoot(tester, '04-jetzt-aufgaben', const NowScreen());
+  });
+
+  // ── Der Hauptfall: eine Regel hat gefeuert ──────────────────────────────
+  //
+  // **Warum das eine eigene Vorrichtung braucht.** Alle uebrigen
+  // `jetzt`-Bilder zeigen den Rueckfallpfad: `_TaskCard` ohne Regel — die
+  // Karte, die AXIOM zeigt, wenn *keine* Regel zutrifft. Der regelgetriebene
+  // `_DecisionCard` mit `RuleStamp`, Defizitcode und antippbarer Begruendung
+  // stand in **keinem** Referenzbild. Der Schirm, um den es in diesem Projekt
+  // geht, war in seiner eigentlichen Form nie angesehen worden — und die
+  // Karte, die G2 auf dem Hauptschirm einloest, war damit ungeprueft.
+  //
+  // Die Vorrichtung stellt die Uhr auf 09:00 und legt weder Check-in noch
+  // Schlafeintrag an. Damit treffen zwei Regeln zu: R-001 („Check-in
+  // Morgen", 08:45–09:30, Prioritaet 70) und R-111 („Schlaf eintragen",
+  // 07:30–10:00, Prioritaet 55). Auf dem Bild steht **R-111**.
+  //
+  // Das ist kein Versehen der Vorrichtung, sondern ein Befund: Ein einziger
+  // Aufruf des Jetzt-Schirms wertet das Regelwerk **zweimal** aus und
+  // schreibt beide Male eine Entscheidung fort (nachgemessen:
+  // `totalInterventionsToday() == 2`, `firedToday('R-001') == 1`). Ursache
+  // ist `languageProvider`: Solange `runtimeProvider` laedt, liefert er die
+  // Geraetesprache, danach die gespeicherte — `snapshotProvider` haengt
+  // daran und rechnet neu. Die erste Auswertung gewinnt mit R-001, wird nie
+  // gezeichnet und verbraucht dabei deren Cooldown (60 min, einmal am Tag);
+  // die zweite sieht R-001 gesperrt und nimmt die naechstbeste Regel.
+  //
+  // Solange das so ist, zeigt dieses Bild, was das Geraet zeigt. Wird der
+  // Doppellauf behoben, wechselt es auf R-001 — und genau dafuer ist ein
+  // Referenzbild da.
+  Future<void> seedFiringRule() async {
+    // Das Geruest aus `setUp` traegt die falsche Uhrzeit. Es wegzuwerfen ist
+    // billiger als eine zweite Uhr durchzureichen; `tearDown` schliesst das
+    // neue.
+    h.dispose();
+    h = TestHarness.create(at: DateTime(2026, 8, 3, 9, 0));
+    h.completeOnboarding();
+    for (final (title, ae, stakes) in [
+      ('Steuerunterlagen sortieren', 8, 9),
+      ('Rückruf Werkstatt', 2, 6),
+      ('Rechnung Elektriker prüfen', 3, 4),
+    ]) {
+      await h.runtime.createTask(
+        title: title,
+        activationEnergy: ae,
+        salience: 4,
+        stakes: stakes,
+      );
+    }
+  }
+
+  testWidgets('40 jetzt — eine Regel hat gefeuert', (tester) async {
+    await seedFiringRule();
+    await shoot(tester, '40-jetzt-regel', const NowScreen());
+  });
+
+  testWidgets('41 jetzt — eine Regel hat gefeuert, hell', (tester) async {
+    // Die Regelplakette ist das einzige technisch gesetzte Element des
+    // Schirms. Ob sie auf hellem Grund noch als das Besondere liest, sagt
+    // nur das Bild — im Dunkeln traegt die Farbe mehr als die Schrift.
+    await seedFiringRule();
+    await shoot(tester, '41-jetzt-regel-hell', const NowScreen(),
+        brightness: Brightness.light);
   });
 
   testWidgets('05 zustand', (tester) async {
@@ -212,7 +329,7 @@ void main() {
     }
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('screenshots/19-onboarding-health.png'),
+      matchesGoldenFile('$_shots/19-onboarding-health.png'),
     );
   });
 
@@ -276,7 +393,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('screenshots/10-zerlegen.png'),
+      matchesGoldenFile('$_shots/10-zerlegen.png'),
     );
   });
 
@@ -402,13 +519,30 @@ void main() {
         brightness: Brightness.light);
   });
 
-  // ── Die drei anderen Schemata ───────────────────────────────────────────
+  // ── Die vier Schemata ───────────────────────────────────────────────────
   //
-  // Bis hierher zeigen alle Bilder `instrument`. Vier Schemata sind aber
+  // Bis hierher zeigen fast alle Bilder `instrument`. Vier Schemata sind aber
   // keine Geschmacksfrage, sondern vier Umgebungen (siehe `AxiomScheme`):
-  // Sonne, Abend, grosser Bildschirm. Jedes bekommt denselben Hauptschirm,
-  // damit sich Erhebung, Mulde und Messfarbe nebeneinander vergleichen
-  // lassen — genau das war ohne Bild nicht pruefbar.
+  // Sonne, Abend, grosser Bildschirm. Und weil eine Palette in beiden
+  // Helligkeiten existiert, sind es acht Fassungen — von denen bis zu dieser
+  // Runde vier nie jemand gesehen hat: `contrast/light`, `muted/light`,
+  // `workbench/dark` und `instrument/light` mit gefuelltem Bestand.
+  //
+  // Was daran haengt, ist nicht Geschmack:
+  //
+  //  * Die **Mulde** ist eine gerechnete Verdunklung des Grundes. In einem
+  //    sehr dunklen Schema (`contrast/dark`, Grund #0A0C0E) bleibt davon
+  //    rechnerisch fast nichts uebrig — ohne Bild faellt nicht auf, dass die
+  //    Signatur dort nur noch aus Lichtlippe und Innenschatten besteht.
+  //  * Die **Erhebung** kommt im Hellen aus Schatten, im Dunkeln aus
+  //    Kantenlicht. `workbench/dark` ist das einzige dunkle Schema mit blauem
+  //    Signal; ob die eine erhobene Karte dort noch heraussticht (G1), sagt
+  //    nur das Bild.
+  //  * `muted` soll abends nichts zum Leuchten bringen (D8). Ob das gelingt,
+  //    entscheidet die groesste helle Flaeche des Schirms — der Hauptknopf.
+  //
+  // Der Hauptschirm bekommt deshalb alle acht Fassungen mit demselben
+  // Bestand, damit sie sich nebeneinander vergleichen lassen.
 
   testWidgets('20 jetzt — kontrast', (tester) async {
     await seedNow();
@@ -447,14 +581,18 @@ void main() {
         brightness: Brightness.light, scheme: AxiomScheme.workbench);
   });
 
-  // Die Herleitung, aufgeklappt.
-  //
-  // G2 verlangt: kein Score ohne sichtbare Formel. Sichtbar ist die Formel
-  // aber erst nach einem Tippen, und **kein** Referenzbild hat sie bisher
-  // gezeigt — genau die Tafel, deren Termsumme früher eine andere Zahl
-  // ergab als die Anzeige darüber, war die einzige Stelle des Entwurfs ohne
-  // Bild.
-  testWidgets('24 zustand — herleitung aufgeklappt', (tester) async {
+  /// Der Zustandsschirm mit **aufgeklappter** Herleitung.
+  ///
+  /// G2 verlangt: kein Score ohne sichtbare Formel. Sichtbar ist die Formel
+  /// aber erst nach einem Tippen, und lange zeigte **kein** Referenzbild sie
+  /// — ausgerechnet die Tafel, deren Termsumme frueher eine andere Zahl
+  /// ergab als die Anzeige darueber.
+  Future<void> shootBreakdown(
+    WidgetTester tester,
+    String name, {
+    Brightness brightness = Brightness.dark,
+    AxiomScheme scheme = AxiomScheme.instrument,
+  }) async {
     h.completeOnboarding();
     await h.runtime.checkIn(
       energy: 3,
@@ -465,16 +603,175 @@ void main() {
       recovery: 2,
       slot: 'evening',
     );
-    await pumpPhone(
-        tester,
-        wrapScheme(const StateScreen(),
-            brightness: Brightness.dark, scheme: AxiomScheme.instrument));
+    await pumpPhone(tester,
+        wrapScheme(const StateScreen(), brightness: brightness, scheme: scheme));
     await tester.tap(find.text('Kapazität').first);
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('screenshots/24-herleitung.png'),
+      matchesGoldenFile('$_shots/$name.png'),
     );
+  }
+
+  testWidgets('24 zustand — herleitung aufgeklappt', (tester) async {
+    await shootBreakdown(tester, '24-herleitung');
+  });
+
+  // ── Die vier Fassungen, die nie jemand gesehen hat ──────────────────────
+
+  testWidgets('25 jetzt — kontrast hell', (tester) async {
+    // `contrast` ist fuer Sonne auf dem Display gedacht — also fuer draussen,
+    // also fuer hell. Ausgerechnet diese Haelfte hatte kein Bild.
+    await seedNow();
+    await shoot(tester, '25-jetzt-kontrast-hell', const NowScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.contrast);
+  });
+
+  testWidgets('26 jetzt — gedämpft hell', (tester) async {
+    await seedNow();
+    await shoot(tester, '26-jetzt-gedaempft-hell', const NowScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.muted);
+  });
+
+  testWidgets('27 jetzt — werkbank dunkel', (tester) async {
+    // Das einzige dunkle Schema mit blauem Signal und blaeulichem Grund.
+    await seedNow();
+    await shoot(tester, '27-jetzt-werkbank-dunkel', const NowScreen(),
+        scheme: AxiomScheme.workbench);
+  });
+
+  testWidgets('28 jetzt — instrument hell', (tester) async {
+    // `08-jetzt-hell` zeigt dieselbe Palette mit einer einzigen Aufgabe und
+    // damit ohne Tiefzone. Fuer den Vergleich der acht Fassungen braucht es
+    // denselben Bestand wie 04, 20, 21, 22 und 25 bis 27.
+    await seedNow();
+    await shoot(tester, '28-jetzt-instrument-hell', const NowScreen(),
+        brightness: Brightness.light);
+  });
+
+  // ── Die Reichweitenkante mit tiefer Mulde ───────────────────────────────
+  //
+  // Auf dem Hauptschirm liegt unter der Kante eine Liste von Zugaengen; der
+  // Aufgabenschirm ist der Ort, an dem darunter wirklich Aufgaben liegen —
+  // mit „zerlegen ›" als einziger farbiger Handlung der Tiefzone. Wenn das
+  // Ausgrauen jemals zurueckkommt, faellt es hier auf.
+
+  testWidgets('29 aufgaben — gedämpft', (tester) async {
+    await seedNow();
+    await shoot(tester, '29-aufgaben-gedaempft', const TasksScreen(),
+        scheme: AxiomScheme.muted);
+  });
+
+  testWidgets('30 aufgaben — werkbank hell', (tester) async {
+    await seedNow();
+    await shoot(tester, '30-aufgaben-werkbank-hell', const TasksScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.workbench);
+  });
+
+  // ── Die Herleitung in den uebrigen Fassungen ────────────────────────────
+
+  testWidgets('31 herleitung — gedämpft', (tester) async {
+    // Die Tafel ist die groesste zusammenhaengende Textflaeche der App. Wenn
+    // abends etwas ermuedet, dann diese.
+    await shootBreakdown(tester, '31-herleitung-gedaempft',
+        scheme: AxiomScheme.muted);
+  });
+
+  testWidgets('32 herleitung — kontrast hell', (tester) async {
+    await shootBreakdown(tester, '32-herleitung-kontrast-hell',
+        brightness: Brightness.light, scheme: AxiomScheme.contrast);
+  });
+
+  testWidgets('33 herleitung — werkbank dunkel', (tester) async {
+    await shootBreakdown(tester, '33-herleitung-werkbank-dunkel',
+        scheme: AxiomScheme.workbench);
+  });
+
+  // ── Ein Blatt ───────────────────────────────────────────────────────────
+  //
+  // Im Blatt ist `panel` der Untergrund selbst. Alles, was sich sonst mit
+  // `panel` von `base` abhebt, muss hier anders arbeiten — die Formenchips
+  // etwa liegen in der Mulde statt auf einer Flaeche. Ob das in jedem Schema
+  // traegt, sagt nur das Bild.
+
+  Future<void> shootAtomize(
+    WidgetTester tester,
+    String name, {
+    Brightness brightness = Brightness.dark,
+    AxiomScheme scheme = AxiomScheme.instrument,
+  }) async {
+    h.completeOnboarding();
+    final task = await h.runtime.createTask(
+      title: 'Steuerunterlagen für 2025 sortieren',
+      activationEnergy: 9,
+      salience: 2,
+      stakes: 9,
+      decayAt: h.clock.nowLocal().add(const Duration(hours: 40)),
+    );
+    await pumpPhone(tester,
+        wrapScheme(const Scaffold(), brightness: brightness, scheme: scheme));
+    showAtomizeSheet(
+      tester.element(find.byType(Scaffold)),
+      AtomizeCandidate(
+        task: task,
+        reason: AtomizeReason.urgentButUnreachable,
+        targetEnergy: 2,
+      ),
+    ).ignore();
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('$_shots/$name.png'),
+    );
+  }
+
+  testWidgets('34 zerlegen — gedämpft', (tester) async {
+    await shootAtomize(tester, '34-zerlegen-gedaempft',
+        scheme: AxiomScheme.muted);
+  });
+
+  testWidgets('35 zerlegen — werkbank hell', (tester) async {
+    await shootAtomize(tester, '35-zerlegen-werkbank-hell',
+        brightness: Brightness.light, scheme: AxiomScheme.workbench);
+  });
+
+  // ── Das Regelwerk ───────────────────────────────────────────────────────
+  //
+  // Die laengste Liste der App und der Ort, an dem G2 sichtbar wird: Jede
+  // Zeile traegt ihre Regel-ID, und die ist seit dem Umbau das einzige
+  // technisch gesetzte Element eines Schirms. Ohne Bild ist nicht pruefbar,
+  // ob sie in einer hellen Palette noch als das Besondere liest.
+
+  testWidgets('36 regelwerk', (tester) async {
+    h.completeOnboarding();
+    await shoot(tester, '36-regelwerk', const RulesScreen());
+  });
+
+  testWidgets('37 regelwerk — kontrast hell', (tester) async {
+    h.completeOnboarding();
+    await shoot(tester, '37-regelwerk-kontrast-hell', const RulesScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.contrast);
+  });
+
+  // ── Grosse Schrift ──────────────────────────────────────────────────────
+  //
+  // Die Systemschriftgroesse ist bei diesem Profil kein Randfall: Was man
+  // zusammenkneifen muss, wird uebersprungen [D9]. Bei 1,6-facher Schrift
+  // bricht Layout, das bei 1,0 sauber aussieht — die Reichweitenkante ist
+  // eine Zeile aus Beschriftung, Zahl und auslaufendem Strich und damit der
+  // erste Kandidat.
+
+  testWidgets('38 jetzt — grosse Schrift', (tester) async {
+    await seedNow();
+    await shoot(tester, '38-jetzt-gross', const NowScreen(), textScale: 1.6);
+  });
+
+  testWidgets('39 aufgaben — grosse Schrift, werkbank hell', (tester) async {
+    await seedNow();
+    await shoot(tester, '39-aufgaben-gross-werkbank', const TasksScreen(),
+        brightness: Brightness.light,
+        scheme: AxiomScheme.workbench,
+        textScale: 1.6);
   });
 }
 

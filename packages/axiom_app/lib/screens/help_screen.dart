@@ -262,7 +262,9 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             },
             active: _hits != null,
           ),
-          const SizedBox(height: Space.lg),
+          // Unter dem Suchfeld steht der Kapiteltitel „Inhalt" jetzt im
+          // grossen Grad; 16 px darunter klebte er an der Feldkante.
+          const SizedBox(height: Space.xl),
           if (_busy)
             PatientLoader(
               hint: context.t(
@@ -351,7 +353,9 @@ class _ChapterList extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 30,
+                    // Waechst mit der Schrift: fest gesetzt schnitt die
+                    // Spalte bei 2,4-facher Groesse die zweite Ziffer ab.
+                    width: MediaQuery.textScalerOf(context).scale(30),
                     child: Text(
                       chapter.number,
                       style: readingStyle(context, size: 14, color: p.info),
@@ -450,6 +454,16 @@ class _HelpChapterScreenState extends ConsumerState<HelpChapterScreen> {
   /// Alle Kapitel außer der Übersicht, in Lesereihenfolge.
   List<HelpChapter> get _reading =>
       widget.chapters.where((c) => !c.isIndex).toList();
+
+  /// Vor welchem Block die Sprungmarken stehen — oder gar nicht.
+  ///
+  /// Das ist die erste Zwischenüberschrift: Titel und Einstiegsabsatz stehen
+  /// darüber, der Rest darunter. Erst ab drei Marken, denn bei zweien ist
+  /// Scrollen schneller als das Lesen der Liste.
+  int? get _marksBefore {
+    if (_anchors.length < 3) return null;
+    return _anchors.keys.reduce((a, b) => a < b ? a : b);
+  }
 
   @override
   void dispose() {
@@ -589,20 +603,27 @@ class _HelpChapterScreenState extends ConsumerState<HelpChapterScreen> {
             )
           else ...[
             if (_fallback) const _FallbackNote(),
-            if (_anchors.length >= 3)
-              _ProseColumn(
-                child: _Marks(
-                  blocks: _blocks ?? const [],
-                  anchors: _anchors,
-                  onJump: _jumpTo,
-                ),
-              ),
             _ProseColumn(
               child: ProseView(
                 blocks: _blocks ?? const [],
                 anchors: _anchors,
                 imageBase: kHelpBase,
                 onChapter: _go,
+                // Die Sprungmarken standen bisher **ueber** der ganzen
+                // Ansicht — also ueber dem Kapiteltitel. Man las das
+                // Inhaltsverzeichnis eines Kapitels, dessen Namen man noch
+                // nicht kannte, und der Titel stand darunter kleiner als der
+                // Kasten darueber. Jetzt stehen sie hinter dem Einstieg und
+                // vor der ersten Zwischenueberschrift: erst worum es geht,
+                // dann was drin steht.
+                interludeBefore: _marksBefore,
+                interlude: _marksBefore == null
+                    ? null
+                    : _Marks(
+                        blocks: _blocks ?? const [],
+                        anchors: _anchors,
+                        onJump: _jumpTo,
+                      ),
               ),
             ),
           ],
@@ -645,8 +666,12 @@ class _Marks extends StatelessWidget {
     // das Inhaltsverzeichnis *dieses* Kapitels und stehen damit unter dem
     // Text, nicht ueber ihm. Eine erhobene Karte haette hier mit dem Kapitel
     // selbst um die Aufmerksamkeit konkurriert.
+    //
+    // Unten kein Abstand: Die erste Zwischenueberschrift bringt ihren
+    // eigenen mit (Space.xxl und den Abschnittsstrich). Zwei Abstaende
+    // uebereinander sind ein Loch.
     return Padding(
-      padding: const EdgeInsets.only(bottom: Space.xl),
+      padding: const EdgeInsets.only(top: Space.sm),
       child: Well(
         padding: const EdgeInsets.symmetric(
           horizontal: Space.lg,
@@ -673,11 +698,15 @@ class _Marks extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
+                          // Eine Sprungmarke ist Navigation, keine Fussnote
+                          // — sie stand im Sekundaergrad da und war damit
+                          // kleiner als der Text, in den sie fuehrt.
                           child: Text(
                             plain,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
                         ),
+                        const SizedBox(width: Space.md),
                         Icon(
                           Icons.arrow_downward,
                           size: 15,
@@ -712,6 +741,19 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    // **Die Knöpfe sind so breit wie ihre Beschriftung.**
+    //
+    // Der `Wrap` darunter sollte sie nebeneinander stellen und erst bei
+    // großer Schrift umbrechen. Er konnte das nie: Das Thema gibt jedem
+    // `OutlinedButton` eine Mindestbreite von `Size.fromHeight(48)`, und
+    // deren Breite ist unendlich. Jeder Knopf nahm damit eine ganze Zeile —
+    // drei Balken über die volle Breite am Fuß jedes Kapitels, obwohl
+    // „Kapitel 12" acht Zeichen hat. Mit einer Mindestbreite von null tut
+    // der `Wrap` endlich das, wofür er dasteht.
+    final style = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 48),
+      padding: const EdgeInsets.symmetric(horizontal: Space.lg),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -728,9 +770,11 @@ class _Footer extends StatelessWidget {
                 icon: const Icon(Icons.arrow_back, size: 16),
                 label: Text(context.t('Kapitel {0}', [previous!])),
                 onPressed: () => onGo(previous!),
+                style: style,
               ),
             OutlinedButton(
               onPressed: onOverview,
+              style: style,
               child: Text(context.t('Übersicht')),
             ),
             if (next != null)
@@ -738,6 +782,7 @@ class _Footer extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward, size: 16),
                 label: Text(context.t('Kapitel {0}', [next!])),
                 onPressed: () => onGo(next!),
+                style: style,
               ),
           ],
         ),
@@ -909,7 +954,7 @@ class _Hits extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: 30,
+                    width: MediaQuery.textScalerOf(context).scale(30),
                     child: Text(
                       hit.number,
                       style: readingStyle(context, size: 14, color: p.info),

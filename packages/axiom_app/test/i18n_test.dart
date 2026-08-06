@@ -1056,7 +1056,12 @@ void _renderedInEnglish() {
         reason: 'zusammengesetzter Satz aus dem Kern');
     expect(looksGerman('Ist es die Sache oder das Gefühl?'), isTrue,
         reason: 'Vorlage aus einer Liste');
-    expect(looksGerman('HINWEIS'), isTrue, reason: 'Etikett im Tupel');
+    // Hier stand „HINWEIS". Das Etikett ist inzwischen normal geschrieben
+    // („Hinweis"), und mit dem Schluessel hat sich die Probe geaendert — der
+    // alte Schluessel steht in keiner Woerterliste mehr, der Waechter haette
+    // ihn also fuer Englisch gehalten und der Selbsttest waere still
+    // durchgelaufen.
+    expect(looksGerman('Hinweis'), isTrue, reason: 'Etikett im Tupel');
 
     // Und die Gegenprobe: Englisch bleibt unbehelligt.
     for (final fine in [
@@ -1064,7 +1069,7 @@ void _renderedInEnglish() {
       'Window has 45 min left.',
       'Where exactly did you leave off on “Tax papers”?',
       'Is it the thing or the feeling?',
-      'NOTICE',
+      'Notice',
     ]) {
       expect(looksGerman(fine), isFalse, reason: fine);
       expect(accountedFor(fine), isTrue, reason: fine);

@@ -292,11 +292,23 @@ class _Running extends StatelessWidget {
             color: p.signal,
           ),
           const SizedBox(height: Space.md),
+          // **Der Fingerabdruck war das kleinste Element des Schirms** — 12,5
+          // px, die Untergrenze der App, in Gruen. Beides war falsch herum:
+          // Er ist der einzige Wert hier, den man Zeichen fuer Zeichen mit
+          // einem zweiten Bildschirm vergleicht, also braucht er Lesegroesse.
+          // Und Gruen sagt „geprueft", bevor irgendjemand verglichen hat —
+          // eine Note auf einer Zeichenkette. Er steht jetzt in der
+          // Textfarbe, wie jeder andere abzulesende Wert.
+          //
+          // Umbrochen wird in festen Gruppen statt an der Kastenbreite (siehe
+          // [_grouped]): Vergleichen heisst, zwei Zeilen nebeneinanderzu-
+          // halten, und das geht nur, wenn die Zeilen bei jedem Blick
+          // dieselben sind.
           _Readout(
             label: context.t('Fingerabdruck des Zertifikats'),
-            value: status.fingerprint ?? '',
-            size: 12.5,
-            color: p.calm,
+            value: _grouped(status.fingerprint ?? ''),
+            size: 15,
+            color: p.ink,
           ),
           const SizedBox(height: Space.sm),
           Text(
@@ -331,6 +343,31 @@ class _Running extends StatelessWidget {
       buffer.write(pin[i]);
     }
     return buffer.toString();
+  }
+
+  /// Der Fingerabdruck in Zeilen zu vier Bytepaaren.
+  ///
+  /// Die Umbruchstelle darf nicht von der Kastenbreite abhängen: Wer den Wert
+  /// mit dem Browser vergleicht, sucht sich eine Zeile und geht sie ab.
+  /// Springt der Umbruch mit der Schriftgröße, fängt er von vorn an — und bei
+  /// acht Paaren tut er das ab etwa anderthalbfacher Schrift, mit einem
+  /// einzelnen Bytepaar als Waise am Zeilenende.
+  ///
+  /// Vier Paare passen bei jeder zugelassenen Schriftgröße in die Mulde. Acht
+  /// kurze Zeilen sind länger als vier lange und dafür bei jedem Blick
+  /// dieselben — genau das ist hier die Arbeit.
+  static const int _bytesPerLine = 4;
+
+  static String _grouped(String fingerprint) {
+    final parts = fingerprint.split(':');
+    if (parts.length <= _bytesPerLine) return fingerprint;
+    final lines = <String>[];
+    for (var i = 0; i < parts.length; i += _bytesPerLine) {
+      final end = i + _bytesPerLine;
+      lines.add(
+          parts.sublist(i, end > parts.length ? parts.length : end).join(':'));
+    }
+    return lines.join('\n');
   }
 }
 
@@ -426,10 +463,16 @@ class _Approval extends StatelessWidget {
               style: sectionStyle(context, color: p.signal)),
           const SizedBox(height: Space.lg),
           Center(
+            // Der Grad ist kein Geschmack: Verglichen wird ueber einen
+            // Schreibtisch hinweg, das Telefon liegt daneben und der Browser
+            // steht davor. Bei 56 px muss man das Geraet dafuer in die Hand
+            // nehmen — und was man in die Hand nimmt, guckt man an, statt zu
+            // vergleichen. Schreibmaschine bleibt richtig: Hier wird Zeichen
+            // gegen Zeichen gehalten.
             child: Text(
               number,
               style: monoStyle(context,
-                  size: 56, weight: FontWeight.w600, color: p.signal),
+                  size: 76, weight: FontWeight.w600, color: p.signal),
             ),
           ),
           const SizedBox(height: Space.lg),
@@ -443,22 +486,43 @@ class _Approval extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.xl),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: onApprove,
-                  child: Text(context.t('Stimmt überein')),
+          // **Gleich hoch, nicht nur gleich breit.** „Stimmt überein" bricht
+          // auf einem Telefon in zwei Zeilen um, „Stimmt nicht" nicht — und
+          // damit stand die Ablehnung als flacherer Knopf neben der
+          // Zustimmung. Das ist genau die Schieflage, die dieser Schirm nicht
+          // haben darf: Ablehnen ist hier die richtige Antwort, nicht die
+          // Ausnahme. `IntrinsicHeight` mit `stretch` gibt beiden die Hoehe
+          // des hoeheren; der engere Innenabstand haelt den Umbruch
+          // ausserdem laenger hinaus.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onApprove,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: Space.sm),
+                    ),
+                    child: Text(context.t('Stimmt überein'),
+                        textAlign: TextAlign.center),
+                  ),
                 ),
-              ),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onDeny,
-                  child: Text(context.t('Stimmt nicht')),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDeny,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: Space.sm),
+                    ),
+                    child: Text(context.t('Stimmt nicht'),
+                        textAlign: TextAlign.center),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

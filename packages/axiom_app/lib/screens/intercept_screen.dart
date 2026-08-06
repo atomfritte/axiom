@@ -92,12 +92,16 @@ class InterceptScreen extends ConsumerWidget {
 /// die die Handarbeit nicht hatte — die richtigen Abstaende und eine
 /// eigene Scrollansicht, wenn der Erklaertext bei grosser Schrift laenger
 /// wird als der Schirm.
+///
+/// Die Marke stand als `KEINE TRIGGER` in Versalien da — auf dem einzigen
+/// Schirm, den man im Impuls oeffnet, und ueber einem Satz, der erklaeren
+/// soll, warum Warten hilft. Jetzt normale Schreibweise.
 class _EmptyTriggers extends StatelessWidget {
   const _EmptyTriggers();
 
   @override
   Widget build(BuildContext context) => EmptyState(
-        label: context.t('KEINE TRIGGER'),
+        label: context.t('Keine Trigger'),
         headline: context.t('Noch nichts eingerichtet.'),
         body: context.t('Ein Trigger ist eine Handlung, die du im Moment tun willst und am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen Fragen.'),
       );
@@ -138,7 +142,10 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(released ? context.t('WARTEZEIT VORBEI') : context.t('WARTEZEIT LÄUFT'),
+          // War `WARTEZEIT LÄUFT` / `WARTEZEIT VORBEI`. Fuenfzehn Versalien
+          // ueber einer laufenden Wartezeit lesen sich als Sperre; gemeint
+          // ist eine Ablesung — es laeuft eine Uhr, sonst nichts (G3).
+          Text(released ? context.t('Wartezeit vorbei') : context.t('Wartezeit läuft'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(run.triggerLabel,
@@ -167,7 +174,9 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
 
           if (trigger != null && trigger.checklist.isNotEmpty) ...[
             const SizedBox(height: Space.xl),
-            Text(context.t('DEINE FRAGEN'),
+            // War `DEINE FRAGEN`. Es sind die selbst geschriebenen Fragen —
+            // die Marke darueber soll sie nicht anschreien.
+            Text(context.t('Deine Fragen'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             for (final (index, question) in trigger.checklist.indexed)
@@ -328,7 +337,10 @@ class _TriggerRow extends ConsumerWidget {
           ),
           if (!disabled) ...[
             const SizedBox(width: Space.md),
-            Text(context.t('AUSLÖSEN'), style: sectionStyle(context, color: p.signal)),
+            // War `AUSLÖSEN`. Eine Handlungsmarke am Zeilenende, kein
+            // Warnschild — acht Versalien in Signalfarbe waren das
+            // Auffaelligste der Liste und meinten das Unauffaelligste.
+            Text(context.t('Auslösen'), style: sectionStyle(context, color: p.signal)),
           ],
         ],
       ),
@@ -421,7 +433,9 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('TRIGGER'), style: Theme.of(context).textTheme.labelSmall),
+            // War `TRIGGER` — Rubrik ueber der Ueberschrift des Blattes,
+            // dieselbe Rolle wie „Zerlegen" im Zerlegeblatt.
+            Text(context.t('Trigger'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,
@@ -519,7 +533,8 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
             ),
 
             const SizedBox(height: Space.lg),
-            Text(context.t('ODER EINE VORLAGE'),
+            // War `ODER EINE VORLAGE`.
+            Text(context.t('Oder eine Vorlage'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             // Hier standen `ActionChip`s. Das war die falsche Bauform, und

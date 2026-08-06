@@ -296,6 +296,14 @@ class _BudgetCard extends StatelessWidget {
 /// Der eingestellte Zustand bleibt trotzdem lesbar: Er steht in der
 /// Kopfzeile. Zuklappen darf verbergen, was man ändern kann, nie das, was
 /// gilt.
+/// Die drei Helligkeitsstellungen — in der Reihenfolge, in der sie gespeichert
+/// werden (0/1/2).
+///
+/// Standen als `AUTO`, `DUNKEL`, `HELL` in gesperrten Versalien und an zwei
+/// Stellen getrennt: einmal als Plakette, einmal in der Kopfzeile. Zwei
+/// Listen, die dasselbe meinen, laufen irgendwann auseinander.
+const List<String> _brightnessNames = ['Automatisch', 'Dunkel', 'Hell'];
+
 class _DisplaySettings extends ConsumerStatefulWidget {
   const _DisplaySettings();
 
@@ -313,15 +321,18 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
     final brightness = ref.watch(themeModeProvider);
     final scheme = ref.watch(schemeProvider);
 
+    // **Woerter statt Kuerzel.** Hier stand „DE · M · AUTO · Instrument".
+    // Drei der vier Stuecke waren Bezeichner und keine Sprache: `DE` ist ein
+    // Sprachcode, `M` eine Konfektionsgroesse, `AUTO` ein Aufzaehlungswert.
+    // Wer sie liest, muss sie erst uebersetzen — und das ist genau die Art
+    // Denkarbeit, die dieser Schirm nicht verlangen darf (G1). Die Namen der
+    // Sprachen stehen bewusst in der jeweiligen Sprache selbst („Deutsch",
+    // „English"): Eine Sprachauswahl, die sich uebersetzt, ist unbrauchbar
+    // fuer den, der die aktuelle Sprache nicht versteht.
     final summary = [
-      language.code.toUpperCase(),
-      switch (textSize) {
-        TextSize.compact => 'S',
-        TextSize.normal => 'M',
-        TextSize.large => 'L',
-        TextSize.larger => 'XL',
-      },
-      context.t(const ['AUTO', 'DUNKEL', 'HELL'][brightness]),
+      language.label,
+      context.t(textSize.label),
+      context.t(_brightnessNames[brightness]),
       // Ohne `.toUpperCase()`: „INSTRUMENT" sind zehn gesperrte
       // Grossbuchstaben. Die Ausnahme fuer Plaketten reicht bis sieben
       // Zeichen — bis dahin liest man Formen, danach Buchstaben.
@@ -346,7 +357,10 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
           options: [
             for (final l in AppLanguage.values)
               (
-                key: l.code.toUpperCase(),
+                // „DE"/„EN" waren zwei Buchstaben in Versalien, und die
+                // Vorlesefunktion las genau die vor. `AppLanguage.label`
+                // traegt den Namen, den die Sprache sich selbst gibt.
+                key: l.label,
                 selected: l == language,
                 onTap: () => ref.read(languageProvider.notifier).set(l),
               ),
@@ -376,11 +390,7 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
           icon: Icons.contrast,
           label: context.t('Helligkeit'),
           options: [
-            for (final (index, name) in const [
-              (0, 'AUTO'),
-              (1, 'DUNKEL'),
-              (2, 'HELL'),
-            ])
+            for (final (index, name) in _brightnessNames.indexed)
               (
                 key: context.t(name),
                 selected: index == brightness,
@@ -852,9 +862,28 @@ class _IssuesCard extends StatelessWidget {
   }
 }
 
-/// `intervene` → `Intervene`. Gleiche Schreibweise wie im Regeleditor.
-String _capitalized(String name) =>
-    name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
+/// Was eine Regel dieser Stufe **tut** — auf Deutsch.
+///
+/// Hier standen „Nudge", „Enforce", „Intervene" als Plaketten. Das sind die
+/// Werte, die in der YAML-Datei stehen, und der Regeleditor zeigt sie
+/// deshalb weiter so: Wer dort waehlt, schreibt genau dieses Wort. **Der
+/// Inspektor ist der andere Fall.** Hier liest jemand nach, warum das System
+/// etwas gesagt hat, und bekommt einen englischen Bezeichner als Antwort —
+/// in einer deutschen Oberflaeche. Ein Begriff, den man erst nachschlagen
+/// muss, erklaert nichts (G2).
+///
+/// Uebersetzt wird deshalb nicht der Name, sondern die Wirkung: was die
+/// Regel tut, wenn sie feuert. Das ist die Auskunft, wegen der man
+/// nachsieht.
+String _severityText(BuildContext context, Rule rule) {
+  if (rule.isShadow) return context.t('läuft stumm mit');
+  return switch (rule.severity) {
+    Severity.info => context.t('nur im Rückblick'),
+    Severity.nudge => context.t('stiller Hinweis'),
+    Severity.intervene => context.t('sichtbare Meldung'),
+    Severity.enforce => context.t('greift ein'),
+  };
+}
 
 /// Abgeleitete Werte, deren Formelgewichte bis zur Kalibrierung geschaetzt
 /// sind. Regeln, die darauf pruefen, werden markiert — damit sichtbar
@@ -899,6 +928,42 @@ class _RuleTile extends StatelessWidget {
           .intersection(_uncalibratedInputs)
           .isNotEmpty;
 
+  /// Die Herkunftszeile: Stufe · Defizit · Eichung · Quote.
+  ///
+  /// Mit Trennpunkten verbunden, damit sie bei grosser Schrift umbricht
+  /// statt abzuschneiden — vier Plaketten in einem `Wrap` taten das auch,
+  /// kosteten dafuer aber vier Rahmen und vier Farben je Zeile.
+  List<InlineSpan> _meta(BuildContext context, double? followRate) {
+    final p = context.axiom;
+    final parts = <(String, Color?)>[
+      (_severityText(context, rule), null),
+      if (rule.deficit != null) (rule.deficit!, null),
+      // „Ungeeicht" behaelt seine Farbe und seine Schreibweise als **Name**
+      // einer Markierung: Die Eichungskarte verweist mit genau diesem Wort
+      // darauf. Was sie nicht mehr braucht, sind neun gesperrte Versalien —
+      // die Ausnahme fuer Plaketten reicht bis sieben Zeichen.
+      if (_isUngauged) (context.t('Ungeeicht'), p.caution),
+      // Die person-naechste Zahl der App — „wie oft hast du getan, was dir
+      // gesagt wurde". Sie ist ein Messwert und traegt deshalb die eine
+      // Messfarbe, nicht Gruen ueber und Kupfer unter einer Schwelle (R7,
+      // D10).
+      if (followRate != null)
+        (context.t('{0}% befolgt', [(followRate * 100).round()]), p.signal),
+    ];
+
+    return [
+      for (final (index, (text, color)) in parts.indexed) ...[
+        // Der Trennpunkt in `inkFaint` und nicht in `rule`: Die Haarlinie
+        // ist auf dunklem Grund unter 2:1 und damit als Zeichen unlesbar —
+        // sie ist als Linie gedacht, nicht als Schrift. `inkFaint` ist die
+        // schwaechste Textrolle, die noch nachgerechnet ist.
+        if (index > 0)
+          TextSpan(text: ' · ', style: TextStyle(color: p.inkFaint)),
+        TextSpan(text: text, style: color == null ? null : TextStyle(color: color)),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
@@ -938,73 +1003,50 @@ class _RuleTile extends StatelessWidget {
               Space.lg,
               Space.lg,
             ),
-            // Die Regel-ID als `RuleStamp` statt als Text in
-            // Schreibmaschine. Sie ist damit dasselbe Zeichen wie ueberall
-            // sonst in der App — und der einzige Ort, an dem Monospace noch
-            // steht, ist genau der, an dem sie etwas bedeutet (G2).
-            title: Row(
-              children: [
-                RuleStamp(
-                  ruleId: rule.id,
-                  color: shadow ? p.inkFaint : p.info,
-                ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: Text(
-                    context.ruleTitle(rule),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: p.ink),
+            // **Der Titel fuehrt.** Hier stand er neben der Regel-ID und in
+            // `bodyMedium` — dem Grad des Sekundaertexts. Darunter lagen drei
+            // bis vier Plaketten in vier Farben. Auf achtzehn Zeilen waren
+            // das rund dreissig Pillen, und das Einzige, was ein Mensch
+            // tatsaechlich liest — der Titel — war das dritte Element ohne
+            // Mehrgewicht. Er steht jetzt allein und in `titleMedium`.
+            title: Text(
+              context.ruleTitle(rule),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: shadow ? p.inkDim : p.ink,
                   ),
-                ),
-              ],
             ),
-            // Wrap statt Row: Bis zu vier Marken, jede so breit wie ihr Text
-            // — bei grosser Schrift passen die nicht mehr nebeneinander. Ein
-            // ueberlaufender Row schneidet ausgerechnet die letzte Marke ab,
-            // und die letzte ist hier UNGEEICHT oder die Befolgungsquote.
+            // **Eine Zeile Herkunft statt vier Plaketten.** Die Regel-ID
+            // bleibt eine Plakette — sie ist der Beleg (G2) und das einzige
+            // technisch gesetzte Element eines Schirms. Alles andere ist
+            // Auskunft und laeuft als Text mit Trennpunkten weiter: Stufe,
+            // Defizitcode, Eichungsstand, Befolgungsquote.
+            //
+            // Farbe traegt nur noch, was eine eigene Rolle hat: die ID
+            // (Struktur), „Ungeeicht" (Aufmerksamkeit) und die Quote
+            // (Messwert). Der Rest ist Sekundaertext. Vorher trug jede Marke
+            // eine eigene Farbe, und vier Farben nebeneinander lesen sich als
+            // vier verschiedene Urteile ueber dieselbe Regel (R7).
             subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: Space.sm,
-                runSpacing: Space.xs,
+              padding: const EdgeInsets.only(top: Space.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // „INTERVENE" waren neun Grossbuchstaben. Die vier Stufen
-                  // sind Fachbegriffe des Regelwerks, stehen genau so in
-                  // jeder YAML-Datei und werden deshalb nicht uebersetzt —
-                  // aber sie brauchen keine Versalien, um Begriffe zu sein.
-                  // Der Regeleditor schreibt sie schon so.
-                  _Tag(
-                    text: _capitalized(shadow ? 'shadow' : rule.severity.name),
-                    color: shadow ? p.inkFaint : p.signal,
+                  RuleStamp(
+                    ruleId: rule.id,
+                    color: shadow ? p.inkFaint : p.info,
                   ),
-                  if (rule.deficit != null)
-                    _Tag(text: rule.deficit!, color: p.inkDim),
-                  // Bleibt in Versalien, obwohl neun Zeichen: „UNGEEICHT" ist
-                  // hier keine Ueberschrift, sondern der **Name** einer
-                  // Markierung — die Eichungskarte weiter oben verweist mit
-                  // genau diesem Wort darauf („betroffene Regeln sind unten
-                  // mit UNGEEICHT markiert"). Wer ihn aendert, aendert beide
-                  // Stellen.
-                  if (_isUngauged)
-                    _Tag(
-                      text: context.t('Ungeeicht').toUpperCase(),
-                      color: p.caution,
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text.rich(
+                        TextSpan(
+                          children: _meta(context, followRate),
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
-                  // Die Befolgungsquote war gruen ab 40 % und kupfern
-                  // darunter. Das ist die person-naechste Zahl der ganzen
-                  // App — „wie oft hast du getan, was dir gesagt wurde" —
-                  // und in zwei Farben liest sie sich als Zeugnis. Sie ist
-                  // ein Messwert und traegt deshalb die Messfarbe, wie jeder
-                  // andere auch (R7, D10). Was sie bedeutet, entscheidet das
-                  // Review, nicht die Farbe.
-                  if (followRate != null)
-                    _Tag(
-                      text: context.t('{0}% befolgt', [
-                        (followRate * 100).round(),
-                      ]),
-                      color: p.signal,
-                    ),
+                  ),
                 ],
               ),
             ),
@@ -1265,37 +1307,14 @@ class _LinkRow extends StatelessWidget {
   }
 }
 
-/// Eine Marke an einer Regel: Stufe, Defizit, Eichstand, Befolgungsquote.
-///
-/// Hier standen 9,5 px Schreibmaschine in einem Kasten mit 2 px Radius.
-/// Beides zog in dieselbe Richtung: `monoStyle` hob die Groesse still auf
-/// die Lesegrenze an, sodass der Kasten enger sass als die Schrift darin,
-/// und der harte Radius machte aus vier Marken vier kleine Kaesten. Jetzt:
-/// Hausschrift mit Tabellenziffern, Radius wie bei jedem anderen kleinen
-/// Bedienelement.
-class _Tag extends StatelessWidget {
-  final String text;
-  final Color color;
-  const _Tag({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 2),
-    decoration: BoxDecoration(
-      border: Border.all(color: color.withValues(alpha: 0.4)),
-      borderRadius: BorderRadius.circular(Radii.control),
-    ),
-    child: Text(
-      text,
-      style: readingStyle(
-        context,
-        size: 12.5,
-        weight: FontWeight.w600,
-        color: color,
-      ),
-    ),
-  );
-}
+// Hier stand `_Tag` — eine Marke an einer Regel: Stufe, Defizit, Eichstand,
+// Befolgungsquote. Der Baustein war in Ordnung, seine Menge nicht: Bei
+// achtzehn Regeln mit je drei bis vier Marken standen rund dreissig
+// gerahmte Pillen in vier Farben auf einem Schirm, und der Regeltitel — das
+// Einzige, was jemand liest — hatte kein Mehrgewicht. Was die Marken sagten,
+// sagt jetzt eine Zeile Text mit Trennpunkten (`_RuleTile._meta`); die
+// Regel-ID bleibt als `RuleStamp` die einzige Plakette, weil sie der Beleg
+// ist (G2).
 
 class _Limit extends StatelessWidget {
   final String label;
@@ -1357,8 +1376,26 @@ class RulesScreen extends ConsumerWidget {
               Space.huge,
             ),
             children: [
-              // Der Einstieg steht oben, nicht unten: Wer eine Regel anlegen
-              // will, soll nicht erst an siebzehn vorbei.
+              for (final rule in rt.rules)
+                _RuleTile(
+                  rule: rule,
+                  calibrated: rt.weightsCalibrated,
+                  skipReason: skipReasons[rule.id],
+                  stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
+                  edit: edits[rule.id],
+                ),
+
+              // **„Neue Regel" steht jetzt unten.** Hier stand: „Der Einstieg
+              // steht oben, nicht unten: Wer eine Regel anlegen will, soll
+              // nicht erst an siebzehn vorbei." Das ist bequem und genau
+              // falsch herum: Damit war der Einstieg ins Regelbauen das
+              // Prominenteste auf dem Schirm — und Regeln bauen ist die
+              // teuerste Form von Meta-Work, die dieses System anbietet (D3).
+              // G4 verlangt, dass AXIOM seine eigene Konfiguration
+              // rationiert, nicht bewirbt. Wer eine Regel schreiben will,
+              // scrollt die achtzehn vorhandenen durch; das ist keine Huerde,
+              // sondern der Zusammenhang, in dem die neue steht.
+              const SizedBox(height: Space.lg),
               Panel(
                 onTap: () => showRuleEditor(context),
                 padding: const EdgeInsets.symmetric(
@@ -1368,7 +1405,7 @@ class RulesScreen extends ConsumerWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Icon(Icons.add, size: 19, color: p.signal),
+                      child: Icon(Icons.add, size: 19, color: p.inkDim),
                     ),
                     const SizedBox(width: Space.md),
                     Expanded(
@@ -1394,15 +1431,6 @@ class RulesScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: Space.lg),
-              for (final rule in rt.rules)
-                _RuleTile(
-                  rule: rule,
-                  calibrated: rt.weightsCalibrated,
-                  skipReason: skipReasons[rule.id],
-                  stats: stats.where((s) => s.ruleId == rule.id).firstOrNull,
-                  edit: edits[rule.id],
-                ),
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Grenzen')),
               Panel(
@@ -1424,7 +1452,7 @@ class RulesScreen extends ConsumerWidget {
                     ),
                     _Limit(
                       label: context.t('Mindestkonfidenz'),
-                      value: rt.limits.minConfidence.toStringAsFixed(2),
+                      value: _decimal(context, rt.limits.minConfidence),
                     ),
                   ],
                 ),
@@ -1455,6 +1483,16 @@ class RulesScreen extends ConsumerWidget {
   static String _hhmm(int minutes) =>
       '${(minutes ~/ 60).toString().padLeft(2, "0")}:'
       '${(minutes % 60).toString().padLeft(2, "0")}';
+}
+
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „0.40" ist im Deutschen keine Zahl, sondern ein Tippfehler — und er stand
+/// ausgerechnet in der Tabelle, die die Grenzen des Systems auflistet.
+/// Dieselbe Regel wie in der Herleitungstafel (`instruments.dart`).
+String _decimal(BuildContext context, double value, {int digits = 2}) {
+  final text = value.toStringAsFixed(digits);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
 }
 
 /// Datenquellen — bisher eine Karte mitten im Systemscreen.

@@ -49,6 +49,21 @@ import '../state/providers.dart';
 import '../state/runtime.dart';
 import 'atomize_sheet.dart';
 
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „Anlauf 2.5 h" ist im Deutschen kein Messwert, sondern ein Tippfehler —
+/// und ein Wert, ueber den man stolpert, wird nicht nachgerechnet (G2).
+/// Beide Zahlen dieses Schirms liefen vorher ueber `toStringAsFixed` und
+/// standen damit auf Deutsch mit Punkt da.
+///
+/// Dieselbe Rechnung steht als `_decimal` in `instruments.dart` fuer die
+/// Herleitungstafel; sie ist dort dateiprivat. Wer beide zusammenlegt —
+/// eine oeffentliche Fassung im Gestaltungsteil — streicht die hier.
+String _decimal(BuildContext context, double value, {int digits = 1}) {
+  final text = value.toStringAsFixed(digits);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
+}
+
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
 
@@ -704,7 +719,7 @@ class _TaskTags extends ConsumerWidget {
         if (runway != null)
           _Tag(
             label: context.t('Anlauf {0} h',
-                [hoursOf(runway).toStringAsFixed(1)]),
+                [_decimal(context, hoursOf(runway))]),
             color: p.caution,
             inWell: inWell,
           ),
@@ -724,9 +739,12 @@ class _TaskTags extends ConsumerWidget {
         // stehen nebeneinander, damit die Formel nachrechenbar bleibt (G2).
         if (holdsUp > 0)
           _Tag(
-            label: context.t('HÄLT {0} AUF · HEBEL ×{1}', [
+            // War Versalien: „HÄLT 3 AUF · HEBEL ×1,70". Die Plakette
+            // steht zwischen zwei normal geschriebenen („Start 2/10",
+            // „Anlauf 2,5 h") und schrie als einzige.
+            label: context.t('Hält {0} auf · Hebel ×{1}', [
               holdsUp,
-              taskLeverage(holdsUp).toStringAsFixed(2),
+              _decimal(context, taskLeverage(holdsUp), digits: 2),
             ]),
             color: p.signal,
             inWell: inWell,
@@ -737,11 +755,16 @@ class _TaskTags extends ConsumerWidget {
 
   /// Verfallszeitpunkt in Worten. Kein Ausrufezeichen, keine Mahnung —
   /// überfällig ist eine Tatsache, kein Vorwurf [R7].
+  ///
+  /// Stand in Versalien und steht jetzt wie jede andere Plakette dieser
+  /// Zeile geschrieben; „IN 3 T" war zusätzlich eine Abkürzung, die die
+  /// Plakette nicht braucht. Wortgleich mit `_until` in `now_screen.dart` —
+  /// dieselbe Angabe an derselben Aufgabe darf nicht zweierlei heißen.
   static String _deadline(BuildContext context, DateTime when, DateTime now) {
     final diff = when.difference(now);
-    if (diff.isNegative) return context.t('ÜBERFÄLLIG');
-    if (diff.inHours < 24) return context.t('IN {0} H', [diff.inHours]);
-    return context.t('IN {0} T', [diff.inDays]);
+    if (diff.isNegative) return context.t('Überfällig');
+    if (diff.inHours < 24) return context.t('In {0} h', [diff.inHours]);
+    return context.t('In {0} Tagen', [diff.inDays]);
   }
 }
 
@@ -801,8 +824,10 @@ class _Empty extends StatelessWidget {
   const _Empty();
 
   @override
+  // Der leere Schirm ist die Stelle, an der jemand zum ersten Mal liest,
+  // wozu es die Liste gibt — und die Marke stand dort in Versalien.
   Widget build(BuildContext context) => EmptyState(
-        label: context.t('NICHTS EINGETRAGEN'),
+        label: context.t('Nichts eingetragen'),
         headline: context.t('Keine Aufgaben.'),
         body: context.t('Was du erfasst, landet zuerst im Eingang. Nach dem Sortieren steht es hier.'),
       );

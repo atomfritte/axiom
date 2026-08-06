@@ -25,6 +25,19 @@ import '../state/providers.dart';
 import 'checkin_sheet.dart';
 import '../i18n/i18n.dart';
 
+/// Breite, über die das Onboarding nicht hinauswächst.
+///
+/// AXIOM läuft auch als Fenster auf dem Rechner, und dort war der erste
+/// Bildschirm bisher eine Zeile über 1100 Pixel: rund 130 Zeichen, ein Titel
+/// in der linken oberen Ecke und ein „Weiter" über die ganze Fensterbreite.
+/// Eine Zeile, deren Anfang das Auge nicht mehr findet, wird nicht gelesen —
+/// und der erste Bildschirm ist der, auf dem gelesen wird.
+///
+/// Etwas schmaler als die Hilfe (`kProseMaxWidth`, 640): Dort steht ein
+/// Kapitel in Lesegröße, hier stehen große Grade, und die brauchen die
+/// kürzere Zeile.
+const double kOnboardingMaxWidth = 560;
+
 class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onDone;
   const OnboardingScreen({super.key, required this.onDone});
@@ -65,100 +78,131 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    // Bei grosser Schrift passten „Überspringen" und „Weiter" nicht mehr
+    // nebeneinander — der Nebenweg stand dann als „Überspri…" da, also
+    // ausgerechnet der Ausweg unleserlich. Ab etwa 1,25-facher Groesse
+    // stehen sie untereinander: oben die Handlung, darunter der Ausweg.
+    final crowded = MediaQuery.textScalerOf(context).scale(16) > 20;
+    // Auf der letzten Seite tun „Überspringen" und „Los geht’s" dasselbe:
+    // beide rufen `_finish`. Zwei Knoepfe mit einer Wirkung sind eine
+    // Entscheidung, die keine ist — und Entscheidungen ohne Unterschied sind
+    // genau das, was dieser Schirm nicht verlangen darf (G1). Der Ausweg
+    // verschwindet dort, wo es nichts mehr auszuweichen gibt.
+    final last = _page == _pageCount - 1;
+    final skip = TextButton(
+      onPressed: _finish,
+      child: Text(context.t('Überspringen'), overflow: TextOverflow.ellipsis),
+    );
+    final forward = FilledButton(
+      onPressed: _next,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, 52),
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
+      ),
+      // Vorher lief nur der letzte Zweig durch `context.t`;
+      // der andere stand als nacktes Literal da und zeigte
+      // auf einem englischen Geraet „Weiter". Ein Ternaer
+      // hat zwei Zweige, und beide sind Nutzertext.
+      child: Text(
+        last ? context.t('Los geht’s') : context.t('Weiter'),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            // Fortschritt als Skala.
-            //
-            // Hier standen 2 px hohe, rechtwinklig abgeschnittene Striche und
-            // daneben ein Zaehler in Schreibmaschine. Beides sah nach
-            // Ladebalken aus — die haerteste Kante auf dem ersten Schirm, den
-            // jemand von AXIOM sieht. Jetzt runde Enden und der Zaehler als
-            // Messwert (Tabellenziffern), damit „3/6" beim Weiterblaettern
-            // nicht springt.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  Space.lg, Space.lg, Space.lg, Space.sm),
-              child: Row(
-                children: [
-                  for (var i = 0; i < _pageCount; i++)
-                    Expanded(
-                      child: AnimatedContainer(
-                        duration: Motion.quick,
-                        height: 3,
-                        margin: EdgeInsets.only(
-                            right: i < _pageCount - 1 ? 5 : 0),
-                        decoration: BoxDecoration(
-                          color: i <= _page ? p.signal : p.rule,
-                          borderRadius: BorderRadius.circular(1.5),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: kOnboardingMaxWidth),
+            child: Column(
+              children: [
+                // Fortschritt als Skala.
+                //
+                // Hier standen 2 px hohe, rechtwinklig abgeschnittene Striche und
+                // daneben ein Zaehler in Schreibmaschine. Beides sah nach
+                // Ladebalken aus — die haerteste Kante auf dem ersten Schirm, den
+                // jemand von AXIOM sieht. Jetzt runde Enden und der Zaehler als
+                // Messwert (Tabellenziffern), damit „3/6" beim Weiterblaettern
+                // nicht springt.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.lg,
+                    Space.lg,
+                    Space.lg,
+                    Space.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < _pageCount; i++)
+                        Expanded(
+                          child: AnimatedContainer(
+                            duration: Motion.quick,
+                            height: 3,
+                            margin: EdgeInsets.only(
+                              right: i < _pageCount - 1 ? 5 : 0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: i <= _page ? p.signal : p.rule,
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: Space.lg),
+                      Text(
+                        '${_page + 1}/$_pageCount',
+                        style: readingStyle(
+                          context,
+                          size: 13,
+                          weight: FontWeight.w500,
+                          color: p.inkFaint,
                         ),
                       ),
-                    ),
-                  const SizedBox(width: Space.lg),
-                  Text('${_page + 1}/$_pageCount',
-                      style: readingStyle(context,
-                          size: 13, weight: FontWeight.w500,
-                          color: p.inkFaint)),
-                ],
-              ),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _controller,
-                onPageChanged: (i) => setState(() => _page = i),
-                children: [
-                  const _PageWhat(),
-                  const _PageHow(),
-                  const _PageLine(),
-                  _PageFirstCheckin(
-                    done: _checkinDone,
-                    onDone: () => setState(() => _checkinDone = true),
+                    ],
                   ),
-                  const _PagePermissions(),
-                  const _PageHealth(),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(Space.lg),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: TextButton(
-                      onPressed: _finish,
-                      child: Text(
-                        context.t('Überspringen'),
-                        overflow: TextOverflow.ellipsis,
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _controller,
+                    onPageChanged: (i) => setState(() => _page = i),
+                    children: [
+                      const _PageWhat(),
+                      const _PageHow(),
+                      const _PageLine(),
+                      _PageFirstCheckin(
+                        done: _checkinDone,
+                        onDone: () => setState(() => _checkinDone = true),
                       ),
-                    ),
+                      const _PagePermissions(),
+                      const _PageHealth(),
+                    ],
                   ),
-                  const SizedBox(width: Space.md),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: _next,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 52),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: Space.md),
-                      ),
-                      // Vorher lief nur der letzte Zweig durch `context.t`;
-                      // der andere stand als nacktes Literal da und zeigte
-                      // auf einem englischen Geraet „Weiter". Ein Ternaer
-                      // hat zwei Zweige, und beide sind Nutzertext.
-                      child: Text(
-                        _page == _pageCount - 1
-                            ? context.t('Los geht’s')
-                            : context.t('Weiter'),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(Space.lg),
+                  child: crowded
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            forward,
+                            if (!last) ...[
+                              const SizedBox(height: Space.xs),
+                              skip,
+                            ],
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            if (!last) ...[
+                              Flexible(child: skip),
+                              const SizedBox(width: Space.md),
+                            ],
+                            Expanded(flex: 2, child: forward),
+                          ],
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -199,23 +243,25 @@ class _Page extends StatelessWidget {
   /// gelesen und nicht bedient.
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-            Space.lg, Space.xxl, Space.lg, Space.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (leading != null) ...[
-              Align(alignment: Alignment.centerLeft, child: leading!),
-              const SizedBox(height: Space.huge),
-            ],
-            Text(eyebrow, style: sectionStyle(context, color: context.axiom.signal)),
-            const SizedBox(height: Space.md),
-            Text(title, style: Theme.of(context).textTheme.displayMedium),
-            const SizedBox(height: Space.xxl),
-            ...children,
-          ],
+    padding: const EdgeInsets.fromLTRB(Space.lg, Space.xxl, Space.lg, Space.xl),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (leading != null) ...[
+          Align(alignment: Alignment.centerLeft, child: leading!),
+          const SizedBox(height: Space.huge),
+        ],
+        Text(
+          eyebrow,
+          style: sectionStyle(context, color: context.axiom.signal),
         ),
-      );
+        const SizedBox(height: Space.md),
+        Text(title, style: Theme.of(context).textTheme.displayMedium),
+        const SizedBox(height: Space.xxl),
+        ...children,
+      ],
+    ),
+  );
 }
 
 class _PageWhat extends StatelessWidget {
@@ -223,26 +269,30 @@ class _PageWhat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Page(
-        eyebrow: context.t('Was das hier ist'),
-        title: context.t('Ein Regelwerk,\nkeine To-do-App.'),
-        leading: const AxiomWordmark(markSize: 30),
-        children: [
-          _Para(
-            context.t('AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.'),
-          ),
-          const SizedBox(height: Space.xl),
-          _Para(
-            context.t('Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.'),
-          ),
-          const SizedBox(height: Space.xxl),
-          _NotList([
-            context.t('Keine Streaks, die brechen können'),
-            context.t('Keine Erinnerung, die dir Vorwürfe macht'),
-            context.t('Keine Cloud, kein Konto, keine Auswertung durch andere'),
-            context.t('Keine KI, die für dich entscheidet'),
-          ]),
-        ],
-      );
+    eyebrow: context.t('Was das hier ist'),
+    title: context.t('Ein Regelwerk,\nkeine To-do-App.'),
+    leading: const AxiomWordmark(markSize: 30),
+    children: [
+      _Lead(
+        context.t(
+          'AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.',
+        ),
+      ),
+      const SizedBox(height: Space.xl),
+      _Para(
+        context.t(
+          'Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.',
+        ),
+      ),
+      const SizedBox(height: Space.xxl),
+      _NotList([
+        context.t('Keine Streaks, die brechen können'),
+        context.t('Keine Erinnerung, die dir Vorwürfe macht'),
+        context.t('Keine Cloud, kein Konto, keine Auswertung durch andere'),
+        context.t('Keine KI, die für dich entscheidet'),
+      ]),
+    ],
+  );
 }
 
 class _PageHow extends StatelessWidget {
@@ -261,26 +311,34 @@ class _PageHow extends StatelessWidget {
               _Step(
                 n: '1',
                 title: context.t('Messen'),
-                body: context.t('Drei kurze Check-ins am Tag, dazu Schlaf und Bewegung vom Gerät. Zusammen ergibt das sechs Messwerte.'),
+                body: context.t(
+                  'Drei kurze Check-ins am Tag, dazu Schlaf und Bewegung vom Gerät. Zusammen ergibt das sechs Messwerte.',
+                ),
               ),
               Divider(color: p.rule, height: Space.xl),
               _Step(
                 n: '2',
                 title: context.t('Regeln anwenden'),
-                body: context.t('Regeln sind Wenn-Dann-Sätze in Klartext. Du kannst jede lesen, ändern und abschalten.'),
+                body: context.t(
+                  'Regeln sind Wenn-Dann-Sätze in Klartext. Du kannst jede lesen, ändern und abschalten.',
+                ),
               ),
               Divider(color: p.rule, height: Space.xl),
               _Step(
                 n: '3',
                 title: context.t('Eine Handlung'),
-                body: context.t('Nie eine Liste zum Auswählen. Genau eine Sache, plus die Regel-Nummer, die dahintersteckt.'),
+                body: context.t(
+                  'Nie eine Liste zum Auswählen. Genau eine Sache, plus die Regel-Nummer, die dahintersteckt.',
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: Space.lg),
         _Para(
-          context.t('Gleicher Zustand, gleiche Regeln — immer dasselbe Ergebnis. Nichts davon ist geraten, und du kannst jederzeit nachsehen, wie ein Wert zustande kam.'),
+          context.t(
+            'Gleicher Zustand, gleiche Regeln — immer dasselbe Ergebnis. Nichts davon ist geraten, und du kannst jederzeit nachsehen, wie ein Wert zustande kam.',
+          ),
         ),
       ],
     );
@@ -314,15 +372,21 @@ class _PageLine extends StatelessWidget {
         Panel(reachable: true, child: CapacityLine(capacity: 55, tasks: demo)),
         const SizedBox(height: Space.xl),
         _Para(
-          context.t('Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? Der Strich zeigt, wie viel Anlauf du heute hast.'),
+          context.t(
+            'Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? Der Strich zeigt, wie viel Anlauf du heute hast.',
+          ),
         ),
         const SizedBox(height: Space.lg),
         _Para(
-          context.t('Was links davon liegt, ist in Reichweite. Was rechts davon liegt, ist heute zu schwer — und wird dir deshalb nicht vorgehalten. Das ist eine Messung, kein Urteil über dich.'),
+          context.t(
+            'Was links davon liegt, ist in Reichweite. Was rechts davon liegt, ist heute zu schwer — und wird dir deshalb nicht vorgehalten. Das ist eine Messung, kein Urteil über dich.',
+          ),
         ),
         const SizedBox(height: Space.lg),
         _Para(
-          context.t('Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, es in kleinere Schritte zu zerlegen, bis ein Teil links landet.'),
+          context.t(
+            'Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, es in kleinere Schritte zu zerlegen, bis ein Teil links landet.',
+          ),
         ),
       ],
     );
@@ -341,10 +405,14 @@ class _PageFirstCheckin extends ConsumerWidget {
       eyebrow: context.t('Erster Messpunkt'),
       title: done ? context.t('Steht.') : context.t('Einmal\nkurz messen.'),
       children: [
-        _Para(
+        _Lead(
           done
-              ? context.t('Der erste Wert ist drin. Ab jetzt sammelt AXIOM zwei Wochen lang Daten, bevor es anfängt, Empfehlungen zu geben.')
-              : context.t('Vier Regler, ungefähr reicht. Ohne einen Anfangswert kann AXIOM nichts berechnen — und würde raten.'),
+              ? context.t(
+                  'Der erste Wert ist drin. Ab jetzt sammelt AXIOM zwei Wochen lang Daten, bevor es anfängt, Empfehlungen zu geben.',
+                )
+              : context.t(
+                  'Vier Regler, ungefähr reicht. Ohne einen Anfangswert kann AXIOM nichts berechnen — und würde raten.',
+                ),
         ),
         const SizedBox(height: Space.xl),
         if (done)
@@ -355,8 +423,10 @@ class _PageFirstCheckin extends ConsumerWidget {
                 Icon(Icons.check, color: p.calm, size: 20),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text(context.t('Check-in gespeichert.'),
-                      style: Theme.of(context).textTheme.bodyLarge),
+                  child: Text(
+                    context.t('Check-in gespeichert.'),
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ),
               ],
             ),
@@ -375,7 +445,9 @@ class _PageFirstCheckin extends ConsumerWidget {
         const SizedBox(height: Space.xxl),
         _Note(
           label: context.t('Die ersten 14 Tage'),
-          body: context.t('In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.'),
+          body: context.t(
+            'In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.',
+          ),
         ),
       ],
     );
@@ -434,7 +506,11 @@ class _PageHealthState extends ConsumerState<_PageHealth> {
         eyebrow: context.t('Datenquellen'),
         title: context.t('Nur auf\nAndroid.'),
         children: [
-          _Para(context.t('Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins — dieselben Regeln, nur eine Quelle weniger.')),
+          _Lead(
+            context.t(
+              'Health Connect gibt es nur auf Android. Auf dem Desktop rechnet AXIOM aus deinen Check-ins — dieselben Regeln, nur eine Quelle weniger.',
+            ),
+          ),
         ],
       );
     }
@@ -443,30 +519,44 @@ class _PageHealthState extends ConsumerState<_PageHealth> {
       eyebrow: context.t('Freiwillig'),
       title: context.t('Schlaf und\nSchritte.'),
       children: [
-        _Para(
-          context.t('Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.'),
+        _Lead(
+          context.t(
+            'Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.',
+          ),
         ),
         const SizedBox(height: Space.xxl),
         _Note(
           label: context.t('Was gelesen wird'),
-          body: context.t('Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.'),
-          second: context.t('Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.'),
+          body: context.t(
+            'Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.',
+          ),
+          second: context.t(
+            'Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.',
+          ),
         ),
         const SizedBox(height: Space.xxl),
         _PermissionRow(
           title: context.t('Health Connect verbinden'),
           body: switch (_availability) {
             null => context.t('Wird geprüft …'),
-            HealthAvailability.unavailable =>
-              context.t('Auf diesem Gerät nicht vorhanden. AXIOM rechnet dann aus den Check-ins.'),
-            HealthAvailability.needsUpdate =>
-              context.t('Die Systemkomponente ist zu alt und muss aktualisiert werden.'),
-            _ => _connected
-                ? context.t('Verbunden. Der erste Import holt die letzten vier Wochen.')
-                : context.t('Öffnet die Freigabe von Health Connect. Du wählst dort selbst, was AXIOM sehen darf.'),
+            HealthAvailability.unavailable => context.t(
+              'Auf diesem Gerät nicht vorhanden. AXIOM rechnet dann aus den Check-ins.',
+            ),
+            HealthAvailability.needsUpdate => context.t(
+              'Die Systemkomponente ist zu alt und muss aktualisiert werden.',
+            ),
+            _ =>
+              _connected
+                  ? context.t(
+                      'Verbunden. Der erste Import holt die letzten vier Wochen.',
+                    )
+                  : context.t(
+                      'Öffnet die Freigabe von Health Connect. Du wählst dort selbst, was AXIOM sehen darf.',
+                    ),
           },
           granted: _connected,
-          onTap: !_busy &&
+          onTap:
+              !_busy &&
                   (_availability == HealthAvailability.notGranted ||
                       _availability == HealthAvailability.ready)
               ? _connect
@@ -478,7 +568,9 @@ class _PageHealthState extends ConsumerState<_PageHealth> {
         ],
         const SizedBox(height: Space.lg),
         _Para(
-          context.t('Das lässt sich jederzeit ändern — unter System → Systemcheck, in beide Richtungen. Ohne Health Connect fehlt AXIOM nichts Grundsätzliches, nur Genauigkeit.'),
+          context.t(
+            'Das lässt sich jederzeit ändern — unter System → Systemcheck, in beide Richtungen. Ohne Health Connect fehlt AXIOM nichts Grundsätzliches, nur Genauigkeit.',
+          ),
         ),
       ],
     );
@@ -521,8 +613,10 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
         eyebrow: context.t('Fertig'),
         title: context.t('Bereit.'),
         children: [
-          _Para(
-            context.t('Auf dem Desktop läuft AXIOM ohne Systemrechte. Erfassen, Check-ins und der Regelinspektor funktionieren vollständig.'),
+          _Lead(
+            context.t(
+              'Auf dem Desktop läuft AXIOM ohne Systemrechte. Erfassen, Check-ins und der Regelinspektor funktionieren vollständig.',
+            ),
           ),
         ],
       );
@@ -532,8 +626,10 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
       eyebrow: context.t('Damit es zuverlässig läuft'),
       title: context.t('Drei\nSystemrechte.'),
       children: [
-        _Para(
-          context.t('AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, und das ganze Konzept ist wertlos.'),
+        _Lead(
+          context.t(
+            'AXIOM arbeitet mit exakten Uhrzeiten. Android schläfert Apps sonst ein — dann kommt die Erinnerung 40 Minuten zu spät oder gar nicht, und das ganze Konzept ist wertlos.',
+          ),
         ),
         const SizedBox(height: Space.xl),
         _PermissionRow(
@@ -547,7 +643,9 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
         ),
         _PermissionRow(
           title: context.t('Mitteilungen'),
-          body: context.t('Vier Kanäle, getrennt einstellbar. Du kannst leise Hinweise stummschalten und wichtige durchlassen.'),
+          body: context.t(
+            'Vier Kanäle, getrennt einstellbar. Du kannst leise Hinweise stummschalten und wichtige durchlassen.',
+          ),
           granted: _granted.contains('notif'),
           onTap: () async {
             await AndroidBridge.requestNotifications();
@@ -556,7 +654,9 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
         ),
         _PermissionRow(
           title: context.t('Akkuoptimierung aus'),
-          body: context.t('Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.'),
+          body: context.t(
+            'Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.',
+          ),
           granted: _granted.contains('battery'),
           onTap: () async {
             await AndroidBridge.requestIgnoreBatteryOptimizations();
@@ -565,12 +665,16 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
         ),
         const SizedBox(height: Space.lg),
         _Para(
-          context.t('Standort und App-Nutzung werden nicht abgefragt — die brauchen erst spätere Module, und dann fragst du selbst danach.'),
+          context.t(
+            'Standort und App-Nutzung werden nicht abgefragt — die brauchen erst spätere Module, und dann fragst du selbst danach.',
+          ),
         ),
         const SizedBox(height: Space.xxl),
         _Note(
           label: context.t('Danach'),
-          body: context.t('Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.'),
+          body: context.t(
+            'Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.',
+          ),
         ),
       ],
     );
@@ -585,12 +689,42 @@ class _Para extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: Theme.of(context)
-            .textTheme
-            .bodyLarge
-            ?.copyWith(color: context.axiom.inkDim, height: 1.55),
-      );
+    text,
+    style: Theme.of(
+      context,
+    ).textTheme.bodyLarge?.copyWith(color: context.axiom.inkDim, height: 1.55),
+  );
+}
+
+/// **Der Vorspann** — der erste Absatz einer Seite.
+///
+/// Hier lief jeder Absatz in derselben Groesse und derselben Farbe. Auf einer
+/// Seite mit zwei Absaetzen und vier Zusagen ergab das eine gleichmaessige
+/// Flaeche, in der kein Satz wichtiger aussah als der naechste — und der
+/// erste Satz ist der einzige, der auf dem ersten Bildschirm sicher gelesen
+/// wird. Er steht jetzt eine Stufe groesser und in [AxiomPalette.ink] statt
+/// [AxiomPalette.inkDim]; alles danach bleibt [_Para].
+///
+/// Die Regel dahinter ist einfach genug, um sie durchzuhalten: **Jede Seite
+/// beginnt mit einer erhobenen Flaeche oder mit einem Vorspann.** Seite 2 und
+/// 3 haben eine Karte, die anderen einen Vorspann.
+///
+/// 19,5 px ist keine Stufe der Typskala, sondern der Zwischenwert zwischen
+/// Fliesstext (17) und `titleLarge` (18,5, aber halbfett): eine ruhige Zeile,
+/// die groesser ist, ohne laut zu werden.
+class _Lead extends StatelessWidget {
+  final String text;
+  const _Lead(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+      fontSize: 19.5,
+      height: 1.45,
+      color: context.axiom.ink,
+    ),
+  );
 }
 
 /// Ein ruhiger Nachsatz in einer Mulde.
@@ -612,21 +746,21 @@ class _Note extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Well(
-        padding: const EdgeInsets.all(Space.lg),
-        radius: BorderRadius.circular(Radii.panel),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: sectionStyle(context)),
-            const SizedBox(height: Space.sm),
-            Text(body, style: Theme.of(context).textTheme.bodySmall),
-            if (second != null) ...[
-              const SizedBox(height: Space.md),
-              Text(second!, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(Space.lg),
+    radius: BorderRadius.circular(Radii.panel),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: sectionStyle(context)),
+        const SizedBox(height: Space.sm),
+        Text(body, style: Theme.of(context).textTheme.bodySmall),
+        if (second != null) ...[
+          const SizedBox(height: Space.md),
+          Text(second!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ],
+    ),
+  );
 }
 
 class _NotList extends StatelessWidget {
@@ -636,6 +770,14 @@ class _NotList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    final scaler = MediaQuery.textScalerOf(context);
+    // Der Strich sitzt auf der optischen Mitte der ersten Zeile. Fest auf
+    // 11 px gesetzt rutschte er bei grosser Schrift an deren Oberkante —
+    // dorthin, wo er wie ein Bindestrich vor dem Wort aussieht statt wie
+    // eine Marke davor. Zeilenhoehe ist 1,5 × Schriftgrad.
+    final firstLine =
+        scaler.scale(Theme.of(context).textTheme.bodyLarge?.fontSize ?? 17) *
+        1.5;
     return Column(
       children: [
         for (final item in items)
@@ -645,9 +787,9 @@ class _NotList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 11),
+                  padding: EdgeInsets.only(top: firstLine / 2 - 1),
                   child: Container(
-                    width: 12,
+                    width: scaler.scale(12),
                     height: 1.5,
                     decoration: BoxDecoration(
                       color: p.signal,
@@ -657,8 +799,10 @@ class _NotList extends StatelessWidget {
                 ),
                 const SizedBox(width: Space.md),
                 Expanded(
-                  child: Text(item,
-                      style: Theme.of(context).textTheme.bodyLarge),
+                  child: Text(
+                    item,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ),
               ],
             ),
@@ -684,10 +828,16 @@ class _Step extends StatelessWidget {
         // dem Geraet halb verschwand. Eine Schrittnummer ist ein Messwert:
         // Hausschrift mit Tabellenziffern, damit 1, 2 und 3 exakt
         // untereinander stehen.
+        //
+        // Die Spalte waechst mit der Schrift: fest auf 26 px schnitt sie die
+        // Ziffer bei 2,4-facher Groesse ab, und ein Schritt ohne Nummer ist
+        // keiner mehr.
         SizedBox(
-          width: 26,
-          child: Text(n,
-              style: readingStyle(context, size: 20, color: p.signal)),
+          width: MediaQuery.textScalerOf(context).scale(26),
+          child: Text(
+            n,
+            style: readingStyle(context, size: 20, color: p.signal),
+          ),
         ),
         const SizedBox(width: Space.md),
         Expanded(
@@ -754,8 +904,10 @@ class _PermissionRow extends StatelessWidget {
             // Zeile.
             if (!granted) ...[
               const SizedBox(width: Space.sm),
-              Text(context.t('Erlauben'),
-                  style: sectionStyle(context, color: p.signal)),
+              Text(
+                context.t('Erlauben'),
+                style: sectionStyle(context, color: p.signal),
+              ),
             ],
           ],
         ),

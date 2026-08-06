@@ -10,6 +10,7 @@ import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'app_test.dart' show findLabel;
 import 'harness.dart';
 
 void main() {
@@ -227,7 +228,7 @@ void main() {
       expect(find.text('wartet auf: Ordner holen'), findsOneWidget);
       // Der Blocker zeigt seinen Hebel — die Zahl, aus der die Formel
       // rechnet, steht sichtbar da (G2).
-      expect(find.text('HÄLT 1 AUF · HEBEL ×1.35'), findsOneWidget);
+      expect(findLabel('Hält 1 auf · Hebel ×1,35'), findsOneWidget);
       // Und die Formel selbst steht einmal in der Ansicht.
       expect(find.textContaining('log2(1 + aufgehaltene)'), findsOneWidget);
     });
@@ -287,7 +288,7 @@ void main() {
 
       await pumpPhone(tester, h.wrap(const NowScreen()));
 
-      expect(find.text('ALLES WARTET'), findsOneWidget);
+      expect(findLabel('Alles wartet'), findsOneWidget);
       expect(find.textContaining('hängt an etwas anderem'), findsOneWidget);
       expect(find.textContaining('mehr Anlauf'), findsNothing);
       await unmount(tester);
@@ -315,7 +316,7 @@ void main() {
       // Der Blocker ist zu groß — also bietet AXIOM ihn zum Zerlegen an,
       // statt das Warten zu vermelden. Auch das ist eine ausführbare
       // Handlung, und genau darum geht es (G1).
-      expect(find.text('ZU GROSS FÜR HEUTE'), findsOneWidget);
+      expect(findLabel('Zu groß für heute'), findsOneWidget);
       expect(find.text('Antrag drucken'), findsOneWidget);
       expect(find.textContaining('Antrag abgeben'), findsNothing);
       await unmount(tester);

@@ -136,7 +136,10 @@ class _BudgetCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('VERDIENT'), style: Theme.of(context).textTheme.labelSmall),
+          // War `VERDIENT`. Gesperrte Versalien ueber einer Zahl, die ohnehin
+          // die groesste Figur der Karte ist — die Marke musste nie laut
+          // sein, sie musste nur dastehen.
+          Text(context.t('Verdient'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           // War gruen, wenn Guthaben da ist, und grau, wenn nicht. Grün sagt
           // „gut gemacht", grau sagt „noch nichts geleistet" — beides sind
@@ -179,7 +182,8 @@ class _SuggestionCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('VORSCHLAG'), style: Theme.of(context).textTheme.labelSmall),
+          // War `VORSCHLAG`.
+          Text(context.t('Vorschlag'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.md),
           Text(channel.label,
               style: Theme.of(context).textTheme.headlineMedium),
@@ -366,7 +370,11 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('KANAL'), style: Theme.of(context).textTheme.labelSmall),
+            // War `KANAL`. Fuenf Zeichen duerften nach der Vorgabe Versalien
+            // behalten — die Ausnahme gilt aber Plaketten, und das hier ist
+            // die Rubrik ueber der Ueberschrift eines Blattes, dieselbe
+            // Rolle wie „Zerlegen" im Zerlegeblatt.
+            Text(context.t('Kanal'), style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,
