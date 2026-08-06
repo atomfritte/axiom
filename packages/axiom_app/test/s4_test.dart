@@ -187,7 +187,7 @@ void main() {
 
       final state = await h.runtime.medState();
       expect(state.enabled, isFalse);
-      expect(state.isInWindow, isFalse);
+      expect(state.hasActiveWindow, isFalse);
     });
   });
 

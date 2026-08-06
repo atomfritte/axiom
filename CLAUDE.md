@@ -86,6 +86,12 @@ Beim Anlegen oder Ändern einer Regel gilt:
   abgedeckt — die
   Widget- und Goldentests werten das ausgelieferte Regelwerk zwar aus, bemerken eine verschobene
   Schwelle aber nur, wenn sie den Bildschirm sichtbar verändert.
+- **`severity: enforce` braucht `authorised_on: JJJJ-MM-TT`.** Eine solche Regel bricht die
+  Ruhezeit und den Tagesdeckel — sie darf nachts sprechen. Zulässig ist das nur, wenn du sie
+  im ruhigen Zustand selbst autorisiert hast, und das Datum hält fest, wann. Ohne das Feld
+  warnt der Validator bei jedem Lauf. Autorisiert ist bisher **R-052** (nächtliche
+  Bestellungen abfangen); **R-010** und **R-090** sind es nicht, und ihre Warnung bleibt
+  stehen, bis jemand sie beantwortet.
 - **Jede neue Regel startet als `severity: log_only` (SHADOW).** Mindestens 7 Tage stumm mitlaufen,
   dann im Wochenreview auswerten, dann erst live.
 - `rules/personal/` ist git-ignoriert. Enthält private Trigger. **Nie committen, nie zitieren,

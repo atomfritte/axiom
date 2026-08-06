@@ -21,7 +21,7 @@ void main() {
     test('standardmaessig aus', () {
       const state = MedWindowState();
       expect(state.enabled, isFalse);
-      expect(state.isInWindow, isFalse);
+      expect(state.hasActiveWindow, isFalse);
     });
 
     test('ausgeschaltet gibt es keinen Kapazitaetsbonus', () {

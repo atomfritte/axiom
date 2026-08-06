@@ -50,7 +50,15 @@ Ohne diese Grenze wird das Regelwerk selbst zur Prokrastinationsfläche (D3).
 | `priority` | ✔ | 0–100. Höher gewinnt bei gleicher `severity` |
 | `severity` | ✔ | `info` \| `nudge` \| `intervene` \| `enforce` (siehe §4) |
 | `cooldown` | ✔ | Spam-Schutz. Ohne Cooldown kein Laden |
+| `authorised_on` | bei `enforce` | `JJJJ-MM-TT`. Wann der Nutzer diese Regel autorisiert hat |
 | `enabled` | – | Default `true` |
+
+`authorised_on` gehört zu `severity: enforce` und zu nichts sonst. Eine `enforce`-Regel bricht
+die Ruhezeit und den Tagesdeckel — sie darf nachts sprechen, und das ist keine Einstellung,
+sondern eine Entscheidung. Das Datum hält fest, wann sie getroffen wurde; ohne das Feld warnt
+der Validator bei jedem Lauf, und ein kaputtes Datum ist ein Fehler. Steht es an einer Regel
+ohne `enforce`, sagt der Validator, dass es dort wirkungslos ist — ein Feld, das nichts tut und
+so aussieht, als täte es etwas, ist schlimmer als keines.
 
 `rationale` und `cooldown` sind Pflicht, weil ihr Fehlen die zwei häufigsten Fehlermodi erzeugt:
 unerklärliche Ausgaben (Vertrauensverlust) und Benachrichtigungsflut (Abstumpfung, dann

@@ -195,7 +195,7 @@ void main() {
       const aus = MedWindowState();
       expect(aus.enabled, isFalse);
       expect(aus.active, isNull);
-      expect(aus.isInWindow, isFalse);
+      expect(aus.hasActiveWindow, isFalse);
     });
   });
 

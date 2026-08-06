@@ -131,6 +131,10 @@
     params: { cooldown_until: "09:00", checklist: personal_purchase }
   priority: 90
   severity: enforce
+  # Vom Nutzer im ruhigen Zustand autorisiert (siehe CLAUDE.md): Sie darf
+  # nachts unterbrechen, weil sie sonst genau in den Stunden stumm bliebe,
+  # für die sie gebaut ist. Höchstens zweimal pro Nacht, Cooldown bis 09:00.
+  authorised_on: 2026-08-06
   cooldown: { minutes: 240, max_per_day: 2 }
   enabled: true
 

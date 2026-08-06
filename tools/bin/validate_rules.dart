@@ -241,9 +241,29 @@ ValidationReport validateRules(Directory dir) {
       final severity = entry['severity']?.toString() ?? '';
       try {
         final parsed = Severity.parse(severity);
+        // `enforce` bricht die Ruhezeit und den Tagesdeckel. CLAUDE.md sagt:
+        // nur zulaessig, wenn der Nutzer die Regel im ruhigen Zustand selbst
+        // autorisiert hat. Bis hierher war das eine Warnung, die bei jedem
+        // Lauf erschien und nie beantwortet werden konnte — also eine, die
+        // man nach dem dritten Mal ueberliest.
+        //
+        // `authorised_on: JJJJ-MM-TT` ist die Antwort. Wer sie eintraegt,
+        // haelt fest, WANN er das entschieden hat; die Warnung verschwindet
+        // fuer genau diese Regel und kommt zurueck, sobald jemand die
+        // Bedingung oder die Aktion aendert, ohne das Datum zu erneuern.
+        final authorised = entry['authorised_on'];
         if (parsed == Severity.enforce) {
-          warnings.add('$where: severity=enforce. Nur zulaessig, wenn der '
-              'Nutzer diese Regel im ruhigen Zustand selbst autorisiert hat.');
+          if (authorised == null) {
+            warnings.add('$where: severity=enforce ohne authorised_on. '
+                'Zulaessig nur, wenn du diese Regel im ruhigen Zustand '
+                'selbst autorisiert hast — dann trag das Datum ein.');
+          } else if (DateTime.tryParse(authorised.toString()) == null) {
+            errors.add('$where: authorised_on ist kein Datum: "$authorised". '
+                'Erwartet JJJJ-MM-TT.');
+          }
+        } else if (authorised != null) {
+          warnings.add('$where: authorised_on steht da, aber severity ist '
+              'nicht enforce — das Feld hat dort keine Wirkung.');
         }
       } on Object {
         errors.add('$where: unbekannte severity "$severity"');

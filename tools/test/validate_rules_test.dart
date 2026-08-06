@@ -132,11 +132,59 @@ void main() {
     expect(report.fileCount, 2);
   });
 
-  test('severity=enforce wird gemeldet, aber nicht abgelehnt', () {
-    final report = check(_rule(severity: 'enforce'));
+  group('enforce braucht eine Autorisierung', () {
+    // `enforce` bricht Ruhezeit und Tagesdeckel. CLAUDE.md laesst das nur zu,
+    // wenn der Nutzer die Regel im ruhigen Zustand selbst autorisiert hat —
+    // vorher war das eine Warnung bei jedem Lauf, die niemand beantworten
+    // konnte und die man deshalb nach dem dritten Mal ueberliest.
 
-    expect(report.isValid, isTrue);
-    expect(report.warnings.join(), contains('severity=enforce'));
+    test('ohne authorised_on wird gemeldet, aber nicht abgelehnt', () {
+      final report = check(_rule(severity: 'enforce'));
+
+      expect(report.isValid, isTrue,
+          reason: 'Eine unautorisierte Regel bleibt ladbar — sonst waere der '
+              'Validator ein Schalter, der die App abschaltet');
+      expect(report.warnings.join(), contains('authorised_on'));
+    });
+
+    test('mit Datum schweigt die Warnung', () {
+      final report =
+          check(_rule(severity: 'enforce', authorisedOn: '2026-08-06'));
+
+      expect(report.isValid, isTrue);
+      expect(report.warnings.join(), isNot(contains('authorised_on')));
+    });
+
+    test('ein kaputtes Datum ist ein Fehler, keine Warnung', () {
+      // Sonst haette „authorised_on: bald" dieselbe Wirkung wie ein Datum,
+      // und die Zusage waere wieder nur ein Wort im Text.
+      final report = check(_rule(severity: 'enforce', authorisedOn: 'bald'));
+
+      expect(report.isValid, isFalse);
+      expect(report.errors.join(), contains('kein Datum'));
+    });
+
+    test('an einer Regel ohne enforce ist das Feld wirkungslos — und sagt es',
+        () {
+      final report = check(_rule(authorisedOn: '2026-08-06'));
+
+      expect(report.isValid, isTrue);
+      expect(report.warnings.join(), contains('keine Wirkung'));
+    });
+
+    test('das ausgelieferte Regelwerk: R-052 ist autorisiert', () {
+      // Der Fall, um den es wirklich geht. R-052 faengt naechtliche
+      // Bestellungen ab und muss dafuer die Ruhezeit brechen — sechs von
+      // sieben Stunden war sie vorher tot.
+      final report = validateRules(Directory('../rules'));
+
+      expect(report.isValid, isTrue);
+      expect(report.warnings.where((w) => w.contains('R-052')), isEmpty,
+          reason: 'R-052 traegt authorised_on');
+      expect(report.warnings.where((w) => w.contains('R-090')), isNotEmpty,
+          reason: 'R-090 ist NICHT autorisiert — die Warnung gehoert stehen '
+              'zu bleiben, bis jemand sie beantwortet');
+    });
   });
 
   group('als Kommandozeilenwerkzeug', () {
@@ -173,6 +221,7 @@ String _rule({
       'ohne Zeilenumbruch.',
   String? cooldown = '  cooldown: { minutes: 60 }',
   String severity = 'info',
+  String? authorisedOn,
   String when = '''
   when:
     all:
@@ -189,6 +238,7 @@ String _rule({
       '    action: log_only',
       '  priority: 10',
       '  severity: $severity',
+      if (authorisedOn != null) '  authorised_on: $authorisedOn',
       if (cooldown != null) cooldown,
       '  enabled: true',
       '',

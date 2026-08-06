@@ -76,7 +76,21 @@ final class MedWindowState {
 
   const MedWindowState({this.enabled = false, this.active});
 
-  bool get isInWindow => enabled && active != null;
+  /// Läuft in DIESEM Zyklus ein Fenster?
+  ///
+  /// **Warum das keine Zeit prüft — und warum es trotzdem stimmt.** Der
+  /// Zustand ist eine Momentaufnahme: [active] wird von
+  /// [MedWindow.activeAt] bereits gegen den Auswertungszeitpunkt gefiltert.
+  /// Hier noch einmal gegen eine Uhr zu prüfen hieße, gegen eine *andere*
+  /// Uhr zu prüfen als die, mit der die Aufnahme entstanden ist — genau der
+  /// Fehler, den `nowProvider` an anderer Stelle verhindert.
+  ///
+  /// Der Getter hieß `isInWindow` und war damit von [MedEntry.isInWindow]
+  /// nicht zu unterscheiden, das eine Zeit *nimmt* und eine prüft. Ein Name,
+  /// der eine Prüfung verspricht, die nicht stattfindet, ist die Sorte
+  /// Zusage, an der dieses Projekt schon mehrfach hängengeblieben ist —
+  /// deshalb sagt er jetzt, was er tut.
+  bool get hasActiveWindow => enabled && active != null;
 }
 
 final class MedWindow {
