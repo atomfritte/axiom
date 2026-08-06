@@ -167,5 +167,100 @@ void main() {
       final zero = DateTime.utc(2026, 8, 11, 6);
       expect(HealthSync.plan([sleep('x', zero, zero)]).entries, isEmpty);
     });
+
+    test('eine unbekannte Art wird stillschweigend liegengelassen', () {
+      // Health Connect kann jederzeit eine Aufzeichnungsart dazubekommen.
+      // Sie darf hier nichts erzeugen — ein Ereignis ohne Bedeutung liesse
+      // sich aus einem append-only-Strom nicht mehr entfernen.
+      final planned = HealthSync.plan([
+        {
+          'kind': 'heart_rate',
+          'sourceId': 'uhr-9',
+          'startMillis': 0,
+          'endMillis': 1000,
+        }
+      ]);
+      expect(planned.entries, isEmpty);
+      expect(planned.skipped, 0,
+          reason: 'uebersprungen heisst „schon da", nicht „kenne ich nicht"');
+    });
+
+    test('Schritte ohne Zahl sind keine Schritte', () {
+      expect(
+        HealthSync.plan([
+          {
+            'kind': 'steps',
+            'sourceId': 'fit-9',
+            'startMillis': 0,
+            'endMillis': 1000,
+          }
+        ]).entries,
+        isEmpty,
+      );
+    });
+
+    test('derselbe Datensatz zweimal im selben Schwung zaehlt einmal', () {
+      // Der Aufrufer bekommt eine Liste vom Geraet, keine Menge. Ohne den
+      // Merker innerhalb des Laufs stuende dieselbe Nacht zweimal im Strom —
+      // und der zweite Import haette sie beide als bekannt uebersprungen.
+      final planned = HealthSync.plan([night, night]);
+      expect(planned.entries, hasLength(1));
+      expect(planned.skipped, 1);
+    });
+  });
+
+  group('Die Raender', () {
+    test('zwei Fenster, die aneinander stossen, sind zwei Fenster', () {
+      // Wer um 6:00 aufwacht und sich um 6:00 wieder hinlegt, hat zwei
+      // Aufzeichnungen. Ein Vergleich mit `<=` statt `<` machte daraus eine
+      // Dublette — und die zweite Nacht verschwaende.
+      final planned = HealthSync.plan(
+        [sleep('uhr-3', DateTime.utc(2026, 8, 11, 6), DateTime.utc(2026, 8, 11, 8))],
+        knownSleep: [
+          (from: DateTime.utc(2026, 8, 10, 23), to: DateTime.utc(2026, 8, 11, 6)),
+        ],
+      );
+      expect(planned.entries, hasLength(1));
+      expect(planned.skipped, 0);
+    });
+
+    test('was der Aufrufer mitgibt, kommt unveraendert zurueck', () {
+      // `plan` bekommt den bekannten Stand aus dem Ereignisstrom. Schriebe
+      // es hinein, waere der zweite Aufruf mit derselben Liste ein anderer —
+      // und `import` ruft sie fuer jeden Lauf neu ab.
+      const knownIds = <String>{'fit-1'};
+      const knownSleep = <SleepWindow>[];
+
+      HealthSync.plan([night], knownSourceIds: knownIds, knownSleep: knownSleep);
+
+      expect(knownIds, {'fit-1'});
+      expect(knownSleep, isEmpty);
+    });
+  });
+
+  group('Was im Ereignisstrom landet', () {
+    // Diese Felder liest der SignalAggregator. Sie umzubenennen ist kein
+    // Fehler, den irgendetwas bemerkt: Der Import laeuft weiter, die Kapazitaet
+    // rechnet weiter — nur ohne Schlaf. Deshalb stehen sie hier vollstaendig.
+
+    test('ein Schlaffenster traegt genau diese Felder', () {
+      expect(
+        HealthSync.plan([night]).entries.single.payload.keys.toSet(),
+        {'bed_at', 'wake_at', 'duration_min', 'source_id', 'via'},
+      );
+    });
+
+    test('eine Tagessumme traegt genau diese Felder', () {
+      final planned =
+          HealthSync.plan([steps('fit-1', DateTime.utc(2026, 8, 10), 8123)]);
+      expect(
+        planned.entries.single.payload.keys.toSet(),
+        {'metric', 'value', 'from', 'to', 'source_id', 'via'},
+      );
+      // Woher der Wert kommt, muss am Ereignis stehen: Ein von Hand
+      // eingetragener und ein importierter Schlaf sind sonst nicht mehr zu
+      // unterscheiden.
+      expect(planned.entries.single.payload['via'], 'health_connect');
+    });
   });
 }

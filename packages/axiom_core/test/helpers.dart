@@ -75,3 +75,32 @@ Rule ruleOf({
 
 /// Werktag, 10:00 Ortszeit — ausserhalb der Ruhezeiten.
 DateTime get testNoon => DateTime(2026, 8, 3, 10);
+
+/// Ergebnis einer Auswertung genau einer Regel.
+typedef RuleOutcome = ({bool fired, SkipReason? reason});
+
+/// Wertet EINE Regel gegen die echten Systemgrenzen aus.
+///
+/// Warum Regeltests das brauchen: Die Bedingung ist nur die halbe Wahrheit.
+/// Ruhezeiten, Tages- und Stundendeckel entscheiden mit, ob aus einem
+/// zutreffenden Anlass ueberhaupt eine Ausgabe wird. Bei R-052 und R-110
+/// faellt genau dort ein Teil des Zeitfensters weg, das in der YAML steht —
+/// wer nur den Bedingungsbaum prueft, sieht das nie.
+RuleOutcome fireOnce(
+  Rule rule, {
+  required EvalContext ctx,
+  required DateTime nowLocal,
+  DecisionHistory? history,
+  GlobalLimits limits = const GlobalLimits(),
+}) {
+  final result = RuleEngine(limits: limits).evaluate(
+    rules: [rule],
+    ctx: ctx,
+    history: history ?? FakeHistory(),
+    nowLocal: nowLocal,
+  );
+  return (
+    fired: result.fired.isNotEmpty,
+    reason: result.skipped.isEmpty ? null : result.skipped.first.reason,
+  );
+}

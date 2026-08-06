@@ -180,7 +180,13 @@ final class TaskLinkGraph {
       if (open.contains(link.blockerId)) {
         (blockers[link.blockedId] ??= <String>[]).add(link.blockerId);
       }
-      if (open.contains(link.blockedId)) {
+      // Beide Enden muessen offen sein — sonst sagen die zwei Blickrichtungen
+      // Verschiedenes ueber dieselbe Kante. Vorher wurde hier nur das
+      // blockierte Ende geprueft: `blockersOf` liess die wartende Aufgabe
+      // richtig frei, sobald ihr Blocker erledigt war, `blockedBy` und
+      // `unblocks` behaupteten aber weiter, die erledigte Aufgabe halte sie
+      // auf. Der Hebel einer schon abgehakten Aufgabe ist null.
+      if (open.contains(link.blockerId) && open.contains(link.blockedId)) {
         (blocks[link.blockerId] ??= <String>[]).add(link.blockedId);
       }
     }

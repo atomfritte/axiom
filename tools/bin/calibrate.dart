@@ -234,15 +234,30 @@ List<String> calibrationReport(List<CalibrationEvent> events) {
     } else {
       out.add('  Korrelation Schlafschuld ↔ Energie: '
           '${r.toStringAsFixed(2)}  (n=${pairs.length})');
-      // Negativ erwartet: mehr Schuld, weniger Energie.
-      final suggested = (r.abs() * 0.6).clamp(0.15, 0.45);
       out.add('');
-      out.add('  Vorschlag  capacity.sleep_debt: '
-          '${suggested.toStringAsFixed(2)}   (bisher 0.30)');
-      if (r > -0.2) {
-        out.add('  Hinweis: Der Zusammenhang ist schwach. Entweder');
-        out.add('  ist Schlaf hier weniger wirksam als angenommen,');
-        out.add('  oder die Schätzungen streuen zu stark.');
+
+      // Erwartet wird ein *negativer* Zusammenhang: mehr Schuld, weniger
+      // Energie. Hier stand `r.abs()` — damit uebersetzte auch der
+      // umgekehrte Fall in einen hohen Vorschlag: Bei r = +1.00 kam
+      // `capacity.sleep_debt: 0.45` heraus, das Hoechstgewicht fuer den
+      // groessten Einzelfaktor der Kapazitaetsformel, versehen mit dem
+      // Hinweis, der Zusammenhang sei „schwach". Beides war falsch. Ein
+      // Vorschlag, der dem Messwert widerspricht, ist schlimmer als keiner
+      // — er kommt mit dem Anschein einer Messung.
+      if (r >= 0) {
+        out.add('  Kein Vorschlag: Mehr Schlafschuld ging hier mit *mehr*');
+        out.add('  Energie einher — die Messung zeigt in die andere');
+        out.add('  Richtung als die Formel. capacity.sleep_debt bleibt');
+        out.add('  auf 0.30, bis mehr Nächte erfasst sind.');
+      } else {
+        final suggested = (-r * 0.6).clamp(0.15, 0.45);
+        out.add('  Vorschlag  capacity.sleep_debt: '
+            '${suggested.toStringAsFixed(2)}   (bisher 0.30)');
+        if (r > -0.2) {
+          out.add('  Hinweis: Der Zusammenhang ist schwach. Entweder');
+          out.add('  ist Schlaf hier weniger wirksam als angenommen,');
+          out.add('  oder die Schätzungen streuen zu stark.');
+        }
       }
     }
   }

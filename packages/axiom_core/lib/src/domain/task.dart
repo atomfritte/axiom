@@ -209,9 +209,20 @@ Duration taskRunway(Task task) =>
       untilDue: due.difference(now),
       runway: taskRunway(task),
     );
-    if (best == null ||
-        candidate.untilDue - candidate.runway <
-            best.untilDue - best.runway) {
+    if (best == null) {
+      best = candidate;
+      continue;
+    }
+    final rest = candidate.untilDue - candidate.runway;
+    final bestRest = best.untilDue - best.runway;
+    // Bei gleichem Rest entscheidet die Kennung. Nicht aus Ordnungsliebe:
+    // Ohne diese Zeile gewinnt, was zufaellig vorn stand, und der Bestand
+    // kommt aus `ORDER BY created_at` — zwei in derselben Millisekunde
+    // angelegte Aufgaben haben dort keine Reihenfolge. Auf dem
+    // Zustandsschirm staende dann bei unveraendertem Bestand mal der eine,
+    // mal der andere Titel (ADR-0003).
+    final tied = rest == bestRest;
+    if (rest < bestRest || (tied && task.id.compareTo(best.task.id) < 0)) {
       best = candidate;
     }
   }

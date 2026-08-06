@@ -112,7 +112,13 @@ final class SignalLog {
       // Der stärkste zuerst — dort ist der Erkenntnisgewinn am größten.
       ..sort((a, b) {
         final byIntensity = b.intensity.compareTo(a.intensity);
-        return byIntensity != 0 ? byIntensity : a.at.compareTo(b.at);
+        if (byIntensity != 0) return byIntensity;
+        final byTime = a.at.compareTo(b.at);
+        if (byTime != 0) return byTime;
+        // Zuletzt die Kennung. Zwei Vorfälle derselben Minute sind keine
+        // Seltenheit — ein Streit erzeugt selten genau einen Eintrag —, und
+        // angeboten wird nur der erste. Ohne feste Ordnung wechselt er.
+        return a.id.compareTo(b.id);
       });
     return due;
   }

@@ -178,7 +178,13 @@ final class SensationLedger {
           .compareTo((b.intensity - wanted).abs());
       if (byFit != 0) return byFit;
       // Gleich passend? Der kürzere gewinnt — er ist eher machbar.
-      return a.typical.compareTo(b.typical);
+      final byLength = a.typical.compareTo(b.typical);
+      if (byLength != 0) return byLength;
+      // Gleich passend und gleich lang? Dann die Kennung. Ohne diese Zeile
+      // entschied die Reihenfolge der Kanalliste, und die kommt aus der
+      // Datenbank — der Vorschlag wechselte bei unverändertem Bedarf. Genau
+      // das schließt der Absatz oben aus (G2).
+      return a.id.compareTo(b.id);
     });
     return eligible.first;
   }

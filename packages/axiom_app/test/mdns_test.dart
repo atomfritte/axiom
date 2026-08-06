@@ -13,11 +13,18 @@ import 'dart:typed_data';
 import 'package:axiom_app/server/mdns_responder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Ein Socket, der sich verhält wie einer in einem Netz ohne Multicast.
+/// Ein Socket, der sich verhält wie einer in einem Netz ohne Multicast —
+/// und einer, in dem tatsächlich jemand fragt.
 ///
-/// Den Fall gibt es auf dem Rechner nicht herzustellen: nur Mobilfunk, WLAN
-/// aus, `adb forward`-Betrieb. Genau in diesem Fall blieben Sperre und
+/// Den ersten Fall gibt es auf dem Rechner nicht herzustellen: nur Mobilfunk,
+/// WLAN aus, `adb forward`-Betrieb. Genau in diesem Fall blieben Sperre und
 /// Socket hängen, und genau deshalb ist er hier nachgebaut.
+///
+/// Den zweiten auch nicht: Ein echtes Paket auf 224.0.0.251 setzt ein Netz
+/// voraus, in dem jemand fragt. Ohne [deliver] wäre die Strecke von der Frage
+/// zur Antwort — `_onEvent` → `_asksForAxiom` → `_announce` — nur in ihren
+/// Einzelteilen prüfbar, und ein fehlendes Glied dazwischen bliebe unsichtbar:
+/// Das Gerät antwortet dann nie, ohne Fehler und ohne Log.
 final class FakeSocket extends Stream<RawSocketEvent>
     implements RawDatagramSocket {
   FakeSocket({this.refusesGroup = false});
@@ -26,10 +33,36 @@ final class FakeSocket extends Stream<RawSocketEvent>
   bool closed = false;
   final List<Uint8List> sent = [];
 
+  /// Wohin das zuletzt gesendete Paket ging. Eine Antwort an die falsche
+  /// Gruppe hört niemand — und sie sieht von hier aus wie eine gesendete aus.
+  final List<({String address, int port})> sentTo = [];
+
+  /// Synchron, damit der Test nicht auf eine Ereignisschleife warten muss:
+  /// Was hier ankommt, ist im nächsten Ausdruck bereits verarbeitet.
+  final _events = StreamController<RawSocketEvent>(sync: true);
+  final _inbox = <Datagram?>[];
+
   /// Ein Feld, kein noSuchMethod-Weiterleiter: Der würde beim Setzen
   /// werfen, und dann prüfte der Test einen anderen Fehler als gemeint.
   @override
   int multicastHops = 0;
+
+  /// Legt ein Paket zu und meldet es an, so wie das Betriebssystem es täte.
+  void deliver(Uint8List data) {
+    _inbox.add(Datagram(data, InternetAddress('192.168.1.9'), 5353));
+    _events.add(RawSocketEvent.read);
+  }
+
+  /// Ein Lesesignal ohne Paket. Kommt vor — `receive()` gibt dann `null`.
+  void deliverNothing() {
+    _inbox.add(null);
+    _events.add(RawSocketEvent.read);
+  }
+
+  void signal(RawSocketEvent event) => _events.add(event);
+
+  @override
+  Datagram? receive() => _inbox.isEmpty ? null : _inbox.removeAt(0);
 
   @override
   void joinMulticast(InternetAddress group, [NetworkInterface? interface]) {
@@ -41,11 +74,15 @@ final class FakeSocket extends Stream<RawSocketEvent>
   @override
   int send(List<int> buffer, InternetAddress address, int port) {
     sent.add(Uint8List.fromList(buffer));
+    sentTo.add((address: address.address, port: port));
     return buffer.length;
   }
 
   @override
-  void close() => closed = true;
+  void close() {
+    closed = true;
+    _events.close();
+  }
 
   @override
   StreamSubscription<RawSocketEvent> listen(
@@ -54,7 +91,8 @@ final class FakeSocket extends Stream<RawSocketEvent>
     void Function()? onDone,
     bool? cancelOnError,
   }) =>
-      const Stream<RawSocketEvent>.empty().listen(onData);
+      _events.stream.listen(onData,
+          onError: onError, onDone: onDone, cancelOnError: cancelOnError);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -215,6 +253,118 @@ void main() {
       final goodbye = socket.sent.last;
       expect(goodbye.sublist(goodbye.length - 10, goodbye.length - 6),
           [0, 0, 0, 0]);
+    });
+
+    test('ein zweiter Start baut keinen zweiten Socket auf', () async {
+      // Der Expertenmodus wird ein- und ausgeschaltet, und `_maybeStartExpert`
+      // läuft bei jedem Vordergrundwechsel. Griffe der zweite Start erneut,
+      // hinge ein zweiter Socket auf Port 5353 und die Sperre wäre ein
+      // zweites Mal genommen — sie ist nicht referenzgezählt, das fiele also
+      // nie auf.
+      var binds = 0;
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async {
+        binds++;
+        return socket;
+      });
+
+      expect(await responder.start('10.0.0.5'), isTrue);
+      expect(await responder.start('10.0.0.5'), isTrue);
+      expect(binds, 1);
+      expect(socket.sent, hasLength(1), reason: 'nur eine Ankündigung');
+
+      await responder.stop();
+      expect(responder.isRunning, isFalse);
+    });
+
+    test('beenden ohne Start tut nichts und wirft nicht', () async {
+      // `stop()` läuft auch dann, wenn der Server gar nicht angelaufen ist —
+      // etwa weil `bindSecure` vorher geworfen hat.
+      final responder = MdnsResponder(bind: () async => FakeSocket());
+      await responder.stop();
+      await responder.stop();
+      expect(responder.holdsMulticastLock, isFalse);
+      expect(responder.isRunning, isFalse);
+    });
+
+    test('zweimal beenden schickt nur einen Abschied', () async {
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+      await responder.start('10.0.0.5');
+      await responder.stop();
+      final afterFirst = socket.sent.length;
+      await responder.stop();
+      expect(socket.sent, hasLength(afterFirst));
+    });
+  });
+
+  group('Was mit einer eingehenden Frage passiert', () {
+    // Bis hierher waren Frageerkennung und Paketbau je einzeln geprüft — die
+    // Strecke dazwischen nicht. Fehlt dort ein Glied, antwortet das Gerät
+    // nie, und von außen sieht das aus wie ein Netz ohne Multicast.
+
+    test('auf die Frage nach axiom.local folgt eine Antwort', () async {
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+      await responder.start('10.0.0.5');
+      expect(socket.sent, hasLength(1), reason: 'die Ankündigung');
+
+      socket.deliver(question('axiom.local'));
+
+      expect(socket.sent, hasLength(2));
+      final answer = socket.sent.last;
+      expect(answer[2] & 0x80, 0x80, reason: 'Antwort-Bit');
+      expect(answer.sublist(answer.length - 4), [10, 0, 0, 5],
+          reason: 'die eigene Adresse, nicht die des Fragenden');
+      await responder.stop();
+    });
+
+    test('auf eine fremde Frage folgt nichts', () async {
+      // Ein Responder, der auf alles antwortet, kapert das Netz.
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+      await responder.start('10.0.0.5');
+
+      socket.deliver(question('drucker.local'));
+      socket.deliver(question('axiom.local', asResponse: true));
+      socket.deliver(Uint8List.fromList([1, 2, 3]));
+
+      expect(socket.sent, hasLength(1), reason: 'nur die Ankündigung');
+      await responder.stop();
+    });
+
+    test('ein Lesesignal ohne Paket ist kein Absturz', () async {
+      // `receive()` gibt `null` zurück, wenn das Paket zwischen Signal und
+      // Abholen verworfen wurde. Eine Ausnahme hier nähme den Expertenmodus
+      // mit — der Server läuft im selben Prozess.
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+      await responder.start('10.0.0.5');
+
+      socket.deliverNothing();
+      socket.signal(RawSocketEvent.write);
+      socket.signal(RawSocketEvent.closed);
+
+      expect(socket.sent, hasLength(1));
+      await responder.stop();
+    });
+
+    test('jede Antwort geht an die Gruppe und den Port aus RFC 6762',
+        () async {
+      // Eine Antwort an die falsche Adresse ist von einer gesendeten nicht zu
+      // unterscheiden — sie hört nur niemand.
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+      await responder.start('10.0.0.5');
+      socket.deliver(question('axiom.local'));
+      await responder.stop();
+
+      expect(socket.sentTo, hasLength(3), reason: 'Ankündigung, Antwort, '
+          'Abschied');
+      for (final target in socket.sentTo) {
+        expect(target.address, kMdnsGroup);
+        expect(target.port, kMdnsPort);
+      }
     });
   });
 }

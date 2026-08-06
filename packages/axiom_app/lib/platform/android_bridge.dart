@@ -477,17 +477,7 @@ abstract final class AndroidBridge {
       _outcome('requestPinWidget', language);
 
   /// Wie viele Widget-Instanzen tatsaechlich auf dem Startbildschirm liegen.
-  static Future<int> widgetCount() async {
-    if (!isSupported) return 0;
-    try {
-      return await _channel
-              .invokeMethod<int>('widgetCount')
-              .timeout(_timeout) ??
-          0;
-    } on Object {
-      return 0;
-    }
-  }
+  static Future<int> widgetCount() => _count('widgetCount');
 
   // ── Notiz-Rolle (S-Pen) ───────────────────────────────────────────────
 
@@ -603,8 +593,19 @@ abstract final class AndroidBridge {
   }
 
   /// Löscht die ersten [count] Notizen — die, die sicher gespeichert sind.
-  static Future<bool> ackPendingMemos(int count) =>
-      _invoke('ackPendingMemos', {'count': count});
+  ///
+  /// Gibt zurück, wie viele wirklich weg sind.
+  ///
+  /// **Warum eine Zahl und kein `bool`.** `MemoInbox.ack` antwortet mit der
+  /// Zahl der gelöschten Einträge. `invokeMethod<bool>` packt die Antwort mit
+  /// `as bool?` aus, und ein `int` gibt dort einen TypeError — den [_invoke]
+  /// wie jede andere Ausnahme fängt. Die Bestätigung lief also durch, die
+  /// Notizen waren weg, und diese Seite meldete trotzdem dauerhaft „hat nicht
+  /// geklappt". Ein Rückgabewert, der strukturell nie wahr werden kann, ist
+  /// schlimmer als keiner: Wer ihn irgendwann abfragt, baut auf eine Aussage,
+  /// die es nie gab.
+  static Future<int> ackPendingMemos(int count) =>
+      _count('ackPendingMemos', {'count': count});
 
   // ── Ort (D2) ──────────────────────────────────────────────────────────
 
@@ -632,8 +633,9 @@ abstract final class AndroidBridge {
     }
   }
 
-  static Future<bool> ackPendingPlaces(int count) =>
-      _invoke('ackPendingPlaces', {'count': count});
+  /// Wie [ackPendingMemos], und aus demselben Grund eine Zahl.
+  static Future<int> ackPendingPlaces(int count) =>
+      _count('ackPendingPlaces', {'count': count});
 
   // ── Intern ────────────────────────────────────────────────────────────
 
@@ -676,6 +678,25 @@ abstract final class AndroidBridge {
         false,
         SystemTexts.reason(language, 'reason.bridge'),
       );
+    }
+  }
+
+  /// Für alles, was die Systemseite mit einer Zahl beantwortet.
+  ///
+  /// Eigene Hülle statt [_invoke], weil der Auspacker den Typ festlegt: Ein
+  /// `int` gegen `invokeMethod<bool>` ist ein TypeError, und der sähe hier
+  /// aus wie ein Fehlschlag. 0 heißt „nichts passiert" — dieselbe Aussage
+  /// wie `false`, nur ohne den Umweg über eine verschluckte Ausnahme.
+  static Future<int> _count(
+    String method, [
+    Map<String, Object?>? args,
+  ]) async {
+    if (!isSupported) return 0;
+    try {
+      return await _channel.invokeMethod<int>(method, args).timeout(_timeout) ??
+          0;
+    } on Object {
+      return 0;
     }
   }
 

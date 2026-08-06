@@ -11,32 +11,215 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:axiom_core/axiom_core.dart';
+import 'package:axiom_data/axiom_data.dart';
+
+import 'package:axiom_app/i18n/i18n.dart';
 import 'package:axiom_app/platform/android_bridge.dart';
 import 'package:axiom_app/platform/health_sync.dart';
+import 'package:axiom_app/platform/system_sync.dart';
+import 'package:axiom_app/platform/system_texts.dart';
+import 'package:axiom_app/state/runtime.dart';
+
+import 'harness.dart';
 
 void main() {
   group('Ohne Android bleibt alles bedienbar', () {
-    test('Systemaufrufe sind stille No-ops, keine Ausnahmen', () async {
-      // Der Desktop-Companion laeuft auf demselben Code. Wuerde ein
-      // Systemaufruf dort werfen, waere die App auf dem Rechner unbrauchbar.
+    // Der Desktop-Companion laeuft auf demselben Code. Ein Systemaufruf, der
+    // dort wirft, macht die App auf dem Rechner unbrauchbar — und ein
+    // Systemaufruf, der dort den *falschen* Wert liefert, ist schlimmer:
+    // `databaseKey` entscheidet damit ueber Klartext oder gar nicht oeffnen.
+    //
+    // **Was hier nicht geprueft werden kann.** Die Pfade hinter der
+    // `isSupported`-Sperre: Zeitueberschreitung, fehlender Kanal, eine
+    // Antwort vom falschen Typ. Sie sind von hier aus unerreichbar, weil
+    // `Platform.isAndroid` auf dem Rechner falsch ist und der Aufruf den
+    // Kanal nie erreicht. Was sich statt dessen pruefen laesst, ist die Naht
+    // selbst — welchen Typ jede Seite erwartet: `bridge_contract_test`.
+
+    test('jede Systemfunktion ist hier ein bekannter Wert, keine Ausnahme',
+        () async {
       expect(AndroidBridge.isSupported, isFalse);
-      expect(await AndroidBridge.startLiveSlot(
-        kind: 'focus',
-        title: 'Test',
-        detail: '',
-        startedAt: DateTime(2026, 1, 1),
-        planned: const Duration(minutes: 50),
-      ), isFalse);
+
+      // Der Schluessel: „hier gab es nie einen" — und nur deshalb oeffnet der
+      // Rechner die Klartextdatei. Waere es `unavailable`, startete die App
+      // auf dem Rechner nie wieder.
+      expect((await AndroidBridge.databaseKey()).state, DatabaseKeyState.none);
+      expect((await AndroidBridge.databaseKey()).key, isNull);
+
+      expect(await AndroidBridge.applySystemTexts(AppLanguage.de), isFalse);
+      expect(await AndroidBridge.ping(), isFalse);
+
+      expect(await AndroidBridge.requestExactAlarm(), isFalse);
+      expect(await AndroidBridge.requestNotifications(), isFalse);
+      expect(await AndroidBridge.requestIgnoreBatteryOptimizations(), isFalse);
+      expect(await AndroidBridge.permissionStatus(), isEmpty);
+
+      expect(
+        await AndroidBridge.scheduleExact(
+          id: 1,
+          at: DateTime(2026, 1, 1),
+          title: 'Test',
+          body: '',
+        ),
+        isFalse,
+      );
+      expect(await AndroidBridge.cancelAlarm(1), isFalse);
+      expect(await AndroidBridge.lastAlarmDrift(), isNull);
+
+      expect(await AndroidBridge.presenceEnabled(), isFalse);
+      expect(await AndroidBridge.presenceActive(), isFalse);
+      expect(await AndroidBridge.updatePresence(headline: 'a', detail: 'b'),
+          isFalse);
+      expect(await AndroidBridge.stopPresence(), isFalse);
+      expect(await AndroidBridge.openPresenceChannel(), isFalse);
+      expect(await AndroidBridge.presenceDiagnosis(), isEmpty);
+      expect(await AndroidBridge.multicastLock(hold: true), isFalse);
+
+      expect(
+          await AndroidBridge.startLiveSlot(
+            kind: 'focus',
+            title: 'Test',
+            detail: '',
+            startedAt: DateTime(2026, 1, 1),
+            planned: const Duration(minutes: 50),
+          ),
+          isFalse);
       expect(await AndroidBridge.stopLiveSlot(), isFalse);
       expect(await AndroidBridge.liveSlotRunning(), isFalse);
       expect(await AndroidBridge.liveSlotPromotable(), isFalse);
+
       expect(await AndroidBridge.healthStatus(), isEmpty);
       expect(await AndroidBridge.healthRead(DateTime(2026)), isEmpty);
+      expect(await AndroidBridge.healthOpenSettings(), isFalse);
+
+      expect(await AndroidBridge.widgetCount(), 0);
+      expect(await AndroidBridge.diagnostics(), isEmpty);
+      expect(await AndroidBridge.listen(), isNull);
+      expect(await AndroidBridge.speechAvailable(), isFalse);
+
+      expect(await AndroidBridge.startExpertNotice(address: 'x'), isFalse);
+      expect(await AndroidBridge.stopExpertNotice(), isFalse);
+
+      expect(await AndroidBridge.peekPendingMemos(), isEmpty);
+      expect(await AndroidBridge.peekPendingPlaces(), isEmpty);
+      // Beide antworten mit einer Zahl, nicht mit einem `bool`: Die
+      // Systemseite meldet, wie viele Einträge wirklich weg sind.
+      expect(await AndroidBridge.ackPendingMemos(1), 0);
+      expect(await AndroidBridge.ackPendingPlaces(1), 0);
+
+      // Alles ohne Rueckgabewert darf hier ebenfalls nicht werfen.
+      await AndroidBridge.updateWidget(headline: 'a', detail: 'b', capacity: 0);
+      await AndroidBridge.scheduleDailyCheckins();
+      await AndroidBridge.broadcast('de.atomfritte.axiom.TEST');
+      await AndroidBridge.focusStart();
+      await AndroidBridge.focusEnd();
+      await AndroidBridge.windDown();
+      await AndroidBridge.enterMaintenanceMode();
+    });
+
+    test('ein Fehlschlag hier sagt, warum — in der Sprache des Aufrufers',
+        () async {
+      // „passiert nichts" ist von aussen nicht diagnostizierbar. Deshalb gibt
+      // es hier keinen stummen Knopf, sondern einen Satz — und der ist
+      // uebersetzt, weil er auf dem Bildschirm steht.
+      for (final call in <Future<PlatformOutcome> Function(AppLanguage)>[
+        (l) => AndroidBridge.startPresence(
+            headline: 'a', detail: 'b', language: l),
+        (l) => AndroidBridge.healthRequestPermissions(language: l),
+        (l) => AndroidBridge.requestPinWidget(language: l),
+        (l) => AndroidBridge.requestNotesRole(language: l),
+      ]) {
+        final german = await call(AppLanguage.de);
+        expect(german.ok, isFalse);
+        expect(german.reason, isNotNull);
+        expect(german.reason, isNot(startsWith('reason.')),
+            reason: 'ein Schluessel statt eines Satzes');
+
+        final english = await call(AppLanguage.en);
+        expect(english.reason, isNot(german.reason),
+            reason: 'unuebersetzt: "${german.reason}"');
+      }
+    });
+
+    test('jede Systemfunktion steht in diesem Vertrag', () {
+      // Ohne diesen Wächter entkommt jede neue Brückenfunktion der Prüfung
+      // oben — und ihr Verhalten auf dem Rechner wäre wieder unbekannt.
+      final source = File('lib/platform/android_bridge.dart').readAsStringSync();
+      final block = source.substring(source.indexOf('abstract final class AndroidBridge'));
+      final declared = RegExp(r'static [\w<>?, ]+ (\w+)\(')
+          .allMatches(block)
+          .map((m) => m.group(1)!)
+          .where((name) => !name.startsWith('_'))
+          .toSet();
+
+      final covered = {
+        'applySystemTexts', 'databaseKey', 'requestExactAlarm',
+        'requestNotifications', 'requestIgnoreBatteryOptimizations',
+        'permissionStatus', 'scheduleExact', 'cancelAlarm',
+        'scheduleDailyCheckins', 'lastAlarmDrift', 'updateWidget',
+        'startPresence', 'updatePresence', 'stopPresence', 'presenceEnabled',
+        'presenceActive', 'multicastLock', 'openPresenceChannel',
+        'presenceDiagnosis', 'startLiveSlot', 'stopLiveSlot',
+        'liveSlotRunning', 'liveSlotPromotable', 'healthStatus',
+        'healthRequestPermissions', 'ping', 'healthOpenSettings', 'healthRead',
+        'requestPinWidget', 'widgetCount', 'requestNotesRole', 'diagnostics',
+        'listen', 'speechAvailable', 'startExpertNotice', 'stopExpertNotice',
+        'broadcast', 'focusStart', 'focusEnd', 'windDown',
+        'enterMaintenanceMode', 'peekPendingMemos', 'ackPendingMemos',
+        'peekPendingPlaces', 'ackPendingPlaces',
+      };
+      expect(declared.length, greaterThan(40));
+      expect(declared.difference(covered), isEmpty,
+          reason: 'neu und ohne bekanntes Verhalten auf dem Rechner');
+      expect(covered.difference(declared), isEmpty,
+          reason: 'steht in der Liste, aber nicht mehr im Quelltext');
     });
 
     test('Health Connect meldet sich als nicht verfügbar, nicht als Fehler',
         () async {
       expect(await HealthSync.availability(), HealthAvailability.unavailable);
+      // Und ein Import laeuft ins Leere statt in eine Ausnahme: Der
+      // Systemschirm ruft ihn auch auf dem Rechner auf.
+      expect(const HealthImportResult().isEmpty, isTrue);
+    });
+  });
+
+  group('Was die Systemseite meldet, wird zu einem Satz', () {
+    test('ein bekannter Grund wird übersetzt und mit Werten gefüllt', () {
+      // Kotlin schickt nur den Schluessel und die Rohwerte herauf — den Satz
+      // baut diese Seite, weil nur sie die gewaehlte Sprache kennt.
+      final german = SystemTexts.reason(
+          AppLanguage.de, 'reason.widget.failed', ['SecurityException']);
+      expect(german, contains('SecurityException'));
+      expect(german, isNot(contains('{0}')));
+
+      final english = SystemTexts.reason(
+          AppLanguage.en, 'reason.widget.failed', ['SecurityException']);
+      expect(english, contains('SecurityException'));
+      expect(english, isNot(german));
+    });
+
+    test('ein unbekannter Grund wird durchgereicht, nicht verschluckt', () {
+      // Sichtbar unfertig statt stumm: Ein technischer Name auf dem
+      // Bildschirm ist haesslich und genau deshalb richtig — ein Knopf, der
+      // kommentarlos nichts tut, ist nicht diagnostizierbar.
+      expect(SystemTexts.reason(AppLanguage.de, 'reason.gibtesnicht'),
+          'reason.gibtesnicht');
+    });
+
+    test('die Systemseite bekommt jeden Text, den sie anzeigen darf', () {
+      // `forLanguage` ist das ganze Bündel. Fehlt darin ein Schlüssel, zeigt
+      // Android an dieser Stelle den Rückfall aus `strings.xml` — also die
+      // Gerätesprache statt der in der App gewählten, und niemand sieht,
+      // warum.
+      for (final language in AppLanguage.values) {
+        final bundle = SystemTexts.forLanguage(language);
+        expect(bundle.keys.toSet(), SystemTexts.sources.keys.toSet());
+        expect(bundle.values.where((v) => v.trim().isEmpty), isEmpty);
+      }
+      expect(SystemTexts.forLanguage(AppLanguage.en)['presence.detail'],
+          isNot(SystemTexts.sources['presence.detail']));
     });
   });
 
@@ -57,6 +240,146 @@ void main() {
           'ein Ergebnis, kein Nichts');
       expect(skipped.imported, 0);
       expect(fresh.imported, 8);
+    });
+  });
+
+  group('Was Android zeichnet, ist genau eine Sache', () {
+    // Widget und dauerhafte Anzeige tragen zwei Zeilen — nicht zwei Zeilen
+    // zur Auswahl, sondern eine Aussage und ihre Begründung (G1, G2). Diese
+    // Ebene entsteht ohne Widget-Baum und fällt deshalb durch jeden
+    // Widget-Test; geprüft war bisher nur ihre Sprache, nicht ihre Rangfolge.
+
+    final now = DateTime.now();
+
+    AxiomSnapshot snapshot({
+      ({Anchor anchor, AnchorStep step})? nextStep,
+      Rule? rule,
+      List<Task> tasks = const [],
+    }) =>
+        AxiomSnapshot(
+          at: now,
+          state: StateVector(
+            at: now,
+            capacity: 60,
+            focusDebt: 0,
+            sensationNeed: 0,
+            loadIndex: 0,
+            regulation: 50,
+            sleepDebt: 0,
+          ),
+          breakdown: const {},
+          tasks: tasks,
+          metaUsedToday: Duration.zero,
+          decisionRule: rule,
+          nextStep: nextStep,
+        );
+
+    ({Anchor anchor, AnchorStep step}) stepIn(Duration lead) {
+      final anchor = Anchor(
+        id: 'a1',
+        title: 'Zahnarzt',
+        arriveBy: now.add(lead + const Duration(minutes: 30)),
+      );
+      return (
+        anchor: anchor,
+        step: AnchorStep(
+          kind: AnchorStepKind.depart,
+          at: now.add(lead),
+          label: 'Losgehen',
+        ),
+      );
+    }
+
+    // Eine echte Regel aus dem ausgelieferten Regelwerk, keine gebaute:
+    // Was hier angezeigt wird, ist ihr Titel — und der kommt aus dem YAML.
+    final rule = YamlRuleSource(loadRuleAssets()).parse().rules.first;
+
+    final task = const Task(
+      id: 't1',
+      title: 'Steuerunterlagen sortieren',
+      activationEnergy: 3,
+      salience: 5,
+      stakes: 5,
+      state: TaskState.ready,
+    );
+
+    test('ein Ankerschritt in der nächsten Stunde schlägt alles andere', () {
+      // Er hat eine Uhrzeit, und verpasste Uhrzeiten kosten am meisten [D4].
+      final (headline, detail) = SystemSync.describe(
+        snapshot(
+            nextStep: stepIn(const Duration(minutes: 30)),
+            rule: rule,
+            tasks: [task]),
+        AppLanguage.de,
+      );
+      expect(headline, 'Losgehen');
+      expect(detail, contains('Zahnarzt'));
+      expect(detail, isNot(contains(rule.title)));
+    });
+
+    test('ein Ankerschritt in vier Stunden nicht', () {
+      // Sonst stünde den ganzen Tag ein Schritt da, der noch lange nicht
+      // ansteht — und die Anzeige wäre wieder eine Liste im Kopf.
+      final (headline, detail) = SystemSync.describe(
+        snapshot(
+            nextStep: stepIn(const Duration(hours: 4)),
+            rule: rule,
+            tasks: [task]),
+        AppLanguage.de,
+      );
+      expect(headline, rule.title);
+      expect(detail, 'Regel ${rule.id}');
+    });
+
+    test('ohne Regel steht die Aufgabe da, mit ihrer Startschwelle', () {
+      final (headline, detail) =
+          SystemSync.describe(snapshot(tasks: [task]), AppLanguage.de);
+      expect(headline, 'Steuerunterlagen sortieren');
+      expect(detail, 'Start 3/10');
+    });
+
+    test('nichts Startbares heißt „nichts in Reichweite", nicht „nichts"', () {
+      // Der Unterschied ist der ganze Nutzen: Aufgaben sind da, sie sind nur
+      // gerade zu schwer. „Nichts anliegend" wäre an dieser Stelle eine
+      // falsche Aussage über den Bestand [D9].
+      final tooHeavy = const Task(
+        id: 't2',
+        title: 'Steuererklärung',
+        activationEnergy: 9,
+        salience: 5,
+        stakes: 8,
+        state: TaskState.ready,
+      );
+      final (headline, detail) =
+          SystemSync.describe(snapshot(tasks: [tooHeavy]), AppLanguage.de);
+      expect(headline, 'Nichts in Reichweite');
+      expect(detail, 'Zerlegen hilft');
+    });
+
+    test('ein leerer Bestand sagt das, ohne Vorwurf', () {
+      final (headline, detail) =
+          SystemSync.describe(snapshot(), AppLanguage.de);
+      expect(headline, 'Nichts anliegend');
+      expect(detail, 'Tippen zum Erfassen');
+    });
+
+    test('keine dieser Zeilen enthält eine Bewertung', () {
+      // Was hier steht, steht auf dem Sperrbildschirm. Es ist ein Messwert
+      // und keine Note (G3, R7).
+      for (final s in [
+        snapshot(),
+        snapshot(tasks: [task]),
+        snapshot(rule: rule),
+        snapshot(nextStep: stepIn(const Duration(minutes: 10))),
+      ]) {
+        for (final language in AppLanguage.values) {
+          final (headline, detail) = SystemSync.describe(s, language);
+          for (final line in [headline, detail]) {
+            expect(line, isNot(contains('!')));
+            expect(line.trim(), isNotEmpty);
+          }
+        }
+      }
     });
   });
 
@@ -204,12 +527,27 @@ void main() {
       // Future offen, das nie fertig wird — und die App steht auf einem
       // Ladekreisel, ohne dass irgendwo ein Fehler steht. Genau so ist sie
       // einmal nicht mehr gestartet.
-      final source = code(
-          File('lib/platform/android_bridge.dart').readAsStringSync());
-      final invocations = RegExp(r'invoke(Method|MapMethod|ListMethod)<')
-          .allMatches(source)
-          .length;
-      final timeouts = '.timeout('.allMatches(source).length;
+      //
+      // Geprueft wird das ganze Verzeichnis, nicht nur `android_bridge.dart`.
+      // Vorher stand hier ein einzelner Dateiname, waehrend der Kanal an
+      // zwei Stellen benutzt wird — und die zweite (`intent_handler`) wartete
+      // ohne Grenze. Dort haengt zusaetzlich der Merker `_handling`: Kommt
+      // die Antwort nie, sammelt diese Seite fuer die Prozesslebensdauer
+      // nichts mehr ein, und jede Schnellerfassung bleibt liegen [D9].
+      var invocations = 0;
+      var timeouts = 0;
+      final files = Directory('lib/platform')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
+      for (final file in files) {
+        final source = code(file.readAsStringSync());
+        invocations += RegExp(r'invoke(Method|MapMethod|ListMethod)<')
+            .allMatches(source)
+            .length;
+        timeouts += '.timeout('.allMatches(source).length;
+      }
+      expect(invocations, greaterThan(10));
       expect(timeouts, greaterThanOrEqualTo(invocations),
           reason: '$invocations Aufrufe, aber nur $timeouts mit Zeitgrenze');
     });
@@ -278,57 +616,20 @@ void main() {
       );
     });
 
-    test('jede Benachrichtigung führt an ihr Ziel, nicht nur in die App',
-        () {
+    test('das Ziel wandert mit dem Alarm mit', () {
       // Ein Anstoß, der auf der Übersicht endet, ist kein Anstoß: Der Weg
-      // zur eigentlichen Handlung beginnt dann von vorn [D2].
+      // zur eigentlichen Handlung beginnt dann von vorn [D2]. Der Empfänger
+      // muss das Ziel also aus dem Alarm lesen und an die Activity
+      // weiterreichen — es steht in keiner Tabelle, an die Kotlin herankommt.
+      //
+      // Ob jedes Ziel auf beiden Seiten bekannt ist, prüft
+      // `bridge_contract_test` als Mengenvergleich: Die frühere Fassung an
+      // dieser Stelle verglich nur in eine Richtung und kannte die Aktionen
+      // nicht, die die Systemseite selbst schickt.
       final receiver =
           android('kotlin/de/atomfritte/axiom/AlarmReceiver.kt');
       expect(receiver, contains('getStringExtra("route")'));
       expect(receiver, contains('.setAction(route'));
-
-      // Jedes Ziel, das gesendet wird, muss auch angenommen werden. Eine
-      // Route, die die Whitelist nicht kennt, landet stumm auf der
-      // Übersicht — funktionierend genug, um nicht aufzufallen.
-      final bridge =
-          code(File('lib/platform/android_bridge.dart').readAsStringSync());
-      // Das Praefix wird aus dem Manifest gelesen, nicht hier
-      // hineingeschrieben: Beim Wechsel der Paketkennung waere ein fest
-      // verdrahtetes Muster still leer geworden — der Test haette dann
-      // nichts mehr geprueft und trotzdem gruen gemeldet.
-      final pkg = RegExp(r'applicationId = "([a-z.]+)"')
-              .firstMatch(File('android/app/build.gradle.kts').readAsStringSync())
-              ?.group(1) ??
-          'de.atomfritte.axiom';
-      // Nur die Konstanten aus `AxiomRoute` — nicht jede Zeichenkette, die
-      // so aussieht.
-      //
-      // Vorher schoepfte das Muster die ganze Datei ab. Das fiel nicht auf,
-      // solange die ausgehenden Broadcasts anders hiessen (`axiom.FOCUS_START`
-      // ohne Praefix); seit sie dieselbe Form haben, verlangte der Test, dass
-      // ein Broadcast an eine Routine in der Start-Whitelist steht. Er tut
-      // dort nichts zu suchen: Das eine sagt „AXIOM oeffnen und dorthin",
-      // das andere sagt einem fremden System „bei mir ist gerade etwas
-      // passiert".
-      final routeBlock = bridge.substring(
-        bridge.indexOf('abstract final class AxiomRoute'),
-      );
-      final routes = RegExp("'(${RegExp.escape(pkg)}\\.[A-Z_]+)'")
-          .allMatches(routeBlock.substring(0, routeBlock.indexOf('}')))
-          .map((m) => m.group(1)!)
-          .toSet();
-      expect(routes, isNotEmpty);
-      final main = android('kotlin/de/atomfritte/axiom/MainActivity.kt');
-      final whitelist = main.substring(main.indexOf('fun consumeLaunchAction'));
-      for (final route in routes) {
-        expect(whitelist, contains('"$route"'), reason: route);
-      }
-
-      // Und die Dart-Seite muss wissen, was sie damit tut.
-      final handler =
-          code(File('lib/platform/intent_handler.dart').readAsStringSync());
-      expect(handler, contains('AxiomRoute.checkin'));
-      expect(handler, contains('AxiomRoute.anchors'));
     });
 
     test('R8 behält jede Klasse, die nur im Manifest steht', () {

@@ -46,11 +46,26 @@ final class Phrase {
 ///
 /// Platzhalter statt fester Reihenfolge, damit eine Uebersetzung die
 /// Wortfolge aendern darf — im Englischen steht die Zahl oft woanders.
+///
+/// **Ein Durchgang, nicht einer je Wert.** Vorher lief je Index ein
+/// `replaceAll` ueber das Zwischenergebnis — und damit auch ueber die
+/// bereits eingesetzten Werte. Ein Wert, der selbst wie ein Platzhalter
+/// aussieht, wurde im naechsten Durchgang erneut ersetzt: Aus
+/// `Phrase('{0} — {1}', ['{1}', 'Zahnarzt'])` wurde „Zahnarzt — Zahnarzt".
+/// Die Werte sind hier keine Konstanten, sondern Nutzertext — Ankertitel und
+/// Ortsnamen kommen so in `FocusGovernor` an. Ein Wert darf nie zu Quelltext
+/// werden.
+///
+/// Ein Platzhalter ohne Wert bleibt stehen, statt zu verschwinden: sichtbar
+/// unfertig ist besser als stumm weggekuerzt.
 String interpolate(String source, List<Object?> args) {
   if (args.isEmpty) return source;
-  var result = source;
-  for (var i = 0; i < args.length; i++) {
-    result = result.replaceAll('{$i}', '${args[i]}');
-  }
-  return result;
+  return source.replaceAllMapped(_placeholder, (match) {
+    final index = int.tryParse(match.group(1)!);
+    return index != null && index < args.length
+        ? '${args[index]}'
+        : match.group(0)!;
+  });
 }
+
+final RegExp _placeholder = RegExp(r'\{(\d+)\}');

@@ -17,7 +17,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:axiom_app/server/expert_certificate.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'harness.dart';
 
 // ── Ein unabhängiger DER-Leser ──────────────────────────────────────────
 //
@@ -125,6 +128,41 @@ Future<String> handshake(
   }
 }
 
+/// Wie [handshake], aber mit einem Namen, den kein Namensdienst kennt.
+///
+/// `SecureSocket.connect` würde `axiom.local` erst auflösen wollen und an
+/// der Namensauflösung scheitern — geprüft wäre dann das Netz des Rechners
+/// und nicht das Zertifikat. Hier wird zur Schleife verbunden und die
+/// Prüfung anschließend ausdrücklich gegen [host] geführt, so wie ein
+/// Browser es täte, der `https://axiom.local:8787` in der Adresszeile hat.
+Future<String> handshakeAgainstName(
+  String certificatePem,
+  String privateKeyPem,
+  String host,
+) async {
+  final serverContext = SecurityContext(withTrustedRoots: false)
+    ..useCertificateChainBytes(utf8.encode(certificatePem))
+    ..usePrivateKeyBytes(utf8.encode(privateKeyPem));
+  final clientContext = SecurityContext(withTrustedRoots: false)
+    ..setTrustedCertificatesBytes(utf8.encode(certificatePem));
+
+  final listener = await SecureServerSocket.bind(
+      InternetAddress.loopbackIPv4, 0, serverContext);
+  listener.listen((socket) => socket.destroy());
+  try {
+    final raw =
+        await Socket.connect(InternetAddress.loopbackIPv4, listener.port);
+    final secure =
+        await SecureSocket.secure(raw, host: host, context: clientContext);
+    secure.destroy();
+    return 'ok';
+  } on Object catch (error) {
+    return '$error';
+  } finally {
+    await listener.close();
+  }
+}
+
 void main() {
   late String certificatePem;
   late String privateKeyPem;
@@ -172,6 +210,143 @@ void main() {
     test('der Aufruf über den Namen kommt zustande', () async {
       // Der Namensweg darf darüber nicht verlorengehen.
       expect(await handshake(certificatePem, privateKeyPem, 'localhost'), 'ok');
+    });
+
+    test('der Aufruf über axiom.local kommt zustande', () async {
+      // Der eigentliche Weg. Er stand bisher in keinem Test: `axiom.local`
+      // löst auf diesem Rechner nicht auf, und `SecureSocket.connect` wäre
+      // schon an der Namensauflösung gescheitert. Damit war der einzige Name,
+      // für den dieses Zertifikat überhaupt gebaut wird, ungeprüft.
+      expect(
+        await handshakeAgainstName(certificatePem, privateKeyPem,
+            'axiom.local'),
+        'ok',
+      );
+    });
+
+    test('ein fremder Name wird abgelehnt', () async {
+      // Die Gegenprobe. Ohne sie wäre nicht zu unterscheiden, ob die
+      // Namensprüfung besteht oder ob sie gar nicht stattfindet — und ein
+      // Zertifikat, das auf jeden Namen passt, wäre kein Ausweis mehr.
+      final result = await handshakeAgainstName(
+          certificatePem, privateKeyPem, 'fremd.local');
+      expect(result, isNot('ok'));
+      expect(result, contains('HandshakeException'));
+    });
+  });
+
+  group('Der Fingerabdruck', () {
+    late ExpertCertificate certificate;
+
+    setUp(() => certificate = ExpertCertificate(
+          certificatePem: certificatePem,
+          privateKeyPem: privateKeyPem,
+          issuedFor: '192.168.1.42',
+        ));
+
+    test('ist der Wert, den der Browser unter „Zertifikat anzeigen" nennt',
+        () {
+      // Der Fingerabdruck ist die ganze Sicherheitsaussage dieses Modus: Er
+      // steht in der App, der Browser zeigt denselben Wert, und wer beide
+      // vergleicht, weiß, dass niemand dazwischen ist. Berechnet werden muss
+      // er über das **DER**. Über den PEM-Text gerechnet käme ebenfalls ein
+      // plausibler 64-Zeichen-Wert heraus — er stimmte nur nie mit dem des
+      // Browsers überein, und aus dem Vergleich würde ein Ritual.
+      final der = derOf(certificatePem);
+      final expected = sha256
+          .convert(der)
+          .bytes
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join()
+          .toUpperCase();
+
+      expect(certificate.fingerprint, expected);
+      expect(certificate.fingerprint, matches(RegExp(r'^[0-9A-F]{64}$')));
+      expect(
+        certificate.fingerprint,
+        isNot(sha256.convert(utf8.encode(certificatePem)).toString().toUpperCase()),
+        reason: 'über den PEM-Text gerechnet',
+      );
+    });
+
+    test('lässt sich vorlesen, ohne sich zu verzählen', () {
+      // Vierergruppen, vier je Zeile. Der Wert wird von Hand verglichen —
+      // eine ununterbrochene Kette aus 64 Zeichen wird dabei zuverlässig
+      // falsch gelesen.
+      final lines = certificate.readableFingerprint.split('\n');
+      expect(lines, hasLength(4));
+      for (final line in lines) {
+        final groups = line.split(' ');
+        expect(groups, hasLength(4));
+        for (final group in groups) {
+          expect(group, matches(RegExp(r'^[0-9A-F]{4}$')));
+        }
+      }
+      expect(
+        certificate.readableFingerprint.replaceAll(RegExp(r'\s'), ''),
+        certificate.fingerprint,
+      );
+    });
+  });
+
+  group('Was einen Neustart überlebt', () {
+    // Ein neues Zertifikat bei jedem Start hieße eine neue Warnung bei jedem
+    // Start — und genau daraus entsteht die Gewöhnung, gegen die der
+    // Fingerabdruck gebaut ist.
+
+    late TestHarness harness;
+
+    setUp(() {
+      harness = TestHarness.create();
+      addTearDown(harness.dispose);
+    });
+
+    test('dieselbe Adresse bekommt dasselbe Zertifikat wieder', () async {
+      final first =
+          await ExpertCertificates.forAddress(harness.runtime, '10.0.0.5');
+      final again =
+          await ExpertCertificates.forAddress(harness.runtime, '10.0.0.5');
+
+      expect(again.certificatePem, first.certificatePem);
+      expect(again.privateKeyPem, first.privateKeyPem);
+      expect(again.fingerprint, first.fingerprint);
+      expect(again.issuedFor, '10.0.0.5');
+    });
+
+    test('eine ältere Form wird ersetzt, nicht geerbt', () async {
+      // Der Merker trägt die Form mit, nicht nur die Adresse. Sonst passte
+      // ein Zertifikat aus der Zeit, als IP-Adressen noch als `dNSName`
+      // drinstanden, weiterhin zur Adresse — und der Aufruf über die IP
+      // scheiterte dauerhaft, während von außen mDNS schuld schiene.
+      final first =
+          await ExpertCertificates.forAddress(harness.runtime, '10.0.0.5');
+      final marker = harness.runtime.store.setting('expert_cert_for');
+      expect(marker, endsWith(':10.0.0.5'));
+
+      final shape = int.parse(marker!.split(':').first);
+      harness.runtime.store
+          .setSetting('expert_cert_for', '${shape - 1}:10.0.0.5');
+
+      final fresh =
+          await ExpertCertificates.forAddress(harness.runtime, '10.0.0.5');
+      expect(fresh.certificatePem, isNot(first.certificatePem));
+      expect(harness.runtime.store.setting('expert_cert_for'), marker);
+    });
+
+    test('wegwerfen lässt nichts liegen, was wiederverwendet würde', () async {
+      // `forget` gibt es für den Fall, dass jemand anders den Fingerabdruck
+      // gesehen haben könnte. Bliebe der Merker stehen, käme beim nächsten
+      // Start dasselbe Zertifikat zurück — und das Wegwerfen wäre eine Geste.
+      await ExpertCertificates.forAddress(harness.runtime, '10.0.0.5');
+      ExpertCertificates.forget(harness.runtime);
+
+      for (final key in [
+        'expert_cert_pem',
+        'expert_key_pem',
+        'expert_cert_for',
+      ]) {
+        expect(harness.runtime.store.setting(key), '', reason: key);
+      }
     });
   });
 }

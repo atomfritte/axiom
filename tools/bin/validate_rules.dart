@@ -31,20 +31,21 @@ final _idPattern = RegExp(r'^R-\d{3}$');
 /// den Test finden, nicht den Dateinamen bewerten.
 final _ruleTestPattern = RegExp(r'^r(\d{3})[_a-zA-Z0-9]*_test\.dart$');
 
-/// Regeln, die vor dieser Pruefung entstanden sind — Stand 06.08.2026.
+/// Regeln, die vor dieser Pruefung entstanden sind — Altbestand.
 ///
-/// Warum eine Ausnahmeliste und nicht sofort ein Fehler fuer alle: 16 der 18
-/// ausgelieferten Regeln haben heute keinen Test. Ein Validator, der beim
-/// ersten Lauf 16 Fehler meldet, wird umgangen — er haette dieselbe Wirkung
-/// wie der Satz in CLAUDE.md, der die Pruefung jahrelang nur behauptet hat.
-/// Deshalb: fuer diese IDs eine Warnung mit Namensliste, fuer jede weitere
-/// Regel ein Fehler. Die Liste waechst nie. Sie schrumpft, sobald ein Test
-/// nachgezogen wird — und der Validator sagt es, sobald ein Eintrag
-/// ueberfluessig geworden ist.
-const _rulesWithoutTest = <String>{
-  'R-001', 'R-002', 'R-003', 'R-010', 'R-020', 'R-050', 'R-051', 'R-052', //
-  'R-070', 'R-090', 'R-100', 'R-101', 'R-110', 'R-111', 'R-120', 'R-130',
-};
+/// **Diese Liste ist leer, und das ist ihr Endzustand.** Sie enthielt am
+/// 06.08.2026 sechzehn der achtzehn ausgelieferten Regeln: Ein Validator,
+/// der beim ersten Lauf sechzehn Fehler meldet, wird umgangen und haette
+/// dieselbe Wirkung gehabt wie der Satz in CLAUDE.md, der die Pruefung
+/// jahrelang nur behauptet hat. Also erst eine Warnung mit Namensliste, dann
+/// die Tests. Beides ist erledigt — jede Regel in `rules/core/` hat heute
+/// einen Test in `packages/axiom_core/test/rules/`.
+///
+/// Die Liste bleibt als Konstante stehen, damit die Ausnahme benannt und
+/// leer sichtbar ist statt als geloeschter Codepfad. Sie waechst nicht: Wer
+/// eine neue Regel ohne Test anlegt, bekommt einen Fehler, keinen Eintrag
+/// hier.
+const _rulesWithoutTest = <String>{};
 
 /// Ergebnis einer Pruefung. Trennt Fehler (Regelwerk wird nicht geladen)
 /// von Warnungen (Regelwerk laedt, ist aber sichtbar unfertig).

@@ -5,11 +5,13 @@
 /// Test gar nicht. Eine Regel mit vertauschter Vergleichsrichtung ging so
 /// durch jeden gruenen Lauf und feuerte am Geraet.
 ///
-/// Seit dem Test-Gate im Validator gilt die Zusage fuer jede neue Regel. Hier
-/// wird sie festgehalten — als Verhalten des Werkzeugs, nicht als zweite
-/// Liste: Der Test startet `validate_rules.dart` genau so, wie CLAUDE.md es
-/// vorschreibt, und liest Exit-Code und Ausgabe. Eine Kopie der
-/// Ausnahmeliste waere binnen einer Regel abgedriftet.
+/// Seit dem Test-Gate im Validator gilt die Zusage fuer jede Regel, und seit
+/// dem Abarbeiten des Altbestands ist die Ausnahmeliste leer: alle achtzehn
+/// ausgelieferten Regeln haben einen Test. Hier wird das festgehalten — als
+/// Verhalten des Werkzeugs, nicht als zweite Liste: Der Test startet
+/// `validate_rules.dart` genau so, wie CLAUDE.md es vorschreibt, und liest
+/// Exit-Code und Ausgabe. Eine Kopie der Ausnahmeliste waere binnen einer
+/// Regel abgedriftet.
 ///
 /// Warum in axiom_data: `rules/` ist von hier aus erreichbar, `dart:io`
 /// erlaubt, und `dart test` in diesem Paket steht in CLAUDE.md unter den
@@ -44,8 +46,7 @@ ProcessResult validate(String rulesPath) => Process.runSync(
     );
 
 void main() {
-  test('jede ausgelieferte Regel hat einen Test oder steht auf der '
-      'Ausnahmeliste', () {
+  test('jede ausgelieferte Regel hat einen Test', () {
     final result = validate('${repoRoot.path}/rules');
     final out = result.stdout as String;
 
@@ -57,9 +58,13 @@ void main() {
           'gegen einen Zustand ausgewertet worden — sie feuert trotzdem.\n'
           '$out',
     );
-    // Die Ausnahmeliste ist Altbestand und soll sichtbar bleiben, statt als
-    // Stille durchzugehen.
-    expect(out, contains('Regeln ohne Test'));
+    // Hier stand die Umkehrung: Der Lauf MUSSTE die Zeile „16 Regeln ohne
+    // Test" enthalten, weil der Altbestand sichtbar bleiben sollte, statt
+    // als Stille durchzugehen. Der Altbestand ist abgearbeitet — jede der
+    // achtzehn Regeln hat einen Test —, und damit dreht sich die Zusage um:
+    // Taucht die Zeile wieder auf, ist eine Regel auf die Ausnahmeliste
+    // gewandert, statt einen Test zu bekommen.
+    expect(out, isNot(contains('Regeln ohne Test')));
   });
 
   group('das Test-Gate im Validator', () {
@@ -97,16 +102,18 @@ void main() {
       expect(result.exitCode, 0, reason: result.stdout as String);
     });
 
-    test('eine Ausnahme, die einen Test bekommen hat, wird gemeldet', () {
-      // Sonst wuerde die Liste zu dem, was jede handgepflegte Zweitliste
-      // wird: laenger als noetig und irgendwann falsch.
+    test('die Ausnahmeliste ist leer — auch fuer den frueheren Altbestand', () {
+      // R-001 stand bis zum 06.08.2026 auf der Liste und war damit von der
+      // Pruefung ausgenommen. Ohne Testdatei ist genau diese ID heute ein
+      // Fehler wie jede andere. Der Test ist die einzige Stelle, an der die
+      // Leere der Liste ueberhaupt messbar ist: Sie ist eine Konstante im
+      // Werkzeug, und eine Konstante liest man nach, statt sie zu pruefen.
       File('${rules.path}/alt.yaml').writeAsStringSync(_rule('R-001'));
-      File('${ruleTests.path}/r001_morgenanker_test.dart').writeAsStringSync('');
 
       final result = check();
 
-      expect(result.exitCode, 0, reason: result.stdout as String);
-      expect(result.stdout as String, contains('streichen'));
+      expect(result.exitCode, 1);
+      expect(result.stdout as String, contains('r001_<name>_test.dart'));
     });
 
     test('ohne Testverzeichnis sagt der Validator, dass er nicht '

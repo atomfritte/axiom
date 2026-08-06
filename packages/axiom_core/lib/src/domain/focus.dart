@@ -178,9 +178,23 @@ final class FocusGovernor {
     final elapsed = session.elapsed(now);
     final overrun = session.overrun(now);
 
+    // Die leisen Zweige 3 und 4 sind **Zusätze**, keine Deckel.
+    //
+    // Beide treffen dauerhaft zu, sobald sie einmal zutreffen: „ohne
+    // gesetztes Ziel" ändert sich während einer Sitzung nicht mehr, und
+    // `sinceBodyPrompt` wächst weiter, solange niemand quittiert. Standen
+    // sie ohne diese Bedingung vor Zweig 5, verdeckten sie die deutliche
+    // Unterbrechung nicht einmal, sondern dauerhaft: Eine Sitzung ohne Ziel
+    // bekam nach sechs Stunden denselben leisen Hinweis wie nach
+    // sechsundvierzig Minuten. Genau der fehlende Ausstieg ist aber der
+    // Fehlermodus, um den es hier geht [D6].
+    final overrunDemandsInterrupt = overrun >= kClearAfterOverrun;
+
     // 3. Ohne gesetztes Ziel ist nicht unterscheidbar, ob die Vertiefung
     //    die richtige ist. Dann wird früher nachgefragt — aber leise.
-    if (!session.hasAnchor && elapsed >= const Duration(minutes: 45)) {
+    if (!session.hasAnchor &&
+        elapsed >= const Duration(minutes: 45) &&
+        !overrunDemandsInterrupt) {
       return FocusVerdict(
         action: FocusAction.gentleNudge,
         reason: Phrase(
@@ -193,7 +207,9 @@ final class FocusGovernor {
 
     // 4. Körper seit langem übergangen. Der stärkste Modulator der
     //    Exekutivfunktion sitzt nicht im Kopf [D7].
-    if (sinceBodyPrompt != null && sinceBodyPrompt >= kBodyNeglectAfter) {
+    if (sinceBodyPrompt != null &&
+        sinceBodyPrompt >= kBodyNeglectAfter &&
+        !overrunDemandsInterrupt) {
       return FocusVerdict(
         action: FocusAction.gentleNudge,
         reason: Phrase(
@@ -205,7 +221,7 @@ final class FocusGovernor {
     }
 
     // 5. Deutliche Überziehung.
-    if (overrun >= kClearAfterOverrun) {
+    if (overrunDemandsInterrupt) {
       return FocusVerdict(
         action: FocusAction.clearInterrupt,
         reason: Phrase(

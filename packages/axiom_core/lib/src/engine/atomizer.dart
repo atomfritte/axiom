@@ -166,7 +166,14 @@ final class Atomizer {
     result.sort((a, b) {
       final byReason = a.reason.index.compareTo(b.reason.index);
       if (byReason != 0) return byReason;
-      return b.task.stakes.compareTo(a.task.stakes);
+      final byStakes = b.task.stakes.compareTo(a.task.stakes);
+      if (byStakes != 0) return byStakes;
+      // Zuletzt die Kennung. Die Oberflaeche zeigt genau den ersten
+      // Kandidaten (G1) — welcher das ist, darf nicht davon abhaengen, in
+      // welcher Reihenfolge der Bestand aus der Datenbank kommt. `List.sort`
+      // ist in Dart ab 32 Elementen nicht stabil, gleichrangige Kandidaten
+      // wechselten also tatsaechlich die Plaetze.
+      return a.task.id.compareTo(b.task.id);
     });
     return result;
   }

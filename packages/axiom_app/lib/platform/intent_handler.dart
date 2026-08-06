@@ -180,12 +180,22 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
     }
   }
 
+  /// Wie lange auf die Systemseite gewartet wird.
+  ///
+  /// Dieselbe Grenze wie in [AndroidBridge], und hier aus einem zusätzlichen
+  /// Grund: Bleibt die Antwort aus, kehrt [_drainPending] nie zurück, das
+  /// `finally` läuft nicht, und `_handling` bleibt für die Lebensdauer des
+  /// Prozesses stehen. Danach sammelt diese Seite nichts mehr ein — keine
+  /// Schnellerfassung, keine Notiz, kein Ortswechsel [D9]. Ohne Grenze war
+  /// das ein stiller Totalausfall der gesamten Erfassung von außerhalb.
+  static const _timeout = Duration(seconds: 5);
+
   static Future<String?> _invokeString(String method) async {
     try {
-      return await _channel.invokeMethod<String>(method);
-    } on PlatformException {
-      return null;
-    } on MissingPluginException {
+      return await _channel.invokeMethod<String>(method).timeout(_timeout);
+    } on Object {
+      // Ausnahme, Zeitüberschreitung oder fehlender Kanal — für den Aufrufer
+      // ist das dasselbe: Es lag nichts an.
       return null;
     }
   }
