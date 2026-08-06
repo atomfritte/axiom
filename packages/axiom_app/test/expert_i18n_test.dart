@@ -6,6 +6,13 @@
 /// verdrahteter deutscher Satz fällt darin durch jede Prüfung, die auf
 /// Dart-Quelltext schaut. Genau so ist die Seite ein Jahr lang einsprachig
 /// geblieben, während die App zwei Sprachen hatte.
+///
+/// Was dieser Test **nicht** sieht: wann ein `tr()` ausgewertet wird. Die
+/// Gruppenbeschriftungen des Boards standen deshalb übersetzt, aber in der
+/// falschen Sprache — `tr()` lief beim Laden des Skripts, die Sprache kam
+/// erst mit der ersten Antwort vom Telefon. Diese Klasse prüft
+/// `expert_client_test.dart`: Es zeichnet die Seite auf Englisch und sucht im
+/// Ergebnis nach deutschen Sätzen.
 library;
 
 import 'dart:io';
@@ -103,6 +110,24 @@ void main() {
       expect(loose, isEmpty,
           reason: 'Nicht übersetzbar, weil nicht durch tr():\n'
               '${loose.join("\n")}');
+    });
+
+    test('kein nackter Text hinter einem Attributobjekt', () {
+      // Die häufigste Form derselben Lücke, und die einzige, die sich am
+      // Quelltext sicher erkennen lässt: `el('button',{…},'Check-in')`.
+      // Alles, was ein Baustein als letztes Kind bekommt, ist sichtbarer
+      // Text. Der Wächter darüber sieht nur Umlaute — „leer", „voll",
+      // „sofort", „von" und „bis" sind ihm deshalb jahrelang entkommen.
+      final loose = <String>[];
+      for (final m in RegExp(r"\},\s*'((?:[^'\\\n]|\\.)*)'").allMatches(code)) {
+        final value = m.group(1)!;
+        // Eine Regel-ID ist kein Satz, und ein Trennzeichen auch nicht.
+        if (RegExp(r'^R-\d{3}$').hasMatch(value)) continue;
+        if (!RegExp('[A-Za-zÄÖÜäöüß]').hasMatch(value)) continue;
+        loose.add(value);
+      }
+      expect(loose, isEmpty,
+          reason: 'Sichtbarer Text ohne tr():\n${loose.join("\n")}');
     });
 
     test('die englische Fassung ist nicht die deutsche', () {

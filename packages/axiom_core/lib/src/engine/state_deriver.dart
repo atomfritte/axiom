@@ -153,9 +153,21 @@ final class StateDeriver {
     // Bei duenner Datenlage Richtung neutral ziehen statt zu raten.
     // Fehlende Daten heissen "unbekannt", nicht "alles bestens". (R8)
     final confidence = s.confidence['capacity'] ?? 1.0;
-    final capacity = clamp100(
-      rawCapacity * confidence + kCapacityNeutral * (1 - confidence),
-    );
+    final blended =
+        rawCapacity * confidence + kCapacityNeutral * (1 - confidence);
+
+    // Vorher fehlte dieser Term. Angezeigt wurde der interpolierte Wert, in
+    // der Herleitung standen aber nur die Rohterme: Bei confidence 0,5 —
+    // dem Normalfall ohne Schlafdaten — summierten sich sichtbare 67,5 zu
+    // einer angezeigten 60. Eine Formel, die etwas anderes rechnet, als sie
+    // zeigt, erklaert nichts; genau das verbietet G2. Der Term wird als
+    // Differenz gebildet und nicht nachgerechnet, damit die Summe der
+    // sichtbaren Terme fuer jede Konfidenz exakt der ausgewiesene Wert ist.
+    if (confidence != 1.0) {
+      capacityTerms.add(Term('Dünne Datenlage', blended - rawCapacity));
+    }
+
+    final capacity = clamp100(blended);
 
     final sensationTerms = <Term>[
       Term('Grunddrive', weights.baselineDrive),

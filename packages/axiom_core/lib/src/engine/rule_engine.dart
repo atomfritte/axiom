@@ -22,6 +22,7 @@ enum SkipReason {
   cooldownActive,
   dailyLimitReached,
   globalLimitReached,
+  hourlyLimitReached,
   quietHours,
   lowConfidence,
 }
@@ -55,7 +56,13 @@ final class EvaluationResult {
 @immutable
 final class GlobalLimits {
   final int maxInterventionsPerDay;
+
+  /// Burst-Bremse innerhalb des Tagesbudgets: Auch wenn von 12 Interventionen
+  /// erst drei verbraucht sind, sollen nicht vier davon in zwanzig Minuten
+  /// liegen. Der Cooldown einer Regel sieht das nicht — er kennt nur sich
+  /// selbst; gedeckelt wird hier das Durchrotieren *verschiedener* Regeln. (R2)
   final int maxNotificationsPerHour;
+
   final int quietFromMinutes;
   final int quietToMinutes;
 
@@ -97,6 +104,14 @@ final class RuleEngine {
     final globalExhausted =
         history.totalInterventionsToday() >= limits.maxInterventionsPerDay;
 
+    // Einmal vor der Schleife, nicht je Regel: Die Historie aendert sich
+    // waehrend einer Auswertung nicht, und ein Wert, der von der
+    // Bearbeitungsreihenfolge abhinge, waere nicht mehr deterministisch
+    // (ADR-0003).
+    final hourlyExhausted =
+        _firedWithinLastHour(rules, history, nowLocal) >=
+            limits.maxNotificationsPerHour;
+
     // Deterministische Reihenfolge unabhaengig von der Ladereihenfolge.
     final ordered = [...rules]..sort((a, b) => a.id.compareTo(b.id));
 
@@ -118,7 +133,14 @@ final class RuleEngine {
         continue;
       }
 
-      final skip = _limitCheck(rule, ctx, history, nowLocal, globalExhausted);
+      final skip = _limitCheck(
+        rule,
+        ctx,
+        history,
+        nowLocal,
+        globalExhausted: globalExhausted,
+        hourlyExhausted: hourlyExhausted,
+      );
       if (skip != null) {
         skipped.add(SkippedRule(rule, skip));
         continue;
@@ -130,13 +152,48 @@ final class RuleEngine {
     return EvaluationResult(fired, skipped);
   }
 
+  /// Wie viele Regeln haben in der letzten Stunde tatsaechlich etwas
+  /// ausgespielt?
+  ///
+  /// Gezaehlt wird ueber die Regelliste statt ueber einen eigenen Zaehler,
+  /// weil die Historie je Regel genau einen Zeitpunkt fuehrt: `lastFired` ist
+  /// der Zeitpunkt der letzten *nicht* unterdrueckten Entscheidung, also genau
+  /// dessen, was der Nutzer zu sehen bekam. Verdraengte Verlierer und
+  /// Schattenregeln zaehlen damit nicht mit, und das ist richtig so — sie
+  /// erscheinen nirgends.
+  ///
+  /// Bewusste Untergrenze: Eine Regel, die innerhalb derselben Stunde zweimal
+  /// gefeuert hat, zaehlt hier einmal. Dagegen wirkt ihr eigener Cooldown; die
+  /// Stundengrenze deckelt das, was der Cooldown prinzipiell nicht sehen kann.
+  int _firedWithinLastHour(
+    List<Rule> rules,
+    DecisionHistory history,
+    DateTime nowLocal,
+  ) {
+    const window = Duration(hours: 1);
+    var count = 0;
+    for (final rule in rules) {
+      final last = history.lastFired(rule.id);
+      // Nicht `difference().abs()`: Ein in der Zukunft liegender Zeitstempel
+      // (Zeitumstellung, manuell gestellte Uhr) darf die Bremse nicht
+      // dauerhaft anziehen.
+      if (last != null &&
+          !last.isAfter(nowLocal) &&
+          nowLocal.difference(last) < window) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   SkipReason? _limitCheck(
     Rule rule,
     EvalContext ctx,
     DecisionHistory history,
-    DateTime nowLocal,
-    bool globalExhausted,
-  ) {
+    DateTime nowLocal, {
+    required bool globalExhausted,
+    required bool hourlyExhausted,
+  }) {
     // Konfidenz: bei zu alten Daten wird nicht geraten.
     for (final variable in rule.when.referencedVariables) {
       if (variable.startsWith('event:') || variable == 'time_between') continue;
@@ -153,6 +210,17 @@ final class RuleEngine {
 
     if (globalExhausted && rule.severity != Severity.enforce) {
       return SkipReason.globalLimitReached;
+    }
+
+    // Vorher wurde `maxNotificationsPerHour` nur geparst und im
+    // Systeminspektor als geltende Grenze angezeigt, nie geprueft. Folge:
+    // Verdraengte Regeln werden mit `suppressed` gespeichert und bekommen
+    // deshalb kein `lastFired` — beim naechsten Durchlauf ruecken sie
+    // ungebremst nach. Vier verschiedene Aufforderungen in zwanzig Minuten,
+    // waehrend der Bildschirm „Meldungen pro Stunde: 2" behauptete. Eine
+    // angezeigte Grenze, die nicht greift, ist schlimmer als keine (G2). (R2)
+    if (hourlyExhausted && rule.severity != Severity.enforce) {
+      return SkipReason.hourlyLimitReached;
     }
 
     final maxPerDay = rule.cooldown.maxPerDay;

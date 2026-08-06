@@ -993,19 +993,28 @@ class _ToolButton extends StatelessWidget {
           onTap();
         },
         behavior: HitTestBehavior.opaque,
+        // Untergrenze statt fester Höhe. Vorher stand hier `height: 62`;
+        // Symbol und Beschriftung brauchen bei angehobener Schrift mehr, und
+        // die Spalte lief um bis zu 52 px nach unten über — der gelbe Balken
+        // fraß genau die Beschriftung, die sagt, wohin der Knopf führt. [D9]
         child: Container(
-          height: 62,
+          constraints: const BoxConstraints(minHeight: 62),
+          padding: const EdgeInsets.symmetric(
+              horizontal: Space.xs, vertical: Space.xs),
           decoration: BoxDecoration(
             color: active ? color.withValues(alpha: 0.14) : p.panel,
             borderRadius: BorderRadius.circular(Radii.control),
             border: Border.all(color: active ? color : p.rule),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 19, color: color),
               const SizedBox(height: 3),
               Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: monoStyle(context,
                       size: 10, spacing: 0.4, color: color)),
             ],
@@ -1281,29 +1290,44 @@ class _MetaBudget extends StatelessWidget {
     final ratio = (used.inSeconds / kMetaBudget.inSeconds).clamp(0.0, 1.0);
     final over = used >= kMetaBudget;
 
-    return Row(
+    // Beschriftung und Messwert oben, der Balken darunter über die volle
+    // Breite. Vorher standen alle drei in einer Zeile, und beide Texte waren
+    // unflexibel: Bei 360 px und angehobener Schrift lief die Zeile ab etwa
+    // 1,4-facher Skalierung über — der Balken wurde dabei auf null Breite
+    // geklemmt. Ausgerechnet die Anzeige, die G4 sichtbar macht, zeigte dann
+    // gar keinen Füllstand mehr. [D9]
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(context.t('ZEIT IN AXIOM HEUTE'),
-            style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(width: Space.md),
-        Expanded(
-          child: Stack(
-            children: [
-              Container(height: 2, color: p.rule),
-              LayoutBuilder(
-                builder: (context, c) => Container(
-                  height: 2,
-                  width: c.maxWidth * ratio,
-                  color: over ? p.caution : p.inkFaint,
-                ),
-              ),
-            ],
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(context.t('ZEIT IN AXIOM HEUTE'),
+                  style: Theme.of(context).textTheme.labelSmall),
+            ),
+            const SizedBox(width: Space.md),
+            Text(
+                context
+                    .t('{0}/{1} min', [used.inMinutes, kMetaBudget.inMinutes]),
+                style: monoStyle(context,
+                    size: 11, color: over ? p.caution : p.inkFaint)),
+          ],
         ),
-        const SizedBox(width: Space.md),
-        Text(context.t('{0}/{1} min', [used.inMinutes, kMetaBudget.inMinutes]),
-            style: monoStyle(context,
-                size: 11, color: over ? p.caution : p.inkFaint)),
+        const SizedBox(height: Space.sm),
+        Stack(
+          children: [
+            Container(height: 2, color: p.rule),
+            LayoutBuilder(
+              builder: (context, c) => Container(
+                height: 2,
+                width: c.maxWidth * ratio,
+                color: over ? p.caution : p.inkFaint,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

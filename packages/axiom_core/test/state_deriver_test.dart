@@ -150,19 +150,58 @@ void main() {
       );
     });
 
-    test('Terme summieren sich auf den ausgewiesenen Wert', () {
+    test('Terme summieren sich auf den ausgewiesenen Wert — jede Konfidenz',
+        () {
+      // Vorher stand hier fest confidence: {'capacity': 1.0} — der einzige
+      // Fall, in dem diese Zusicherung gar nicht scheitern kann. Der Waechter
+      // war gruen und bewachte nichts: Ohne Schlafdaten liegt die Konfidenz
+      // dauerhaft bei 0,5, und dort summierten sich die angezeigten Terme auf
+      // 67,5, waehrend auf dem Bildschirm 60 stand.
+      for (final c in <double>[0.0, 0.25, 0.4, 0.5, 0.75, 1.0]) {
+        final s = deriver.derive(
+          Signals(
+            sleepDebtNorm: 40,
+            focusDebt: 20,
+            recoveryQuality: 60,
+            confidence: {'capacity': c},
+          ),
+          at,
+        );
+        final sum = s.breakdown['capacity']!
+            .fold<double>(0, (a, t) => a + t.contribution);
+        expect(
+          sum.round().clamp(0, 100),
+          s.vector.capacity,
+          reason: 'Konfidenz $c: Herleitung ergibt $sum, '
+              'angezeigt wird ${s.vector.capacity}',
+        );
+      }
+    });
+
+    test('duenne Datenlage steht als eigener Term in der Herleitung', () {
+      // Der Zug Richtung neutral ist der groesste Einzelposten, sobald
+      // Schlafdaten fehlen. Er darf nicht unsichtbar wirken (G2).
       final s = deriver.derive(
-        const Signals(
-          sleepDebtNorm: 40,
-          focusDebt: 20,
-          recoveryQuality: 60,
-          confidence: {'capacity': 1.0},
-        ),
+        const Signals(recoveryQuality: 90, confidence: {'capacity': 0.5}),
         at,
       );
-      final sum = s.breakdown['capacity']!
-          .fold<double>(0, (a, t) => a + t.contribution);
-      expect(sum.round().clamp(0, 100), s.vector.capacity);
+      expect(
+        s.breakdown['capacity']!.map((t) => t.label),
+        contains('Dünne Datenlage'),
+      );
+    });
+
+    test('bei voller Konfidenz erscheint kein Term ohne Wirkung', () {
+      // Eine Zeile "Dünne Datenlage +0.0" waere Rauschen und wuerde einen
+      // Zweifel behaupten, den es nicht gibt.
+      final s = deriver.derive(
+        const Signals(recoveryQuality: 90, confidence: {'capacity': 1.0}),
+        at,
+      );
+      expect(
+        s.breakdown['capacity']!.map((t) => t.label),
+        isNot(contains('Dünne Datenlage')),
+      );
     });
   });
 

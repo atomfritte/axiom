@@ -74,7 +74,18 @@ Beim Anlegen oder Ändern einer Regel gilt:
   geladene Regel wäre schlimmer.
 - `cooldown` ist **Pflicht** — ohne Cooldown entsteht Benachrichtigungsflut (R2).
 - `id` (`R-NNN`) wird **nie** wiederverwendet, auch nicht nach Löschung.
-- Jede Regel braucht einen Test in `packages/axiom_core/test/rules/`, sonst wird sie nicht geladen.
+- Jede Regel **soll** einen Test in `packages/axiom_core/test/rules/` haben. Hier stand, sie werde
+  sonst nicht geladen — das war nie so und ist zur Laufzeit auch nicht baubar: Testdateien werden
+  nicht mit der App ausgeliefert, `YamlRuleSource.load()` kann am Gerät nichts über sie wissen.
+  Der einzige mögliche Ort ist der Validator, und dort steht es jetzt: Er gleicht jede Regel-ID
+  gegen `packages/axiom_core/test/rules/` ab. Die 16 Regeln ohne Test sind als Altbestand
+  namentlich ausgenommen und erscheinen als **Warnung**; eine **neue** Regel ohne Test ist ein
+  **Fehler**. So wird der Rückstand nicht zum Dauerrot, das man wegsieht — aber er wächst auch
+  nicht weiter. Wer eine Regel anlegt, schreibt den Test also nicht aus Disziplin, sondern weil
+  der Validator sonst rot wird. Und er braucht ihn: Ohne ihn ist ihre Bedingung nur zufällig
+  abgedeckt — die
+  Widget- und Goldentests werten das ausgelieferte Regelwerk zwar aus, bemerken eine verschobene
+  Schwelle aber nur, wenn sie den Bildschirm sichtbar verändert.
 - **Jede neue Regel startet als `severity: log_only` (SHADOW).** Mindestens 7 Tage stumm mitlaufen,
   dann im Wochenreview auswerten, dann erst live.
 - `rules/personal/` ist git-ignoriert. Enthält private Trigger. **Nie committen, nie zitieren,
@@ -140,8 +151,9 @@ Alle aus der Projektwurzel, sofern nicht anders vermerkt.
 
 ```bash
 # Prüfen — muss immer grün sein
-dart run tools/bin/validate_rules.dart rules      # Regelwerk
-dart run tools/bin/check_layering.dart .          # Architekturgrenzen
+dart run tools/bin/validate_rules.dart rules      # Regelwerk + Regel-Test-Gate
+dart run tools/bin/check_layering.dart .          # Architekturgrenzen + Aufruforte
+(cd tools               && dart analyze && dart test)
 (cd packages/axiom_core && dart analyze && dart test)
 (cd packages/axiom_data && dart analyze && dart test)
 (cd packages/axiom_app  && flutter analyze && flutter test)
@@ -157,12 +169,31 @@ dart run tools/bin/calibrate.dart axiom.db
 (cd packages/axiom_app && flutter run -d linux)   # Desktop-Companion
 (cd packages/axiom_app && flutter run -d <id>)    # Gerät, siehe adb devices
 
+# Release bauen — das Flag ist nicht optional.
+# Ohne es liegen 24 MB x86_64-Maschinencode in der APK, den kein Telefon
+# ausführt. In build.gradle.kts lässt sich das nicht festschreiben: Das
+# Flutter-Plugin setzt die ABIs selbst und überschreibt jeden abiFilters-
+# Block. platform_integration_test.dart prüft eine gebaute APK nach.
+(cd packages/axiom_app && flutter build apk --release \
+    --target-platform android-arm,android-arm64)
+(cd packages/axiom_app && flutter build linux --release)
+
 # Referenzbilder erneuern, wenn eine UI-Änderung beabsichtigt war
 (cd packages/axiom_app && flutter test test/screenshot_test.dart --update-goldens)
 ```
 
 Vor jedem Commit: Regelvalidator, Layering-Check, `analyze` und `test` in allen
-drei Paketen.
+drei Paketen **und in `tools/`**. Die Werkzeuge waren lange das einzige
+ungetestete Verzeichnis — ausgerechnet die vier Programme, die prüfen sollen.
+
+Vier dieser Prüfungen erzwingen seit dieser Runde etwas, das vorher nur zugesagt
+war: die **Regelwerks-Parität** (`rules/core/` gegen `assets/rules/`; rot heißt
+`sync_rules.dart` ausführen), das **Regel-Test-Gate** im Validator (neue Regel
+ohne `r<nnn>_<name>_test.dart` = Fehler, Altbestand = Warnung mit Namensliste),
+die **Aufruforte** von `upsertTask` im Layering-Check und dessen eigene
+**Vollständigkeit** (ein Paket ohne Regelsatz ist eine Verletzung, keine
+Auslassung). Läuft eine davon rot, ist es kein Testproblem — wo sie steht, sagt
+die Tabelle unter *Tests*.
 
 **Regeltexte sind Nutzertexte.** `title` und `rationale` erscheinen im
 Systeminspektor. Echte Umlaute, keine Ersatzschreibung — `language_test.dart`
@@ -175,10 +206,15 @@ stattdessen von `i18n_test.dart` geprüft.
 
 | Ebene | Datei | Prüft |
 |---|---|---|
+| Werkzeuge | `tools/test/` | Validator, Layering-Check, Spiegelschritt und Kalibrierung — als Prozess, mit Exit-Code |
 | Regeln | `axiom_core/test/` | Bedingungen, Cooldowns, Limits, Konfliktauflösung |
+| Regel-Test-Gate | `axiom_data/test/rule_test_parity_test` | jede Regel hat einen Test in `axiom_core/test/rules/` — Altbestand als Warnung, neue Regel als Fehler |
+| Regelwerks-Parität | `axiom_app/test/parity_test` | `assets/rules/` ist byteweise `rules/core/`; sonst läuft am Gerät ein anderes Regelwerk als das committete |
+| Append-only | `tools/test/append_only_guard_test` | `upsertTask` nur dort, wo zu jedem Aufruf ein Ereignis geschrieben wird |
 | Determinismus | `decision_resolver_test` | gleiche Eingabe → gleiche Ausgabe (ADR-0003) |
 | Rebuild | `axiom_data/test/event_store_test` | Projektionen aus `events` neu aufbaubar |
 | Regelwerk | `axiom_data/test/rule_source_test` | lädt das **echte** `rules/`-Verzeichnis |
+| Regelzwillinge | `axiom_data/test/rule_overlap_test` | keine zwei Regeln geben dieselbe Aufforderung aus demselben Anlass |
 | Verhalten | `axiom_app/test/app_test` | genau eine Handlung (G1), sichtbare Regel-ID (G2) |
 | Sprache | `axiom_app/test/language_test` | keine Schuldsprache, echte Umlaute, kein Netzwerk |
 | Übersetzung | `axiom_app/test/i18n_test` | jeder Text hat eine englische Fassung, gleiche Platzhalter, gleicher Ton |
@@ -202,9 +238,16 @@ und Medikation. Entsprechend:
 
 - **`INTERNET` ist deklariert** (ADR-0005, Expertenmodus). An die Stelle der früheren
   strukturellen Garantie tritt eine engere, getestete Zusage: **AXIOM ruft nichts von sich aus
-  auf.** Kein HTTP-Client, keine ausgehende Verbindung, kein SDK, das eine aufbauen könnte —
+  auf.** Kein HTTP-Client, keine ausgehende Verbindung, kein Aufruf im eigenen Code —
   `language_test.dart` verbietet `package:http`, `HttpClient`, `Socket.connect`,
-  `WebSocket.connect` und `dart:html` im gesamten App-Code. Die App **lauscht** nur, und nur
+  `WebSocket.connect` und `dart:html` im gesamten App-Code. Hier stand zusätzlich „kein SDK, das
+  eine aufbauen könnte". Das stimmt nicht: `basic_utils` erzeugt das Zertifikat des
+  Expertenmodus und bringt `package:http` als transitive Abhängigkeit mit; sein Sammelmodul
+  exportiert `HttpUtils` und `DnsUtils` (DNS über HTTPS gegen Google und Cloudflare) in jeden
+  Namensraum, der es importiert. Aufgerufen wird davon nichts — und seit diesem Befund verbietet
+  `language_test.dart` beide Einstiegspunkte und lässt einen Netzwerk-Client nicht mehr als
+  direkte Abhängigkeit zu. Die Zusage lautet also: nicht *unmöglich*, sondern *geprüft*.
+  Die App **lauscht** nur, und nur
   solange der Expertenmodus eingeschaltet ist. **Eine Ausnahme:** Der Expertenmodus meldet sich
   per mDNS als `axiom.local` an — link-lokales Multicast, nur Name und IP, nur solange er läuft
   (ADR-0005 Punkt 2a). Genau eine Datei darf das, und ein Test hält die Liste kurz.

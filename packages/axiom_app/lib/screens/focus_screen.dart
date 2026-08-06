@@ -406,8 +406,11 @@ class _VerdictCard extends StatelessWidget {
     final p = context.axiom;
     final (label, color) = switch (verdict.action) {
       FocusAction.protect => (context.t('GESCHÜTZT'), p.calm),
-      FocusAction.gentleNudge => ('HINWEIS', p.info),
-      FocusAction.clearInterrupt => ('UNTERBRECHUNG', p.signal),
+      // Zwei der vier Zweige liefen frueher nicht durch die Uebersetzung:
+      // Im Tupel eines `switch` steht das Literal nicht hinter `Text(`, und
+      // genau daran hat der Waechter sie vorbeigelassen.
+      FocusAction.gentleNudge => (context.t('HINWEIS'), p.info),
+      FocusAction.clearInterrupt => (context.t('UNTERBRECHUNG'), p.signal),
       FocusAction.hardStop => (context.t('JETZT BEENDEN'), p.caution),
     };
 
@@ -473,7 +476,18 @@ class _BreadcrumbSheetState extends State<_BreadcrumbSheet> {
               Text(context.t('WIEDEREINSTIEG'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.md),
-              Text(FocusGovernor.breadcrumbPrompt(widget.session),
+              // Vorher stand hier `FocusGovernor.breadcrumbPrompt(...)`: ein
+              // im Kern fertig zusammengesetzter deutscher Satz mit bereits
+              // eingesetztem Ankertitel. So war er nicht uebersetzbar — als
+              // Schluessel taugt er nicht, weil der Titel darin steckt — und
+              // stand mitten zwischen englischen Zeilen. Jetzt traegt die
+              // Oberflaeche den Satz und der Titel ist ein Platzhalter.
+              Text(
+                  widget.session.hasAnchor
+                      ? context.t('Wo genau bist du bei „{0}" stehengeblieben?',
+                          [widget.session.anchorTitle])
+                      : context.t(
+                          'Woran warst du dran, und was wäre der nächste Handgriff?'),
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: Space.xs),
               Text(

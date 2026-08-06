@@ -4,9 +4,13 @@
 # Sie feuern auf Uhrzeiten und gezählte Ereignisse — beides ist exakt, nicht
 # geschätzt. Deshalb dürfen sie live gehen, obwohl die Baseline noch aussteht.
 #
-# Die schwellenabhängigen Regeln (R-050 ff.) bleiben in shadow-s2s3.yaml
-# stumm, bis weights.yaml an echten Daten kalibriert ist. Eine Empfehlung auf
-# geratener Grundlage kostet Vertrauen, das man nicht zurückbekommt (R3).
+# Die schwellenabhängigen Regeln (R-050 ff.) stehen in s3-regulation.yaml.
+# Hier stand bis zum 06.08.2026 der Dateiname `shadow-s2s3.yaml` und die
+# Aussage, jene Regeln liefen stumm mit — die Datei gibt es nicht, und die
+# Regeln sprechen längst. Was gilt: Ihre Schwellen kommen aus weights.yaml
+# und sind noch ungeeicht; der Systeminspektor markiert sie deshalb. Eine
+# Empfehlung auf geratener Grundlage kostet Vertrauen, das man nicht
+# zurückbekommt (R3).
 
 # ── M7 Body Loop ────────────────────────────────────────────────────────
 # Reine Zeittrigger. Bei diesem Profil der zuverlässigste Interventionstyp,

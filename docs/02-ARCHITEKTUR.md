@@ -40,8 +40,8 @@
                                 │ Port-Implementierungen
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │  INFRASTRUCTURE                     packages/axiom_data             │
-│  SQLite (sqlite3mc, verschlüsselt) · YAML-Loader · Health Connect · │
-│  Alarm/Notification-Scheduler · Export/Backup                       │
+│  SQLite (sqlite3mc, auf Android verschlüsselt) · YAML-Loader ·      │
+│  Health Connect · Alarm/Notification-Scheduler · Export/Backup      │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ optional, ab S4
 ┌───────────────────────────────▼─────────────────────────────────────┐
@@ -51,7 +51,8 @@
 ```
 
 **Abhängigkeitsrichtung: immer nach innen.** `axiom_core` kennt weder `axiom_app` noch
-`axiom_data`. Verletzungen dieser Regel werden im CI geprüft (`tools/check_layering.dart`).
+`axiom_data`. Verletzungen dieser Regel meldet `dart run tools/bin/check_layering.dart .` — von
+Hand vor jedem Commit. Hier stand „werden im CI geprüft"; ein CI gibt es in diesem Repo nicht.
 
 ---
 
@@ -172,7 +173,7 @@ hier hardwareseitig lösbar.
 | ML-Modell in der Entscheidungsschleife | Verletzt G2 (Auditierbarkeit). Deterministische Regeln schlagen hier ein Blackbox-Modell |
 | Plugin-System / Skripting-Layer | Direkter Meta-Work-Treibstoff (D3). YAML-Regeln sind die Erweiterungsgrenze |
 | Multi-User, Rollen, Rechte | Kein Anwendungsfall |
-| Web-Frontend | Kein Anwendungsfall, zusätzliche Angriffsfläche für Gesundheitsdaten |
+| Web-Frontend im Internet, gehostet oder als Zweit-UI | Zusätzliche Angriffsfläche für Gesundheitsdaten. **Teilweise revidiert durch [ADR-0005](adr/ADR-0005-expertenmodus.md):** Der Expertenmodus liefert vom Telefon aus eine vollwertige Weboberfläche (`packages/axiom_app/assets/expert/`) — aber nur ins lokale Netz, nur nach Anmeldung, nur solange er ausdrücklich eingeschaltet ist, und er beendet sich von selbst. Hier stand bis zum 06.08.2026 „Web-Frontend — kein Anwendungsfall", während genau das ausgeliefert wurde. Eine Verbotsliste, die Konflikte entscheiden soll, muss stimmen |
 | GPS, Geofences, Standortberechtigung | Ein Geofence beantwortet „wo bin ich", die Frage ist aber „was geht hier". Er kostet `ACCESS_BACKGROUND_LOCATION`, verlangt Play Services oder einen dauerhaft messenden Dienst und legt in einer Datenbank mit Gesundheitsdaten ein Bewegungsprofil an. Ortsgebundene Aufgaben laufen stattdessen über einen frei vergebenen Namen (`Task.place`), gesetzt in der App oder per Broadcast `de.atomfritte.axiom.PLACE` aus einer Geräteroutine |
 
 Diese Liste ist Teil der Architektur. Ein hochkompensierter Systemizer wird beim Bauen genau diese
@@ -182,14 +183,35 @@ Erweiterungen attraktiv finden — deshalb stehen sie hier explizit als abgelehn
 
 ## 9. Qualitätssicherung
 
-- **Regel-Tests** — jede Regel in `rules/` braucht mindestens einen Test mit fixiertem `FakeClock`
-  und erwartetem Ergebnis. Eine ungetestete Regel wird nicht geladen (CI-Gate).
-- **Golden-Szenarien** — komplette simulierte Tage als Event-Ströme mit erwarteter
-  Entscheidungssequenz. Fängt Regelkonflikte, die Einzeltests nicht sehen.
-- **Layering-Check** — `tools/check_layering.dart` bricht den Build bei Abhängigkeitsverletzungen.
+**Was es gibt:**
+
+- **Layering-Check** — `tools/bin/check_layering.dart` bricht den Build bei
+  Abhängigkeitsverletzungen.
 - **Determinismus-Check** — dieselbe Event-Sequenz muss zweimal dieselbe Entscheidungsfolge
   erzeugen. Fängt versehentliche `DateTime.now()`- und `Random()`-Aufrufe.
-- **Kein Netzwerk im Core** — statisch geprüft.
+- **Kein Netzwerk im Core** — statisch geprüft (`packages/axiom_app/test/language_test.dart`,
+  Gruppe *Datenschutz*).
+- **Regelwerks-Struktur** — `packages/axiom_data/test/rule_source_test.dart` lädt das echte
+  `rules/`-Verzeichnis und erzwingt `rationale`, `cooldown`, eindeutige IDs und den
+  Prioritätsbereich. `rule_overlap_test.dart` daneben verbietet Regelzwillinge: gleiche Aktion,
+  gleiche Parameter, gleicher Anlass, überlappendes Zeitfenster.
+- **Regel-Validator** — `tools/bin/validate_rules.dart` prüft Syntax, Pflichtfelder und den
+  Bedingungsbaum.
+
+**Was es nicht gibt, obwohl es hier stand:**
+
+- **Regel-Tests als Ladebedingung.** Hier stand: „jede Regel in `rules/` braucht mindestens einen
+  Test mit fixiertem `FakeClock` und erwartetem Ergebnis. Eine ungetestete Regel wird nicht
+  geladen (CI-Gate)." Beide Hälften waren falsch: Zur Laufzeit ist es gar nicht baubar —
+  Testdateien werden nicht mit der App ausgeliefert, `YamlRuleSource.load()` kann am Gerät nichts
+  über sie wissen —, und ein CI gibt es in diesem Repo nicht (kein `.github/`, kein Hook).
+  **Was es stattdessen gibt:** Der Validator gleicht jede Regel-ID gegen
+  `packages/axiom_core/test/rules/` ab. Die 16 Regeln ohne Test sind namentlich als Altbestand
+  ausgenommen und erscheinen als Warnung; eine neue Regel ohne Test ist ein Fehler. Nicht beim
+  Laden, sondern beim Prüfen — an der einzigen Stelle, an der es überhaupt geht.
+- **Golden-Szenarien** — komplette simulierte Tage als Event-Ströme mit erwarteter
+  Entscheidungssequenz. Wären der Wächter für Regelkonflikte, die Einzeltests nicht sehen — der
+  Zwilling R-080/R-110 blieb bis zum 06.08.2026 unbemerkt. Nicht gebaut.
 
 ---
 
@@ -217,5 +239,5 @@ adhs_master/
 │   ├── core/                  mitgelieferte Basisregeln (versioniert)
 │   └── personal/              persönliche Regeln (git-ignoriert, private Daten)
 ├── ops/sync/                  optionaler self-hosted Sync (S4)
-└── tools/                     Layering-Check, Regel-Validator, Szenario-Runner
+└── tools/bin/                 Layering-Check, Regel-Validator, Asset-Spiegelung, Kalibrierung
 ```

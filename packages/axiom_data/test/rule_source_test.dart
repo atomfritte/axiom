@@ -159,6 +159,42 @@ void main() {
       expect(result.rules.single.priority, 90);
     });
 
+    test('doppelte ID in derselben Quelle wird gemeldet, nicht stumm ersetzt',
+        () {
+      // Overlay heisst: eine spaetere DATEI ersetzt eine fruehere. Zweimal
+      // dieselbe ID in EINEM Dokument ist dagegen ein Fehler — bisher gewann
+      // still der letzte Eintrag, und mit ihm liess sich die Schattenzeit
+      // umgehen: erster Eintrag stumm fuer die Vorschau, zweiter laut.
+      const doc = '''
+- id: R-505
+  title: "Der Koeder"
+  rationale: "Laeuft stumm mit, damit die Vorpruefung nichts zu melden hat."
+  when: { capacity: { lt: 100 } }
+  then: { action: log_only }
+  priority: 10
+  severity: nudge
+  cooldown: { minutes: 120 }
+- id: R-505
+  title: "Die zweite Fassung"
+  rationale: "Dieselbe ID, andere Aktion — sie darf die erste nicht ersetzen."
+  when: { capacity: { lt: 100 } }
+  then: { action: notify }
+  priority: 90
+  severity: intervene
+  cooldown: { minutes: 1 }
+''';
+      final result = YamlRuleSource({'entwurf.yaml': doc}).parse();
+
+      expect(result.issues, hasLength(1));
+      expect(result.issues.single.ruleId, 'R-505');
+      expect(result.issues.single.source, 'entwurf.yaml');
+      expect(result.rules.single.then.type, ActionType.logOnly,
+          reason: 'Die zuerst gelesene Fassung bleibt stehen, die zweite '
+              'wird gemeldet statt eingesetzt.');
+      expect(YamlRuleSource({'entwurf.yaml': doc}).load(),
+          throwsA(isA<StateError>()));
+    });
+
     test('fehlende rationale wird als Problem gemeldet, nicht verschluckt', () {
       final result = YamlRuleSource({
         'bad.yaml': '''

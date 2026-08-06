@@ -10,6 +10,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:axiom_core/axiom_core.dart';
+import 'package:meta/meta.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Aktuelle Schemaversion. Migrationen sind vorwaertsgerichtet.
@@ -33,7 +34,12 @@ import 'package:sqlite3/sqlite3.dart';
 /// v9: `task_links` — „A blockiert B". Eigene Tabelle statt Spalte in
 ///     `tasks`: Die Beziehung gehoert keiner der beiden Aufgaben, und ein
 ///     Listenfeld muesste jede Abfrage mitladen.
-const int kSchemaVersion = 9;
+/// v10: Teilindex `idx_decisions_open` auf `decisions(at) WHERE suppressed
+///     = 0`. Schattenregeln umgehen bewusst jeden Cooldown und schreiben
+///     bei jedem Auswertungszyklus eine Zeile; `historyAt` las bisher die
+///     ganze Tabelle und verwarf die unterdrueckten Zeilen erst in Dart.
+///     Der Aufwand wuchs damit mit genau den Zeilen, die niemand braucht.
+const int kSchemaVersion = 10;
 
 /// Die Datei ist da, laesst sich aber nicht lesen.
 ///
@@ -443,6 +449,19 @@ final class SqliteEventStore implements EventStore {
       ''');
     }
 
+    // Teilindex fuer [historyAt]. Eigener Block, wie jede Version davor.
+    //
+    // **Warum ein Teilindex.** Die Auswertung braucht ausschliesslich
+    // Entscheidungen, die tatsaechlich gefeuert haben. Die unterdrueckten
+    // Zeilen sind das Schattenprotokoll und wachsen ungebremst — sie stehen
+    // damit nicht im Index und werden bei der Abfrage nicht mehr angefasst.
+    if (current < 10) {
+      _db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_decisions_open '
+        'ON decisions(at) WHERE suppressed = 0;',
+      );
+    }
+
     _db.execute('PRAGMA user_version = $kSchemaVersion;');
   }
 
@@ -594,7 +613,19 @@ final class SqliteEventStore implements EventStore {
 
   // ── Tasks (Projektion) ────────────────────────────────────────────────
 
-  Future<void> upsertTask(Task task) async {
+  /// Schreibt die Projektion einer Aufgabe.
+  ///
+  /// [createdAt] setzt die Anlagezeit — sie wird nur beim INSERT verwendet,
+  /// die `ON CONFLICT`-Klausel laesst die Spalte bewusst in Ruhe.
+  ///
+  /// **Warum das ein Parameter ist.** Vorher stand hier immer
+  /// `_clock.nowUtc()`. Weil `rebuildProjections()` die Tabelle vorher
+  /// leert, war jedes Schreiben beim Wiederaufbau ein INSERT — und danach
+  /// galt jede Aufgabe als „gerade angelegt". Der Atomizer sah nichts mehr
+  /// liegen (`AtomizeReason.stale` konnte nicht mehr entstehen), und die
+  /// Liste stand nicht mehr in der Anlagereihenfolge. Die echte Anlagezeit
+  /// steht im `task_created`-Ereignis und wird von dort durchgereicht.
+  Future<void> upsertTask(Task task, {DateTime? createdAt}) async {
     _db.execute(
       'INSERT INTO tasks (id, title, ae, salience, stakes, decay_at, state, '
       'parent_id, contexts, breadcrumb, place, created_at) '
@@ -616,7 +647,7 @@ final class SqliteEventStore implements EventStore {
         task.contexts.join(','),
         task.breadcrumb,
         task.place,
-        _clock.nowUtc().millisecondsSinceEpoch,
+        (createdAt ?? _clock.nowUtc()).toUtc().millisecondsSinceEpoch,
       ],
     );
   }
@@ -839,6 +870,22 @@ final class SqliteEventStore implements EventStore {
 
   // ── DecisionHistory-Port ──────────────────────────────────────────────
 
+  /// Die Abfrage hinter [historyAt].
+  ///
+  /// Als Konstante, damit der Test den Ausfuehrungsplan genau dieser
+  /// Zeichenkette pruefen kann statt einer nachgebauten.
+  ///
+  /// **Warum `WHERE suppressed = 0` in SQL steht.** Die Schleife darunter
+  /// hat unterdrueckte Zeilen ohnehin verworfen — sie aber erst zu lesen
+  /// heisst, bei jedem Auswertungszyklus das ganze Schattenprotokoll zu
+  /// scannen. Eine `log_only`-Regel umgeht bewusst jeden Cooldown und
+  /// schreibt pro Zyklus eine Zeile; die Tabelle waechst also genau dort
+  /// ungebremst, wo niemand sie braucht. Mit dem Teilindex
+  /// `idx_decisions_open` steht das Ergebnis bereits sortiert bereit.
+  @visibleForTesting
+  static const String historyQuery = 'SELECT rule_id, at, response '
+      'FROM decisions WHERE suppressed = 0 ORDER BY at ASC';
+
   DecisionHistory historyAt(DateTime localNow) {
     final dayStart =
         DateTime(localNow.year, localNow.month, localNow.day).toUtc();
@@ -847,15 +894,11 @@ final class SqliteEventStore implements EventStore {
     final rejections = <String, int>{};
     var total = 0;
 
-    for (final row in _db.select(
-      'SELECT rule_id, at, response, suppressed FROM decisions '
-      'ORDER BY at ASC',
-    )) {
+    for (final row in _db.select(historyQuery)) {
       final ruleId = row['rule_id'] as String;
       final at = DateTime.fromMillisecondsSinceEpoch(row['at'] as int,
               isUtc: true)
           .toLocal();
-      if ((row['suppressed'] as int) == 1) continue;
       last[ruleId] = at;
       if (row['response'] == 'rejected') {
         rejections[ruleId] = (rejections[ruleId] ?? 0) + 1;
@@ -919,7 +962,29 @@ final class SqliteEventStore implements EventStore {
 
   /// Verwirft alle Projektionen und baut sie aus `events` neu auf.
   /// Muss denselben Zustand erzeugen — siehe Rebuild-Test.
+  ///
+  /// **Ganz oder gar nicht.** Vorher stand das `DELETE FROM tasks` blank
+  /// da. Warf der Aufbau danach, blieb die Projektion leer zurueck — und
+  /// weil der Vault-Import einen Wiederaufbau nur bei `imported > 0`
+  /// ausloest, kam sie nie wieder: Der zweite Importversuch meldete Erfolg
+  /// auf dauerhaft leerem Aufgabenbestand, und das empfangende Geraet hatte
+  /// dabei auch seine eigenen Aufgaben verloren.
+  ///
+  /// `SAVEPOINT` statt `BEGIN`, weil der Aufrufer seinerseits schon in
+  /// einer Transaktion stehen darf (der Import tut genau das).
   Future<void> rebuildProjections() async {
+    _db.execute('SAVEPOINT axiom_rebuild');
+    try {
+      await _rebuildProjections();
+    } on Object {
+      _db.execute('ROLLBACK TO axiom_rebuild');
+      rethrow;
+    } finally {
+      _db.execute('RELEASE axiom_rebuild');
+    }
+  }
+
+  Future<void> _rebuildProjections() async {
     _db.execute('DELETE FROM tasks');
     _db.execute('DELETE FROM task_links');
     final events = await query(types: {
@@ -937,6 +1002,8 @@ final class SqliteEventStore implements EventStore {
       EventType.taskUnlinked,
     });
     final byId = <String, Task>{};
+    // Anlagezeit je Aufgabe, aus dem Ereignis statt aus der Uhr.
+    final createdAt = <String, DateTime>{};
     for (final e in events) {
       // Beziehungen tragen `blocker_id`/`blocked_id` statt `task_id` — die
       // Waechterzeile weiter unten haette sie sonst stumm verworfen.
@@ -962,8 +1029,23 @@ final class SqliteEventStore implements EventStore {
       }
       final id = e.payload['task_id'] as String?;
       if (id == null) continue;
+
+      // Zustandswechsel auf eine Aufgabe, die der Strom nie angelegt hat.
+      //
+      // Das gibt es: Vor Commit aefafc3 schrieb `atomize()` die Teilschritte
+      // nur in die Projektion, der Strom kannte nur ihre IDs im
+      // `task_split`. Wird so ein Schritt spaeter abgehakt, liegt ein
+      // `task_completed` ohne `task_created` im Strom. Vorher stand hier
+      // `?? byId[id]!` — ein Zweig, der per Konstruktion nur werfen konnte:
+      // Er greift genau dann, wenn `byId[id]` null ist. Gemeint war
+      // ueberspringen. Aus einer Aufgabe ohne Anlage-Ereignis laesst sich
+      // nichts wiederherstellen; sie stumm zu ueberspringen ist der einzige
+      // Weg, der den uebrigen Bestand stehen laesst.
+      if (e.type != EventType.taskCreated && byId[id] == null) continue;
+
       switch (e.type) {
         case EventType.taskCreated:
+          createdAt[id] = e.at;
           byId[id] = Task(
             id: id,
             title: e.payload['title'] as String? ?? '(ohne Titel)',
@@ -989,9 +1071,9 @@ final class SqliteEventStore implements EventStore {
             place: e.payload['place'] as String?,
           );
         case EventType.taskStarted:
-          byId[id] = byId[id]?.copyWith(state: TaskState.active) ?? byId[id]!;
+          byId[id] = byId[id]!.copyWith(state: TaskState.active);
         case EventType.taskCompleted:
-          byId[id] = byId[id]?.copyWith(state: TaskState.done) ?? byId[id]!;
+          byId[id] = byId[id]!.copyWith(state: TaskState.done);
         case EventType.taskAbandoned:
           // Nicht jedes „abandoned" ist ein Verwerfen. Zuruecklegen und
           // Verdraengen sind Rueckwege in den Bestand — sie als verworfen
@@ -1006,18 +1088,17 @@ final class SqliteEventStore implements EventStore {
           // passiert ist, ist die teuerste Art von Fehler in einem System,
           // dessen Projektionen aus ihm entstehen.
           const back = {'released', 'superseded', 'steps_done'};
-          byId[id] = byId[id]?.copyWith(
-                state: back.contains(reason)
-                    ? TaskState.ready
-                    : TaskState.dropped,
-              ) ??
-              byId[id]!;
+          byId[id] = byId[id]!.copyWith(
+            state: back.contains(reason) ? TaskState.ready : TaskState.dropped,
+          );
         default:
           break;
       }
     }
-    for (final task in byId.values) {
-      await upsertTask(task);
+    for (final entry in byId.entries) {
+      // Ohne die Anlagezeit aus dem Ereignis waere nach jedem Wiederaufbau
+      // jede Aufgabe „gerade angelegt" — siehe [upsertTask].
+      await upsertTask(entry.value, createdAt: createdAt[entry.key]);
     }
   }
 

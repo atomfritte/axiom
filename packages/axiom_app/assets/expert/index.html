@@ -47,13 +47,13 @@
    tokens.dart, und ein siebter Farbwert kann nicht daneben altern. */
 [data-scheme=instrument][data-mode=dark]{
   --base:#0E1113;--panel:#171B1E;--raised:#1F2529;--rule:#2A3237;
-  --ink:#ECEAE4;--dim:#9BA4AB;--faint:#7A848B;
-  --signal:#E8A33D;--deep:#B8761F;--calm:#7FA88A;--caution:#C4653A;--info:#6E90A4;
+  --ink:#ECEAE4;--dim:#9BA4AB;--faint:#838D93;
+  --signal:#E8A33D;--deep:#B8761F;--calm:#7FA88A;--caution:#CB754E;--info:#6E90A4;
   --on-signal:var(--base)}
 [data-scheme=instrument][data-mode=light]{
   --base:#F2F1ED;--panel:#FFFFFF;--raised:#FAF9F6;--rule:#CFCCC4;
-  --ink:#15181B;--dim:#4A545B;--faint:#6E767C;
-  --signal:#9A6510;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
+  --ink:#15181B;--dim:#4A545B;--faint:#676E74;
+  --signal:#966210;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
   --on-signal:var(--panel)}
 /* Werkbank — die Vorgabe dieser Oberflaeche.
    Auf dem Telefon bleibt Instrument die Vorgabe; dort ist das Geraet
@@ -62,12 +62,12 @@
 :root,[data-scheme=workbench][data-mode=light],
 [data-scheme=workbench]{
   --base:#F5F6FA;--panel:#FFFFFF;--raised:#F0F2F8;--rule:#DDE1EC;
-  --ink:#20232C;--dim:#565E72;--faint:#868DA1;
-  --signal:#0F62D6;--deep:#0A48A0;--calm:#157F4F;--caution:#A9500F;--info:#6A3FBF;
+  --ink:#20232C;--dim:#565E72;--faint:#666E83;
+  --signal:#0F62D6;--deep:#0A48A0;--calm:#157D4E;--caution:#A9500F;--info:#6A3FBF;
   --on-signal:var(--panel)}
 [data-scheme=workbench][data-mode=dark]{
   --base:#12141B;--panel:#1A1D26;--raised:#232733;--rule:#313648;
-  --ink:#ECEEF5;--dim:#A0A7BB;--faint:#7A8196;
+  --ink:#ECEEF5;--dim:#A0A7BB;--faint:#878EA1;
   --signal:#5A9BFF;--deep:#3570D4;--calm:#3FC98D;--caution:#E08C4A;--info:#A98BFF;
   --on-signal:var(--base)}
 [data-scheme=contrast][data-mode=dark]{
@@ -82,12 +82,12 @@
   --on-signal:var(--panel)}
 [data-scheme=muted][data-mode=dark]{
   --base:#12100D;--panel:#1A1714;--raised:#221E1A;--rule:#332C26;
-  --ink:#E0D8CC;--dim:#A3988A;--faint:#7D7264;
+  --ink:#E0D8CC;--dim:#A3988A;--faint:#918575;
   --signal:#D79A55;--deep:#A87433;--calm:#8FA98C;--caution:#BE7A55;--info:#8B9AA0;
   --on-signal:var(--base)}
 [data-scheme=muted][data-mode=light]{
   --base:#F4F0E7;--panel:#FBF8F1;--raised:#FFFDF8;--rule:#D5CDBE;
-  --ink:#221E19;--dim:#57503F;--faint:#7A7263;
+  --ink:#221E19;--dim:#57503F;--faint:#746C5E;
   --signal:#8A5A16;--deep:#6B450F;--calm:#44634A;--caution:#8C4A26;--info:#3F5A66;
   --on-signal:var(--panel)}
 
@@ -929,6 +929,27 @@ const EN={
 "Tastenkürzel":"Keyboard shortcuts",
 "Größe":"Size",
 "Der Server antwortet nicht.":"The server is not responding.",
+"Der Server ist aus. Die App auf dem Telefon startet ihn wieder.":"The server is off. The app on the phone starts it again.",
+"leer":"empty",
+"voll":"full",
+"zerstreut":"scattered",
+"klar":"clear",
+"unten":"low",
+"oben":"high",
+"ruhig":"calm",
+"stark":"strong",
+"sofort":"right away",
+"nichts":"nothing",
+"viel":"a lot",
+"von":"from",
+"bis":"to",
+"Minuten":"minutes",
+"mal":"times",
+"mindestens":"at least",
+"genau":"exactly",
+"nicht":"not",
+"Übernommen — der Titel steht gekürzt an der Aufgabe.":"Adopted — the title is shortened on the task.",
+"{0} Schritte sind die Grenze. Mehr ist ein Projektplan, kein Anfang.":"{0} steps is the limit. More is a project plan, not a start.",
 };
 
 /* ── Sprache ─────────────────────────────────────────────────────────
@@ -963,6 +984,11 @@ function setLanguage(code){
   if(next===LANG) return false;
   LANG=next;
   document.documentElement.lang=next;
+  // Die Hilfe folgt der Oberfläche, solange dort niemand ausdrücklich
+  // gewählt hat. Vorher stand sie fest auf Deutsch: englische Reiter,
+  // englisches Suchfeld — und ein deutsches Kapitel dazwischen, obwohl
+  // beide Fassungen im Bündel liegen.
+  if(!localStorage.getItem('axiom.help.lang')) helpLang=next;
   localise(document);
   return true;
 }
@@ -988,7 +1014,13 @@ function toast(m){const box=$('#toast');box.textContent=m;box.classList.add('on'
 async function api(path,opts={}){
   const res=await fetch(path,{credentials:'same-origin',
     headers:opts.body?{'Content-Type':'application/json'}:{},...opts});
-  if(res.status===401){showGate();throw new Error('401')}
+  if(res.status===401){
+    // Als Anmeldung gekennzeichnet, nicht als Fehler: `report()` schweigt
+    // dazu, weil die Freigabe schon dasteht und ein Toast „401" daneben nur
+    // Rauschen wäre.
+    showGate();
+    const gate=new Error('401');gate.gate=true;throw gate;
+  }
   const data=await res.json().catch(()=>({}));
   if(!res.ok){
     // Die Einzelmeldungen mitschleppen: Bei einer abgelehnten Regel steht in
@@ -998,6 +1030,39 @@ async function api(path,opts={}){
     throw err;
   }
   return data;
+}
+
+/* ── Fehlerpfad ──────────────────────────────────────────────────────
+   Vorher gab es für weite Teile dieser Seite gar keinen. Ein `onclick`, der
+   `await api(…)` ruft und nichts fängt, endet bei einer Ablehnung als
+   unbehandelte Zusage: Der Server schrieb „Feld breadcrumb ist leer",
+   die Oberfläche schwieg, der Fokus lief weiter und der Knopf war von
+   kaputt nicht zu unterscheiden. Dasselbe traf das Übernehmen einer langen
+   Notiz und jede Zerlegung über zwanzig Schritte.
+
+   Der Fensterhandler ist die Untergrenze: Was niemand fängt, wird
+   wenigstens gesagt. Wo mehr nötig ist als eine Meldung — einen Reiter
+   zurücknehmen, ein Feld wieder füllen — steht weiterhin ein eigenes
+   `catch` daneben. `preventDefault` bleibt aus, damit die Meldung zusätzlich
+   in der Konsole des Browsers steht. */
+function report(e){
+  if(!e||e.gate) return;
+  toast(e.message||String(e));
+}
+addEventListener('unhandledrejection',e=>report(e.reason));
+
+/* Ein Knopf, der während seiner eigenen Anfrage nicht noch einmal auslöst.
+   Zwei Klicks auf „Als Aufgabe" legten sonst zwei Aufgaben aus einer Notiz
+   an: Die Zeile bleibt stehen, bis die Antwort da ist, und der zweite Klick
+   schickt dieselbe Anfrage ein zweites Mal. Zwei identische Einträge sind
+   genau die Auswahlentscheidung, die AXIOM abnehmen soll (G1). */
+function busy(handler){
+  return async e=>{
+    const b=e.currentTarget;
+    if(b.disabled) return;
+    b.disabled=true;
+    try{await handler(e)}finally{b.disabled=false}
+  };
 }
 
 /* ── Darstellung ─────────────────────────────────────────────────────
@@ -1131,6 +1196,12 @@ async function refresh(){
   paintHeader();paintAction();paintCapline();
 }
 async function loadSurface(){
+  // Der Eingang wird immer geholt, nicht nur wenn sein Reiter offen ist:
+  // Die Zahl am Reiter misst dieselbe Menge wie der Reiter selbst — die
+  // unsortierten Notizen. Vorher kam sie aus `S.inboxCount`, und das sind
+  // Aufgaben im Zustand `inbox`; die entstehen auf keinem Weg dieser App.
+  // Die Zahl stand deshalb dauerhaft auf nichts, während Notizen lagen.
+  inbox=await api('/api/inbox');
   // Board und Liste zeigen denselben Bestand und holen ihn deshalb gleich.
   if(tab==='tasks'||tab==='board') tasks=(await api('/api/tasks')).tasks;
   else if(tab==='rules'){
@@ -1141,7 +1212,6 @@ async function loadSurface(){
     ruleIssues=data.issues||[];
   }
   else if(tab==='events') events=(await api('/api/events?limit=250')).events;
-  else if(tab==='inbox') inbox=await api('/api/inbox');
   else if(tab==='review') review=await api('/api/review?scope='+(review?.scope||'day'));
   else if(tab==='help') await loadHelp();
 }
@@ -1224,7 +1294,7 @@ async function respond(id,response){
   await reload();
 }
 async function act(id,verb){
-  try{await api('/api/tasks/'+id+'/'+verb,{method:'POST'});await reload()}catch(e){toast(e.message)}
+  try{await api('/api/tasks/'+id+'/'+verb,{method:'POST'});await reload()}catch(e){report(e)}
 }
 
 /* ── Kapazitätslinie ─────────────────────────────────────────────────
@@ -1268,7 +1338,7 @@ async function saveCapture(){
   if(!text) return;
   box.value='';
   try{await api('/api/capture',{method:'POST',body:JSON.stringify({text})});toast(tr('Erfasst.'))}
-  catch(e){box.value=text;toast(e.message)}
+  catch(e){box.value=text;report(e)}
   await reload();
 }
 $('#cap-save').addEventListener('click',saveCapture);
@@ -1281,10 +1351,22 @@ $('#checkin-btn').addEventListener('click',()=>checkinDialog());
 $('#tabs').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-tab]');
   if(!b) return;
+  // Der Reiter wurde vorher markiert und gespeichert, bevor sein Inhalt da
+  // war: Fiel das Laden aus, hob der Streifen „Ereignisse" hervor, die
+  // Fläche zeigte weiter das Board, und niemand sagte warum. Markiert wird
+  // jetzt vorläufig, gespeichert erst nach der Antwort — und geht sie
+  // schief, steht der Streifen wieder dort, wo die Fläche steht.
+  const before=tab;
   tab=b.dataset.tab;
-  localStorage.setItem('axiom.tab',tab);
   markTabs();
-  await loadSurface();render();
+  try{
+    await loadSurface();
+  }catch(err){
+    tab=before;markTabs();report(err);
+    return;
+  }
+  localStorage.setItem('axiom.tab',tab);
+  render();
 });
 function markTabs(){
   document.querySelectorAll('#tabs button[data-tab]').forEach(b=>
@@ -1294,7 +1376,10 @@ const VIEWS={tasks:viewTasks,board:viewBoard,inbox:viewInbox,state:viewState,
   rules:viewRules,review:viewReview,events:viewEvents,help:viewHelp};
 function render(){
   if(!S) return;
-  $('#c-inbox').textContent=S.inboxCount?' '+S.inboxCount:'';
+  // Dieselbe Menge, die der Reiter daneben zeigt — sonst zählt die Zahl am
+  // Reiter etwas anderes als der Inhalt dahinter.
+  const unsorted=(inbox.notes||[]).length;
+  $('#c-inbox').textContent=unsorted?' '+unsorted:'';
   paintTaskCount();
   // Ein unbekannter Name aus dem Speicher darf die Seite nicht leer lassen.
   put($('#surface'),(VIEWS[tab]||VIEWS.tasks)());
@@ -1474,17 +1559,25 @@ function taskModel(){
 
    Jede Aufgabe steht in genau einer Gruppe, entschieden in dieser
    Reihenfolge: Was läuft, läuft. Was auf etwas anderes wartet, wartet. Über
-   den Rest entscheidet die Kapazität. */
-const GROUPS=[
-  {key:'run',label:tr('Läuft'),color:'var(--calm)'},
-  {key:'reach',label:tr('In Reichweite'),color:'var(--signal)'},
-  {key:'far',label:tr('Nicht in Reichweite'),color:'var(--rule)'},
-  // Erscheint erst, wenn etwas wartet. Eine dauerhaft leere Spalte ist
-  // Fläche ohne Aussage — und der Server liefert `waiting` gerade erst.
-  {key:'wait',label:tr('Wartet'),color:'var(--info)',onlyIfFull:true},
-  // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
-  // Gruppe erscheint nur, wenn derselbe Filter sie auch sonst zeigt.
-  {key:'done',label:tr('Erledigt'),color:'var(--faint)'}];
+   den Rest entscheidet die Kapazität.
+
+   Eine Funktion, keine Konstante: Die Beschriftung entsteht beim Zeichnen.
+   Als Konstante lief `tr()` beim Laden des Skripts — da galt noch die
+   geratene Browsersprache, denn die des Telefons kommt erst mit der ersten
+   Antwort. In einer englischen Oberfläche standen deshalb fünf deutsche
+   Spaltenüberschriften, im aria-label eingeschlossen. */
+function groups(){
+  return [
+    {key:'run',label:tr('Läuft'),color:'var(--calm)'},
+    {key:'reach',label:tr('In Reichweite'),color:'var(--signal)'},
+    {key:'far',label:tr('Nicht in Reichweite'),color:'var(--rule)'},
+    // Erscheint erst, wenn etwas wartet. Eine dauerhaft leere Spalte ist
+    // Fläche ohne Aussage — und der Server liefert `waiting` gerade erst.
+    {key:'wait',label:tr('Wartet'),color:'var(--info)',onlyIfFull:true},
+    // Erledigtes misst nichts mehr — deshalb die leiseste Farbe, und die
+    // Gruppe erscheint nur, wenn derselbe Filter sie auch sonst zeigt.
+    {key:'done',label:tr('Erledigt'),color:'var(--faint)'}];
+}
 
 function groupOf(t,m){
   if(t.state==='done') return 'done';
@@ -1494,7 +1587,7 @@ function groupOf(t,m){
 }
 
 function groupedTasks(m){
-  const map=new Map(GROUPS.map(g=>[g.key,[]]));
+  const map=new Map(groups().map(g=>[g.key,[]]));
   let shown=0;
   for(const t of tasks){
     // Klammern stehen in der Leiste, nicht im Bestand: Sonst stünde die
@@ -1516,7 +1609,7 @@ function groupedTasks(m){
    Band ohne Inhalt, an dem man vorbeiscrollt — eine Liste zeigt, was da
    ist. */
 function visibleGroups(map,asColumns){
-  return GROUPS.filter(g=>{
+  return groups().filter(g=>{
     const count=map.get(g.key).length;
     if(g.key==='done') return tprefs.done&&(asColumns||count>0);
     if(g.onlyIfFull) return count>0;
@@ -1894,9 +1987,9 @@ function viewInbox(){
         // sofort startbar. Die Zahlen stehen an der Aufgabe und lassen sich
         // dort jederzeit aendern; falsch geschaetzt ist besser als
         // unentschieden liegengeblieben (G1).
-        el('button',{class:'btn primary',onclick:()=>adoptNote(n)},tr('Als Aufgabe')),
+        el('button',{class:'btn primary',onclick:busy(()=>adoptNote(n))},tr('Als Aufgabe')),
         el('button',{class:'btn',onclick:()=>taskDialog(n.text,n.id)},tr('Mit Werten')),
-        el('button',{class:'btn quiet',onclick:()=>dismissNote(n)},tr('Keine Aufgabe')))));
+        el('button',{class:'btn quiet',onclick:busy(()=>dismissNote(n))},tr('Keine Aufgabe')))));
   }
   return frag;
 }
@@ -1913,13 +2006,35 @@ function noteAge(n){
   return el('span',{style:'color:var(--caution)'},tr('seit {0} Tagen',[days]));
 }
 
+/* Der Titel einer übernommenen Notiz.
+
+   Der Kern kennt keine Längengrenze — der Weg über HTTP schon: `/api/capture`
+   nimmt 4000 Zeichen an, `/api/tasks` nur 500. Ein geteilter Artikelauszug
+   ließ den Knopf deshalb wirkungslos aussehen: Die Anfrage wurde abgelehnt,
+   die Notiz blieb stehen, gesagt wurde nichts. Übernommen wird jetzt die
+   erste Zeile, nötigenfalls an einer Wortgrenze gekürzt. Verloren geht dabei
+   nichts — die Erfassung bleibt als Ereignis stehen und hängt über
+   `fromCapture` an der Aufgabe. */
+const MAX_TITLE=500;
+function noteTitle(text){
+  const whole=String(text||'').trim();
+  const first=whole.split('\n').map(s=>s.trim()).find(s=>s)||whole;
+  if(first.length<=MAX_TITLE) return first;
+  const cut=first.slice(0,MAX_TITLE-2);
+  const space=cut.lastIndexOf(' ');
+  return (space>MAX_TITLE/2?cut.slice(0,space):cut)+' …';
+}
+
 /* Notiz zu Aufgabe, ohne Rueckfrage. Mittelwerte, weil im Erfassungsmoment
    ohnehin niemand ehrlich schaetzt — dieselbe Begruendung, aus der der
    Eingang der App die Salienz nicht abfragt. */
 async function adoptNote(n){
+  const title=noteTitle(n.text);
   await api('/api/tasks',{method:'POST',body:JSON.stringify({
-    title:n.text,activationEnergy:5,salience:5,stakes:5,fromCapture:n.id})});
-  toast(tr('Übernommen.'));
+    title,activationEnergy:5,salience:5,stakes:5,fromCapture:n.id})});
+  toast(title===String(n.text||'').trim()
+    ?tr('Übernommen.')
+    :tr('Übernommen — der Titel steht gekürzt an der Aufgabe.'));
   await reload();
 }
 
@@ -1948,7 +2063,7 @@ function viewState(){
       terms.length?el('div',{class:'faint',style:'font-size:.68rem;margin-top:.3rem'},tr('Aufklappen für die Formel')):null));
   }
   frag.append(el('div',{class:'row'},
-    el('button',{class:'btn primary',onclick:checkinDialog},'Check-in'),
+    el('button',{class:'btn primary',onclick:checkinDialog},tr('Check-in')),
     S.focus?el('button',{class:'btn',onclick:endFocusDialog},tr('Fokus beenden'))
            :el('button',{class:'btn',onclick:focusDialog},tr('Fokus starten'))));
   if(S.regimeDescription) frag.append(el('p',{class:'why',style:'margin-top:1rem'},S.regimeDescription));
@@ -2053,14 +2168,17 @@ function viewEvents(){
    Kapitel nebeneinander und die Suche geht über alle — das ist der ganze
    Unterschied, und er ist der Grund, warum diese Fläche existiert.
 
-   Die Sprachwahl gilt nur für die Doku. Die Oberfläche ringsum ist
-   deutsch, und ein englisches Kapitel darin ist eine halbe Übersetzung —
-   aber die Texte gibt es in beiden Fassungen, und wer die englische lesen
-   will, soll sie nicht suchen müssen. Fehlt sie, kommt die deutsche mit
-   einem Hinweis darüber statt einer leeren Seite. */
+   Die Sprachwahl gilt nur für die Doku und ist trotzdem an die Oberfläche
+   gebunden: Voreingestellt ist deren Sprache, denn ein deutsches Kapitel in
+   einer englischen Oberfläche ist eine halbe Übersetzung. Wer hier
+   ausdrücklich wählt, gewinnt — dann bleibt es dabei, auch wenn die App
+   umschaltet. Fehlt eine Fassung, kommt die deutsche mit einem Hinweis
+   darüber statt einer leeren Seite. */
 let helpChapters=[],helpId=null,helpDoc=null,helpQuery='',helpError=null;
 let helpAllLoaded=false,helpLoading=null;
-let helpLang=localStorage.getItem('axiom.help.lang')==='en'?'en':'de';
+/* Der gespeicherte Wert nur, wenn er existiert: Sonst stand die Hilfe auf
+   Deutsch, bevor die Sprache vom Telefon überhaupt da war — und blieb dort. */
+let helpLang=(c=>c==='de'||c==='en'?c:LANG)(localStorage.getItem('axiom.help.lang'));
 const helpCache=new Map();
 
 async function loadHelp(){
@@ -2344,17 +2462,21 @@ function dial(label,hint,low,high,value,min=1,max=5){
 }
 
 function checkinDialog(){
-  const e=dial(tr('Energie'),null,'leer','voll',3),f=dial(tr('Fokus'),null,'zerstreut','klar',3),
-    m=dial(tr('Stimmung'),null,'unten','oben',3),
-    s=dial(tr('Reizbedarf'),tr('Wie sehr zieht es gerade nach Input?'),'ruhig','stark',3);
-  sheet('Check-in',el('div',{},
+  // Auch die Enden der Regler gehen durch tr(): Sie tragen keinen Umlaut und
+  // sind dem Wächter in `expert_i18n_test.dart` deshalb lange entkommen —
+  // in der englischen Oberfläche stand „leer/voll" unter englischen Fragen.
+  const e=dial(tr('Energie'),null,tr('leer'),tr('voll'),3),
+    f=dial(tr('Fokus'),null,tr('zerstreut'),tr('klar'),3),
+    m=dial(tr('Stimmung'),null,tr('unten'),tr('oben'),3),
+    s=dial(tr('Reizbedarf'),tr('Wie sehr zieht es gerade nach Input?'),tr('ruhig'),tr('stark'),3);
+  sheet(tr('Check-in'),el('div',{},
     el('p',{style:'margin-bottom:1rem'},tr('Vier Regler, ungefähr reicht. Genauigkeit kostet hier mehr, als sie bringt.')),
     e,f,m,s),[
-    el('button',{class:'btn primary',onclick:async()=>{
+    el('button',{class:'btn primary',onclick:busy(async()=>{
       await api('/api/checkin',{method:'POST',body:JSON.stringify({
         energy:e.value(),focus:f.value(),mood:m.value(),stimNeed:s.value()})});
       $('#dlg').close();toast(tr('Eingetragen.'));await reload();
-    }},tr('Übernehmen'))]);
+    })},tr('Übernehmen'))]);
 }
 
 function focusDialog(){
@@ -2367,11 +2489,14 @@ function focusDialog(){
     '5 min','120 min',suggested,5,120);
   sheet(tr('Fokus starten'),el('div',{},
     el('div',{class:'field'},el('label',{},tr('Ziel')),title),min),[
-    el('button',{class:'btn primary',onclick:async()=>{
+    el('button',{class:'btn primary',onclick:busy(async()=>{
       await api('/api/focus',{method:'POST',body:JSON.stringify({
-        title:title.value.trim(),taskId:running?.id||null,minutes:min.value()})});
+        // Leer heißt „nicht angegeben", nicht „leerer Text": Der Server
+        // lehnt ein optionales Feld ab, das als Leerstring ankommt, und der
+        // Fokus startete dann gar nicht.
+        title:title.value.trim()||null,taskId:running?.id||null,minutes:min.value()})});
       $('#dlg').close();await reload();
-    }},tr('Starten'))]);
+    })},tr('Starten'))]);
 }
 
 function endFocusDialog(){
@@ -2379,23 +2504,28 @@ function endFocusDialog(){
   sheet(tr('Fokus beenden'),el('div',{},
     el('p',{style:'margin-bottom:.8rem'},tr('Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.')),
     crumb),[
-    el('button',{class:'btn primary',onclick:async()=>{
-      await api('/api/focus',{method:'DELETE',body:JSON.stringify({breadcrumb:crumb.value.trim()})});
+    el('button',{class:'btn primary',onclick:busy(async()=>{
+      // Dasselbe hier, und hier wog es schwerer: Wer ohne Notiz beenden
+      // wollte, schickte einen Leerstring, bekam 400 — und der Fokus lief
+      // weiter, ohne dass irgendwo etwas stand.
+      await api('/api/focus',{method:'DELETE',body:JSON.stringify({breadcrumb:crumb.value.trim()||null})});
       $('#dlg').close();await reload();
-    }},tr('Beenden'))]);
+    })},tr('Beenden'))]);
 }
 
 function taskDialog(prefill,fromCapture){
-  const title=el('textarea',{placeholder:tr('Was ist zu tun?')});
-  if(prefill) title.value=prefill;
-  const ae=dial(tr('Wie schwer fällt der Start?'),tr('Nicht wie lang es dauert. Nur der Anfang.'),'sofort',tr('große Hürde'),5,1,10);
-  const st=dial(tr('Was kostet es, wenn es liegenbleibt?'),tr('Folgen, nicht Wichtigkeit.'),'nichts','viel',5,1,10);
-  const sa=dial(tr('Wie sehr zieht es?'),tr('Sog, nicht Pflicht.'),tr('gar nicht'),'stark',5,1,10);
+  // `maxlength` ist die Grenze, die der Server ohnehin zieht. Ohne sie ließ
+  // sich eine lange Notiz hier hineinlegen, und „Anlegen" tat dann nichts.
+  const title=el('textarea',{placeholder:tr('Was ist zu tun?'),maxlength:MAX_TITLE});
+  if(prefill) title.value=noteTitle(prefill);
+  const ae=dial(tr('Wie schwer fällt der Start?'),tr('Nicht wie lang es dauert. Nur der Anfang.'),tr('sofort'),tr('große Hürde'),5,1,10);
+  const st=dial(tr('Was kostet es, wenn es liegenbleibt?'),tr('Folgen, nicht Wichtigkeit.'),tr('nichts'),tr('viel'),5,1,10);
+  const sa=dial(tr('Wie sehr zieht es?'),tr('Sog, nicht Pflicht.'),tr('gar nicht'),tr('stark'),5,1,10);
   const due=el('input',{type:'datetime-local'});
   sheet(tr('Aufgabe anlegen'),el('div',{},
     el('div',{class:'field'},el('label',{},tr('Titel')),title),ae,st,sa,
     el('div',{class:'field'},el('label',{},tr('Ab wann tut es weh? (optional)')),due)),[
-    el('button',{class:'btn primary',onclick:async()=>{
+    el('button',{class:'btn primary',onclick:busy(async()=>{
       const text=title.value.trim();
       if(!text){toast(tr('Ohne Titel geht es nicht.'));return}
       await api('/api/tasks',{method:'POST',body:JSON.stringify({
@@ -2405,30 +2535,44 @@ function taskDialog(prefill,fromCapture){
         // ihr laengst eine Aufgabe geworden ist.
         fromCapture:fromCapture||null})});
       $('#dlg').close();toast(tr('Angelegt.'));await reload();
-    }},tr('Anlegen'))]);
+    })},tr('Anlegen'))]);
 }
+
+/* Dieselbe Grenze, die der Kern zieht (expert_server.dart). Vorher ließ der
+   Dialog beliebig viele Zeilen anlegen; ab der einundzwanzigsten lehnte der
+   Server ab, und weil der Knopf keinen Fehlerpfad hatte, geschah sichtbar
+   gar nichts. Eine Grenze, die man erst nach dem Tippen erfährt, ist keine.
+   [D2] */
+const MAX_STEPS=20;
 
 function atomizeDialog(cand){
   const rows=el('div',{});
+  const note=el('p',{class:'hint'});
+  const more=el('button',{class:'btn quiet'},tr('+ Schritt'));
   const add=(t='',e=2)=>{
+    if(rows.children.length>=MAX_STEPS) return;
     rows.append(el('div',{class:'field',style:'display:flex;gap:.5rem;align-items:end'},
       el('div',{style:'flex:1'},el('label',{},tr('Schritt')),
         el('input',{type:'text',value:t,placeholder:tr('Erster kleiner Schritt')})),
       el('div',{},el('label',{},tr('Start')),
         el('input',{type:'number',min:1,max:10,value:e,style:'width:5rem'}))));
+    const full=rows.children.length>=MAX_STEPS;
+    more.disabled=full;
+    note.textContent=full?tr('{0} Schritte sind die Grenze. Mehr ist ein Projektplan, kein Anfang.',[MAX_STEPS]):'';
   };
+  more.addEventListener('click',()=>add());
   add();add();
   sheet(tr('Zerlegen: {0}',[cand.title]),el('div',{},
     el('p',{style:'margin-bottom:.9rem'},tr('Der erste Schritt muss so klein sein, dass er heute in Reichweite liegt. Alles andere darf größer bleiben.')),
-    rows,el('button',{class:'btn quiet',onclick:()=>add()},tr('+ Schritt'))),[
-    el('button',{class:'btn primary',onclick:async()=>{
+    rows,more,note),[
+    el('button',{class:'btn primary',onclick:busy(async()=>{
       const steps=[...rows.querySelectorAll('.field')].map(f=>({
         title:f.querySelector('input[type=text]').value.trim(),
         energy:Number(f.querySelector('input[type=number]').value)||2})).filter(s=>s.title);
       if(!steps.length){toast(tr('Mindestens ein Schritt.'));return}
       await api('/api/tasks/'+cand.taskId+'/atomize',{method:'POST',body:JSON.stringify({steps})});
       $('#dlg').close();toast(tr('Zerlegt.'));await reload();
-    }},tr('Übernehmen'))]);
+    })},tr('Übernehmen'))]);
 }
 
 /* ── Regeleditor ─────────────────────────────────────────────────────
@@ -2577,7 +2721,7 @@ function editorGuided(){
       stepper(tr('Mindestabstand'),[15,30,60,120,240,480,1440],d.cooldownMinutes,'min',
         v=>{d.cooldownMinutes=v},
         tr('Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.')),
-      stepper(tr('Höchstens pro Tag'),[0,1,2,3,5,10],d.maxPerDay,'mal',
+      stepper(tr('Höchstens pro Tag'),[0,1,2,3,5,10],d.maxPerDay,tr('mal'),
         v=>{d.maxPerDay=v},tr('Eine harte Obergrenze zusätzlich zum Abstand.'),tr('kein Limit')),
       stepper(tr('Rang bei Gleichstand'),[10,30,50,70,90],d.priority,'',
         v=>{d.priority=v},
@@ -2746,28 +2890,38 @@ function leafFields(f){
          onclick:()=>{f.symbol=key;redraw()}},label))];
   }
   if(f.kind==='time') return [
-    el('span',{class:'hint'},'von'),timeField(f.from,v=>{f.from=v}),
-    el('span',{class:'hint'},'bis'),timeField(f.to,v=>{f.to=v})];
+    el('span',{class:'hint'},tr('von')),timeField(f.from,v=>{f.from=v}),
+    el('span',{class:'hint'},tr('bis')),timeField(f.to,v=>{f.to=v})];
   return [
     sel(evts.map(v=>({v:v.id,l:v.label})),f.event,v=>{f.event=v;redraw()},tr('Ereignis')),
     sel(opItems(false),f.op,v=>{f.op=v;redraw()},tr('Vergleich')),
     numberField(f.number,0,f.kind==='since'?1440:50,v=>{f.number=v}),
-    el('span',{class:'hint'},f.kind==='since'?'Minuten':tr('mal heute'))];
+    el('span',{class:'hint'},f.kind==='since'?tr('Minuten'):tr('mal heute'))];
 }
-/* Welche Operatoren es gibt und wie sie heißen, sagt die Engine. Die Liste
-   hier ist nur die Rückfallebene, solange der Wortschatz nicht da ist —
-   und zugleich die Menge der Schlüssel, an denen der Leser einen Vergleich
-   im YAML erkennt. */
-const OPS={lt:tr('kleiner als'),lte:tr('höchstens'),gte:'mindestens',gt:tr('größer als'),
-  eq:'genau',ne:'nicht'};
+/* Welche Vergleiche es gibt, sagt die Engine; wie sie in der Oberfläche
+   heißen, steht hier. Vorher gewann das Etikett aus dem Wortschatz — das ist
+   hart deutsch (`rule_vocabulary.dart`) und ließ die Liste in der englischen
+   Oberfläche deutsch. Für alles, was die Engine darüber hinaus kennt, gilt
+   weiterhin ihr Etikett; erfunden wird hier nichts.
+
+   `OPS` ist zugleich die Menge der Schlüssel, an denen der Leser einen
+   Vergleich im YAML erkennt (`parseCondition`). Die Beschriftung entsteht
+   erst beim Zeichnen: Ein `tr()` beim Laden fror die Sprache ein, die der
+   Browser geraten hatte — die des Telefons kommt erst mit der ersten
+   Antwort. */
+const OPS=['lt','lte','gte','gt','eq','ne'];
+function opLabel(op){
+  return {lt:tr('kleiner als'),lte:tr('höchstens'),gte:tr('mindestens'),
+    gt:tr('größer als'),eq:tr('genau'),ne:tr('nicht')}[op];
+}
 function opItems(symbolic){
   const source=(vocab&&vocab.operators)||{};
   const labels=(vocab&&vocab.operatorLabels)||{};
   const raw=(symbolic?source.symbolic:source.numeric)||
-    (symbolic?['eq','ne']:Object.keys(OPS));
+    (symbolic?['eq','ne']:OPS);
   return raw.map(o=>typeof o==='string'
-    ?{v:o,l:labels[o]||OPS[o]||o}
-    :{v:o.id||o.op||o.token,l:o.label||labels[o.id]||OPS[o.id]||o.id});
+    ?{v:o,l:opLabel(o)||labels[o]||o}
+    :{v:o.id||o.op||o.token,l:opLabel(o.id)||o.label||labels[o.id]||o.id});
 }
 function leafMeaning(f){
   const find=(list,id)=>((vocab&&vocab[list])||[]).find(x=>x.id===id);
@@ -3082,7 +3236,7 @@ function condNode(map,negated){
 }
 function opOf(value){
   if(!value||typeof value!=='object') throw new Error(tr('Ein Vergleich fehlt.'));
-  const op=Object.keys(value).find(k=>OPS[k]!==undefined);
+  const op=Object.keys(value).find(k=>OPS.includes(k));
   if(!op) throw new Error(tr('Unbekannter Vergleich in: {0}',[Object.keys(value).join(', ')]));
   return op;
 }
@@ -3259,7 +3413,7 @@ function plainScalar(text){
    daneben die Bedienungsanleitung. Zwei Dinge mit demselben Namen sind
    zwei Dinge, die man verwechselt. */
 function keysDialog(){
-  const keys=[['n',tr('Erfassen')],['c','Check-in'],['f',tr('Fokus starten oder beenden')],
+  const keys=[['n',tr('Erfassen')],['c',tr('Check-in')],['f',tr('Fokus starten oder beenden')],
     ['a',tr('Neue Aufgabe')],['g',tr('Angefangenes erledigen')],['h',tr('Hilfe')],
     ['1 … '+TABS.length,tr('Reiter wechseln')],['r',tr('Neu laden')],['?',tr('Diese Übersicht')],['Esc',tr('Schließen')]];
   sheet(tr('Tastenkürzel'),el('div',{class:'keys'},
@@ -3276,14 +3430,24 @@ $('#stop-btn').addEventListener('click',async()=>{
   try{await api('/api/stop',{method:'POST'})}catch(e){}
   // Kein Wiederverbinden auf etwas, das gerade absichtlich zugeht.
   wsStop();
-  document.body.innerHTML='<div style="display:grid;place-items:center;min-height:100vh">'+
-    '<p style="color:var(--dim)">Der Server ist aus. Die App auf dem Telefon startet ihn wieder.</p></div>';
+  // Gebaut statt zusammengeschrieben: Der Satz ist ein Nutzertext und muss
+  // durch tr() — als Markup-Zeichenkette war er in jeder Sprache deutsch.
+  put(document.body,el('div',{style:'display:grid;place-items:center;min-height:100vh'},
+    el('p',{style:'color:var(--dim)'},
+      tr('Der Server ist aus. Die App auf dem Telefon startet ihn wieder.'))));
 });
 
 /* ── Tastatur ────────────────────────────────────────────────────────
    Das kann ein Schreibtisch und eine Hand nicht. Ohne Kürzel bleibt das
    hier eine Webseite; mit ihnen ist es ein Werkzeug. */
 addEventListener('keydown',e=>{
+  // Ohne Sitzung gilt kein Kürzel. Auf der Freigabeseite ist nichts
+  // fokussiert, also griffen sie alle: „f" las den Zustand, den es noch
+  // nicht gab, „n" zog den Cursor in ein verstecktes Feld, und die Ziffern
+  // klickten Reiter in der unsichtbaren Anwendung an — jeder Klick eine
+  // Anfrage, die der Server mit 401 abweist. Dieselbe Bedingung wie in
+  // `sync()`, damit es nur eine Wahrheit gibt.
+  if($('#app').classList.contains('hide')) return;
   if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey) return;
   if($('#dlg').open) return;
   // Die Zifferntasten kommen aus TABS, nicht aus einer zweiten Liste: Sonst

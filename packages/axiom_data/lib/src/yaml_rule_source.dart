@@ -5,7 +5,9 @@
 /// ignorierte Regel schlimmer als ein Absturz.
 ///
 /// Overlay-Semantik: gleiche `id` aus `personal` ersetzt `core` vollstaendig,
-/// neue IDs werden additiv geladen.
+/// neue IDs werden additiv geladen. Innerhalb EINER Quelle ist eine doppelte
+/// `id` dagegen ein Fehler und kein Overlay — sonst verschwindet dort eine
+/// Regel, ohne dass es jemand meldet.
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -62,12 +64,30 @@ final class YamlRuleSource implements RuleSource {
       }
       if (doc is! YamlList) continue; // limits.yaml / weights.yaml
 
+      // IDs werden je Quelle gezaehlt, nicht ueber alle: Dass eine spaetere
+      // DATEI eine fruehere Regel ersetzt, ist die Overlay-Semantik. Zweimal
+      // dieselbe ID in EINEM Dokument ist dagegen ein Fehler — vorher gewann
+      // dort still der letzte Eintrag. Damit liess sich die Schattenzeit
+      // umgehen (erster Eintrag stumm fuer die Vorpruefung, zweiter laut),
+      // und in `rules/` verschwand eine Regel spurlos. Eine stumm ignorierte
+      // Regel ist schlimmer als ein Absturz (CLAUDE.md, Fail-Fast).
+      final seen = <String>{};
+
       for (final node in doc) {
         if (node is! YamlMap) {
           issues.add(RuleLoadIssue(entry.key, '-', 'Eintrag ist keine Map'));
           continue;
         }
         final id = node['id']?.toString() ?? '<ohne id>';
+        if (!seen.add(id)) {
+          issues.add(RuleLoadIssue(
+            entry.key,
+            id,
+            'id bereits vergeben. IDs werden nie wiederverwendet, auch '
+            'nicht innerhalb einer Datei.',
+          ));
+          continue;
+        }
         try {
           byId[id] = _toRule(node);
         } on ConditionError catch (e) {

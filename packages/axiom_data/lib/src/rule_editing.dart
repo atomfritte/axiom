@@ -18,6 +18,7 @@ import 'package:axiom_core/axiom_core.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'sqlite_event_store.dart';
+import 'yaml_rule_source.dart';
 
 /// Eine im Gerät bearbeitete Regel.
 final class RuleOverride {
@@ -128,16 +129,44 @@ extension RuleOverrideStore on SqliteEventStore {
 
 /// Setzt die Aktion auf `log_only`, ohne den Rest anzutasten.
 ///
-/// Am Text und nicht am Objekt, damit die gespeicherte Fassung genau die
-/// bleibt, die nach Ablauf der Schattenzeit live geht — sonst müsste man sich
-/// merken, was die Regel „eigentlich" tun sollte.
-String _forceShadow(String yaml) => yaml.replaceFirstMapped(
-      RegExp(r'^(\s*)action:.*$', multiLine: true),
-      // replaceFirst ersetzt Gruppen NICHT — mit der String-Fassung stand
-      // hier woertlich "$1action: log_only" im YAML, und die Regel liess
-      // sich nicht mehr laden. Eine Schattenregel, die dabei verschwindet,
-      // ist das Gegenteil dessen, wofuer der Schatten da ist.
-      (m) => '${m.group(1)}action: log_only',
+/// Am geparsten Objekt und nicht am Text. Vorher stand hier eine
+/// Zeilenersetzung (`^(\s*)action:.*$`, `replaceFirst`), und die hatte zwei
+/// Folgen: Eine im Flow-Stil geschriebene Regel (`then: { action: notify }`
+/// — im Regelwerk voellig ueblich und im Rohtext-Modus des Expertenmodus
+/// erlaubt) wurde gar nicht getroffen und sprach ab Tag 0, obwohl die
+/// Datenbank Schattenzeit meldete und die Oberflaeche sieben stumme Tage
+/// zusagte. Und stand irgendwo davor eine Zeile, die mit `action:` beginnt
+/// — etwa in einem umbrochenen `rationale`-Block —, schrieb die Ersetzung
+/// die Begruendung um statt die Aktion: Die Regel blieb laut, und ihr im
+/// Systeminspektor sichtbarer Grund war verfaelscht (G2).
+///
+/// Ueber das Objekt gibt es keine Schreibweise, die daran vorbeikommt: Was
+/// gespeichert ist, bleibt gespeichert; nur die Ausgabe fuer den Lader wird
+/// gedaempft, und nach Ablauf der Schattenzeit geht wieder der Rohtext raus.
+String _forceShadow(String yaml) {
+  final parsed = YamlRuleSource({'Schattenzeit': yaml}).parse();
+  // Laesst sich gar nichts als Regel lesen, bleibt der Text woertlich
+  // stehen: Dann meldet der Lader denselben Fehler wie sonst auch und laedt
+  // nichts — eine still zurechtgebogene Regel waere schlimmer.
+  if (parsed.rules.isEmpty) return yaml;
+  return rulesToYaml(parsed.rules.map(_silenced));
+}
+
+/// Dieselbe Regel, aber stumm. Die Parameter bleiben stehen, damit nach der
+/// Schattenzeit nichts nachgetragen werden muss.
+Rule _silenced(Rule rule) => Rule(
+      id: rule.id,
+      title: rule.title,
+      rationale: rule.rationale,
+      deficit: rule.deficit,
+      when: rule.when,
+      then: Action(ActionType.logOnly, rule.then.params),
+      priority: rule.priority,
+      severity: rule.severity,
+      cooldown: rule.cooldown,
+      enabled: rule.enabled,
+      titleTranslations: rule.titleTranslations,
+      rationaleTranslations: rule.rationaleTranslations,
     );
 
 // ── Serialisierung ──────────────────────────────────────────────────────
@@ -243,6 +272,13 @@ String _flow(Map<String, Object?> map) =>
 
 String _scalar(Object? value) {
   if (value is num || value is bool) return '$value';
+  // Vorher fielen Listen und Maps in die String-Interpolation unten: Aus
+  // `pool: [sport, kaelte]` wurde `pool: "[sport, kaelte]"`, und der
+  // Parameter kam als Zeichenkette zurueck. Der Text parste fehlerfrei,
+  // also meldete niemand etwas — und beim Zurueckkopieren nach `rules/`
+  // waere der Typverlust dauerhaft im versionierten Regelwerk gelandet.
+  if (value is List) return '[${value.map(_scalar).join(', ')}]';
+  if (value is Map) return _flow(value.cast<String, Object?>());
   final text = '$value';
   // Unquotiert nur, wo YAML es garantiert wieder als String liest.
   return RegExp(r'^[A-Za-z][A-Za-z0-9_.-]*$').hasMatch(text)

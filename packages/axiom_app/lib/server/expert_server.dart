@@ -36,6 +36,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
@@ -111,12 +112,36 @@ final class _AuthRequest {
 /// nicht gibt, nicht.
 final class _Invalid implements Exception {
   final String message;
-  _Invalid(this.message);
+
+  /// Welcher Status zu dieser Ablehnung gehört. 400 ist der Normalfall —
+  /// ein zu großer oder ausbleibender Rumpf ist etwas anderes als ein
+  /// falscher Wert, und wer die Antwort liest, soll das unterscheiden
+  /// können.
+  final int status;
+
+  _Invalid(this.message, {this.status = 400});
 }
 
 
 /// Wie lange der Server ohne Anfrage weiterläuft.
 const Duration kExpertIdleTimeout = Duration(minutes: 30);
+
+/// Größter Anfragerumpf, den der Server annimmt.
+///
+/// Das größte legitime Feld ist `yaml` mit 20 000 Zeichen; 64 KB lassen
+/// dafür reichlich Luft. Vorher las [ExpertServer._body] ohne Grenze und
+/// ohne Frist: Eine einzige unangemeldete `POST /api/login` mit
+/// angekündigtem, aber nie gesendetem Rumpf hielt die Anfrageschleife an —
+/// sie arbeitet eine Anfrage nach der anderen ab — und legte damit den
+/// ganzen Server still. Derselbe ungedeckelte Lesevorgang sammelte den
+/// Rumpf zudem als einen String im Speicher, bis Android die App beendet.
+const int kExpertMaxBodyBytes = 64 * 1024;
+
+/// So lange darf ein Rumpf zum Eintreffen brauchen.
+///
+/// Über das lokale Netz sind 64 KB augenblicklich da. Wer langsamer
+/// sendet, hält nach dieser Frist niemanden mehr auf.
+const Duration kExpertBodyTimeout = Duration(seconds: 10);
 
 /// Nach so vielen falschen PINs schaltet er sich ab.
 const int kExpertMaxAttempts = 5;
@@ -248,6 +273,9 @@ final class ExpertServer {
     _idleStopAt = null;
     _sessions.clear();
     _pin = null;
+    // Sonst buchte der erste Aufruf nach einem Neustart die Pause dazwischen
+    // als Nutzungszeit.
+    _lastBrowserRequestAt = null;
     // Ein Abschied mit Grund. Die Seite kann dann „Server beendet" statt
     // „Verbindung verloren" zeigen — das eine ist Absicht, das andere ein
     // Problem, und wer den Unterschied nicht sieht, sucht einen Fehler, den
@@ -278,7 +306,7 @@ final class ExpertServer {
       } on _Invalid catch (e) {
         // Eine abgelehnte Eingabe ist ein Ergebnis, kein Serverfehler: Sie
         // nennt ihren Grund und hat nichts geändert.
-        _json(request, 400, {'error': e.message});
+        _json(request, e.status, {'error': e.message});
       } on Object catch (e) {
         // Ein Fehler in einer Anfrage darf den Server nicht mitnehmen —
         // sonst ist der Expertenmodus nach dem ersten Tippfehler weg.
@@ -425,10 +453,10 @@ final class ExpertServer {
       .line { stroke: #ECEAE4 } .bar { stroke: #E8A33D }
     }
     @media (prefers-color-scheme: light) {
-      .line { stroke: #15181B } .bar { stroke: #9A6510 }
+      .line { stroke: #15181B } .bar { stroke: #966210 }
     }
   </style>
-  <path class="line" d="M3 13h7M12 13h7" stroke="#7A848B" stroke-width="2"/>
+  <path class="line" d="M3 13h7M12 13h7" stroke="#838D93" stroke-width="2"/>
   <path class="bar" d="M10 3v16" stroke="#B8761F" stroke-width="4"/>
 </svg>
 ''';
@@ -565,6 +593,7 @@ final class ExpertServer {
 
     final segments = request.uri.pathSegments;
     final runtime = await resolveRuntime();
+    await _bookBrowserTime(runtime);
 
     switch ((request.method, segments)) {
       case ('GET', ['api', 'state']):
@@ -656,10 +685,20 @@ final class ExpertServer {
         return _json(request, 200,
             await _preview(runtime, _requiredText(body, 'yaml', max: 20000)));
 
+      // ── Regeln schreiben — beide hinter demselben Deckel ─────────────
+      //
+      // Der Deckel stand bisher nur im Browser (`S.configLocked` schaltet
+      // dort die Knöpfe ab). Eine Anfrage, die diesen Client nicht benutzt,
+      // ging vorbei — und der Editor, der offen war, als das Budget vollief,
+      // erfuhr davon ohnehin nie. Am Telefon prüft `showRuleEditor` vor
+      // jedem Öffnen; hier gilt dasselbe, nur an der Stelle, an der es sich
+      // nicht umgehen lässt (G4).
       case ('PUT', ['api', 'rules', final id]):
+        if (await _configLocked(request, runtime)) return;
         return _putRule(request, runtime, id);
 
       case ('DELETE', ['api', 'rules', final id]):
+        if (await _configLocked(request, runtime)) return;
         runtime.store.deleteRuleOverride(id);
         onChanged();
         return _json(request, 200, {'ok': true});
@@ -970,13 +1009,25 @@ final class ExpertServer {
     _touch();
     final now = DateTime.now();
     final open = _pending;
-    if (open != null &&
-        !open.isExpired(now) &&
-        now.difference(open.at) < const Duration(seconds: 3)) {
-      // Zu schnell hintereinander: Sonst laesst sich die Zahl erraten,
-      // indem man sie oft genug neu wuerfelt, bis eine passt, die gerade
-      // auf dem Telefon steht.
-      return _json(request, 429, {'error': 'Zu schnell. Kurz warten.'});
+    if (open != null && !open.isExpired(now)) {
+      // Eine offene Anfrage wird nicht verdraengt.
+      //
+      // Vorher galt hier nur eine Drei-Sekunden-Sperre: Danach ersetzte
+      // jeder unangemeldete Aufrufer `_pending` bedingungslos. Wer im selben
+      // Netz mitpollte, konnte damit die Anfrage des Nutzers gegen die
+      // eigene austauschen, waehrend dieser die Zahl vom Bildschirm zum
+      // Telefon trug — der Tap auf „Freigeben" gab dann die fremde Anfrage
+      // frei, und der eigene Browser sah nur „Abgelaufen". Der
+      // Zahlenabgleich ist die einzige Anmeldung fuer Gesundheitsdaten; er
+      // traegt nur, wenn die Anfrage, die der Nutzer vergleicht, bis zu
+      // seiner Antwort dieselbe bleibt (ADR-0005 §3a).
+      //
+      // Das ist zugleich die Zusage im Feldkommentar oben: Es gibt genau
+      // **eine** offene Anfrage. Sie geht mit der Antwort weg oder verfaellt
+      // nach neunzig Sekunden — laenger blockiert niemand.
+      return _json(request, 429, {
+        'error': 'Es ist schon eine Anfrage offen. Kurz warten.',
+      });
     }
     final random = Random.secure();
     _pending = _AuthRequest(
@@ -1029,9 +1080,18 @@ final class ExpertServer {
   }
 
   /// Aus der App heraus: freigeben oder ablehnen.
-  void resolvePending({required bool approve}) {
+  ///
+  /// [number] ist die Zahl, die auf dem Telefon stand, als der Nutzer
+  /// entschieden hat. Stimmt sie nicht mit der offenen Anfrage ueberein,
+  /// passiert nichts: Freigegeben wird, was verglichen wurde — nicht, was
+  /// gerade offen ist. Der Aufrufer hat sie ohnehin zur Hand
+  /// ([ExpertStatus.pendingNumber] wird angezeigt); wer sie nicht mitgibt,
+  /// verlaesst sich darauf, dass eine offene Anfrage nicht mehr verdraengt
+  /// werden kann (siehe [_requestApproval]).
+  void resolvePending({required bool approve, String? number}) {
     final open = _pending;
     if (open == null || open.isExpired(DateTime.now())) return;
+    if (number != null && number != open.number) return;
     if (approve) {
       open.approved = true;
     } else {
@@ -1042,6 +1102,39 @@ final class ExpertServer {
       if (_failedAttempts >= kExpertMaxAttempts) unawaited(stop());
     }
     onChanged();
+  }
+
+  /// Wann zuletzt eine angemeldete Anfrage kam — die Grundlage der Buchung.
+  DateTime? _lastBrowserRequestAt;
+
+  /// Größter Abstand, der noch als zusammenhängende Nutzung gilt.
+  ///
+  /// Die Weboberfläche meldet sich von selbst spätestens jede Minute; ein
+  /// größerer Abstand ist kein Arbeiten, sondern ein Reiter, zu dem jemand
+  /// zurückkehrt.
+  static const _browserBookingGap = Duration(minutes: 2);
+
+  /// Bucht die im Browser verbrachte Zeit auf das Meta-Work-Budget (M12).
+  ///
+  /// **Warum das hier stehen muss.** G4 ist laut CLAUDE.md das wichtigste
+  /// Gesetz dieses Projekts, und der Expertenmodus ist die Fläche, auf der
+  /// sich am leichtesten Stunden am System statt an der Arbeit verbringen
+  /// lassen (D3, R1). Gebucht wurde bisher ausschließlich in `dispose()`
+  /// der Telefon-Bildschirme — wer im Browser arbeitete, während das Telefon
+  /// auf „Jetzt" lag, verbrauchte null Sekunden Budget. Der Deckel ließ sich
+  /// damit nicht umgehen, sondern schlicht nie vollaufen.
+  ///
+  /// Gemessen wird der Abstand zwischen zwei angemeldeten Anfragen, nicht
+  /// eine Sitzungsdauer: Ein Reiter, der gestern offen blieb, ist keine
+  /// Nutzung, und der Server weiß nicht, wann jemand aufhört.
+  Future<void> _bookBrowserTime(AxiomRuntime runtime) async {
+    final now = runtime.clock.nowLocal();
+    final last = _lastBrowserRequestAt;
+    _lastBrowserRequestAt = now;
+    if (last == null) return;
+    final spent = now.difference(last);
+    if (spent <= Duration.zero || spent > _browserBookingGap) return;
+    await runtime.logScreenTime('expert-web', spent);
   }
 
   bool _authorised(HttpRequest request) {
@@ -1097,14 +1190,17 @@ final class ExpertServer {
           // Fokusfenster mitgeschlossen wird.
           await runtime.releaseTask(task);
         case TaskState.inbox || TaskState.blocked:
-          // Für diese beiden gibt es keinen Laufzeitweg. Sie sind
-          // Ablagezustände ohne Folgewirkung.
-          await runtime.store.upsertTask(task.copyWith(state: target));
+          // Für diese beiden gibt es keinen eigenen Laufzeitweg — ein
+          // Ablagezustand hat keine Folgewirkung. Ein Ereignis braucht er
+          // trotzdem: Ohne eines kam eine als zerlegt markierte Aufgabe nach
+          // dem nächsten Wiederaufbau als `ready` zurück und stand wieder
+          // zur Wahl.
+          await runtime.amendTask(task.copyWith(state: target));
       }
     }
 
     final updated = (await runtime.store.tasks()).firstWhere((t) => t.id == id);
-    await runtime.store.upsertTask(updated.copyWith(
+    final amended = updated.copyWith(
       // Ein leerer Titel wäre kein „unverändert", sondern eine Aufgabe
       // ohne Namen — `copyWith` unterscheidet nur gegen null.
       title: _text(body, 'title', max: 500),
@@ -1122,7 +1218,22 @@ final class ExpertServer {
           ? _clamp(body['stakes'], 1, 10, updated.stakes)
           : null,
       decayAt: _date(body, 'decayAt'),
-    ));
+    );
+    // Über die Laufzeit, nicht über den Speicher.
+    //
+    // Hier stand `runtime.store.upsertTask(...)` — die Projektion wurde
+    // geschrieben, ein Ereignis nicht. `rebuildProjections()` baut `tasks`
+    // aber allein aus dem Strom: Nach dem nächsten Vault-Import standen
+    // Titel, Anlaufenergie, Salienz, Stakes und Frist wieder auf dem Stand
+    // der Anlage, und im Export waren sie nie enthalten. Es war der einzige
+    // `upsertTask`-Aufruf der App ohne passendes Ereignis.
+    //
+    // Nur bei echter Änderung: Ein PATCH, der allein den Zustand wechselt,
+    // hat seinen Weg schon gemacht — eine zusätzliche Korrektur erzählte
+    // eine Änderung, die es nicht gab.
+    if (_differs(updated, amended)) {
+      await runtime.amendTask(amended);
+    }
     onChanged();
 
     final after = await runtime.store.tasks();
@@ -1136,6 +1247,17 @@ final class ExpertServer {
     );
     return _json(request, 200, _task(result, _childCounts(after), graph));
   }
+
+  /// Unterscheiden sich die Felder, die ein PATCH ändern kann?
+  ///
+  /// `Task` hat kein `==`; ein Vergleich der ganzen Aufgabe wäre hier
+  /// ohnehin falsch, weil der Zustandswechsel seinen eigenen Weg geht.
+  static bool _differs(Task before, Task after) =>
+      before.title != after.title ||
+      before.activationEnergy != after.activationEnergy ||
+      before.salience != after.salience ||
+      before.stakes != after.stakes ||
+      before.decayAt != after.decayAt;
 
   /// Die Detailansicht: eine Aufgabe mit allem, was um sie herum hängt.
   ///
@@ -1251,6 +1373,20 @@ final class ExpertServer {
     await runtime.unlinkBlocker(blockerId: blockerId, blockedId: blockedId);
     onChanged();
     return _json(request, 200, {'ok': true});
+  }
+
+  /// Antwortet mit 423, wenn das Tagesbudget aufgebraucht ist — und sagt
+  /// dann `true`, damit der Aufrufer nicht weiterschreibt.
+  ///
+  /// Mit Regel-ID, wie jede Ausgabe (G2). Kein Vorwurf, keine Wertung: Der
+  /// Deckel ist Schutz vor der Meta-Work-Falle, keine Strafe (D3).
+  Future<bool> _configLocked(HttpRequest request, AxiomRuntime runtime) async {
+    if (!await runtime.isConfigLocked()) return false;
+    _json(request, HttpStatus.locked, {
+      'error': 'Regelwerk heute zu — das Tagesbudget ist aufgebraucht.',
+      'rule': 'R-010',
+    });
+    return true;
   }
 
   Future<void> _putRule(
@@ -1631,6 +1767,14 @@ final class ExpertServer {
 
   // ── Abbildung nach JSON ───────────────────────────────────────────────
 
+  /// Die Sprache des Geräts — derselbe Rückfall, den `LanguageChoice.build`
+  /// in der App nimmt, solange nie eine Sprache gewählt wurde.
+  ///
+  /// Steht hier als eigener Ausdruck und nicht als zweite Ableitung: Wer
+  /// die eine Seite ändert, findet über diesen Kommentar die andere.
+  static AppLanguage get _deviceLanguage =>
+      AppLanguage.fromLocale(PlatformDispatcher.instance.locale);
+
   Future<Map<String, Object?>> _state(AxiomRuntime runtime) async {
     final snapshot = await runtime.evaluate();
     final state = snapshot.state;
@@ -1653,7 +1797,15 @@ final class ExpertServer {
       // verschieden. Bis diese Antwort da ist — also auf dem
       // Anmeldebildschirm — nimmt die Seite die Browsersprache als beste
       // verfuegbare Vermutung.
-      'language': runtime.language ?? AppLanguage.de.code,
+      //
+      // Der Rueckfall war fest `de`. Die App faellt in demselben Fall aber
+      // auf die Geraetesprache zurueck (`LanguageChoice.build`), und
+      // persistiert wird erst, wenn jemand unter System → Anzeige tippt: Auf
+      // einem englisch eingestellten Telefon sprach die App Englisch und
+      // diese Antwort Deutsch — zwei Vorgaben fuer dieselbe Frage, genau
+      // das, was der Absatz darueber ausschliesst. Hier steht deshalb
+      // dieselbe Aufloesung wie dort.
+      'language': runtime.language ?? _deviceLanguage.code,
       'values': {
         for (final variable in RuleVocabulary.numerics)
           if (ctx.numeric(variable.id) != null)
@@ -2052,8 +2204,46 @@ final class ExpertServer {
 
   // ── Kleinkram ─────────────────────────────────────────────────────────
 
+  /// Liest den Anfragerumpf — gedeckelt und mit Frist.
+  ///
+  /// **Warum die angekündigte Länge zuerst geprüft wird.** Ein Aufrufer, der
+  /// eine Million Bytes ankündigt, wird abgelehnt, *bevor* ein einziges Byte
+  /// gelesen wird. Vorher stand hier `utf8.decoder.bind(request).join()`
+  /// ohne beides: Der Aufruf wartete unbegrenzt auf einen Rest, der nie kam,
+  /// und weil die Anfrageschleife eine Anfrage nach der anderen abarbeitet,
+  /// nahm der Server danach keine weitere mehr an — unangemeldet auslösbar
+  /// über `POST /api/login`. Fail-Fast wie überall: Eine abgelehnte Anfrage
+  /// ist billiger als eine, die stumm alles anhält.
   Future<Map<String, Object?>> _body(HttpRequest request) async {
-    final text = await utf8.decoder.bind(request).join();
+    final announced = request.contentLength;
+    if (announced > kExpertMaxBodyBytes) {
+      throw _Invalid(
+        'Rumpf zu groß: $announced Bytes, erlaubt sind $kExpertMaxBodyBytes',
+        status: HttpStatus.requestEntityTooLarge,
+      );
+    }
+
+    // Und noch einmal beim Lesen: Ohne `Content-Length` (Chunked) ist die
+    // Ankündigung -1, und eine falsche Ankündigung ist ohnehin keine Zusage.
+    final bytes = <int>[];
+    try {
+      await request.forEach((chunk) {
+        bytes.addAll(chunk);
+        if (bytes.length > kExpertMaxBodyBytes) {
+          throw _Invalid(
+            'Rumpf zu groß: mehr als $kExpertMaxBodyBytes Bytes',
+            status: HttpStatus.requestEntityTooLarge,
+          );
+        }
+      }).timeout(kExpertBodyTimeout);
+    } on TimeoutException {
+      throw _Invalid(
+        'Der Rumpf kam nicht vollständig an',
+        status: HttpStatus.requestTimeout,
+      );
+    }
+
+    final text = utf8.decode(bytes, allowMalformed: true);
     if (text.trim().isEmpty) return {};
     final decoded = jsonDecode(text);
     return decoded is Map<String, Object?> ? decoded : {};

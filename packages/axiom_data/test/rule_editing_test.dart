@@ -5,14 +5,31 @@
 /// Regelwerk zwei Wahrheiten, und G2 haengt daran, dass es eine gibt.
 library;
 
+import 'dart:io';
+
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:test/test.dart';
+
+/// Das echte ausgelieferte Regelwerk — kein Mock.
+/// Der Round-Trip wird an ihm gemessen, nicht an einem Wunschbeispiel.
+Map<String, String> shippedRules() {
+  final dir = Directory('../../rules/core');
+  if (!dir.existsSync()) return {};
+  return {
+    for (final file in dir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.yaml')))
+      file.path.split('/').last: file.readAsStringSync(),
+  };
+}
 
 Rule sample({
   String id = 'R-900',
   ActionType action = ActionType.notify,
   bool enabled = true,
+  Map<String, Object?> params = const {'text': 'Kleines zuerst.'},
 }) =>
     Rule(
       id: id,
@@ -38,7 +55,7 @@ Rule sample({
           },
         ]
       }),
-      then: Action(action, const {'text': 'Kleines zuerst.'}),
+      then: Action(action, params),
       priority: 60,
       severity: Severity.nudge,
       cooldown: const Cooldown(
@@ -91,6 +108,50 @@ void main() {
       // Sonst zeigt ein Diff im Regelwerk Aenderungen, die keine sind.
       final once = ruleToYaml(sample());
       expect(ruleToYaml(reparse(once)), once);
+    });
+
+    test('Listen und Maps in params behalten ihren Typ', () {
+      // Eine Liste, die als Zeichenkette zurueckkommt, parst fehlerfrei und
+      // ist trotzdem kaputt — genau die stumme Sorte Verlust, die der
+      // Round-Trip ausschliessen soll.
+      final original = sample(
+        action: ActionType.suggestSlot,
+        params: const {
+          'pool': ['sport', 'kaelte', 'musik_laut'],
+          'duration_min': 30,
+          'grenze': {'lt': 3},
+        },
+      );
+      final params = reparse(ruleToYaml(original)).then.params;
+
+      expect(params['pool'], isA<List<Object?>>());
+      expect(params['pool'], ['sport', 'kaelte', 'musik_laut']);
+      expect(params['duration_min'], 30);
+      expect(params['grenze'], {'lt': 3});
+    });
+  });
+
+  group('Round-Trip mit dem ausgelieferten Regelwerk', () {
+    test('kein Parameter wechselt dabei seinen Typ', () {
+      final sources = shippedRules();
+      if (sources.isEmpty) {
+        markTestSkipped('rules/core nicht gefunden');
+        return;
+      }
+      final rules = YamlRuleSource(sources).parse().rules;
+      expect(rules, isNotEmpty);
+
+      for (final rule in rules) {
+        final again = reparse(ruleToYaml(rule));
+        // Map-Gleichheit prueft tief und typgenau: "[a, b]" ist nicht [a, b].
+        expect(again.then.params, rule.then.params, reason: rule.id);
+        expect(again.when.toMap(), rule.when.toMap(), reason: rule.id);
+        // Getrimmt verglichen: `_folded` schreibt bewusst `>-` und laesst den
+        // Zeilenumbruch weg, den `>` im Regelwerk anhaengt. Der Text selbst
+        // muss stimmen, der Umbruch dahinter ist keiner.
+        expect(again.rationale.trim(), rule.rationale.trim(), reason: rule.id);
+        expect(again.severity, rule.severity, reason: rule.id);
+      }
     });
   });
 
@@ -169,6 +230,120 @@ void main() {
       expect(live.isShadow, isFalse);
       expect(live.then.type, ActionType.notify,
           reason: 'nach Ablauf gilt wieder, was gespeichert wurde');
+    });
+
+    // Die Schattenzeit ist das einzige Versprechen, das der Editor dem
+    // Nutzer gibt ("laeuft zuerst sieben Tage stumm mit"). Sie darf an
+    // keiner Schreibweise haengen — deshalb hier die Formen, die ein
+    // handgeschriebener Regeltext annimmt.
+    test('auch im Flow-Stil spricht die Regel im Schatten nicht', () {
+      final now = DateTime(2026, 8, 3);
+      store.saveRuleOverride(
+        id: 'R-902',
+        yaml: '''
+- id: R-902
+  title: "Von Hand im Rohtext geschrieben"
+  deficit: D2
+  rationale: >-
+    Flow-Stil ist im Regelwerk ueblich, und der Rohtext-Modus des
+    Expertenmodus laesst ihn durch — er darf keine Abkuerzung sein.
+  when: { capacity: { lt: 100 } }
+  then: { action: notify, params: { text: "jetzt" } }
+  priority: 60
+  severity: intervene
+  cooldown: { minutes: 60 }
+''',
+        overridesShipped: false,
+        updatedAt: now,
+        shadowUntil: now.add(kShadowPeriod),
+      );
+
+      final shadowed = YamlRuleSource({
+        'overrides.yaml': store.overrideDocument(now),
+      }).parse().rules.single;
+      expect(shadowed.isShadow, isTrue,
+          reason: 'Der Expertenmodus sagt sieben stumme Tage zu.');
+
+      final live = YamlRuleSource({
+        'overrides.yaml': store.overrideDocument(now.add(const Duration(days: 8))),
+      }).parse().rules.single;
+      expect(live.then.type, ActionType.notify);
+      expect(live.then.params['text'], 'jetzt',
+          reason: 'nach Ablauf gilt wieder, was gespeichert wurde');
+    });
+
+    test('eine Begruendung, die wie eine Aktion aussieht, bleibt unangetastet',
+        () {
+      final now = DateTime(2026, 8, 3);
+      store.saveRuleOverride(
+        id: 'R-903',
+        yaml: '''
+- id: R-903
+  title: "Begruendung mit Doppelpunkt"
+  deficit: D2
+  rationale: |
+    Warum diese Regel spricht:
+    action: notify passt hier, weil der Abend sonst kippt und das
+    Nachdenken dann teuer wird.
+  when: { capacity: { lt: 100 } }
+  then:
+    action: notify
+  priority: 60
+  severity: intervene
+  cooldown: { minutes: 60 }
+''',
+        overridesShipped: false,
+        updatedAt: now,
+        shadowUntil: now.add(kShadowPeriod),
+      );
+
+      final shadowed = YamlRuleSource({
+        'overrides.yaml': store.overrideDocument(now),
+      }).parse().rules.single;
+      expect(shadowed.isShadow, isTrue);
+      expect(shadowed.rationale, contains('passt hier'),
+          reason: 'Die Begruendung ist Nutzertext (G2) und keine Aktion.');
+    });
+
+    test('ein zweiter Eintrag mit derselben ID hebt den Schatten nicht auf', () {
+      final now = DateTime(2026, 8, 3);
+      store.saveRuleOverride(
+        id: 'R-904',
+        yaml: '''
+- id: R-904
+  title: "Der Koeder"
+  deficit: D2
+  rationale: >-
+    Erster Eintrag, stumm — damit die Vorschau nichts zu beanstanden hat
+    und die Waechterpruefung genau eine Regel zaehlt.
+  when: { capacity: { lt: 100 } }
+  then:
+    action: log_only
+  priority: 10
+  severity: nudge
+  cooldown: { minutes: 120 }
+- id: R-904
+  title: "Die zweite Fassung"
+  deficit: D2
+  rationale: >-
+    Zweiter Eintrag mit derselben ID — er darf die erste nicht stumm
+    verdraengen und schon gar nicht den Schatten aushebeln.
+  when: { capacity: { lt: 100 } }
+  then:
+    action: notify
+  priority: 90
+  severity: intervene
+  cooldown: { minutes: 1 }
+''',
+        overridesShipped: false,
+        updatedAt: now,
+        shadowUntil: now.add(kShadowPeriod),
+      );
+
+      final loaded = YamlRuleSource({
+        'overrides.yaml': store.overrideDocument(now),
+      }).parse().rules.single;
+      expect(loaded.isShadow, isTrue);
     });
 
     test('Loeschen stellt die mitgelieferte Fassung wieder her', () {

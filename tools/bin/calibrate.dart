@@ -12,14 +12,61 @@
 /// Korrelationen, Perzentile. Kein Modell, kein Lernen. Bei einem Nutzer
 /// und 14 Tagen wäre alles andere Zahlenmystik — und ein Systemizer merkt
 /// das sofort.
+///
+/// Aufbau: `main()` macht ausschliesslich I/O, die Auswertung ist eine
+/// reine Funktion (`calibrationReport`). Nur so laesst sich pruefen, dass
+/// ein Werkzeug, das Zahlen zum Eichen einer Formel vorschlaegt, die
+/// richtigen Zahlen vorschlaegt (tools/test/calibrate_test.dart).
 library;
 
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:axiom_core/axiom_core.dart';
+
 /// Mindestanzahl Tage, bevor eine Aussage tragfähig ist.
 const int kMinimumDays = 14;
+
+/// Welche Ereignisse die Kalibrierung liest.
+///
+/// Als `EventType`, nicht als Zeichenkette: Der Store schreibt
+/// `event.type.name` (`sqlite_event_store.dart`, `INSERT INTO events`), also
+/// `sleepWindow` und nicht `sleep_window`. Vorher standen hier von Hand
+/// getippte Namen in Schlangenschrift; drei der sechs trafen deshalb nie zu,
+/// und der Abschnitt „Schlaf und Kapazität" — der Vorschlag fuer den
+/// groessten Einzelfaktor der Kapazitaetsformel — meldete auch nach Jahren
+/// „Nur 0 Nächte erfasst". Ueber das Enum kann derselbe Fehler nicht
+/// wiederkommen: ein falscher Name uebersetzt nicht mehr.
+///
+/// `sensationSlot`, `focusEnd` und `taskCompleted` werden nicht ausgewertet,
+/// aber mitgelesen: Sie tragen den gemessenen Zeitraum (`Zeitraum: n Tage`)
+/// auch dann, wenn an einem Tag nur gearbeitet und nicht eingecheckt wurde.
+const Set<EventType> kAnalysedTypes = {
+  EventType.checkin,
+  EventType.sleepWindow,
+  EventType.sensationSlot,
+  EventType.focusEnd,
+  EventType.capture,
+  EventType.taskCompleted,
+};
+
+/// Ein Ereignis in der Form, die die Auswertung braucht.
+///
+/// `at` ist lokale Zeit — die Tagesrhythmus-Auswertung fragt nach der
+/// Stunde, und die Stunde, die zaehlt, ist die auf der Uhr des Nutzers.
+typedef CalibrationEvent = ({
+  DateTime at,
+  String type,
+  Map<String, Object?> payload,
+});
+
+/// Die Abfrage, mit der die Ereignisse geholt werden.
+String eventQuery() {
+  final types = kAnalysedTypes.map((t) => "'${t.name}'").join(',');
+  return 'SELECT at, type, payload FROM events '
+      'WHERE type IN ($types) ORDER BY at ASC';
+}
 
 void main(List<String> args) {
   if (args.isEmpty) {
@@ -41,62 +88,72 @@ void main(List<String> args) {
 
   // sqlite3 als Kommandozeilenwerkzeug — spart dem Tool eine Abhängigkeit,
   // die nur hier gebraucht würde.
-  final result = Process.runSync('sqlite3', [
-    path,
-    '-json',
-    "SELECT at, type, payload FROM events "
-        "WHERE type IN ('checkin','sleep_window','sensation_slot',"
-        "'focus_end','capture','task_completed') ORDER BY at ASC",
-  ]);
+  final result = Process.runSync('sqlite3', [path, '-json', eventQuery()]);
   if (result.exitCode != 0) {
     stderr.writeln('sqlite3 fehlgeschlagen: ${result.stderr}');
     exit(1);
   }
 
-  final raw = (result.stdout as String).trim();
-  if (raw.isEmpty) {
-    stdout.writeln('Keine auswertbaren Ereignisse gefunden.');
-    exit(0);
+  for (final line in calibrationReport(decodeEvents(result.stdout as String))) {
+    stdout.writeln(line);
+  }
+}
+
+/// Wandelt die JSON-Ausgabe von `sqlite3 -json` in Ereignisse.
+///
+/// Fail-Fast wie im Kern: Eine Zeile, die nicht passt, wird nicht
+/// uebersprungen. Eine stumm verworfene Nacht verschiebt den Vorschlag,
+/// ohne dass jemand es sieht.
+List<CalibrationEvent> decodeEvents(String json) {
+  final raw = json.trim();
+  if (raw.isEmpty) return const [];
+  return (jsonDecode(raw) as List).cast<Map<String, Object?>>().map((row) {
+    final payload = jsonDecode(row['payload']! as String) as Map;
+    return (
+      at: DateTime.fromMillisecondsSinceEpoch(
+        row['at']! as int,
+        isUtc: true,
+      ).toLocal(),
+      type: row['type']! as String,
+      payload: payload.cast<String, Object?>(),
+    );
+  }).toList();
+}
+
+/// Die Auswertung. Rein: gleiche Ereignisse, gleiche Zeilen.
+List<String> calibrationReport(List<CalibrationEvent> events) {
+  final out = <String>[];
+  if (events.isEmpty) {
+    out.add('Keine auswertbaren Ereignisse gefunden.');
+    return out;
   }
 
-  final events = (jsonDecode(raw) as List)
-      .cast<Map<String, Object?>>()
-      .map((row) => (
-            at: DateTime.fromMillisecondsSinceEpoch(row['at']! as int,
-                isUtc: true).toLocal(),
-            type: row['type']! as String,
-            payload: (jsonDecode(row['payload']! as String) as Map)
-                .cast<String, Object?>(),
-          ))
-      .toList();
+  final days = events.last.at.difference(events.first.at).inDays + 1;
 
-  final days = events.isEmpty
-      ? 0
-      : events.last.at.difference(events.first.at).inDays + 1;
-
-  stdout.writeln('═══ AXIOM Kalibrierung ═══');
-  stdout.writeln('');
-  stdout.writeln('Zeitraum:   $days Tage');
-  stdout.writeln('Ereignisse: ${events.length}');
-  stdout.writeln('');
+  out.add('═══ AXIOM Kalibrierung ═══');
+  out.add('');
+  out.add('Zeitraum:   $days Tage');
+  out.add('Ereignisse: ${events.length}');
+  out.add('');
 
   if (days < kMinimumDays) {
-    stdout.writeln('⚠  Weniger als $kMinimumDays Tage.');
-    stdout.writeln('   Die Vorschläge unten sind noch nicht tragfähig.');
-    stdout.writeln('   Weitermessen — geratene Regeln sind schlimmer als');
-    stdout.writeln('   gar keine (Risiko R3).');
-    stdout.writeln('');
+    out.add('⚠  Weniger als $kMinimumDays Tage.');
+    out.add('   Die Vorschläge unten sind noch nicht tragfähig.');
+    out.add('   Weitermessen — geratene Regeln sind schlimmer als');
+    out.add('   gar keine (Risiko R3).');
+    out.add('');
   }
 
-  final checkins = events.where((e) => e.type == 'checkin').toList();
+  final checkins =
+      events.where((e) => e.type == EventType.checkin.name).toList();
   if (checkins.length < 20) {
-    stdout.writeln('Zu wenige Check-ins (${checkins.length}) für eine '
+    out.add('Zu wenige Check-ins (${checkins.length}) für eine '
         'Auswertung. Mindestens 20 nötig.');
-    exit(0);
+    return out;
   }
 
   // ── 1. Tagesrhythmus ────────────────────────────────────────────────
-  stdout.writeln('── Leistungsfenster ────────────────────────────────');
+  out.add('── Leistungsfenster ────────────────────────────────');
   final byHour = <int, List<double>>{};
   for (final e in checkins) {
     final energy = (e.payload['energy'] as num?)?.toDouble();
@@ -114,7 +171,7 @@ void main(List<String> args) {
     ..sort((a, b) => b.avg.compareTo(a.avg));
 
   if (hourly.isEmpty) {
-    stdout.writeln('  Nicht genug Messpunkte je Tageszeit.');
+    out.add('  Nicht genug Messpunkte je Tageszeit.');
   } else {
     // Stark und schwach dürfen sich nicht überlappen: Bei wenigen
     // Messzeitpunkten stünde dieselbe Stunde sonst in beiden Listen.
@@ -122,32 +179,33 @@ void main(List<String> args) {
     final weakCount = (hourly.length - strongCount).clamp(0, 2);
 
     for (final h in hourly.take(strongCount)) {
-      stdout.writeln('  ${_hh(h.hour)}  Energie ${h.avg.toStringAsFixed(2)}'
+      out.add('  ${_hh(h.hour)}  Energie ${h.avg.toStringAsFixed(2)}'
           '  (${h.n} Messungen)   ← stark');
     }
     for (final h in hourly.reversed.take(weakCount)) {
-      stdout.writeln('  ${_hh(h.hour)}  Energie ${h.avg.toStringAsFixed(2)}'
+      out.add('  ${_hh(h.hour)}  Energie ${h.avg.toStringAsFixed(2)}'
           '  (${h.n} Messungen)   ← schwach');
     }
 
     final spread = hourly.first.avg - hourly.last.avg;
-    stdout.writeln('');
+    out.add('');
     if (spread < 0.5) {
-      stdout.writeln('  Der Unterschied ist gering (${spread.toStringAsFixed(2)}).');
-      stdout.writeln('  → capacity.circadian eher senken als erhöhen.');
+      out.add('  Der Unterschied ist gering (${spread.toStringAsFixed(2)}).');
+      out.add('  → capacity.circadian eher senken als erhöhen.');
     } else {
-      stdout.writeln('  → Hoch-Aktivierungsenergie-Aufgaben in die starken');
-      stdout.writeln('    Fenster legen, nicht in die schwachen.');
+      out.add('  → Hoch-Aktivierungsenergie-Aufgaben in die starken');
+      out.add('    Fenster legen, nicht in die schwachen.');
     }
   }
-  stdout.writeln('');
+  out.add('');
 
   // ── 2. Schlafkopplung ───────────────────────────────────────────────
-  stdout.writeln('── Schlaf und Kapazität ────────────────────────────');
-  final sleep = events.where((e) => e.type == 'sleep_window').toList();
+  out.add('── Schlaf und Kapazität ────────────────────────────');
+  final sleep =
+      events.where((e) => e.type == EventType.sleepWindow.name).toList();
   if (sleep.length < 7) {
-    stdout.writeln('  Nur ${sleep.length} Nächte erfasst — mindestens 7 nötig.');
-    stdout.writeln('  Bis dahin bleibt sleep_debt auf dem Startwert 0.30.');
+    out.add('  Nur ${sleep.length} Nächte erfasst — mindestens 7 nötig.');
+    out.add('  Bis dahin bleibt sleep_debt auf dem Startwert 0.30.');
   } else {
     final pairs = <(double debt, double energy)>[];
     for (final night in sleep) {
@@ -172,38 +230,38 @@ void main(List<String> args) {
       pairs.map((p) => p.$2).toList(),
     );
     if (r == null) {
-      stdout.writeln('  Zu wenig Streuung für eine Aussage.');
+      out.add('  Zu wenig Streuung für eine Aussage.');
     } else {
-      stdout.writeln('  Korrelation Schlafschuld ↔ Energie: '
+      out.add('  Korrelation Schlafschuld ↔ Energie: '
           '${r.toStringAsFixed(2)}  (n=${pairs.length})');
       // Negativ erwartet: mehr Schuld, weniger Energie.
       final suggested = (r.abs() * 0.6).clamp(0.15, 0.45);
-      stdout.writeln('');
-      stdout.writeln('  Vorschlag  capacity.sleep_debt: '
+      out.add('');
+      out.add('  Vorschlag  capacity.sleep_debt: '
           '${suggested.toStringAsFixed(2)}   (bisher 0.30)');
       if (r > -0.2) {
-        stdout.writeln('  Hinweis: Der Zusammenhang ist schwach. Entweder');
-        stdout.writeln('  ist Schlaf hier weniger wirksam als angenommen,');
-        stdout.writeln('  oder die Schätzungen streuen zu stark.');
+        out.add('  Hinweis: Der Zusammenhang ist schwach. Entweder');
+        out.add('  ist Schlaf hier weniger wirksam als angenommen,');
+        out.add('  oder die Schätzungen streuen zu stark.');
       }
     }
   }
-  stdout.writeln('');
+  out.add('');
 
   // ── 3. Reizzyklus ───────────────────────────────────────────────────
-  stdout.writeln('── Reizbedarf ──────────────────────────────────────');
+  out.add('── Reizbedarf ──────────────────────────────────────');
   final stim = checkins
       .map((e) => (e.payload['stim_need'] as num?)?.toDouble())
       .whereType<double>()
       .toList();
   if (stim.length < 15) {
-    stdout.writeln('  Zu wenige Angaben (${stim.length}).');
+    out.add('  Zu wenige Angaben (${stim.length}).');
   } else {
     final avg = stim.reduce((a, b) => a + b) / stim.length;
     final baseline = ((avg - 1) / 4 * 100).round();
-    stdout.writeln('  Mittlerer Reizbedarf: ${avg.toStringAsFixed(2)} von 5');
-    stdout.writeln('');
-    stdout.writeln('  Vorschlag  sensation_need.baseline_drive: $baseline'
+    out.add('  Mittlerer Reizbedarf: ${avg.toStringAsFixed(2)} von 5');
+    out.add('');
+    out.add('  Vorschlag  sensation_need.baseline_drive: $baseline'
         '   (bisher 45)');
 
     // Ab welchem Wert brechen Impulse durch?
@@ -216,52 +274,52 @@ void main(List<String> args) {
       for (final h in highHours) {
         counts[h] = (counts[h] ?? 0) + 1;
       }
-      final peak =
-          counts.entries.reduce((a, b) => a.value >= b.value ? a : b);
-      stdout.writeln('  Höchster Bedarf typischerweise um ${_hh(peak.key)}.');
-      stdout.writeln('  → Reiz-Slot davor einplanen, nicht danach.');
+      final peak = counts.entries.reduce((a, b) => a.value >= b.value ? a : b);
+      out.add('  Höchster Bedarf typischerweise um ${_hh(peak.key)}.');
+      out.add('  → Reiz-Slot davor einplanen, nicht danach.');
     }
   }
-  stdout.writeln('');
+  out.add('');
 
   // ── 4. Erfassungsquote ──────────────────────────────────────────────
-  stdout.writeln('── Erfassung ───────────────────────────────────────');
+  out.add('── Erfassung ───────────────────────────────────────');
   final expected = days * 3;
   final rate = expected == 0 ? 0.0 : checkins.length / expected;
-  stdout.writeln('  ${checkins.length} von $expected Check-ins '
+  out.add('  ${checkins.length} von $expected Check-ins '
       '(${(rate * 100).round()} %)');
   if (rate < 0.8) {
-    stdout.writeln('');
-    stdout.writeln('  ⚠  Unter 80 %. Das Abbruchkriterium von Stufe 1 ist');
-    stdout.writeln('     gerissen: Bevor Module dazukommen, muss die');
-    stdout.writeln('     Erfassung leichter werden — nicht das System');
-    stdout.writeln('     größer.');
+    out.add('');
+    out.add('  ⚠  Unter 80 %. Das Abbruchkriterium von Stufe 1 ist');
+    out.add('     gerissen: Bevor Module dazukommen, muss die');
+    out.add('     Erfassung leichter werden — nicht das System');
+    out.add('     größer.');
   }
 
   final byChannel = <String, int>{};
-  for (final e in events.where((e) => e.type == 'capture')) {
+  for (final e in events.where((e) => e.type == EventType.capture.name)) {
     final via = e.payload['via'] as String? ?? 'app';
     byChannel[via] = (byChannel[via] ?? 0) + 1;
   }
   if (byChannel.isNotEmpty) {
-    stdout.writeln('');
-    stdout.writeln('  Genutzte Erfassungswege:');
+    out.add('');
+    out.add('  Genutzte Erfassungswege:');
     final sorted = byChannel.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     for (final c in sorted) {
-      stdout.writeln('    ${c.key.padRight(12)} ${c.value}');
+      out.add('    ${c.key.padRight(12)} ${c.value}');
     }
-    stdout.writeln('  → Auf den meistgenutzten Weg optimieren, die');
-    stdout.writeln('    ungenutzten entfernen.');
+    out.add('  → Auf den meistgenutzten Weg optimieren, die');
+    out.add('    ungenutzten entfernen.');
   }
 
-  stdout.writeln('');
-  stdout.writeln('════════════════════════════════════════════════════');
-  stdout.writeln('Nichts davon wurde geschrieben. Die Vorschläge gehören');
-  stdout.writeln('ins Wochen-Review und von dort — geprüft — nach');
-  stdout.writeln('rules/core/weights.yaml. Danach dort setzen:');
-  stdout.writeln('  calibration.status: calibrated');
-  stdout.writeln('  calibration.last_calibrated: <Datum>');
+  out.add('');
+  out.add('════════════════════════════════════════════════════');
+  out.add('Nichts davon wurde geschrieben. Die Vorschläge gehören');
+  out.add('ins Wochen-Review und von dort — geprüft — nach');
+  out.add('rules/core/weights.yaml. Danach dort setzen:');
+  out.add('  calibration.status: calibrated');
+  out.add('  calibration.last_calibrated: <Datum>');
+  return out;
 }
 
 String _hh(int hour) => '${hour.toString().padLeft(2, "0")}:00';

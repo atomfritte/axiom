@@ -58,14 +58,21 @@ final class CapacityLine extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // `Wrap` statt `Row`: Der Messwert rechts war unflexibel, und bei
+          // 360 px und angehobener Schrift lief die Kopfzeile um bis zu
+          // 88 px nach rechts hinaus — ausgerechnet die Zahl, um die es
+          // geht, verschwand hinter dem Überlaufmuster. Passt beides
+          // nebeneinander, sieht es aus wie vorher; passt es nicht, rutscht
+          // die Kapazität in die zweite Zeile, statt abgeschnitten zu
+          // werden. [D9]
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: Space.md,
+            runSpacing: Space.xs,
             children: [
-              Flexible(
-                child: Text(context.t('AKTIVIERUNGSENERGIE'),
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall),
-              ),
-              const SizedBox(width: Space.md),
+              Text(context.t('AKTIVIERUNGSENERGIE'),
+                  style: Theme.of(context).textTheme.labelSmall),
               Text(context.t('KAPAZITÄT {0}', [capacity]),
                   style: monoStyle(context,
                       size: 11,
@@ -156,6 +163,22 @@ final class _CapacityLinePainter extends CustomPainter {
   static const double _axisY = 34;
   static const double _padX = 6;
 
+  /// Wie viele Marken übereinander passen, bevor der Stapel die Leinwand
+  /// verlässt.
+  ///
+  /// Vorher rechnete der Stapel ohne Obergrenze nach oben: `y = 34 - 10 -
+  /// stack * 9`. Ab der vierten Aufgabe mit derselben Aktivierungsenergie
+  /// lag der Punkt bei y = −3, ab der fünften mitten in der Kopfzeile
+  /// darüber. Es gab dabei keinen Überlauffehler — weder `CustomPaint` noch
+  /// `Panel` clippen —, das Bild war einfach falsch, und eine Skala, die man
+  /// falsch abliest, ist schlimmer als keine. [D2]
+  ///
+  /// Vier gleiche Werte entstehen im Alltag von selbst: Die Triage startet
+  /// bei AE 5, jede Zerlegung erzeugt einen ersten Schritt mit AE 2.
+  static const int _maxStack = 2;
+  static const double _markStep = 9;
+  static const double _markBase = 10;
+
   @override
   void paint(Canvas canvas, Size size) {
     final usable = size.width - _padX * 2;
@@ -206,19 +229,34 @@ final class _CapacityLinePainter extends CustomPainter {
 
     // ── Aufgabenmarken ──────────────────────────────────────────────────
     // Gleiche Energie? Gestapelt statt uebereinander, damit nichts verdeckt.
+    //
+    // Die hervorgehobene Aufgabe kommt zuerst. Sie ist die eine, die
+    // sichtbar bleiben muss — nach ihr wird der Stapel gedeckelt, und wer
+    // dort herausfaellt, ist nicht mehr zu sehen (G1).
+    final ordered = <Task>[
+      ...tasks.where((t) => t.id == highlightTaskId),
+      ...tasks.where((t) => t.id != highlightTaskId),
+    ];
     final byEnergy = <int, int>{};
-    for (final task in tasks) {
+    final hidden = <int, int>{};
+    for (final task in ordered) {
       final energy = task.activationEnergy;
       final stack = byEnergy.update(energy, (v) => v + 1, ifAbsent: () => 0);
       final x = xAt(energy / 10);
-      final y = _axisY - 10 - stack * 9.0;
+      if (stack > _maxStack) {
+        hidden.update(energy, (v) => v + 1, ifAbsent: () => 1);
+        continue;
+      }
+      final y = _axisY - _markBase - stack * _markStep;
       final reachable = energy <= threshold * 10;
       final isHighlight = task.id == highlightTaskId;
 
       if (isHighlight) {
+        // Der Hof wird nur so gross, wie oberhalb der Marke Platz ist —
+        // sonst ragte gerade die wichtigste Marke aus der Leinwand.
         canvas.drawCircle(
           Offset(x, y),
-          7,
+          math.min(7.0, y),
           Paint()..color = palette.signal.withValues(alpha: 0.22),
         );
       }
@@ -233,6 +271,37 @@ final class _CapacityLinePainter extends CustomPainter {
           ..strokeWidth = 1.4,
       );
     }
+
+    // Was der Stapel nicht mehr fasst, wird angeschrieben statt verschwiegen.
+    // Eine stumm weggelassene Aufgabe waere derselbe Fehler wie ein Punkt
+    // ausserhalb der Leinwand: Die Skala zeigt dann etwas anderes an, als da
+    // ist.
+    final topY = _axisY - _markBase - _maxStack * _markStep;
+    hidden.forEach((energy, count) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: '+$count',
+          style: TextStyle(
+            fontFamily: Fonts.mono,
+            fontSize: 10,
+            letterSpacing: 0.4,
+            color: palette.inkFaint,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final anchorX = xAt(energy / 10);
+      final left = anchorX + 6 + painter.width <= size.width
+          ? anchorX + 6
+          : anchorX - 6 - painter.width;
+      painter.paint(
+        canvas,
+        Offset(
+          math.max(0, left),
+          math.max(0, topY - painter.height / 2),
+        ),
+      );
+    });
 
     // ── Achsenbeschriftung ──────────────────────────────────────────────
     void label(String text, double x, Color color,

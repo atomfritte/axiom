@@ -30,7 +30,7 @@ abstract final class SystemSync {
     // Sie schreibt nur, wenn sich die Sprache geändert hat.
     await AndroidBridge.applySystemTexts(language);
 
-    final (headline, detail) = _describe(snapshot, language);
+    final (headline, detail) = describe(snapshot, language);
     await AndroidBridge.updateWidget(
       headline: headline,
       detail: detail,
@@ -75,7 +75,14 @@ abstract final class SystemSync {
     );
   }
 
-  static (String, String) _describe(
+  /// Die zwei Zeilen, die Widget und dauerhafte Anzeige tragen.
+  ///
+  /// Sichtbar für den Test, weil sonst nichts davon prüfbar ist: [publish]
+  /// steigt ohne Android sofort aus, und ein Widget-Test kommt an diese
+  /// Ebene nie heran — genau deshalb stand hier ein deutscher Regeltitel in
+  /// einer englischen Anzeige, ohne dass ein Test rot wurde.
+  @visibleForTesting
+  static (String, String) describe(
       AxiomSnapshot snapshot, AppLanguage language) {
     // Ein anstehender Ankerschritt schlaegt alles andere: Er hat eine
     // Uhrzeit, und verpasste Uhrzeiten kosten am meisten [D4].
@@ -94,7 +101,16 @@ abstract final class SystemSync {
 
     final rule = snapshot.decisionRule;
     if (rule != null) {
-      return (rule.title, translate(language, 'Regel {0}', [rule.id]));
+      // Vorher stand hier `rule.title` — der deutsche Titel aus dem YAML,
+      // waehrend die Zeile darunter uebersetzt war. Widget und dauerhafte
+      // Anzeige sprachen damit eine andere Sprache als derselbe Satz in der
+      // App, die `context.ruleTitle` benutzt. Die Sprache liegt hier bereits
+      // als Parameter vor; `titleFor` faellt ohne `title_en` auf Deutsch
+      // zurueck, wie ueberall sonst.
+      return (
+        rule.titleFor(language.code),
+        translate(language, 'Regel {0}', [rule.id]),
+      );
     }
     final task = snapshot.startable.firstOrNull;
     if (task != null) {

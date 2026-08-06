@@ -63,6 +63,24 @@ android {
                 signingConfigs.getByName("debug")
             }
 
+            // Zur ABI-Auswahl steht hier bewusst NICHTS.
+            //
+            // Ein Drittel der APK (24 MB) ist Maschinencode fuer x86_64 —
+            // eine Architektur, auf der diese App nie laeuft; unter Android
+            // gibt es sie praktisch nur im Emulator. Hier stand deshalb
+            // kurzzeitig `ndk { abiFilters += ... }`. Das wirkt nicht: Das
+            // Flutter-Gradle-Plugin setzt die ABIs selbst, und der Block
+            // blieb folgenlos — nachgemessen, die APK war danach byte-genau
+            // gleich gross. Ein Konfigurationsblock, der etwas behauptet und
+            // nichts tut, ist schlimmer als keiner.
+            //
+            // Was wirkt, ist das Flag am Build:
+            //   flutter build apk --release --target-platform android-arm,android-arm64
+            // Es steht in CLAUDE.md unter „Befehle", und
+            // `platform_integration_test.dart` prueft eine vorhandene
+            // Release-APK darauf nach. Im Debug bleibt x86_64 drin, sonst
+            // startet kein Emulator mehr.
+
             // R8 raeumt auf und verkleinert. Ohne `isShrinkResources` bleiben
             // die Ressourcen der ungenutzten Health-Connect-Oberflaechen drin.
             isMinifyEnabled = true

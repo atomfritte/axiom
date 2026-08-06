@@ -45,6 +45,13 @@ const Map<String, String> kEnglish = {
   'AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.':
       'AXIOM measures your state, applies rules you set yourself, and names '
           'one next action. With the reasoning and the rule that produced it.',
+  // Der Abgrenzungssatz aus `kMedDisclaimer` (axiom_core). Er steht hier,
+  // weil er in der englischen Oberflaeche sonst deutsch bliebe — und er ist
+  // genau der Satz, der M13 von einer Behandlungsempfehlung trennt (R10).
+  'AXIOM protokolliert nur. Es nennt keine Dosis, schlägt keine Einnahmezeit vor und bewertet keine Wirkung. Alles, was die Behandlung betrifft, gehört zu deiner Ärztin oder deinem Arzt.':
+      'AXIOM only keeps a log. It names no dose, suggests no time of intake '
+          'and rates no effect. Everything that concerns the treatment belongs '
+          'with your doctor.',
   'AXIOM sendet Signale, auf die Routinen reagieren können: Fokus an und aus, Abendgrenze, Erhaltungsmodus.':
       'AXIOM sends signals that routines can react to: focus on and off, '
           'evening cutoff, maintenance mode.',
@@ -106,6 +113,7 @@ const Map<String, String> kEnglish = {
       'From focused work today. That trade is the only one this reward system '
           'reliably accepts.',
   'Aussteigen': 'Step out',
+  'Außerhalb des Fensters.': 'Outside the window.',
   'BASELINE': 'BASELINE',
   'BASELINE LÄUFT': 'BASELINE RUNNING',
   'BASELINE TAG {0}': 'BASELINE DAY {0}',
@@ -312,11 +320,14 @@ const Map<String, String> kEnglish = {
       'Something physical that takes two minutes. Not the plan — the first '
           'move.',
   'Exakte Erinnerungen': 'Exact reminders',
+  'Exportieren': 'Export',
   'Exportiert: {0}': 'Exported: {0}',
   'Fahrzeit': 'Travel time',
   'Falls nicht sichtbar: Schnelleinstellungen aufziehen → Stift-Symbol → „AXIOM erfassen" nach oben ziehen.':
       'If it is not there: pull down quick settings → pencil icon → drag '
           '“AXIOM capture” up.',
+  'Fenster läuft noch {0} h.': 'Window has {0} h left.',
+  'Fenster läuft noch {0} min.': 'Window has {0} min left.',
   'Fertig': 'Done',
   'Fertigmachen': 'Get ready',
   'Festhalten': 'Record',
@@ -372,6 +383,11 @@ const Map<String, String> kEnglish = {
   'Hat nie gefeuert. Entweder ist die Bedingung zu eng oder die Regel überflüssig.':
       'Never fired. Either the condition is too narrow or the rule is '
           'redundant.',
+  'HINWEIS': 'NOTICE',
+  'Health Connect ist eine Schnittstelle des Geräts. AXIOM liest nur und ruft nichts von sich aus auf. Solange der Expertenmodus läuft, sind diese Werte im lokalen Netz abrufbar.':
+      'Health Connect is an interface of the device. AXIOM only reads and '
+          'never calls out on its own. While expert mode is running, these '
+          'values can be fetched on the local network.',
   'Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.':
       'Health Connect is an interface of the device. None of it leaves the '
           'phone — AXIOM has no network permission.',
@@ -401,6 +417,7 @@ const Map<String, String> kEnglish = {
   'Interventionen pro Tag': 'Interventions per day',
   'Ist die Last gesunken? Belegen, nicht behaupten.':
       'Has load come down? Show it, do not claim it.',
+  'Ist es die Sache oder das Gefühl?': 'Is it the thing or the feeling?',
   'JETZT': 'NOW',
   'JETZT BEENDEN': 'END NOW',
   'Jetzt': 'Now',
@@ -416,8 +433,10 @@ const Map<String, String> kEnglish = {
   'KAPAZITÄT {0}': 'CAPACITY {0}',
   'KEINE ANKER': 'NO ANCHORS',
   'KEINE TRIGGER': 'NO TRIGGERS',
+  'KONFLIKT': 'CONFLICT',
   'Kalt duschen': 'Cold shower',
   'Kanal speichern': 'Save channel',
+  'Kannte ich das vor heute?': 'Did I know about this before today?',
   'Kanäle · {0}': 'Channels · {0}',
   'Kapazitaetslinie. Kapazitaet {0} von 100. {1} von {2} Aufgaben sind jetzt startbar.':
       'Capacity line. Capacity {0} out of 100. {1} of {2} tasks can be started '
@@ -478,8 +497,13 @@ const Map<String, String> kEnglish = {
   'Mit gesetztem Ziel bleibt es still, solange der Block läuft. Benachrichtigungen werden unterdrückt.':
       'With a target set it stays quiet while the block runs. Notifications '
           'are suppressed.',
+  'Meldungen dieser Stunde erschöpft': 'hourly notification limit reached',
   'Mittag.': 'Midday.',
   'Mitteilungen': 'Notifications',
+  // Die vier Umfaenge des Reviews (`ReviewScope.label`). Sie werden als Wert
+  // in einen Satz gesetzt („{0}-Review"), deshalb steht hier die Form, die
+  // sich im englischen Rahmen liest — „Weekly review", nicht „Week review".
+  'Monat': 'Monthly',
   'Morgen.': 'Morning.',
   'Morgen: ein Anker, eine Aufgabe.': 'Tomorrow: one anchor, one task.',
   'Musik, laut': 'Music, loud',
@@ -555,6 +579,7 @@ const Map<String, String> kEnglish = {
   'Probelauf': 'Dry run',
   'Puffer': 'Buffer',
   'Puffer für emotionale Belastung.': 'Headroom for emotional load.',
+  'Quartal': 'Quarterly',
   'Raus, schnell': 'Outside, fast',
   'Rechtfertigt AXIOM seine eigenen Kosten?':
       'Does AXIOM justify its own cost?',
@@ -600,6 +625,7 @@ const Map<String, String> kEnglish = {
   'SORTIEREN': 'SORT',
   'START FEHLGESCHLAGEN': 'STARTUP FAILED',
   'START {0}/10': 'START {0}/10',
+  'STREICHEN': 'RETIRE',
   'SYSTEM': 'SYSTEM',
   'Samsung Modi und Routinen': 'Samsung Modes and Routines',
   'Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.':
@@ -647,6 +673,7 @@ const Map<String, String> kEnglish = {
   'System': 'System',
   'TAG {0}': 'DAY {0}',
   'TRIGGER': 'TRIGGERS',
+  'Tag': 'Daily',
   'Tage': 'days',
   'Tageslimit dieser Regel erreicht': 'daily limit for this rule reached',
   'Termin': 'Appointment',
@@ -663,6 +690,7 @@ const Map<String, String> kEnglish = {
   'Trigger speichern': 'Save trigger',
   'Trigger · {0}': 'Triggers · {0}',
   'UND DANN? (OPTIONAL)': 'AND THEN? (OPTIONAL)',
+  'UNTERBRECHUNG': 'INTERRUPTION',
   'Umgekehrte Richtung: Eine Routine sagt AXIOM, wo du bist. „WLAN Büro verbunden" ist genauer als jeder Kreis auf der Karte — und kostet keine Standortberechtigung.':
       'The other direction: a routine tells AXIOM where you are. “Office Wi-Fi connected” is more precise than any circle on a map — and costs no location permission.',
   'Ungedeckter Bedarf sucht sich den schnellsten Kanal.':
@@ -719,6 +747,8 @@ const Map<String, String> kEnglish = {
   'Was dir zwischendurch einfällt, landet hier. Erfassen kannst du von überall — über den Knopf unten, die Schnelleinstellung oder den S-Pen.':
       'Whatever occurs to you in between lands here. You can capture from '
           'anywhere — the button below, the quick setting or the S Pen.',
+  'Was genau löst es, das ich gestern noch nicht lösen musste?':
+      'What exactly does it solve that I did not have to solve yesterday?',
   'Was ginge beim nächsten Mal anders?': 'What could go differently next time?',
   'Was hier fehlt, deckst du sonst woanders. Trag ein, was bei dir wirklich wirkt — auch wenn es etwas kostet. Gezählt wird es ohnehin.':
       'What is missing here you will cover elsewhere. Enter what actually '
@@ -736,8 +766,11 @@ const Map<String, String> kEnglish = {
           'measurement, not a verdict about you.',
   'Was war der eigentliche Auslöser?': 'What was the actual trigger?',
   'Was wirkt bei dir wirklich?': 'What actually works for you?',
+  'Was würde ich jemandem raten, der mir das erzählt?':
+      'What would I advise someone who told me this?',
   'Wege in die App: Widget, Benachrichtigung, Stift':
       'Routes into the app: widget, notification, pen',
+  'Weiter': 'Next',
   'Weiteres': 'More',
   'Welche Regel hat genervt statt geholfen?':
       'Which rule got in the way instead of helping?',
@@ -756,6 +789,7 @@ const Map<String, String> kEnglish = {
   'Wie lange warten': 'How long to wait',
   'Wie schwer fällt der Start?': 'How hard is it to start?',
   'Wie schwer fällt dieser Schritt?': 'How hard is this step?',
+  'Wie sehe ich das in vier Wochen?': 'How will I see this in four weeks?',
   'Wie stark': 'How strong',
   'Wie viel exekutive Reserve heute da ist.':
       'How much executive reserve there is today.',
@@ -771,7 +805,12 @@ const Map<String, String> kEnglish = {
   'Wo? (optional)': 'Where? (optional)',
   'Wobei musst du sein?': 'What do you have to be at?',
   'Wobei willst du eine Wartezeit?': 'What do you want a waiting period for?',
+  'Wo genau bist du bei „{0}" stehengeblieben?':
+      'Where exactly did you leave off on “{0}”?',
+  'Woche': 'Weekly',
   'Woran hing es?': 'What was it hanging on?',
+  'Woran warst du dran, und was wäre der nächste Handgriff?':
+      'What were you working on, and what would the next move be?',
   'Worauf': 'On what',
   'Wovon habe ich mich lautlos verabschiedet?': 'What did I quietly let go of?',
   'ZEIT IN AXIOM HEUTE': 'TIME IN AXIOM TODAY',
@@ -807,6 +846,7 @@ const Map<String, String> kEnglish = {
   'große Hürde': 'high barrier',
   'in {0} min': 'in {0} min',
   'kein Ort': 'no place',
+  'keine': 'none',
   'keine Daten': 'no data',
   'lief nebenbei': 'ran alongside',
   'oder ein eigener Wert': 'or a value of your own',
@@ -1302,7 +1342,7 @@ const Map<String, String> kEnglish = {
   'Der Weg, der auf aktuellen Galaxy-Geräten funktioniert: Stift herausziehen, im Air-Command-Menü auf AXIOM tippen. Einrichten unter Einstellungen → Erweiterte Funktionen → S Pen → Air Command → Verknüpfungen → AXIOM.':
       'The route that works on current Galaxy devices: pull out the pen, tap AXIOM in the Air command menu. Set it up under Settings → Advanced features → S Pen → Air command → Shortcuts → AXIOM.',
   'Air Actions — der Stiftknopf als Fernbedienung — gibt es auf dem Galaxy S25 Ultra nicht mehr: Dessen Stift hat kein Bluetooth. Die Rolle „Notiz-App" für den Doppeltipp schaltet Samsung in One UI ebenfalls nicht frei. Screen-off-Memos landen weiterhin in Samsung Notes, dafür gibt es keine offene Schnittstelle.':
-      'Air actions — the pen button as a remote — are gone on the Galaxy S25 Ultra: that pen has no Bluetooth. Samsung does not expose the „note app" role for the double tap in One UI either. Screen-off memos still land in Samsung Notes; there is no open interface for them.',
+      'Air actions — the pen button as a remote — are gone on the Galaxy S25 Ultra: that pen has no Bluetooth. Samsung does not expose the “note app” role for the double tap in One UI either. Screen-off memos still land in Samsung Notes; there is no open interface for them.',
   'Notiz-Rolle anfragen':
       'Request the note role',
   'Dieses Gerät bietet die Rolle nicht an. Der Weg zum Stift führt über Air Command → Verknüpfungen.':
@@ -1312,13 +1352,13 @@ const Map<String, String> kEnglish = {
   'Der S Pen des Galaxy S25 Ultra hat kein Bluetooth Low Energy. Damit entfallen Air Actions, Kopplung und Laden — nicht nur für AXIOM, sondern für alle Apps. Was bleibt, ist das Air-Command-Menü: Stift herausziehen, AXIOM antippen. Als Verknüpfung eingetragen sind das zwei Handgriffe.':
       'The Galaxy S25 Ultra S Pen has no Bluetooth Low Energy. That removes air actions, pairing and charging — for every app, not just AXIOM. What remains is the Air command menu: pull out the pen, tap AXIOM. Entered as a shortcut, that is two moves.',
   'Der Dienst wurde gestartet, aber es hängt keine Benachrichtigung. Meistens ist der Kanal „Dauerhafte Anzeige" in den Benachrichtigungseinstellungen abgeschaltet, oder die Akkuoptimierung beendet den Dienst sofort wieder.':
-      'The service started, but no notification is showing. Usually the „Persistent display" channel is switched off in the notification settings, or battery optimisation stops the service right away.',
+      'The service started, but no notification is showing. Usually the “Persistent display” channel is switched off in the notification settings, or battery optimisation stops the service right away.',
   'Was das System dazu sagt':
       'What the system says about it',
   'Benachrichtigungen freigegeben':
       'Notifications allowed',
   'Kanal „Dauerhafte Anzeige" eingeschaltet':
-      'Channel „Persistent display" switched on',
+      'Channel “Persistent display” switched on',
   'Dienst gestartet':
       'Service started',
   'Benachrichtigung hängt':
@@ -1418,7 +1458,7 @@ const Map<String, String> kEnglish = {
   'Der Name wird im Netz angesagt':
       'The name is announced on the network',
   'Damit „axiom.local" aufgeht, beantwortet AXIOM Namensanfragen im lokalen Netz. Das Paket geht an eine Adresse, die kein Router weiterleitet, enthält nur Name und IP dieses Geräts, und läuft nur, solange der Server läuft. Beim Beenden wird der Name zurückgenommen.':
-      'For „axiom.local" to resolve, AXIOM answers name queries on the local network. The packet goes to an address no router forwards, carries only this device’s name and IP, and runs only while the server runs. On shutdown the name is withdrawn.',
+      'For “axiom.local” to resolve, AXIOM answers name queries on the local network. The packet goes to an address no router forwards, carries only this device’s name and IP, and runs only while the server runs. On shutdown the name is withdrawn.',
   'Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:':
       'If the name does not resolve — some networks block multicast:',
   'Zeit im System heute':

@@ -49,40 +49,74 @@ object DatabaseKey {
     /** Von GCM vorgegeben. Den IV erzeugt die Chiffre selbst. */
     private const val GCM_TAG_BITS = 128
 
+    /** Der Schluessel liegt vor. `key` traegt ihn. */
+    const val STATE_READY = "ready"
+
     /**
-     * Die Passphrase fuer `PRAGMA key`, Base64-kodiert.
-     *
-     * Beim ersten Aufruf erzeugt, danach nur noch ausgewickelt. Gibt `null`
-     * zurueck, wenn der Keystore nicht mitspielt — dann entscheidet die
-     * Dart-Seite, ob sie unverschluesselt startet oder gar nicht. Sie
-     * entscheidet sich fuer sichtbar unverschluesselt: Eine App, die sich nach
-     * einem Geraetefehler nicht mehr oeffnen laesst, waere der teurere Ausfall.
+     * Auf diesem Geraet wurde nie einer abgelegt. Eine vorhandene Datei kann
+     * dann nur im Klartext liegen — unverschluesselt zu oeffnen ist hier
+     * richtig und verliert nichts.
      */
-    fun passphrase(context: Context): String? {
+    const val STATE_NONE = "none"
+
+    /**
+     * Es gab einen, er ist gerade nicht zu bekommen. Die Datei ist dann mit
+     * hoher Wahrscheinlichkeit verschluesselt, und ohne Schluessel darf sie
+     * niemand anfassen.
+     */
+    const val STATE_UNAVAILABLE = "unavailable"
+
+    /**
+     * Zustand und — wenn vorhanden — Passphrase fuer `PRAGMA key`, Base64.
+     *
+     * **Warum drei Zustaende und nicht zwei.** Vorher gab dieselbe Methode
+     * `null` zurueck, sowohl wenn hier nie ein Schluessel angelegt wurde als
+     * auch wenn der Keystore gerade nicht antwortete. Die Dart-Seite las
+     * beides als „unverschluesselt oeffnen", legte eine Klartextdatei an,
+     * traf beim naechsten Start mit dem inzwischen vorhandenen Schluessel auf
+     * eine unlesbare Datei — und loeschte den gesamten append-only-Strom. Ein
+     * voruebergehender Keystore-Fehler kostete damit alle Daten, ohne
+     * Rueckfrage und ohne Backup.
+     *
+     * Der Unterschied, auf den es ankommt: „hier war nie einer" ist eine
+     * Aussage ueber dieses Geraet und erlaubt den Klartextstart. „ich komme
+     * gerade nicht heran" ist eine Aussage ueber diesen Moment und erlaubt
+     * gar nichts.
+     */
+    fun passphrase(context: Context): Map<String, Any?> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WRAPPED, null)
         val iv = prefs.getString(KEY_IV, null)
 
         if (stored != null && iv != null) {
-            unwrap(stored, iv)?.let { return it }
-            // Ausgewickelt werden konnte es nicht. Das passiert, wenn der
-            // Keystore-Schluessel weg ist — geloeschte App-Daten, ein
-            // zurueckgespieltes Backup, ein Geraetewechsel. Ein neuer
-            // Schluessel macht die alte Datenbank unlesbar; genau das meldet
-            // die Dart-Seite und legt neu an. Stillschweigend weiterlaufen
-            // waere hier das Schlimmste: Die App liefe, und niemand wuesste,
-            // dass der Bestand nicht mehr erreichbar ist.
+            unwrap(stored, iv)?.let { return reply(STATE_READY, it) }
+            // Ausgewickelt werden konnte es nicht. Das hat zwei sehr
+            // verschiedene Ursachen — der Keystore-Schluessel ist endgueltig
+            // weg (geloeschte App-Daten, zurueckgespieltes Backup,
+            // Geraetewechsel), oder er antwortet gerade nicht (Keymaster kurz
+            // nach dem Booten belegt) —, und von hier aus sind sie nicht zu
+            // unterscheiden. Vorher wurde deshalb einfach ein neuer Schluessel
+            // erzeugt und abgelegt; damit war die alte Datei endgueltig
+            // unlesbar, auch im zweiten Fall. Jetzt wird nichts entschieden:
+            // Der Zustand geht so, wie er ist, an die Dart-Seite.
+            return reply(STATE_UNAVAILABLE)
         }
 
+        // Ab hier steht fest, dass auf diesem Geraet nie ein Schluessel
+        // abgelegt wurde — `commit()` unten ist die einzige Stelle, die das
+        // tut, und sie schreibt erst, wenn das Einwickeln geklappt hat.
         val fresh = ByteArray(PASSPHRASE_BYTES).also { SecureRandom().nextBytes(it) }
         val encoded = Base64.encodeToString(fresh, Base64.NO_WRAP)
-        val wrapped = wrap(encoded) ?: return null
+        val wrapped = wrap(encoded) ?: return reply(STATE_NONE)
         prefs.edit()
             .putString(KEY_WRAPPED, wrapped.first)
             .putString(KEY_IV, wrapped.second)
             .commit() // nicht apply(): Ohne den Eintrag ist die Datenbank verloren.
-        return encoded
+        return reply(STATE_READY, encoded)
     }
+
+    private fun reply(state: String, key: String? = null): Map<String, Any?> =
+        mapOf("state" to state, "key" to key)
 
     /** Paar aus eingewickelter Passphrase und IV, beide Base64. */
     private fun wrap(passphrase: String): Pair<String, String>? = try {

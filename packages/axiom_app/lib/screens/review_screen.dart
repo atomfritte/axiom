@@ -79,7 +79,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       SnackBar(
         content: Text(reachedCap
             ? context.t('Zeit um. Der Rest wartet bis zum nächsten Mal.')
-            : context.t('{0}-Review abgeschlossen.', [widget.scope.label])),
+            : context.t('{0}-Review abgeschlossen.',
+                [context.t(widget.scope.label)])),
       ),
     );
   }
@@ -91,7 +92,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.t('{0}-Review', [widget.scope.label])),
+        // Der Rahmen war uebersetzt, der eingesetzte Wert nicht — in der
+        // englischen App stand deshalb „Woche review". Ein Platzhalterwert
+        // ist Nutzertext wie jeder andere und muss selbst durch `context.t`.
+        title: Text(
+            context.t('{0}-Review', [context.t(widget.scope.label)])),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2),
           child: _TimeCapBar(elapsed: _elapsed, cap: widget.scope.timeCap),
@@ -312,10 +317,13 @@ class _VerdictCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    // Alle drei Zweige, nicht nur der mittlere: In einem Tupel steht das
+    // Literal nicht hinter `Text(`, deshalb blieben zwei von drei
+    // Etiketten in der englischen Oberflaeche deutsch.
     final (label, color) = switch (verdict.verdict) {
-      RuleAction.retire => ('STREICHEN', p.caution),
+      RuleAction.retire => (context.t('STREICHEN'), p.caution),
       RuleAction.widen => (context.t('ZU ENG'), p.info),
-      RuleAction.resolveConflict => ('KONFLIKT', p.signal),
+      RuleAction.resolveConflict => (context.t('KONFLIKT'), p.signal),
     };
 
     return Panel(

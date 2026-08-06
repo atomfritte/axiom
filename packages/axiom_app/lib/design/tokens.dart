@@ -21,6 +21,19 @@ library;
 import 'package:flutter/material.dart';
 
 /// Semantische Farbrollen. Jede Rolle hat eine dunkle und eine helle Fassung.
+///
+/// **Kontrast ist hier eine Zusage, keine Absicht.** Jede Rolle, die als Text
+/// erscheint — [ink], [inkDim], [inkFaint], [signal], [calm], [caution],
+/// [info] —, erreicht auf [base], [panel] und [panelRaised] mindestens
+/// 4,5:1 (WCAG 2.x AA fuer Fliesstext). Das ist keine Formalie: Die kleinste
+/// Schriftgroesse der App liegt bei 12,5 px, damit greift keine
+/// Large-Text-Ausnahme, und was nicht gelesen wird, existiert fuer dieses
+/// Profil nicht [D9].
+///
+/// Nachgerechnet wird das von `test/contrast_test.dart` — fuer alle vier
+/// Schemata in beiden Helligkeiten. Vorher prueften die Tests genau eine der
+/// acht Paletten, und dabei war der Tertiaertext der Werkbank bei 2,96:1
+/// gelandet: unterhalb sogar der 3:1-Grenze, die fuer reine Grafik gilt.
 @immutable
 final class AxiomPalette {
   /// Seitenhintergrund.
@@ -85,11 +98,14 @@ final class AxiomPalette {
     // darunter. Skalenzahlen und Fussnoten muessen ablesbar sein, sonst
     // sind sie Dekoration.
     inkDim: Color(0xFF9BA4AB),
-    inkFaint: Color(0xFF7A848B),
+    // #7A848B lag auf `panelRaised` (Dialog, SnackBar) bei 4,06:1 und
+    // Kupfer #C4653A bei 3,89:1 — beides unter AA. Beide sind minimal
+    // aufgehellt, der Farbton bleibt.
+    inkFaint: Color(0xFF838D93),
     signal: Color(0xFFE8A33D),
     signalDeep: Color(0xFFB8761F),
     calm: Color(0xFF7FA88A),
-    caution: Color(0xFFC4653A),
+    caution: Color(0xFFCB754E),
     info: Color(0xFF6E90A4),
   );
 
@@ -105,8 +121,10 @@ final class AxiomPalette {
     // etwa 4,5:1 und 3,0:1. Der zweite Wert war auf einem hellen
     // Hintergrund schlicht nicht mehr zuverlaessig lesbar.
     inkDim: Color(0xFF4A545B),
-    inkFaint: Color(0xFF6E767C),
-    signal: Color(0xFF9A6510),
+    // Zweiter Nachzug: #6E767C lag auf `base` bei 4,09:1, Bernstein #9A6510
+    // bei 4,38:1. Beides sah als Screenshot in Ordnung aus und war es nicht.
+    inkFaint: Color(0xFF676E74),
+    signal: Color(0xFF966210),
     signalDeep: Color(0xFF7A4E08),
     calm: Color(0xFF3F6B4F),
     caution: Color(0xFF9C4522),
@@ -161,7 +179,9 @@ final class AxiomPalette {
     rule: Color(0xFF332C26),
     ink: Color(0xFFE0D8CC),
     inkDim: Color(0xFFA3988A),
-    inkFaint: Color(0xFF7D7264),
+    // Lag mit 4,04/3,79/3,52:1 auf allen drei Flaechen unter AA — die
+    // gedaempfte Fassung darf leiser sein, nicht unlesbar.
+    inkFaint: Color(0xFF918575),
     signal: Color(0xFFD79A55),
     signalDeep: Color(0xFFA87433),
     calm: Color(0xFF8FA98C),
@@ -176,7 +196,8 @@ final class AxiomPalette {
     rule: Color(0xFFD5CDBE),
     ink: Color(0xFF221E19),
     inkDim: Color(0xFF57503F),
-    inkFaint: Color(0xFF7A7263),
+    // 4,18:1 auf `base`, 4,48:1 auf `panel` — knapp daneben ist auch daneben.
+    inkFaint: Color(0xFF746C5E),
     signal: Color(0xFF8A5A16),
     signalDeep: Color(0xFF6B450F),
     calm: Color(0xFF44634A),
@@ -209,10 +230,16 @@ final class AxiomPalette {
     rule: Color(0xFFDDE1EC),
     ink: Color(0xFF20232C),
     inkDim: Color(0xFF565E72),
-    inkFaint: Color(0xFF868DA1),
+    // Der schlechteste Wert der ganzen Palette: #868DA1 lag bei 3,07/3,31/
+    // 2,96:1. Der letzte Wert unterschreitet sogar die 3:1-Grenze, die fuer
+    // reine Grafik gilt — und er traf jede `SectionLabel` und jeden
+    // Hinweistext im Erfassungsblatt. #868DA1 ist praktisch derselbe Ton,
+    // der bei der hellen Standardpalette (siehe oben) schon einmal als
+    // unlesbar verworfen wurde.
+    inkFaint: Color(0xFF666E83),
     signal: Color(0xFF0F62D6),
     signalDeep: Color(0xFF0A48A0),
-    calm: Color(0xFF157F4F),
+    calm: Color(0xFF157D4E),
     // Kupfer, nicht Rot. Das Vorbild benutzt hier #E2445C — und genau das
     // ist die eine Farbe, die dieses Projekt nicht fuehrt (Kopfkommentar,
     // Punkt 1). Aufmerksamkeit ja, Vorwurf nein.
@@ -227,7 +254,8 @@ final class AxiomPalette {
     rule: Color(0xFF313648),
     ink: Color(0xFFECEEF5),
     inkDim: Color(0xFFA0A7BB),
-    inkFaint: Color(0xFF7A8196),
+    // 4,33:1 auf `panel`, 3,84:1 auf `panelRaised`.
+    inkFaint: Color(0xFF878EA1),
     signal: Color(0xFF5A9BFF),
     signalDeep: Color(0xFF3570D4),
     calm: Color(0xFF3FC98D),

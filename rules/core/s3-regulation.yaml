@@ -1,14 +1,33 @@
-# SHADOW-Regeln für die Stufen S2/S3.
+# Regeln der Stufen S2/S3, die an Schwellenwerten des Zustandsvektors hängen.
 #
-# Alle stehen auf `log_only`. Sie feuern stumm mit und werden protokolliert,
-# erzeugen aber KEINE Ausgabe. Nach der Baseline-Phase wird im Wochenreview
-# bewertet:
+# Hier stand, alle Regeln dieser Datei stünden auf `log_only` und erzeugten
+# KEINE Ausgabe. Das war seit dem ersten Commit falsch. Wer die Datei
+# aufschlug, um zu sehen, was am Gerät sprechen kann, las diese Zusage und
+# schloss sie wieder — deshalb konnte ein Zwilling von R-110 hier unbemerkt
+# liegen. Der Ist-Stand:
+#
+#   LIVE    R-020, R-050, R-051, R-052, R-070 — sie sprechen
+#           R-090 — severity: enforce, verändert das Systemverhalten (L3)
+#   SHADOW  R-140 — läuft stumm mit, wird nur protokolliert
+#
+# Die Schwellen stammen aus weights.yaml und sind noch ungeeicht; der
+# Systeminspektor markiert die betroffenen Regeln deshalb.
+#
+# Für neue Regeln gilt unverändert: Sie starten als `log_only`, laufen
+# mindestens sieben Tage stumm mit und werden erst danach im Wochenreview
+# umgestellt. Bewertet wird dabei:
 #   - Wie oft hätte die Regel gefeuert?  (zu oft = Bedingung zu weit)
 #   - Wäre der Rat in der Situation richtig gewesen?
 #   - Kollidiert sie mit bestehenden Regeln?
-#
-# Erst dann wird `action` auf die echte Aktion umgestellt.
 # Siehe docs/04-REGELWERK.md §6 (Regel-Lebenszyklus).
+#
+# R-080 („Wind-Down-Grenze") stand hier bis zum 06.08.2026 und war dieselbe
+# Regel wie R-110 („Abendgrenze") in s2-live.yaml: gleiche Aktion, gleiche
+# Parameter, gleiche Severity, überlappendes Zeitfenster. Sie konnte den
+# Konflikt nie verlieren und hat R-110 damit zu einer reinen Wiederholung
+# gemacht — dieselbe Aufforderung ein zweites Mal, unter anderem Namen und
+# mit anderer rule_id (G2). Gestrichen. Die ID bleibt verbrannt und wird nie
+# wieder vergeben; `rule_overlap_test.dart` hält den Fall fest.
 
 # ── M5 Sensation Budget ─────────────────────────────────────────────────
 
@@ -128,34 +147,9 @@
   enabled: true
 
 # ── M8 Sleep Gate ───────────────────────────────────────────────────────
-
-- id: R-080
-  title: "Wind-Down-Grenze"
-  title_en: "Wind-down boundary"
-  deficit: D8
-  rationale: >
-    Die Nacht ist reizarm genug für Hyperfokus und bietet zugleich die
-    stärkste Novelty. Daraus entsteht eine sich selbst verstärkende
-    Kaskade: Schlafdefizit senkt die Exekutivfunktion, das erhöht den
-    Kompensationsaufwand und den Reizbedarf, was den Abendkonsum steigert.
-    Der Ausstiegsanker bricht den Kreis an seiner schwächsten Stelle.
-  rationale_en: >
-    The night is quiet enough for hyperfocus and at the same time offers
-    the strongest novelty. That produces a self-reinforcing cascade: sleep
-    debt lowers executive function, which raises compensation effort and
-    stimulation need, which raises evening consumption. The exit anchor
-    breaks the loop at its weakest point.
-  when:
-    all:
-      - time_between: ["22:30", "23:30"]
-      - not: { active_slot: { eq: focus } }
-  then:
-    action: notify
-    params: { ritual: winddown, broadcast: "de.atomfritte.axiom.WINDDOWN" }
-  priority: 70
-  severity: nudge
-  cooldown: { minutes: 720, max_per_day: 1 }
-  enabled: true
+# Die Abendgrenze steht als R-110 in s2-live.yaml. Sie braucht keine
+# Kalibrierung — sie feuert auf eine Uhrzeit — und gehört deshalb dorthin.
+# Was hier stand (R-080), war dieselbe Regel; siehe Dateikopf.
 
 # ── M9 Load Monitor ─────────────────────────────────────────────────────
 

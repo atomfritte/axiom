@@ -17,8 +17,20 @@
 /// antippt und sofort wieder verlässt, ist keine Nutzungszeit. Ohne die
 /// Karenz addierte sich jedes Durchtippen zu Minuten, die niemand verbracht
 /// hat — und ein Deckel, der falsch misst, ist schlimmer als keiner.
+///
+/// **Warum die Buchung nicht mehr allein an `dispose()` hängt.** Sie tat es,
+/// und damit blieb G4 in beide Richtungen falsch. Beendet Android den Prozess
+/// (Swipe-away, Speicherdruck), läuft `dispose()` nie: Eine halbe Stunde im
+/// Regeleditor war danach spurlos verschwunden, `usageToday` stand wieder auf
+/// null und die Sperre griff nicht. Und hing ein Bildschirm in einem
+/// Behälter, der ihn dauerhaft montiert hält, maß `dispose()` nicht die
+/// Verweildauer, sondern die Lebensdauer des Behälters. Deshalb wird jetzt
+/// zusätzlich beim Wechsel in den Hintergrund gebucht und beim Zurückkommen
+/// neu angesetzt — und die Uhr ist der injizierte `Clock`, nicht
+/// `DateTime.now()`, damit die Buchung überhaupt prüfbar ist.
 library;
 
+import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,25 +49,60 @@ mixin MetaTimed<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   /// Beim Aufbau gemerkt: In `dispose()` ist `ref` nicht mehr benutzbar,
   /// die Zeit muss aber genau dann gebucht werden.
   AxiomRuntime? _runtime;
+  Clock _clock = const SystemClock();
+
+  /// Kein `WidgetsBindingObserver`-Mixin: `check_screen` und `expert_screen`
+  /// bringen das selbst mit und überschreiben `didChangeAppLifecycleState`
+  /// für ihre eigenen Zwecke. Ein zweites Mixin mit derselben Methode wäre
+  /// stumm verloren gegangen — genau die Sorte Fehler, die niemand sieht.
+  AppLifecycleListener? _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    _openedAt = DateTime.now();
+    _clock = ref.read(clockProvider);
+    _openedAt = _clock.nowUtc();
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     ref.read(runtimeProvider.future).then((runtime) {
       if (mounted) _runtime = runtime;
     });
   }
 
+  void _onLifecycle(AppLifecycleState state) {
+    switch (state) {
+      // Der Prozess kann ab hier jederzeit beendet werden, ohne dass noch
+      // ein `dispose()` läuft. Was bis hierher verbraucht wurde, muss weg
+      // sein, bevor das passiert.
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _book();
+      case AppLifecycleState.resumed:
+        _openedAt ??= _clock.nowUtc();
+      case AppLifecycleState.inactive:
+        break;
+    }
+  }
+
+  /// Schreibt das bisher Verbrauchte weg und hält die Uhr an.
+  ///
+  /// Idempotent: Zweimal hintereinander gerufen bucht nichts doppelt. Nötig,
+  /// weil beim Wechsel in den Hintergrund erst `hidden` und dann `paused`
+  /// kommt und danach noch `dispose()` folgen kann.
+  void _book() {
+    final openedAt = _openedAt;
+    _openedAt = null;
+    if (openedAt == null) return;
+    final spent = _clock.nowUtc().difference(openedAt);
+    if (spent > kMetaGrace) {
+      _runtime?.logScreenTime(metaScreen, spent);
+    }
+  }
+
   @override
   void dispose() {
-    final openedAt = _openedAt;
-    if (openedAt != null) {
-      final spent = DateTime.now().difference(openedAt);
-      if (spent > kMetaGrace) {
-        _runtime?.logScreenTime(metaScreen, spent);
-      }
-    }
+    _book();
+    _lifecycle?.dispose();
     super.dispose();
   }
 }

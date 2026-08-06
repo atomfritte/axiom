@@ -186,10 +186,14 @@ final class AxiomRuntime {
     this.weightsCalibrated = false,
   });
   // ── 1. Ingest ─────────────────────────────────────────────────────────
+  /// [correctionOf] verweist auf das Ereignis, dessen Werte dieses hier
+  /// ersetzt. Der Strom bleibt dabei append-only: Korrigiert wird durch
+  /// Anhaengen, nie durch Ueberschreiben (event.dart).
   Future<Event> record(
     EventType type, {
     Map<String, Object?> payload = const {},
     EventSource source = EventSource.user,
+    String? correctionOf,
   }) async {
     final event = Event(
       id: newUlid(clock.nowUtc()),
@@ -197,6 +201,7 @@ final class AxiomRuntime {
       type: type,
       source: source,
       payload: payload,
+      correctionOf: correctionOf,
     );
     await store.append(event);
     return event;
@@ -297,9 +302,24 @@ final class AxiomRuntime {
       nextId: () => newUlid(clock.nowUtc()),
     );
     // SHADOW-Regeln protokollieren, ohne etwas anzuzeigen.
+    //
+    // Eine Zeile je Regel und lokalem Tag, nicht eine je Auswertung. Vorher
+    // stand hier `newUlid(...)`: Jeder `evaluate()`-Aufruf legte fuer jede
+    // zutreffende Schattenregel eine neue Zeile an — die App wertet bei
+    // jeder Handlung aus, der Expertenmodus zusaetzlich bei jedem
+    // `/api/state`. Eine Bedingung, die einen Tag lang wahr bleibt, ergab
+    // so Tausende Zeilen fuer eine Regel. Die Zahl, aus der nach sieben
+    // Tagen die Regelguete abgelesen wird, zaehlte damit Bildschirm-
+    // aktualisierungen statt Regeltreffer, und die Wochenauswertung meldete
+    // die Regel als staendig verdraengt — verdraengt hat sie nie jemand,
+    // Schattenregeln nehmen an der Konfliktaufloesung gar nicht teil.
+    //
+    // Die Kennung ist deshalb aus Regel und Tag gebildet: `saveDecision`
+    // schreibt mit `INSERT OR REPLACE`, die zweite Auswertung desselben
+    // Tages ersetzt die erste, statt sie zu vermehren. [D3]
     for (final fired in result.fired.where((f) => f.rule.isShadow)) {
       await store.saveDecision(Decision(
-        id: newUlid(clock.nowUtc()),
+        id: _shadowDecisionId(fired.rule.id, clock.nowLocal()),
         at: clock.nowLocal(),
         ruleId: fired.rule.id,
         action: fired.rule.then,
@@ -367,6 +387,15 @@ final class AxiomRuntime {
       deadlinePressure: tightestDeadline(tasks, now),
     );
   }
+  /// Kennung einer Schattenzeile: eine je Regel und lokalem Tag.
+  ///
+  /// Bewusst kein ULID — die Kennung *ist* die Entdopplung. Der Praefix
+  /// haelt sie von echten Entscheidungs-IDs fern, die immer ULIDs sind.
+  static String _shadowDecisionId(String ruleId, DateTime localDay) =>
+      'shadow:$ruleId:${localDay.year.toString().padLeft(4, '0')}-'
+      '${localDay.month.toString().padLeft(2, '0')}-'
+      '${localDay.day.toString().padLeft(2, '0')}';
+
   /// Zeit seit der letzten Koerper-Quittierung, fuer den Focus Governor.
   static Duration? _sinceBody(RuntimeContext ctx) {
     final minutes = ctx.minutesSinceByEvent['body_prompt'];
@@ -560,30 +589,74 @@ final class AxiomRuntime {
       state: state,
     );
     await store.upsertTask(task);
-    await record(EventType.taskCreated, payload: {
-      'task_id': task.id,
-      'title': title,
-      'ae': activationEnergy,
-      'salience': salience,
-      'stakes': stakes,
-      'state': state.name,
-      if (decayAt != null) 'decay_at': decayAt.toUtc().toIso8601String(),
-      'parent_id': ?parentId,
-      // Ohne diesen Eintrag ueberlebt der Ort keinen Wiederaufbau aus dem
-      // Ereignisstrom — und die Aufgabe kaeme ortsungebunden zurueck.
-      'place': ?task.place,
-      // Welche Notiz hier aufgegangen ist. Daran — und nur daran — erkennt
-      // [unsortedCaptures], dass sie erledigt ist.
-      //
-      // Frueher schrieb der Eingang dafuer ein *zweites* `taskCreated` mit
-      // demselben `task_id`. Das funktionierte, hatte aber eine Falle: Beim
-      // Wiederaufbau ueberschrieb der zweite Eintrag den ersten, also musste
-      // dort jedes Feld noch einmal stehen — und ein neues Feld an der
-      // Aufgabe fiel beim naechsten Rebuild lautlos weg, wenn jemand diese
-      // zweite Stelle uebersah.
-      'from_capture': ?fromCapture,
-    });
+    await record(EventType.taskCreated,
+        payload: _taskPayload(task, fromCapture: fromCapture));
     return task;
+  }
+
+  /// Der Ereignisrumpf einer Aufgabe — an genau einer Stelle.
+  ///
+  /// [createTask] und [amendTask] schreiben beide ein `taskCreated`, und der
+  /// Wiederaufbau baut die Aufgabe allein daraus. Stuenden die Felder zweimal
+  /// im Quelltext, fiele ein neu hinzugekommenes an einer der beiden Stellen
+  /// lautlos weg — genau die Falle, die der Eingang schon einmal hatte: Er
+  /// schrieb ein *zweites* `taskCreated` mit demselben `task_id`, und beim
+  /// Wiederaufbau ueberschrieb der zweite Eintrag den ersten.
+  ///
+  /// [fromCapture] sagt, welche Notiz hier aufgegangen ist. Daran — und nur
+  /// daran — erkennt [unsortedCaptures], dass sie beantwortet ist.
+  static Map<String, Object?> _taskPayload(
+    Task task, {
+    String? fromCapture,
+  }) =>
+      {
+        'task_id': task.id,
+        'title': task.title,
+        'ae': task.activationEnergy,
+        'salience': task.salience,
+        'stakes': task.stakes,
+        'state': task.state.name,
+        if (task.decayAt != null)
+          'decay_at': task.decayAt!.toUtc().toIso8601String(),
+        'parent_id': ?task.parentId,
+        // Ohne diesen Eintrag ueberlebt der Ort keinen Wiederaufbau aus dem
+        // Ereignisstrom — und die Aufgabe kaeme ortsungebunden zurueck.
+        'place': ?task.place,
+        'from_capture': ?fromCapture,
+      };
+
+  /// Aendert Felder einer bestehenden Aufgabe — als Korrektur im Strom.
+  ///
+  /// **Warum es diesen Weg gibt.** Der Expertenmodus schrieb geaenderte
+  /// Werte bisher mit `store.upsertTask` direkt in die Projektion, ohne
+  /// Ereignis. `rebuildProjections()` baut `tasks` aber allein aus dem
+  /// Ereignisstrom: Nach dem naechsten Vault-Import standen Titel,
+  /// Anlaufenergie, Salienz, Stakes und Frist wieder auf dem Stand der
+  /// Anlage — stumm. Der Export selbst enthaelt ohnehin nur Ereignisse, ein
+  /// Umzug auf ein zweites Geraet verlor die Aenderung also auch ohne
+  /// Wiederaufbau. Eine Projektion, die etwas anderes erzaehlt als der
+  /// Strom, ist in diesem System die teuerste Art von Fehler [D9].
+  ///
+  /// **Warum ein zweites `taskCreated` mit `correctionOf` und kein neuer
+  /// Ereignistyp.** `Event` fuehrt Korrekturen genau so (event.dart), der
+  /// Wiederaufbau wertet `taskCreated` bereits aus, und ein Typ, den ein
+  /// aelterer Strom nicht kennt, waere beim Einlesen ein Fail-Fast-Fehler.
+  /// Der spaetere Eintrag ersetzt den frueheren vollstaendig — deshalb
+  /// kommt der Rumpf aus [_taskPayload] und nicht aus einer zweiten Liste.
+  Future<Task> amendTask(Task amended) async {
+    await store.upsertTask(amended);
+    // Auf das Ereignis zeigen, dessen Werte hier ersetzt werden. Fehlt es
+    // (eine Aufgabe aus einem fremden Strom), bleibt der Verweis leer —
+    // die Korrektur gilt trotzdem, sie steht nur ohne Vorgaenger da.
+    final earlier = (await store.query(types: {EventType.taskCreated}))
+        .where((e) => e.payload['task_id'] == amended.id)
+        .toList();
+    await record(
+      EventType.taskCreated,
+      payload: _taskPayload(amended),
+      correctionOf: earlier.isEmpty ? null : earlier.last.id,
+    );
+    return amended;
   }
   Future<void> completeTask(Task task) async {
     await store.upsertTask(task.copyWith(state: TaskState.done));
@@ -791,18 +864,10 @@ final class AxiomRuntime {
     // Datenverlust, den es hier gibt.
     for (final child in children) {
       await store.upsertTask(child);
-      await record(EventType.taskCreated, payload: {
-        'task_id': child.id,
-        'title': child.title,
-        'ae': child.activationEnergy,
-        'salience': child.salience,
-        'stakes': child.stakes,
-        'state': child.state.name,
-        'parent_id': parent.id,
-        if (child.decayAt != null)
-          'decay_at': child.decayAt!.toUtc().toIso8601String(),
-        'place': ?child.place,
-      });
+      // Derselbe Rumpf wie bei jeder anderen Anlage: Der Atomizer setzt
+      // `parentId` bereits, eine dritte handgeschriebene Feldliste waere
+      // die dritte Stelle, an der ein neues Feld vergessen werden kann.
+      await record(EventType.taskCreated, payload: _taskPayload(child));
     }
     // Lief die Aufgabe gerade, endet damit auch ihr Fokusfenster: Die
     // Arbeit geht an den ersten Schritt über, und Zeit auf eine Klammer zu

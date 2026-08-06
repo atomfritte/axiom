@@ -19,15 +19,77 @@ import '../server/expert_server.dart';
 import '../platform/system_sync.dart';
 import 'runtime.dart';
 
-/// Regelwerk-Assets. Werden von `dart run tools/bin/sync_rules.dart`
-/// aus rules/ hierher gespiegelt.
-const _ruleAssets = <String>[
-  'assets/rules/limits.yaml',
-  'assets/rules/weights.yaml',
-  'assets/rules/s1-baseline.yaml',
-  'assets/rules/s2-live.yaml',
-  'assets/rules/s3-regulation.yaml',
-];
+/// Wo die gespiegelten Regel-Assets liegen. `dart run tools/bin/sync_rules.dart`
+/// kopiert sie aus `rules/` hierher.
+const _ruleAssetPrefix = 'assets/rules/';
+
+/// Das ausgelieferte Regelwerk und was dabei nicht ging.
+final class BundledRules {
+  /// Dateiname (ohne Pfad) auf Inhalt.
+  final Map<String, String> sources;
+
+  /// Was nicht geladen werden konnte. Landet in `AxiomRuntime.ruleIssues`
+  /// und damit sichtbar im Systeminspektor.
+  final List<RuleLoadIssue> issues;
+
+  const BundledRules(this.sources, this.issues);
+}
+
+/// Liest alle Regel-Assets aus dem Asset-Manifest.
+///
+/// **Aus dem Manifest und nicht aus einer Liste im Quelltext.** Vorher stand
+/// hier eine feste Liste von fünf Dateinamen. Eine neue Regeldatei wurde
+/// vom Validator geprüft, von `sync_rules.dart` kopiert und vom Build ins
+/// Paket genommen — und danach nie geladen, weil die Liste sie nicht kannte.
+/// Alle Tests blieben grün: Sie lesen `rules/`, die App liest das Bundle.
+/// Eine Regel, die es gibt und die nie feuert, ist genau das, was CLAUDE.md
+/// „schlimmer als ein Absturz" nennt.
+///
+/// Dasselbe gilt für den Fehlerfall: Ein Asset, das sich nicht lesen lässt,
+/// wurde stumm übersprungen. Jetzt steht es als [RuleLoadIssue] im
+/// Systeminspektor — sichtbar unfertig statt still verschwunden.
+///
+/// [bundle] ist für Tests da; in der App ist es immer der `rootBundle`.
+Future<BundledRules> loadBundledRules([AssetBundle? bundle]) async {
+  final from = bundle ?? rootBundle;
+  final sources = <String, String>{};
+  final issues = <RuleLoadIssue>[];
+
+  final List<String> assets;
+  try {
+    final manifest = await AssetManifest.loadFromAssetBundle(from);
+    // Sortiert, damit die Overlay-Reihenfolge nicht davon abhängt, in
+    // welcher Reihenfolge der Build die Assets aufgeschrieben hat.
+    assets = manifest
+        .listAssets()
+        .where((a) => a.startsWith(_ruleAssetPrefix) && a.endsWith('.yaml'))
+        .toList()
+      ..sort();
+  } on Object catch (e) {
+    return BundledRules(
+      const {},
+      [RuleLoadIssue(_ruleAssetPrefix, '-', 'Asset-Verzeichnis nicht lesbar: $e')],
+    );
+  }
+
+  if (assets.isEmpty) {
+    issues.add(RuleLoadIssue(
+      _ruleAssetPrefix,
+      '-',
+      'Kein Regelwerk im Paket. sync_rules.dart überträgt rules/ hierher.',
+    ));
+  }
+
+  for (final asset in assets) {
+    try {
+      sources[asset.split('/').last] = await from.loadString(asset);
+    } on Object catch (e) {
+      issues.add(RuleLoadIssue(asset, '-', 'Asset nicht lesbar: $e'));
+    }
+  }
+
+  return BundledRules(sources, issues);
+}
 
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
 
@@ -37,6 +99,35 @@ final clockProvider = Provider<Clock>((ref) => const SystemClock());
 /// Zeitpunkt weg. Der Systeminspektor zeigt es an; niemand soll es daran
 /// merken, dass Aufgaben fehlen.
 const kDatabaseResetSetting = 'db_reset_at';
+
+/// Ob die Datei ohne Schluessel lesbar waere.
+///
+/// Eine unverschluesselte SQLite-Datei beginnt mit `SQLite format 3\0`. Das
+/// steht so im Dateiformat und gilt unabhaengig davon, welche Bibliothek
+/// gerade eingebunden ist; `SqliteEventStore.isEncrypted` fragt dieselbe
+/// Kennung ab, braucht dafuer aber eine offene Verbindung — und genau die
+/// gibt es an der Stelle, an der das hier gebraucht wird, nicht mehr.
+bool _isPlainSqlite(String path) {
+  const header = <int>[
+    0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, //
+    0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00, // "SQLite format 3\0"
+  ];
+  final file = File(path);
+  if (!file.existsSync()) return false;
+  final handle = file.openSync();
+  try {
+    final head = handle.readSync(header.length);
+    if (head.length < header.length) return false;
+    for (var i = 0; i < header.length; i++) {
+      if (head[i] != header[i]) return false;
+    }
+    return true;
+  } on FileSystemException {
+    return false;
+  } finally {
+    handle.closeSync();
+  }
+}
 
 /// Oeffnet die Datenbank, notfalls neu.
 ///
@@ -52,13 +143,36 @@ const kDatabaseResetSetting = 'db_reset_at';
 /// dasteht, laesst einen an sich selbst zweifeln — genau die Wirkung, die
 /// dieses Projekt vermeiden will.
 ///
-/// Der Fall tritt ein bei einer unverschluesselten Datei aus einer frueheren
-/// Fassung, nach geloeschten App-Daten, nach einem zurueckgespielten Backup
-/// und beim Geraetewechsel.
-SqliteEventStore _openDatabase(String path, Clock clock, String? key) {
+/// **Und warum hier trotzdem fast nie geloescht wird.** Eine Datei, die mit
+/// `SQLite format 3\0` beginnt, ist ohne Schluessel vollstaendig lesbar. Sie
+/// wegzuwerfen, weil ein *Schluessel* nicht passt, war der teuerste Fehler
+/// dieses Projekts: Ein einziger Fehlschlag des Keystore genuegte, damit die
+/// App eine Klartextdatenbank anlegte — und der naechste Start warf sie weg,
+/// weil inzwischen ein Schluessel da war. Der Fall wird deshalb erkannt und
+/// unverschluesselt geoeffnet. Sichtbar unverschluesselt (*System → Daten*)
+/// ist besser als sauber geloescht.
+///
+/// Geloescht wird nur noch, was wirklich nicht mehr zu lesen ist: eine
+/// verschluesselte Datei, deren Schluessel nicht mehr passt — nach
+/// geloeschten App-Daten, nach einem zurueckgespielten Backup, beim
+/// Geraetewechsel.
+///
+/// Oeffentlich, weil ein Test genau diesen Weg fahren koennen muss.
+SqliteEventStore openAxiomDatabase(String path, Clock clock, String? key) {
   try {
     return SqliteEventStore.open(path, clock: clock, encryptionKey: key);
   } on DatabaseUnreadable {
+    if (key != null && _isPlainSqlite(path)) {
+      // Der Schluessel ist neu, die Datei ist aelter als er. Nichts ist
+      // verloren — sie wird ohne Schluessel geoeffnet und bleibt es, bis
+      // jemand sie bewusst umschluesselt.
+      try {
+        return SqliteEventStore.open(path, clock: clock);
+      } on DatabaseUnreadable {
+        // Auch ohne Schluessel nicht zu lesen. Dann lag es nicht an ihm,
+        // und es bleibt beim dokumentierten Neuanfang.
+      }
+    }
     // WAL und Shared-Memory muessen mit weg. Bleiben sie liegen, findet
     // SQLite eine Sitzung zu einer Datei vor, die es nicht mehr gibt.
     for (final suffix in ['', '-wal', '-shm']) {
@@ -74,24 +188,45 @@ SqliteEventStore _openDatabase(String path, Clock clock, String? key) {
   }
 }
 
-/// Baut die Laufzeit auf: Datenbank oeffnen, Regelwerk laden, Engine binden.
-final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
+/// Die Datenbank. Genau einmal geoeffnet, fuer die Lebensdauer der App.
+///
+/// **Warum sie nicht in [runtimeProvider] liegt.** Dort lag sie, und dort
+/// wurde sie bei jedem `ref.invalidate(runtimeProvider)` geschlossen — nach
+/// jedem gespeicherten Regeleditor-Eintrag und nach jeder Aenderung im
+/// Expertenmodus. Riverpod gibt waehrend des Neuaufbaus aber weiterhin die
+/// *alte* Laufzeit heraus; wer in diesem Fenster etwas las (die Weiche in
+/// `app.dart`, die vier Anzeige-Einstellungen unten), traf auf eine
+/// geschlossene Datenbank: `StateError`, und statt der App stand fuer einige
+/// hundert Millisekunden ein Fehlerbildschirm da.
+///
+/// Getrennt gehalten loest sich das an der Wurzel statt an fuenf Stellen:
+/// Die Verbindung ueberlebt jedes Neuladen des Regelwerks, weil sie mit ihm
+/// nichts zu tun hat.
+final storeProvider = FutureProvider<SqliteEventStore>((ref) async {
   final clock = ref.watch(clockProvider);
+
+  final key = await AndroidBridge.databaseKey();
+  if (key.state == DatabaseKeyState.unavailable) {
+    // Nicht oeffnen, nicht anlegen, nicht loeschen. Der Startbildschirm
+    // sagt, was los ist (G1: ein Bildschirm ist teuer, Datenverlust
+    // teurer; G2: der Grund steht dabei).
+    throw const DatabaseKeyUnavailable();
+  }
 
   final dir = await getApplicationSupportDirectory();
   final dbPath = '${dir.path}${Platform.pathSeparator}axiom.db';
-  final store = _openDatabase(dbPath, clock, await AndroidBridge.databaseKey());
+  final store = openAxiomDatabase(dbPath, clock, key.key);
   ref.onDispose(store.close);
+  return store;
+});
 
-  final sources = <String, String>{};
-  for (final asset in _ruleAssets) {
-    try {
-      sources[asset.split('/').last] = await rootBundle.loadString(asset);
-    } on Object {
-      // Fehlendes Asset ist ein Konfigurationsfehler, aber kein Grund,
-      // die App nicht zu starten — der Systeminspektor zeigt es an.
-    }
-  }
+/// Baut die Laufzeit auf: Regelwerk laden, Engine an die Datenbank binden.
+final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
+  final clock = ref.watch(clockProvider);
+  final store = await ref.watch(storeProvider.future);
+
+  final bundled = await loadBundledRules();
+  final sources = Map<String, String>.of(bundled.sources);
 
   // Im Geraet bearbeitete Regeln kommen zuletzt: gleiche ID ersetzt die
   // mitgelieferte Fassung, neue ID kommt dazu — dieselbe Overlay-Semantik
@@ -114,7 +249,11 @@ final runtimeProvider = FutureProvider<AxiomRuntime>((ref) async {
     rules: parsed.rules,
     limits: limits,
     weights: weights,
-    ruleIssues: parsed.issues,
+    // Zuerst, was gar nicht erst geladen werden konnte, dann was sich nicht
+    // uebersetzen liess. Beides gehoert in denselben Kasten im
+    // Systeminspektor — sonst faellt genau der Fall durch, der niemandem
+    // auffaellt.
+    ruleIssues: [...bundled.issues, ...parsed.issues],
     weightsCalibrated: !(sources['weights.yaml'] ?? '')
         .contains('status: uncalibrated'),
   );

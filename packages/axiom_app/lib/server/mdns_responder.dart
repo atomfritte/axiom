@@ -52,11 +52,38 @@ const String kAxiomHostname = 'axiom.local';
 /// Seitenaufruf neu gefragt wird.
 const int kMdnsTtl = 120;
 
+/// Wie der Socket entsteht.
+///
+/// Nur der Test setzt das. Ein Netz ohne Multicast laesst sich auf dem
+/// Rechner nicht herstellen, und genau dieser Fehlerfall — `bind` oder
+/// `joinMulticast` wirft — war der, in dem Sperre und Socket haengenblieben.
+typedef MdnsSocketBinder = Future<RawDatagramSocket> Function();
+
 final class MdnsResponder {
+  MdnsResponder({MdnsSocketBinder? bind}) : _bind = bind ?? _bindMdnsPort;
+
+  final MdnsSocketBinder _bind;
+
   RawDatagramSocket? _socket;
   String? _ip;
+  bool _holdsMulticastLock = false;
 
   bool get isRunning => _socket != null;
+
+  /// Ob die Multicast-Sperre gerade gehalten wird.
+  ///
+  /// Sichtbar, weil sie auf der Systemseite **nicht** referenzgezaehlt ist
+  /// (`setReferenceCounted(false)`): Wird sie einmal nicht freigegeben,
+  /// bleibt sie bis zum Prozessende stehen und kostet die ganze Zeit Strom.
+  /// Die Zusicherung lautet: gehalten genau dann, wenn der Responder laeuft.
+  bool get holdsMulticastLock => _holdsMulticastLock;
+
+  static Future<RawDatagramSocket> _bindMdnsPort() => RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        kMdnsPort,
+        reuseAddress: true,
+        reusePort: true,
+      );
 
   /// Beginnt zu antworten. [ip] ist die Adresse, die ausgeliefert wird.
   ///
@@ -67,14 +94,10 @@ final class MdnsResponder {
     if (isRunning) return true;
     // Zuerst die Sperre: Ohne sie kaeme die Frage nie an, und der Socket
     // laege nur herum.
-    await AndroidBridge.multicastLock(hold: true);
+    await _holdLock();
+    RawDatagramSocket? socket;
     try {
-      final socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        kMdnsPort,
-        reuseAddress: true,
-        reusePort: true,
-      );
+      socket = await _bind();
       socket.multicastHops = 255;
       socket.joinMulticast(InternetAddress(kMdnsGroup));
 
@@ -88,7 +111,16 @@ final class MdnsResponder {
       _announce();
       return true;
     } on Object {
-      await stop();
+      // Vorher stand hier `await stop()`. Das kehrte bei `_socket == null`
+      // sofort zurueck — und `_socket` wird erst nach `joinMulticast`
+      // gesetzt. Wirft eines der drei davor, blieb die Sperre fuer die
+      // Prozesslebensdauer gehalten, und ein bereits gebundener Socket hielt
+      // Port 5353 bis zum Prozessende, je Startversuch einer. Deshalb hier
+      // beides ausdruecklich und ohne Umweg ueber stop().
+      socket?.close();
+      _socket = null;
+      _ip = null;
+      await _releaseLock();
       return false;
     }
   }
@@ -97,7 +129,12 @@ final class MdnsResponder {
   Future<void> stop() async {
     final socket = _socket;
     _socket = null;
-    if (socket == null) return;
+    if (socket == null) {
+      // Auch ohne Socket kann die Sperre stehen — etwa wenn zwischen
+      // Greifen und Binden abgebrochen wurde.
+      await _releaseLock();
+      return;
+    }
     try {
       // TTL 0 heisst: vergesst den Eintrag. Ohne das zeigt der Name noch
       // zwei Minuten auf ein Telefon, das nicht mehr lauscht — und der
@@ -112,7 +149,25 @@ final class MdnsResponder {
     }
     socket.close();
     _ip = null;
-    // Sie kostet Strom. Sie haengt am Expertenmodus, nicht am App-Start.
+    await _releaseLock();
+  }
+
+  // ── Multicast-Sperre ──────────────────────────────────────────────────
+  //
+  // Sie kostet Strom. Sie haengt am Expertenmodus, nicht am App-Start.
+  // Der Merker davor ist kein Zwischenspeicher, sondern die einzige Stelle,
+  // an der ueber Greifen und Loslassen entschieden wird — sonst kann er
+  // von der Wirklichkeit abweichen.
+
+  Future<void> _holdLock() async {
+    if (_holdsMulticastLock) return;
+    _holdsMulticastLock = true;
+    await AndroidBridge.multicastLock(hold: true);
+  }
+
+  Future<void> _releaseLock() async {
+    if (!_holdsMulticastLock) return;
+    _holdsMulticastLock = false;
     await AndroidBridge.multicastLock(hold: false);
   }
 

@@ -214,7 +214,10 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
           FilledButton(
             onPressed:
                 _busy || _passphrase.text.length < 8 ? null : _export,
-            child: Text(_busy ? context.t('Läuft…') : 'Exportieren'),
+            // Beide Zweige durch die Uebersetzung: Der zweite stand als
+            // nacktes Literal da und blieb in der englischen App deutsch.
+            child: Text(
+                _busy ? context.t('Läuft…') : context.t('Exportieren')),
           ),
           if (_lastPath != null) ...[
             const SizedBox(height: Space.md),
@@ -396,6 +399,22 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
 
 // ── Wirkfenster (M13) ───────────────────────────────────────────────────
 
+/// Der Stand des laufenden Fensters — als Rahmen mit Platzhalter.
+///
+/// Vorher kam dieser Satz fertig zusammengesetzt aus dem Kern
+/// (`MedWindow.describe` über `runtime.describeMedWindow`). Ein Satz mit
+/// eingebauter Minutenzahl taugt nicht als Übersetzungsschlüssel, also blieb
+/// in der englischen Oberfläche „Fenster läuft noch 45 min." stehen. Hier
+/// steht nur noch der Rahmen; die Zahl ist ein Wert.
+String _describeWindow(BuildContext context, MedEntry active, DateTime at) {
+  if (!active.isInWindow(at)) return context.t('Außerhalb des Fensters.');
+  final left = active.remaining(at);
+  return left.inMinutes < 60
+      ? context.t('Fenster läuft noch {0} min.', [left.inMinutes])
+      : context.t('Fenster läuft noch {0} h.',
+          [(left.inMinutes / 60).toStringAsFixed(1)]);
+}
+
 class _MedSection extends ConsumerWidget {
   const _MedSection();
 
@@ -431,7 +450,11 @@ class _MedSection extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: Space.sm),
-              Text(kMedDisclaimer,
+              // `kMedDisclaimer` ist ein Bezeichner, kein Literal — deshalb
+              // hat ihn kein Waechter gesehen, und ausgerechnet der Satz,
+              // der M13 von einer Behandlungsempfehlung trennt (R10), stand
+              // in der englischen Oberflaeche deutsch da.
+              Text(context.t(kMedDisclaimer),
                   style: Theme.of(context).textTheme.bodySmall),
 
               if (enabled) ...[
@@ -445,7 +468,8 @@ class _MedSection extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(Radii.control),
                     ),
                     child: Text(
-                      runtime?.describeMedWindow(state!) ?? '',
+                      _describeWindow(
+                          context, state!.active!, ref.watch(nowProvider)),
                       style: monoStyle(context, size: 12, color: p.ink),
                     ),
                   ),
@@ -625,7 +649,9 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
               child: Text(context.t('Eintragen')),
             ),
             const SizedBox(height: Space.md),
-            Text(kMedDisclaimer,
+            // Dieselbe Abgrenzung wie auf der Modulkarte, aus demselben
+            // Grund uebersetzt: Sie steht an beiden Stellen bewusst.
+            Text(context.t(kMedDisclaimer),
                 style: Theme.of(context).textTheme.bodySmall),
           ],
         ),

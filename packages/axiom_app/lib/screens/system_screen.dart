@@ -649,9 +649,17 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
             ),
           ],
           const SizedBox(height: Space.md),
+          // Vorher stand hier, nichts davon verlasse das Telefon, weil AXIOM
+          // gar keine Berechtigung fuers Netz habe. Beide Haelften waren
+          // falsch: Das Manifest deklariert seit ADR-0005 `INTERNET`, und der
+          // Expertenmodus liefert genau diese Schlaf- und Schrittereignisse
+          // ueber `GET /api/events` ins lokale Netz aus. Eine falsche
+          // Datenschutzzusage ausgerechnet auf dem Schirm fuer
+          // Gesundheitsdaten. Was bleibt, ist die engere, getestete Zusage
+          // aus ADR-0005 — und der ehrliche Hinweis auf die eine Ausnahme.
           Text(
             context.t(
-              'Health Connect ist eine Schnittstelle des Geräts. Nichts davon verlässt das Telefon — AXIOM hat keine Netzwerkberechtigung.',
+              'Health Connect ist eine Schnittstelle des Geräts. AXIOM liest nur und ruft nichts von sich aus auf. Solange der Expertenmodus läuft, sind diese Werte im lokalen Netz abrufbar.',
             ),
             style: monoStyle(context, size: 10.5, color: p.inkFaint),
           ),
@@ -982,6 +990,12 @@ class _RuleTile extends StatelessWidget {
         ),
         SkipReason.globalLimitReached => context.t(
           'globales Tageslimit erreicht',
+        ),
+        // Gegenstueck zu „Meldungen pro Stunde" weiter unten in diesem
+        // Screen: Die Grenze stand dort als geltend, ohne dass ein Grund
+        // dafuer je hier auftauchen konnte.
+        SkipReason.hourlyLimitReached => context.t(
+          'Meldungen dieser Stunde erschöpft',
         ),
         SkipReason.quietHours => context.t('Ruhezeit'),
         SkipReason.lowConfidence => context.t(

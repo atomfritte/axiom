@@ -156,8 +156,14 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
               ),
             ),
           const SizedBox(height: Space.sm),
+          // Vorher `interceptWaitingText` — der fertig zusammengesetzte
+          // deutsche Satz. Die uebersetzbare Fassung mit getrennten Werten
+          // gab es daneben schon; sie wurde nur nicht benutzt, und die
+          // Wartezeit stand deshalb in der englischen App deutsch da.
           Text(
-            runtime?.interceptWaitingText(run) ?? '',
+            runtime == null
+                ? ''
+                : context.p(runtime.interceptWaitingPhrase(run)),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
 
@@ -256,7 +262,9 @@ class _ChecklistRow extends StatelessWidget {
             ),
             const SizedBox(width: Space.md),
             Expanded(
-              child: Text(question,
+              // Dieselbe Frage wie im Editor, dieselbe Regel: Vorlagen
+              // werden uebersetzt, eigene Formulierungen bleiben stehen.
+              child: Text(context.t(question),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: checked ? p.ink : p.inkDim,
                       )),
@@ -445,7 +453,11 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(question,
+                      // Eine uebernommene Vorlage steht deutsch in der
+                      // Liste — hier wird sie uebersetzt. Eine selbst
+                      // geschriebene Frage kennt die Woerterliste nicht und
+                      // bleibt unveraendert stehen, genau wie eingetippt.
+                      child: Text(context.t(question),
                           style: Theme.of(context).textTheme.bodyMedium),
                     ),
                     IconButton(
@@ -485,10 +497,16 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
               spacing: Space.sm,
               runSpacing: Space.sm,
               children: [
+                // Gespeichert wird der deutsche Quelltext, angezeigt die
+                // Uebersetzung: Der deutsche Satz ist der Schluessel, also
+                // wandert eine einmal gewaehlte Vorlage bei einem
+                // Sprachwechsel mit. Waere hier der englische Satz abgelegt,
+                // haette die Checkliste dauerhaft die Sprache des Tages, an
+                // dem sie entstand.
                 for (final seed in kChecklistSeeds)
                   if (!_checklist.contains(seed))
                     ActionChip(
-                      label: Text(seed,
+                      label: Text(context.t(seed),
                           style: Theme.of(context).textTheme.bodySmall),
                       onPressed: () => setState(() => _checklist.add(seed)),
                     ),

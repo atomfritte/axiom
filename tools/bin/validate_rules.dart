@@ -1,11 +1,22 @@
-/// Regel-Validator. Laeuft im CI und beim App-Start.
+/// Regel-Validator. Laeuft vor jedem Commit und vor jedem Spiegeln ins
+/// App-Bundle.
 ///
-/// Eine ungueltige Regel wird NICHT geladen und die App startet mit einem
-/// sichtbaren Fehler — kein stilles Ueberspringen. In einem regelbasierten
-/// System ist eine stumm ignorierte Regel schlimmer als ein Absturz: Man
-/// verlaesst sich auf etwas, das nicht existiert.
+/// Hier stand „Laeuft im CI und beim App-Start". Beides trifft nicht zu: Es
+/// gibt kein CI, und die App kennt dieses Paket gar nicht. Genau die Sorte
+/// Zusage, die dieser Validator verhindern soll.
+///
+/// Eine ungueltige Regel wird NICHT gespiegelt und nicht geladen — kein
+/// stilles Ueberspringen. In einem regelbasierten System ist eine stumm
+/// ignorierte Regel schlimmer als ein Absturz: Man verlaesst sich auf etwas,
+/// das nicht existiert.
 ///
 ///   dart run tools/bin/validate_rules.dart [pfad]
+///
+/// Die Pruefung selbst ist eine Funktion (`validateRules`), kein `main()`:
+/// `sync_rules.dart` ruft sie auf, bevor es eine Regel in die App-Assets
+/// spiegelt. Vorher stand dort nur der Satz „Der Validator läuft mit" —
+/// aufgerufen wurde er nie, und ein ungueltiges Regelwerk ging ungehindert
+/// ins Bundle.
 library;
 
 import 'dart:io';
@@ -15,6 +26,52 @@ import 'package:yaml/yaml.dart';
 
 final _idPattern = RegExp(r'^R-\d{3}$');
 
+/// Testdateien nach der Namenskonvention `r<nnn>_<name>_test.dart`.
+/// `r<nnn>_test.dart` ohne Namensteil zaehlt ebenfalls — der Waechter soll
+/// den Test finden, nicht den Dateinamen bewerten.
+final _ruleTestPattern = RegExp(r'^r(\d{3})[_a-zA-Z0-9]*_test\.dart$');
+
+/// Regeln, die vor dieser Pruefung entstanden sind — Stand 06.08.2026.
+///
+/// Warum eine Ausnahmeliste und nicht sofort ein Fehler fuer alle: 16 der 18
+/// ausgelieferten Regeln haben heute keinen Test. Ein Validator, der beim
+/// ersten Lauf 16 Fehler meldet, wird umgangen — er haette dieselbe Wirkung
+/// wie der Satz in CLAUDE.md, der die Pruefung jahrelang nur behauptet hat.
+/// Deshalb: fuer diese IDs eine Warnung mit Namensliste, fuer jede weitere
+/// Regel ein Fehler. Die Liste waechst nie. Sie schrumpft, sobald ein Test
+/// nachgezogen wird — und der Validator sagt es, sobald ein Eintrag
+/// ueberfluessig geworden ist.
+const _rulesWithoutTest = <String>{
+  'R-001', 'R-002', 'R-003', 'R-010', 'R-020', 'R-050', 'R-051', 'R-052', //
+  'R-070', 'R-090', 'R-100', 'R-101', 'R-110', 'R-111', 'R-120', 'R-130',
+};
+
+/// Ergebnis einer Pruefung. Trennt Fehler (Regelwerk wird nicht geladen)
+/// von Warnungen (Regelwerk laedt, ist aber sichtbar unfertig).
+class ValidationReport {
+  const ValidationReport({
+    required this.errors,
+    required this.warnings,
+    required this.ruleCount,
+    required this.shadowCount,
+    required this.fileCount,
+    this.ruleTestDir,
+  });
+
+  final List<String> errors;
+  final List<String> warnings;
+  final int ruleCount;
+  final int shadowCount;
+  final int fileCount;
+
+  /// Gegen welches Testverzeichnis abgeglichen wurde, oder `null`, wenn
+  /// keines gefunden wurde. Steht in der Ausgabe: Ein stumm uebersprungener
+  /// Waechter ist schlimmer als keiner.
+  final String? ruleTestDir;
+
+  bool get isValid => errors.isEmpty;
+}
+
 void main(List<String> args) {
   final root = args.isNotEmpty ? args.first : 'rules';
   final dir = Directory(root);
@@ -23,11 +80,47 @@ void main(List<String> args) {
     exit(2);
   }
 
+  final report = validateRules(dir);
+  for (final w in report.warnings) {
+    stdout.writeln('WARN   $w');
+  }
+  for (final e in report.errors) {
+    stdout.writeln('FEHLER $e');
+  }
+
+  stdout.writeln('');
+  stdout.writeln('${report.ruleCount} Regeln geprueft in '
+      '${report.fileCount} Dateien '
+      '(${report.shadowCount} im SHADOW-Modus)');
+  stdout.writeln('${report.errors.length} Fehler, '
+      '${report.warnings.length} Warnungen');
+
+  // Was nicht geprueft wurde, steht da. Sonst sieht ein uebersprungener
+  // Abgleich genauso aus wie ein bestandener.
+  if (report.ruleTestDir == null) {
+    stdout.writeln('Regel-Tests nicht abgeglichen: kein '
+        'packages/axiom_core/test/rules/ oberhalb von $root gefunden.');
+  }
+
+  if (!report.isValid) {
+    stdout.writeln('');
+    stdout.writeln('Regelwerk ungueltig — wird nicht geladen.');
+    exit(1);
+  }
+  stdout.writeln('Regelwerk gueltig.');
+}
+
+/// Prueft jede YAML-Datei unterhalb von [dir]. Schreibt nichts.
+ValidationReport validateRules(Directory dir) {
   final errors = <String>[];
   final warnings = <String>[];
   final seenIds = <String, String>{};
   var ruleCount = 0;
   var shadowCount = 0;
+
+  final ruleTests = _findRuleTests(dir);
+  final testedIds = ruleTests == null ? null : _testedRuleIds(ruleTests);
+  final untested = <String>[];
 
   final files = dir
       .listSync(recursive: true)
@@ -68,6 +161,30 @@ void main(List<String> args) {
             'IDs werden nie wiederverwendet.');
       } else {
         seenIds[id] = relative;
+      }
+
+      // ── Test in packages/axiom_core/test/rules/ ──
+      //
+      // CLAUDE.md sagt diese Kopplung seit Langem zu, erzwungen wurde sie
+      // nirgends: 18 Regeln, 2 Testdateien. Eine ungetestete Regel feuert am
+      // Geraet, ohne dass ihre Bedingung je gegen einen Zustand ausgewertet
+      // wurde — eine vertauschte Vergleichsrichtung faellt erst dort auf.
+      if (testedIds != null && _idPattern.hasMatch(id)) {
+        final number = id.substring(2);
+        if (testedIds.contains(id)) {
+          if (_rulesWithoutTest.contains(id)) {
+            warnings.add('$where: hat einen Test — Eintrag aus '
+                '_rulesWithoutTest in tools/bin/validate_rules.dart '
+                'streichen.');
+          }
+        } else if (_rulesWithoutTest.contains(id)) {
+          untested.add(id);
+        } else {
+          errors.add('$where: kein Test in packages/axiom_core/test/rules/. '
+              'Erwartet wird r${number}_<name>_test.dart. Eine Regel ohne '
+              'Test feuert am Geraet, ohne dass ihre Bedingung je gegen '
+              'einen Zustand ausgewertet wurde.');
+        }
       }
 
       // ── rationale (G2) ──
@@ -162,26 +279,49 @@ void main(List<String> args) {
     }
   }
 
-  // ── Ausgabe ──
-  for (final w in warnings) {
-    stdout.writeln('WARN   $w');
-  }
-  for (final e in errors) {
-    stdout.writeln('FEHLER $e');
+  // Eine Zeile statt sechzehn: Die Namensliste soll gelesen werden, nicht
+  // ueberblaettert.
+  if (untested.isNotEmpty) {
+    untested.sort();
+    warnings.add('${untested.length} Regeln ohne Test in '
+        'packages/axiom_core/test/rules/: ${untested.join(", ")}. '
+        'Altbestand — eine neue Regel ohne Test ist ein Fehler.');
   }
 
-  stdout.writeln('');
-  stdout.writeln('$ruleCount Regeln geprueft in ${files.length} Dateien '
-      '($shadowCount im SHADOW-Modus)');
-  stdout.writeln('${errors.length} Fehler, ${warnings.length} Warnungen');
-
-  if (errors.isNotEmpty) {
-    stdout.writeln('');
-    stdout.writeln('Regelwerk ungueltig — wird nicht geladen.');
-    exit(1);
-  }
-  stdout.writeln('Regelwerk gueltig.');
+  return ValidationReport(
+    errors: errors,
+    warnings: warnings,
+    ruleCount: ruleCount,
+    shadowCount: shadowCount,
+    fileCount: files.length,
+    ruleTestDir: ruleTests?.path,
+  );
 }
+
+/// Sucht `packages/axiom_core/test/rules/` ab [start] aufwaerts.
+///
+/// Gesucht statt angenommen: Der Validator laeuft mal ueber `rules/`, mal
+/// ueber `rules/core/` (aus `sync_rules.dart`) und in Tests ueber eine Kopie
+/// im temporaeren Verzeichnis. Ein fester Pfad waere der erste, der bricht.
+Directory? _findRuleTests(Directory start) {
+  var dir = start.absolute;
+  while (true) {
+    final probe = Directory('${dir.path}/packages/axiom_core/test/rules');
+    if (probe.existsSync()) return probe;
+    final parent = dir.parent;
+    if (parent.path == dir.path) return null;
+    dir = parent;
+  }
+}
+
+/// Welche Regel-IDs eine Testdatei haben. Der Dateiname ist die Kopplung —
+/// ein Kommentar waere nicht pruefbar.
+Set<String> _testedRuleIds(Directory ruleTests) => {
+      for (final file in ruleTests.listSync().whereType<File>())
+        if (_ruleTestPattern.firstMatch(file.uri.pathSegments.last)
+            case final match?)
+          'R-${match.group(1)}',
+    };
 
 /// Bekannte Variablen der Regel-DSL — abgeleitet, nicht abgeschrieben.
 ///

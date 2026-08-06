@@ -95,17 +95,45 @@ void main() {
   });
 
   group('Impulse', () {
+    /// Ein vollständiger Abfang: ein Ereignis beim Start, eines beim Auflösen.
+    /// Genau so schreibt es AxiomRuntime.
+    Future<void> intercept(String outcome, {Duration ago = Duration.zero}) async {
+      await record(EventType.impulseIntercepted,
+          payload: {'outcome': 'pending', 'trigger_id': 't1'}, ago: ago);
+      await record(EventType.impulseIntercepted,
+          payload: {'outcome': outcome, 'trigger_id': 't1'}, ago: ago);
+    }
+
     test('zählt abgefangen und trotzdem ausgeführt', () async {
-      await record(EventType.impulseIntercepted,
-          payload: {'outcome': 'aborted'});
-      await record(EventType.impulseIntercepted,
-          payload: {'outcome': 'aborted'});
-      await record(EventType.impulseIntercepted,
-          payload: {'outcome': 'proceeded'});
+      await intercept('aborted', ago: const Duration(hours: 3));
+      await intercept('aborted', ago: const Duration(hours: 2));
+      await intercept('proceeded', ago: const Duration(hours: 1));
 
       final input = await aggregator.collect(ReviewScope.week);
       expect(input.impulsesIntercepted, 3);
       expect(input.impulsesProceeded, 1);
+    });
+
+    test('ein Abfang ist einer, nicht zwei', () async {
+      // Zwei Abfänge, beide durchgezogen: 0 von 2 gehalten. Vorher wurden
+      // Start- und Auflösungsereignis getrennt gezählt — „2 von 4 gehalten".
+      await intercept('proceeded', ago: const Duration(hours: 2));
+      await intercept('proceeded', ago: const Duration(hours: 1));
+
+      final input = await aggregator.collect(ReviewScope.week);
+      expect(input.impulsesIntercepted, 2);
+      expect(input.impulsesProceeded, 2);
+    });
+
+    test('ein laufender Abfang gilt nicht als gehalten', () async {
+      // Nur das Start-Ereignis, der Cooldown läuft noch. Vorher stand hier
+      // „1 von 1 gehalten", bevor überhaupt etwas entschieden war.
+      await record(EventType.impulseIntercepted,
+          payload: {'outcome': 'pending', 'trigger_id': 't1'});
+
+      final input = await aggregator.collect(ReviewScope.week);
+      expect(input.impulsesIntercepted, 0);
+      expect(input.impulsesProceeded, 0);
     });
   });
 
@@ -115,13 +143,14 @@ void main() {
       DecisionResponse? response,
       bool suppressed = false,
       Duration ago = Duration.zero,
+      ActionType action = ActionType.notify,
     }) async {
       final at = clock.nowUtc().subtract(ago);
       await store.saveDecision(Decision(
         id: newUlid(at),
         at: at,
         ruleId: ruleId,
-        action: const Action(ActionType.notify),
+        action: Action(action),
         explanation: 'weil',
         stateSnapshotId: 's1',
         suppressed: suppressed,
@@ -169,6 +198,79 @@ void main() {
       }
       final input = await aggregator.collect(ReviewScope.week);
       expect(input.suppressedRules, contains('R-090'));
+    });
+
+    test('eine Schattenregel ist kein Konflikt', () async {
+      // Eine neue Regel läuft ihre sieben Tage als log_only. Jeder Tag legt
+      // eine Zeile mit suppressed = 1 an — dieselbe Spalte, die auch „hat die
+      // Konfliktauflösung verloren" bedeutet. Vorher meldete der Review
+      // deshalb für jede neue Regel einen Konflikt, den es nie gab.
+      for (var i = 0; i < 7; i++) {
+        await decision('R-140',
+            suppressed: true,
+            action: ActionType.logOnly,
+            ago: Duration(days: i));
+      }
+      final input = await aggregator.collect(ReviewScope.week);
+      expect(input.suppressedRules, isEmpty);
+    });
+
+    test('Schattenzeit verdeckt keinen echten Konflikt', () async {
+      // Dieselbe Regel läuft erst im Schatten und wird danach live von einer
+      // höherrangigen verdrängt. Der Konflikt muss sichtbar bleiben.
+      for (var i = 0; i < 3; i++) {
+        await decision('R-140',
+            suppressed: true,
+            action: ActionType.logOnly,
+            ago: Duration(days: 4 + i));
+      }
+      for (var i = 0; i < 5; i++) {
+        await decision('R-140', suppressed: true, ago: Duration(hours: i));
+      }
+      final input = await aggregator.collect(ReviewScope.week);
+      expect(input.suppressedRules, contains('R-140'));
+    });
+  });
+
+  group('Ersparnisschätzung', () {
+    test('zählt die Schritte vergangener Zeitanker', () async {
+      // Vorher stand im Summanden `EventType.decisionEmitted` — ein
+      // Ereignistyp, den niemand schreibt. Der Anteil, den der Kommentar den
+      // Zeitankern zuschreibt, war konstant null; K6 wurde damit systematisch
+      // zu schlecht und kann den Rückbau laufender Module auslösen.
+      final before = (await aggregator.collect(ReviewScope.week))
+          .savedMinutesEstimate;
+
+      await store.upsertAnchor(Anchor(
+        id: 'a1',
+        title: 'Zahnarzt',
+        arriveBy: clock.nowLocal().subtract(const Duration(days: 2)),
+        travel: const Duration(minutes: 20),
+      ));
+
+      final after = (await aggregator.collect(ReviewScope.week))
+          .savedMinutesEstimate;
+      expect(after, greaterThan(before));
+    });
+
+    test('Anker außerhalb des Zeitraums zählen nicht', () async {
+      await store.upsertAnchor(Anchor(
+        id: 'a2',
+        title: 'Elternabend',
+        arriveBy: clock.nowLocal().subtract(const Duration(days: 20)),
+        travel: const Duration(minutes: 20),
+      ));
+      await store.upsertAnchor(Anchor(
+        id: 'a3',
+        title: 'Termin morgen',
+        arriveBy: clock.nowLocal().add(const Duration(days: 1)),
+        travel: const Duration(minutes: 20),
+      ));
+
+      expect(
+        (await aggregator.collect(ReviewScope.week)).savedMinutesEstimate,
+        0,
+      );
     });
   });
 

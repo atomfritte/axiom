@@ -554,6 +554,36 @@ void main() {
       expect(fonts, greaterThan(0));
     });
 
+    test('eine gebaute Release-APK trägt keinen x86_64-Maschinencode', () {
+      // 24 MB für eine Architektur, auf der diese App nie läuft: x86_64 gibt
+      // es unter Android praktisch nur im Emulator, und die Datei wird von
+      // Hand installiert — jedes Megabyte trägt jemand über eine Leitung.
+      //
+      // Warum das ein Test ist und keine Zeile in build.gradle.kts: Ein
+      // `abiFilters`-Block dort bleibt folgenlos, weil das Flutter-Plugin die
+      // ABIs selbst setzt (nachgemessen — die APK war danach gleich groß).
+      // Was wirkt, ist `--target-platform android-arm,android-arm64` am
+      // Build. Ein Flag lässt sich vergessen; deshalb prüft das hier die
+      // Datei statt die Absicht.
+      //
+      // Ohne gebaute APK ist der Test still: Er soll niemanden zwingen, vor
+      // jedem `flutter test` zu bauen. Er greift beim nächsten Bauen — und
+      // genau dann ist er nötig.
+      final apk = File('build/app/outputs/flutter-apk/app-release.apk');
+      if (!apk.existsSync()) return;
+
+      // Ohne Entpacken: Die Pfadnamen stehen im Zentralverzeichnis der
+      // ZIP-Datei im Klartext.
+      final raw = String.fromCharCodes(apk.readAsBytesSync());
+      expect(
+        raw.contains('lib/x86_64/libflutter.so'),
+        isFalse,
+        reason: 'Die Release-APK enthält die Flutter-Engine für x86_64. '
+            'Mit --target-platform android-arm,android-arm64 bauen '
+            '(siehe CLAUDE.md → Befehle).',
+      );
+    });
+
     test('der Expertenmodus startet nicht von selbst', () {
       final service = android('kotlin/de/atomfritte/axiom/ExpertService.kt');
       expect(service, contains('START_NOT_STICKY'));

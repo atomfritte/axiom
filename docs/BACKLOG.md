@@ -24,6 +24,31 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
 
 ## Aufgenommen
 
+### Die 16 Regeln ohne Test nachziehen
+- **Defizit:** keins — Werkzeugqualität, zahlt auf G2 ein
+- **Frühestens:** eine Regel pro Gelegenheit, nicht als Block
+- **Warum nicht jetzt:** Das Gate ist gebaut — der Validator gleicht jede Regel-ID gegen
+  `packages/axiom_core/test/rules/` ab, eine neue Regel ohne Test ist ein Fehler. Offen ist der
+  Altbestand: 16 der 18 ausgelieferten Regeln stehen namentlich auf der Ausnahmeliste und
+  erscheinen als Warnung. Sie in einem Zug nachzuziehen wäre ein Nachmittag Meta-Work ohne eine
+  einzige erledigte Aufgabe (D3). Der Weg ist stattdessen: Wer eine dieser Regeln anfasst,
+  schreibt ihren Test und streicht sie von der Liste. Solange sie draufsteht, wird ihre Bedingung
+  nirgends gegen einen Zustand ausgewertet — das ist der Preis, und er steht hier, damit er
+  sichtbar bleibt.
+- **Notiert:** 2026-08-06
+
+### Statuszahlen aus dem Repo erzeugen statt eintippen
+- **Defizit:** keins
+- **Frühestens:** beim nächsten Release-Durchgang
+- **Warum nicht jetzt:** Die Status-Tabelle beider READMEs nannte 854 Tests und 18 Regeln, davon
+  16 aktiv und 8 ungeeicht. Vier von fünf Zahlen waren falsch — in einer README, die damit wirbt,
+  dass ihre Zusagen nachprüfbar sind. Die Zahlen stehen jetzt nicht mehr da; stattdessen der
+  Befehl, der sie erzeugt. Ein kleines Skript im Release-Ablauf (`dart test` je Paket zählen,
+  `validate_rules.dart` auswerten, Tabelle schreiben oder bei Abweichung mit Exit 1 abbrechen)
+  wäre die dauerhafte Lösung. Es ist aber genau die Art Nebenbaustelle, die vor einem Release
+  attraktiv wirkt (D3) — deshalb erst, wenn ein Release ansteht.
+- **Notiert:** 2026-08-06
+
 ### Biometrie-Gate vor dem Start
 - **Defizit:** keins — Schutz, nicht Selbstregulation
 - **Frühestens:** wenn das Gerät regelmäßig entsperrt aus der Hand gegeben wird
@@ -77,8 +102,10 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
 - **Defizit:** D9
 - **Frühestens:** S3
 - **Warum nicht jetzt:** Der S-Pen ist reibungsärmer und läuft komplett offline. Transkription
-  bräuchte entweder ein lokales Modell (Größe, Akku) oder Netzwerk — und `INTERNET` ist in
-  S1–S3 nicht deklariert (ADR-0002).
+  bräuchte entweder ein lokales Modell (Größe, Akku) oder einen fremden Dienst. Hier stand als
+  Begründung, `INTERNET` sei nicht deklariert (ADR-0002) — das gilt seit ADR-0005 nicht mehr.
+  Die Berechtigung ist da, der Grund bleibt: AXIOM ruft nichts von sich aus auf, und ein
+  Transkriptionsdienst wäre der erste ausgehende Aufruf des Projekts.
 - **Notiert:** 2026-08-03
 
 ### Regel-Analytik-Dashboard

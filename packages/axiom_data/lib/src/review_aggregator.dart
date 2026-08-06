@@ -39,18 +39,31 @@ final class ReviewAggregator {
     final slots = events.where((e) => e.type == EventType.sensationSlot);
     final planned = slots.where((e) => e.payload['planned'] == true).length;
 
+    // Jeder Abfang schreibt zwei Ereignisse: eines beim Start mit
+    // `outcome: 'pending'` und eines beim Aufloesen mit dem Ergebnis. Vorher
+    // stand hier `intercepts.length` ueber beide — zwei durchgezogene
+    // Abfaenge wurden zu „2 von 4 gehalten", drei abgebrochene zu „6 von 6
+    // gehalten", ein noch laufender zu „1 von 1 gehalten". Die Quote lag
+    // damit unabhaengig vom Verhalten bei mindestens 50 %, und der Review
+    // ist der einzige Ort, an dem ueber einen Trigger entschieden wird.
+    // Gezaehlt wird deshalb nur die Aufloesung: Ein Abfang ohne Ergebnis
+    // gehoert in keine Haltequote. [D6]
     final intercepts = events.where(
-      (e) => e.type == EventType.impulseIntercepted,
+      (e) =>
+          e.type == EventType.impulseIntercepted &&
+          e.payload['outcome'] is String &&
+          e.payload['outcome'] != InterceptOutcome.pending.name,
     );
 
     final stats = await store.ruleStats(since: from);
+    final shadow = await _shadowCounts(from);
 
     return ReviewInputs(
       checkinRate: expected == 0 ? 0 : (checkins / expected).clamp(0.0, 1.0),
       loadIndex: await _averageLoad(events),
       loadIndexBefore: previous.isEmpty ? null : await _averageLoad(previous),
       metaMinutes: (await store.usageToday(clock.nowLocal())).inMinutes,
-      savedMinutesEstimate: _savedEstimate(events),
+      savedMinutesEstimate: await _savedEstimate(events, from, now),
       captures: _count(events, EventType.capture),
       tasksCreated: _count(events, EventType.taskCreated),
       tasksCompleted: _count(events, EventType.taskCompleted),
@@ -65,10 +78,43 @@ final class ReviewAggregator {
           .toList(),
       silentRules: _silentRules(stats, knownRuleIds),
       suppressedRules: stats
-          .where((s) => s.suppressed >= 5 && s.suppressed > s.fires * 2)
+          .where((s) {
+            // Nur echte Konflikte, nicht die Schattenzeit — siehe
+            // [_shadowCounts].
+            final conflicts = s.suppressed - (shadow[s.ruleId] ?? 0);
+            return conflicts >= 5 && conflicts > s.fires * 2;
+          })
           .map((s) => s.ruleId)
           .toList(),
     );
+  }
+
+  /// Wie oft eine Regel im Zeitraum nur ihre Schattenzeit protokolliert hat.
+  ///
+  /// **Warum das eine eigene Abfrage braucht.** `decisions.suppressed` traegt
+  /// zwei Bedeutungen: „hat die Konfliktaufloesung verloren" und „laeuft als
+  /// SHADOW mit". [SqliteEventStore.ruleStats] summiert beide in eine Spalte.
+  /// Weil eine `log_only`-Regel an der Konfliktaufloesung gar nicht teilnimmt,
+  /// sind ihre `fires` konstruktiv 0 — die Bedingung unten reduzierte sich
+  /// damit auf „fuenfmal unterdrueckt" und meldete jede neue Regel als
+  /// staendig verdraengt. Es gab keinen Konflikt: Die Regel lief die sieben
+  /// Tage ab, die CLAUDE.md vorschreibt. Geflutet wurde damit genau die
+  /// Auswertung, fuer die die Schattenzeit da ist.
+  ///
+  /// Unterscheidbar sind die beiden Faelle an der Aktion: Eine
+  /// SHADOW-Entscheidung traegt `log_only`, Verlierer der Konfliktaufloesung
+  /// tragen ihre echte Aktion — `log_only`-Regeln kommen im Resolver nicht
+  /// vor. Die Abfrage gehoert langfristig neben `ruleStats`; hier steht sie,
+  /// weil sie sonst dieselbe Verbindung ein zweites Mal aufmachen muesste.
+  Future<Map<String, int>> _shadowCounts(DateTime since) async {
+    final rows = store.rawDatabase.select(
+      'SELECT rule_id, COUNT(*) AS shadow FROM decisions '
+      'WHERE at >= ? AND suppressed = 1 AND action = ? GROUP BY rule_id',
+      [since.toUtc().millisecondsSinceEpoch, ActionType.logOnly.token],
+    );
+    return {
+      for (final row in rows) row['rule_id'] as String: row['shadow'] as int,
+    };
   }
 
   static Duration _spanOf(ReviewScope scope) => switch (scope) {
@@ -105,16 +151,39 @@ final class ReviewAggregator {
   /// Bewusst grob und konservativ: Für K6 zählt die Größenordnung, nicht die
   /// Nachkommastelle. Eine Scheingenauigkeit würde das Abbruchkriterium
   /// unbrauchbar machen, weil man ihr nicht traut.
-  static int _savedEstimate(List<Event> events) {
+  Future<int> _savedEstimate(
+    List<Event> events,
+    DateTime from,
+    DateTime to,
+  ) async {
     // Jede erfasste Notiz spart das Wiederfinden eines verlorenen Gedankens,
     // jeder Zeitanker das wiederholte Nachrechnen im Kopf.
     const perCapture = 3;
     const perAnchorStep = 4;
     const perAtomized = 10;
+
+    // Vorher stand hier `_count(events, EventType.decisionEmitted)`. Diesen
+    // Ereignistyp schreibt keine Stelle des Projekts — der Summand war
+    // konstant null, obwohl der Kommentar daneben die Zeitanker meint.
+    // Ankerschritte stehen ueberhaupt nicht im Ereignisstrom, sondern in der
+    // Ankertabelle; von dort kommen sie jetzt. Das ist nicht kosmetisch:
+    // `savedMinutesEstimate` ist der Nenner von K6, dem Abbruchkriterium des
+    // Projekts. Ein systematisch zu kleiner Nenner treibt den Quotienten
+    // ueber 1,0 und loest den Rueckbau funktionierender Module aus. [D4]
+    final anchors = await store.anchors(from: from, to: to);
+    final anchorSteps = anchors.fold<int>(
+      0,
+      // Der Ankunftsschritt ist der Termin selbst — gerechnet und
+      // wachgehalten hat AXIOM nur die Schritte davor.
+      (sum, a) =>
+          sum +
+          a.chain.where((s) => s.kind != AnchorStepKind.arrive).length,
+    );
+
     return _count(events, EventType.capture) * perCapture +
         _count(events, EventType.bodyPrompt) * 1 +
         _count(events, EventType.taskSplit) * perAtomized +
-        _count(events, EventType.decisionEmitted) * perAnchorStep;
+        anchorSteps * perAnchorStep;
   }
 
   /// Regeln, die im Zeitraum kein einziges Mal aktiv wurden.

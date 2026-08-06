@@ -9,6 +9,11 @@
 /// rückgängig zu machen und würde die Schlafschuld verdoppeln. Deshalb trägt
 /// jedes importierte Ereignis die Quell-ID, und vor jedem Schreiben werden
 /// die bereits vorhandenen gelesen. Zweimal importieren ändert nichts.
+///
+/// Die Quell-ID allein reicht dafür nicht: Uhr und Hersteller-App schreiben
+/// dieselbe Nacht als zwei Aufzeichnungen mit verschiedenen IDs. Ein
+/// Schlaffenster, das ein bereits erfasstes überlappt, wird deshalb ebenfalls
+/// übersprungen — siehe [HealthSync.plan].
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -51,6 +56,30 @@ final class HealthImportResult {
 
   int get imported => sleepNights + stepDays;
   bool get isEmpty => imported == 0 && skipped == 0;
+}
+
+/// Ein bereits erfasstes Schlaffenster. Beide Zeiten UTC.
+typedef SleepWindow = ({DateTime from, DateTime to});
+
+/// Ein Datensatz, so wie er in den Ereignisstrom soll.
+///
+/// **Warum es diesen Typ gibt.** [HealthSync.import] laeuft nur auf einem
+/// Geraet mit Health Connect; die Zuordnung von Datensaetzen zu Ereignissen
+/// war damit nur dort pruefbar — und blieb ungeprueft. [HealthSync.plan]
+/// trennt das Entscheiden vom Schreiben und laeuft ueberall.
+final class HealthEntry {
+  final EventType type;
+
+  /// Zeitpunkt des Ereignisses: das Ende der Aufzeichnung.
+  final DateTime at;
+
+  final Map<String, Object?> payload;
+
+  const HealthEntry({
+    required this.type,
+    required this.at,
+    required this.payload,
+  });
 }
 
 abstract final class HealthSync {
@@ -98,16 +127,58 @@ abstract final class HealthSync {
     final records = await AndroidBridge.healthRead(since);
     if (records.isEmpty) return const HealthImportResult();
 
-    final known = await _knownSourceIds(runtime, since);
+    final known = await _known(runtime, since);
+    final planned = plan(
+      records,
+      knownSourceIds: known.sourceIds,
+      knownSleep: known.sleep,
+    );
 
     var nights = 0;
     var days = 0;
+    for (final entry in planned.entries) {
+      await runtime.recordAt(entry.at, entry.type, payload: entry.payload);
+      if (entry.type == EventType.sleepWindow) {
+        nights++;
+      } else {
+        days++;
+      }
+    }
+
+    return HealthImportResult(
+      sleepNights: nights,
+      stepDays: days,
+      skipped: planned.skipped,
+    );
+  }
+
+  /// Was aus den Datensaetzen wird — ohne Geraet, ohne Datenbank.
+  ///
+  /// Uebersprungen wird aus zwei Gruenden, und beide sind derselbe Gedanke:
+  /// Ein Ereignis, das schon da ist, darf nicht zweimal in einen
+  /// append-only-Strom.
+  ///
+  /// 1. Die Quell-ID ist schon bekannt — ein zweiter Import derselben
+  ///    Aufzeichnung.
+  /// 2. **Das Schlaffenster ueberlappt ein bereits erfasstes.** Uhr und
+  ///    Herstellerapp schreiben dieselbe Nacht mit verschiedenen Quell-IDs;
+  ///    ueber die ID allein war das nicht zu erkennen. Die Nacht landete
+  ///    zweimal im Strom, verdoppelte die Schlafschuld und zaehlte in der
+  ///    Baseline als zwei Naechte.
+  static ({List<HealthEntry> entries, int skipped}) plan(
+    List<Map<String, Object?>> records, {
+    Set<String> knownSourceIds = const {},
+    List<SleepWindow> knownSleep = const [],
+  }) {
+    final seen = {...knownSourceIds};
+    final sleepSoFar = [...knownSleep];
+    final entries = <HealthEntry>[];
     var skipped = 0;
 
     for (final record in records) {
       final sourceId = record['sourceId'] as String?;
       if (sourceId == null) continue;
-      if (known.contains(sourceId)) {
+      if (seen.contains(sourceId)) {
         skipped++;
         continue;
       }
@@ -118,29 +189,46 @@ abstract final class HealthSync {
 
       switch (record['kind']) {
         case 'sleep':
-          await runtime.recordAt(
-            end,
-            EventType.sleepWindow,
+          if (!end.isAfter(start)) continue;
+          if (sleepSoFar
+              .any((w) => start.isBefore(w.to) && end.isAfter(w.from))) {
+            skipped++;
+            continue;
+          }
+          sleepSoFar.add((from: start, to: end));
+          seen.add(sourceId);
+          entries.add(HealthEntry(
+            type: EventType.sleepWindow,
+            at: end,
             payload: {
               'bed_at': start.toUtc().toIso8601String(),
               'wake_at': end.toUtc().toIso8601String(),
+              'duration_min': end.difference(start).inMinutes,
               // Keine Qualitaetsangabe erfinden: Health Connect liefert
               // Phasen, aber keine Bewertung, und eine geratene Zahl waere
-              // in der Herleitung nicht von einer gemessenen zu unterscheiden.
-              'est_debt_min': _sleepDebtMinutes(start, end),
+              // in der Herleitung nicht von einer gemessenen zu
+              // unterscheiden.
+              //
+              // Aus demselben Grund steht hier kein `est_debt_min` mehr.
+              // Vorher wurde jeder Datensatz gegen sieben Stunden Soll
+              // gerechnet — Health Connect legt aber jede Schlafphase
+              // einzeln ab, ein halbstuendiges Nickerchen trug so 390
+              // Minuten Schuld bei, obwohl es Schlaf ist. Schuld entsteht
+              // jetzt dort, wo alle Naechte zusammen sichtbar sind
+              // (SignalAggregator); hier stehen nur Messwerte. Genau das
+              // sagt der Dateikopf zu: Diese Datei rechnet nicht.
               'source_id': sourceId,
               'via': 'health_connect',
             },
-          );
-          known.add(sourceId);
-          nights++;
+          ));
 
         case 'steps':
           final count = (record['count'] as num?)?.round();
           if (count == null) continue;
-          await runtime.recordAt(
-            end,
-            EventType.healthSample,
+          seen.add(sourceId);
+          entries.add(HealthEntry(
+            type: EventType.healthSample,
+            at: end,
             payload: {
               'metric': 'steps',
               'value': count,
@@ -149,29 +237,19 @@ abstract final class HealthSync {
               'source_id': sourceId,
               'via': 'health_connect',
             },
-          );
-          known.add(sourceId);
-          days++;
+          ));
       }
     }
 
-    return HealthImportResult(
-      sleepNights: nights,
-      stepDays: days,
-      skipped: skipped,
-    );
+    return (entries: entries, skipped: skipped);
   }
 
-  /// Schlafschuld gegen sieben Stunden Soll — dieselbe Annahme wie bei der
-  /// Handeingabe, damit importierte und getippte Nächte vergleichbar bleiben.
-  /// Der Wert wird nach der Eichung durch das persönliche Soll ersetzt.
-  static int _sleepDebtMinutes(DateTime bedAt, DateTime wakeAt) {
-    const targetMinutes = 7 * 60;
-    final actual = wakeAt.difference(bedAt).inMinutes;
-    return (targetMinutes - actual).clamp(0, 600);
-  }
-
-  static Future<Set<String>> _knownSourceIds(
+  /// Was schon im Strom steht: Quell-IDs und gemessene Schlaffenster.
+  ///
+  /// Die Fenster kommen bewusst aus dem Ereignisstrom und nicht nur aus dem
+  /// Import — so faellt auch eine von Hand eingetragene Nacht auf, die
+  /// Health Connect spaeter noch einmal liefert.
+  static Future<({Set<String> sourceIds, List<SleepWindow> sleep})> _known(
     AxiomRuntime runtime,
     DateTime since,
   ) async {
@@ -180,11 +258,23 @@ abstract final class HealthSync {
       from: since.subtract(const Duration(days: 2)),
       types: {EventType.sleepWindow, EventType.healthSample},
     );
-    return events
-        .map((e) => e.payload['source_id'])
-        .whereType<String>()
-        .toSet();
+    final sourceIds = <String>{};
+    final sleep = <SleepWindow>[];
+    for (final event in events) {
+      final id = event.payload['source_id'];
+      if (id is String) sourceIds.add(id);
+      if (event.type != EventType.sleepWindow) continue;
+      final from = _parseUtc(event.payload['bed_at']);
+      final to = _parseUtc(event.payload['wake_at']);
+      if (from != null && to != null && to.isAfter(from)) {
+        sleep.add((from: from, to: to));
+      }
+    }
+    return (sourceIds: sourceIds, sleep: sleep);
   }
+
+  static DateTime? _parseUtc(Object? value) =>
+      value is String ? DateTime.tryParse(value)?.toUtc() : null;
 
   static DateTime? _millis(Object? value) {
     final ms = (value as num?)?.toInt();

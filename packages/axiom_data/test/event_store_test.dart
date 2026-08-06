@@ -405,6 +405,42 @@ void main() {
       expect(store.historyAt(clock.nowLocal()).firedToday('R-099'), 0);
     });
 
+    test('das Schattenprotokoll wird nicht mitgelesen', () async {
+      // Eine `log_only`-Regel umgeht bewusst jeden Cooldown und schreibt
+      // pro Auswertungszyklus eine Zeile — bei offener Weboberflaeche
+      // tausende am Tag. Vorher las `historyAt` die ganze Tabelle und warf
+      // diese Zeilen erst in Dart weg: Der Aufwand jeder Auswertung wuchs
+      // mit genau den Zeilen, die niemand braucht.
+      final plan = store.rawDatabase
+          .select('EXPLAIN QUERY PLAN ${SqliteEventStore.historyQuery}')
+          .map((r) => r['detail'] as String)
+          .join(' | ');
+      expect(plan, contains('idx_decisions_open'));
+      expect(plan, isNot(contains('TEMP B-TREE')),
+          reason: 'Der Teilindex liefert die Zeilen bereits sortiert');
+    });
+
+    test('viele Schattenzeilen aendern das Ergebnis nicht', () async {
+      await store.saveDecision(decision('R-050'));
+      for (var i = 0; i < 200; i++) {
+        clock.advance(const Duration(seconds: 20));
+        await store.saveDecision(Decision(
+          id: newUlid(clock.nowUtc()),
+          at: clock.nowUtc(),
+          ruleId: 'R-900',
+          action: const Action(ActionType.notify),
+          explanation: 'Schattenlauf',
+          stateSnapshotId: 's1',
+          suppressed: true,
+        ));
+      }
+      final history = store.historyAt(clock.nowLocal());
+      expect(history.firedToday('R-050'), 1);
+      expect(history.firedToday('R-900'), 0);
+      expect(history.lastFired('R-900'), isNull);
+      expect(history.totalInterventionsToday(), 1);
+    });
+
     test('ruleStats berechnet die Befolgungsquote', () async {
       await store.saveDecision(
           decision('R-050', response: DecisionResponse.followed));

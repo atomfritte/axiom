@@ -279,11 +279,20 @@ der Server läuft, und wird beim Beenden mit einem Abschiedspaket zurückgezogen
 überhaupt deklariert. Die frühere, strukturelle Zusage — dass das Betriebssystem selbst eine
 ausgehende Verbindung unmöglich macht — gilt damit nicht mehr. An ihre Stelle tritt eine engere,
 geprüfte statt angenommene: **AXIOM lauscht, ruft aber nie von sich aus auf.** Es gibt keinen
-HTTP-Client irgendwo in der App, keine ausgehende Verbindung, kein SDK, das eine aufbauen könnte;
+HTTP-Client irgendwo in der App und keinen ausgehenden Aufruf im eigenen Code;
 `language_test.dart` verbietet `package:http`, `HttpClient`, `Socket.connect`,
 `WebSocket.connect` und `dart:html` im gesamten App-Code und hält fest, dass genau eine Datei
 überhaupt einen Socket öffnet — der Server, und der mDNS-Responder darüber, beide nur zum Lauschen
-oder Ankündigen. Die vollständige Begründung, einschließlich dessen, was diese Berechtigung wert
+oder Ankündigen.
+
+Hier stand zusätzlich „kein SDK, das eine aufbauen könnte". Das war zu viel versprochen:
+`basic_utils`, das dem Expertenmodus sein Zertifikat erzeugt, bringt `package:http` als transitive
+Abhängigkeit mit, und sein Sammelmodul exportiert `HttpUtils` und `DnsUtils` (DNS über HTTPS gegen
+Google und Cloudflare) in jeden Namensraum, der es importiert. Aufgerufen wird davon nichts — aber
+„könnte nicht" war eine stärkere Behauptung, als irgendein Test deckte. Seither verbietet
+`language_test.dart` beide Einstiegspunkte namentlich und lässt einen Netzwerk-Client nicht mehr
+als *direkte* Abhängigkeit zu. Die Zusage lautet damit, was sie sagt: nicht unmöglich, sondern
+geprüft. Die vollständige Begründung, einschließlich dessen, was diese Berechtigung wert
 war und was sich ändern müsste, damit dieses Urteil neu gefällt wird, steht in
 [ADR-0005](docs/adr/ADR-0005-expertenmodus.md).
 
@@ -377,10 +386,14 @@ einspielen, und das löscht die Datenbank. Vorher exportieren
 
 | | |
 |---|---|
-| Tests | 854 grün (272 Core · 113 Daten · 469 App) |
+| Tests | grün in allen drei Paketen — `dart test` in Core und Daten, `flutter test` in App |
 | Analyzer | keine Meldungen in allen Paketen |
-| Regelwerk | 18 Regeln gültig, 16 aktiv — davon 8 **ungeeicht** |
+| Regelwerk | 18 Regeln gültig, 15 aktiv — davon 5 **ungeeicht** (`dart run tools/bin/validate_rules.dart rules`) |
 | Release-APK | gebaut, **mit der `INTERNET`-Berechtigung** — nur für den Expertenmodus deklariert (ADR-0005), sonst kein Netzwerkcode in der App |
+
+In der ersten Zeile stand eine genaue Testzahl. Keine dieser Zahlen stimmte noch — in einer
+README, deren ganzer Anspruch ist, dass ihre Zusagen nachprüfbar sind. Eine Zahl, die niemand
+nachmisst, altert schlecht; deshalb steht dort jetzt der Befehl, der sie erzeugt.
 
 **Stufe 1** — Erfassung (< 3 s), Check-in, Kapazitätslinie, Zustandsanzeige
 mit Herleitung, Regelinspektor, Meta-Guard, Onboarding, Widget, Quick Tile,
@@ -497,9 +510,9 @@ Grenzen des Systems, ausdrücklich benannt statt umgangen:
 ### Eichung
 
 Die Formelgewichte in `rules/core/weights.yaml` sind geschätzt, nicht gemessen.
-Acht aktive Regeln prüfen auf abgeleitete Werte und können deshalb
-danebenliegen. Sie laufen trotzdem — eine bewusste Entscheidung. Der
-Systeminspektor markiert sie als **UNGEEICHT**.
+Fünf aktive Regeln (R-020, R-050, R-051, R-052, R-090) prüfen auf abgeleitete
+Werte und können deshalb danebenliegen. Sie laufen trotzdem — eine bewusste
+Entscheidung. Der Systeminspektor markiert sie als **UNGEEICHT**.
 
 **Wo du den Stand siehst:** In der App unter *System → Eichung*. Dort stehen
 drei Bedingungen mit Fortschritt — und wenn alle erfüllt sind, der komplette

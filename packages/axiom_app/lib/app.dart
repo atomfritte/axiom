@@ -132,16 +132,30 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
-  static const _screens = <Widget>[
-    NowScreen(),
-    StateScreen(),
-    SystemScreen(),
-  ];
+  /// Genau ein Reiter ist gebaut — der sichtbare.
+  ///
+  /// Vorher stand hier ein `IndexedStack`, der alle drei Bildschirme
+  /// dauerhaft montiert hielt. Das hatte zur Folge, dass die Meta-Zeit von
+  /// „Zustand" und „System" nicht die Verweildauer maß, sondern die
+  /// Lebensdauer der Shell (M12, G4): Wer eine Sitzung lang nur erfasste,
+  /// bekam beim Abbau trotzdem zweimal die volle Sitzungsdauer gebucht —
+  /// sechs Minuten Erfassung rissen den Zwölf-Minuten-Deckel, ohne dass je
+  /// eine Konfigurationsseite offen war. Umgekehrt wurde ein Besuch im
+  /// Systemschirm während der Sitzung nie gebucht, weil dort kein
+  /// `dispose()` lief.
+  ///
+  /// Der Preis ist die Scrollposition der beiden Nebenreiter. Die ist
+  /// billiger als ein Deckel, der in beide Richtungen falsch misst.
+  static Widget _screenAt(int index) => switch (index) {
+        1 => const StateScreen(),
+        2 => const SystemScreen(),
+        _ => const NowScreen(),
+      };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: _screenAt(_index),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) {

@@ -11,7 +11,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:axiom_core/axiom_core.dart'
-    show CompareOp, RuleVocabulary, Severity;
+    show CompareOp, EventType, RuleVocabulary, Severity;
 import 'package:axiom_data/axiom_data.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -179,6 +179,63 @@ void main() {
       expect(patched['state'], 'done');
       expect(changes, greaterThan(0),
           reason: 'Was im Browser passiert, muss auf dem Telefon ankommen');
+    });
+
+    test('eine Änderung im Browser überlebt den Wiederaufbau', () async {
+      // Der Befund, den drei Prüfer unabhängig gefunden haben: PATCH schrieb
+      // nur die Projektion (`store.upsertTask`), ohne Ereignis. `tasks` baut
+      // `rebuildProjections()` aber allein aus dem Strom — nach dem nächsten
+      // Vault-Import standen Titel, Anlaufenergie, Salienz, Stakes und Frist
+      // wieder auf dem Stand der Anlage. Es war der einzige upsertTask-Aufruf
+      // der App ohne passendes Ereignis, und er verlor Daten stillschweigend.
+      //
+      // Dieser Test prüft nicht, DASS ein Ereignis geschrieben wird — das
+      // wäre die Implementierung. Er prüft die Wirkung: Wirf die Projektion
+      // weg und bau sie aus dem Strom neu. Was der Browser geändert hat,
+      // muss danach noch da sein.
+      final cookie = await login(server.status.pin!);
+      final created = await json(await call('POST', '/api/tasks',
+          cookie: cookie,
+          body: {'title': 'Steuerunterlagen sortieren', 'activationEnergy': 8}));
+
+      final frist = DateTime.utc(2026, 9, 1, 12);
+      await call('PATCH', '/api/tasks/${created['id']}', cookie: cookie, body: {
+        'title': 'Steuerunterlagen für 2025 sortieren',
+        'activationEnergy': 3,
+        'salience': 9,
+        'stakes': 7,
+        'decayAt': frist.toIso8601String(),
+      });
+
+      await h.store.rebuildProjections();
+
+      final rebuilt =
+          (await h.store.tasks()).firstWhere((t) => t.id == created['id']);
+      expect(rebuilt.title, 'Steuerunterlagen für 2025 sortieren');
+      expect(rebuilt.activationEnergy, 3);
+      expect(rebuilt.salience, 9);
+      expect(rebuilt.stakes, 7);
+      expect(rebuilt.decayAt?.toUtc(), frist);
+    });
+
+    test('ein reiner Zustandswechsel erzählt keine zusätzliche Änderung',
+        () async {
+      // Die Gegenprobe. Ein PATCH, der nur den Zustand wechselt, hat seinen
+      // Weg über completeTask/dropTask schon gemacht — eine zusätzliche
+      // Korrektur daneben behauptete eine Änderung, die es nicht gab, und
+      // stünde für immer im Ereignisstrom.
+      final cookie = await login(server.status.pin!);
+      final created = await json(await call('POST', '/api/tasks',
+          cookie: cookie, body: {'title': 'Wohnung lüften'}));
+
+      final vorher = (await h.store.query()).length;
+      await call('PATCH', '/api/tasks/${created['id']}',
+          cookie: cookie, body: {'state': 'done'});
+      final nachher = await h.store.query();
+
+      expect(nachher.length, vorher + 1,
+          reason: 'Genau ein Ereignis: der Abschluss. Keine Korrektur daneben');
+      expect(nachher.last.type, EventType.taskCompleted);
     });
 
     test('eine ungültige Regel wird abgelehnt, nicht übersprungen', () async {
@@ -357,16 +414,40 @@ void main() {
       expect(poll.statusCode, 410);
     });
 
-    test('es gibt immer nur eine offene Anfrage', () async {
+    test('eine offene Anfrage wird nicht verdraengt', () async {
       // Zwei Zahlen auf dem Telefon waeren eine Auswahl — und wer
       // auswaehlt, vergleicht nicht mehr.
+      //
+      // Frueher stand hier das Gegenteil: Nach drei Sekunden ersetzte jeder
+      // unangemeldete Aufrufer die offene Anfrage. Wer im selben Netz
+      // mitpollte, konnte sie damit gegen die eigene austauschen, waehrend
+      // der Nutzer die Zahl vom Bildschirm zum Telefon trug — sein Tap auf
+      // „Freigeben" gab dann die fremde Anfrage frei. Der Zahlenabgleich ist
+      // die einzige Anmeldung fuer Gesundheitsdaten; er traegt nur, wenn die
+      // Anfrage bis zur Antwort dieselbe bleibt.
       final first = await json(await call('POST', '/api/auth/request'));
-      await Future<void>.delayed(const Duration(seconds: 4));
-      final second = await json(await call('POST', '/api/auth/request'));
-      expect(second['id'], isNot(first['id']));
+
+      final second = await call('POST', '/api/auth/request');
+      expect(second.statusCode, 429,
+          reason: 'Die zweite Anfrage darf die erste nicht ersetzen');
+
+      final poll = await call('GET', '/api/auth/poll?id=${first['id']}');
+      expect(poll.statusCode, 202,
+          reason: 'Die Anfrage des Nutzers laeuft weiter — genau die, deren '
+              'Zahl er gerade vergleicht');
+    });
+
+    test('nach der Antwort ist wieder Platz', () async {
+      // Die Gegenprobe: Ein Sperren, das sich nicht loest, waere kein Schutz,
+      // sondern ein Riegel. Nach Freigabe oder Ablehnung geht es weiter.
+      final first = await json(await call('POST', '/api/auth/request'));
+      server.resolvePending(approve: false);
       expect((await call('GET', '/api/auth/poll?id=${first['id']}')).statusCode,
-          410);
-    }, timeout: const Timeout(Duration(seconds: 30)));
+          403);
+
+      final second = await call('POST', '/api/auth/request');
+      expect(second.statusCode, 200);
+    });
   });
 
   group('Die Verbindung ist verschlüsselt', () {

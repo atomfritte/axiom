@@ -6,10 +6,59 @@
 /// nicht gegen die eigene Erwartung.
 library;
 
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:axiom_app/server/mdns_responder.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Ein Socket, der sich verhält wie einer in einem Netz ohne Multicast.
+///
+/// Den Fall gibt es auf dem Rechner nicht herzustellen: nur Mobilfunk, WLAN
+/// aus, `adb forward`-Betrieb. Genau in diesem Fall blieben Sperre und
+/// Socket hängen, und genau deshalb ist er hier nachgebaut.
+final class FakeSocket extends Stream<RawSocketEvent>
+    implements RawDatagramSocket {
+  FakeSocket({this.refusesGroup = false});
+
+  final bool refusesGroup;
+  bool closed = false;
+  final List<Uint8List> sent = [];
+
+  /// Ein Feld, kein noSuchMethod-Weiterleiter: Der würde beim Setzen
+  /// werfen, und dann prüfte der Test einen anderen Fehler als gemeint.
+  @override
+  int multicastHops = 0;
+
+  @override
+  void joinMulticast(InternetAddress group, [NetworkInterface? interface]) {
+    if (refusesGroup) {
+      throw const SocketException('kein Multicast auf dieser Schnittstelle');
+    }
+  }
+
+  @override
+  int send(List<int> buffer, InternetAddress address, int port) {
+    sent.add(Uint8List.fromList(buffer));
+    return buffer.length;
+  }
+
+  @override
+  void close() => closed = true;
+
+  @override
+  StreamSubscription<RawSocketEvent> listen(
+    void Function(RawSocketEvent event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) =>
+      const Stream<RawSocketEvent>.empty().listen(onData);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// Baut eine DNS-Frage, so wie ein Browser sie stellt.
 Uint8List question(String name, {bool asResponse = false}) {
@@ -102,6 +151,70 @@ void main() {
       // 5 axiom 5 local 0
       expect(packet.sublist(12, 25),
           [5, ...'axiom'.codeUnits, 5, ...'local'.codeUnits, 0]);
+    });
+  });
+
+  group('Was ein fehlgeschlagener Start hinterlässt', () {
+    // Die Multicast-Sperre ist auf der Systemseite nicht referenzgezählt
+    // (`setReferenceCounted(false)`). Wird sie einmal nicht freigegeben,
+    // bleibt sie bis zum Prozessende stehen und kostet die ganze Zeit
+    // Strom — genau der Verbrauch, den der Kommentar an den Expertenmodus
+    // binden will. Und ein Socket auf Port 5353 pro Startversuch dazu.
+
+    test('nichts, wenn schon das Binden scheitert', () async {
+      final responder = MdnsResponder(
+        bind: () async => throw const SocketException('Port belegt'),
+      );
+
+      expect(await responder.start('10.0.0.5'), isFalse);
+      expect(responder.holdsMulticastLock, isFalse,
+          reason: 'die Sperre bliebe sonst bis zum Prozessende gehalten');
+      expect(responder.isRunning, isFalse);
+    });
+
+    test('nichts, wenn der Beitritt zur Gruppe scheitert', () async {
+      // Der teurere Fall: Das Binden hat geklappt, der Socket existiert
+      // bereits, und erst `joinMulticast` wirft.
+      final socket = FakeSocket(refusesGroup: true);
+      final responder = MdnsResponder(bind: () async => socket);
+
+      expect(await responder.start('10.0.0.5'), isFalse);
+      expect(socket.closed, isTrue,
+          reason: 'der Socket hielte sonst Port 5353 bis zum Prozessende');
+      expect(responder.holdsMulticastLock, isFalse);
+      expect(responder.isRunning, isFalse);
+    });
+
+    test('ein zweiter Versuch beginnt wieder bei null', () async {
+      // Ohne Freigabe wäre der zweite Startversuch der, der die Sperre ein
+      // zweites Mal greift — sichtbar wird das nie.
+      final responder = MdnsResponder(
+        bind: () async => throw const SocketException('Port belegt'),
+      );
+      await responder.start('10.0.0.5');
+      await responder.start('10.0.0.5');
+      expect(responder.holdsMulticastLock, isFalse);
+    });
+  });
+
+  group('Die Sperre hängt am Lauf', () {
+    test('gehalten, solange geantwortet wird — losgelassen beim Beenden',
+        () async {
+      final socket = FakeSocket();
+      final responder = MdnsResponder(bind: () async => socket);
+
+      expect(await responder.start('10.0.0.5'), isTrue);
+      expect(responder.holdsMulticastLock, isTrue);
+      // Die unaufgeforderte Ankündigung ist der Grund für den Start.
+      expect(socket.sent, hasLength(1));
+
+      await responder.stop();
+      expect(responder.holdsMulticastLock, isFalse);
+      expect(socket.closed, isTrue);
+      // Zuletzt der Abschied mit TTL 0.
+      final goodbye = socket.sent.last;
+      expect(goodbye.sublist(goodbye.length - 10, goodbye.length - 6),
+          [0, 0, 0, 0]);
     });
   });
 }

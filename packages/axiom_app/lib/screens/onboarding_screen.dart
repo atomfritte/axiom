@@ -131,8 +131,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: Space.md),
                       ),
+                      // Vorher lief nur der letzte Zweig durch `context.t`;
+                      // der andere stand als nacktes Literal da und zeigte
+                      // auf einem englischen Geraet „Weiter". Ein Ternaer
+                      // hat zwei Zweige, und beide sind Nutzertext.
                       child: Text(
-                        _page == _pageCount - 1 ? context.t('Los geht’s') : 'Weiter',
+                        _page == _pageCount - 1
+                            ? context.t('Los geht’s')
+                            : context.t('Weiter'),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -511,7 +517,10 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
   Widget build(BuildContext context) {
     if (!AndroidBridge.isSupported) {
       return _Page(
-        eyebrow: 'Fertig',
+        // Die acht Geschwister-Aufrufe geben `eyebrow` uebersetzt weiter;
+        // hier stand der deutsche Text roh und wurde von `_Page` unveraendert
+        // gerendert — ein benanntes Argument sieht kein Literal-Waechter.
+        eyebrow: context.t('Fertig'),
         title: context.t('Bereit.'),
         children: [
           _Para(

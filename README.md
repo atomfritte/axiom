@@ -267,13 +267,21 @@ withdrawn with a goodbye packet when it stops.
 **The honest price.** Expert mode is why AXIOM declares the `INTERNET` permission at all. The
 earlier, structural guarantee — that the operating system itself made an outbound connection
 impossible — no longer holds. What replaces it is narrower and tested rather than assumed:
-**AXIOM listens, but never calls out.** There is no HTTP client anywhere in the app, no outbound
-socket, no SDK that could open one; `language_test.dart` forbids `package:http`, `HttpClient`,
+**AXIOM listens, but never calls out.** There is no HTTP client anywhere in the app and no
+outbound call in its own code; `language_test.dart` forbids `package:http`, `HttpClient`,
 `Socket.connect`, `WebSocket.connect` and `dart:html` across the whole app, and pins down that
 exactly one file opens a socket at all — the server, and the mDNS responder above it, both only to
-listen or to announce. See [ADR-0005](docs/adr/ADR-0005-expertenmodus.md) for the full reasoning,
-including why this was judged worth the permission and what would have to change for that
-judgement to be revisited.
+listen or to announce.
+
+This paragraph used to add "no SDK that could open one". It should not have. `basic_utils`, which
+generates expert mode's certificate, pulls in `package:http` transitively, and its umbrella
+library exports `HttpUtils` and `DnsUtils` (DNS over HTTPS against Google and Cloudflare) into
+every namespace that imports it. Nothing calls them — but "could not" was a stronger claim than
+anything under test. Since then `language_test.dart` forbids both entry points by name and
+rejects any network client as a *direct* dependency, so the guarantee is what it says on the tin:
+not impossible, but checked. See [ADR-0005](docs/adr/ADR-0005-expertenmodus.md) for the full
+reasoning, including why this was judged worth the permission and what would have to change for
+that judgement to be revisited.
 
 ## Documentation
 
@@ -372,10 +380,14 @@ Keep the keystore. Without it no build can be installed over an existing one
 
 | | |
 |---|---|
-| Tests | 854 green (272 core · 113 data · 469 app) |
+| Tests | green in all three packages — `dart test` in core and data, `flutter test` in app |
 | Analyzer | clean across all packages |
-| Rulebook | 18 rules valid, 16 active — 8 of them **uncalibrated** |
+| Rulebook | 18 rules valid, 15 active — 5 of them **uncalibrated** (`dart run tools/bin/validate_rules.dart rules`) |
 | Release APK | built, **with the `INTERNET` permission** — declared for expert mode only (ADR-0005), no other network code in the app |
+
+That first row used to carry an exact test count. Every number in it had drifted — in a README
+whose whole pitch is that its claims can be checked. A number nobody re-measures ages badly, so
+what stands here now is the command that produces it.
 
 **Stage 1** — capture (< 3 s), check-in, capacity line, state view with derivation, rule
 inspector, meta-guard, onboarding, home screen widget, quick settings tile, exact alarms, app
@@ -480,9 +492,9 @@ Platform limits, named explicitly rather than worked around:
 
 ### Calibration
 
-The formula weights in `rules/core/weights.yaml` are estimated, not measured. Eight active rules
-test derived values and can therefore be wrong. They run anyway — a deliberate decision. The
-system inspector marks them **UNCALIBRATED**.
+The formula weights in `rules/core/weights.yaml` are estimated, not measured. Five active rules
+(R-020, R-050, R-051, R-052, R-090) test derived values and can therefore be wrong. They run
+anyway — a deliberate decision. The system inspector marks them **UNCALIBRATED**.
 
 **Where to see the state:** in the app under *System → Calibration*. Three conditions with
 progress, and once all of them are met, the full procedure with copyable commands.

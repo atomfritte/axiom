@@ -39,6 +39,76 @@ final class PlatformOutcome {
       );
 }
 
+/// In welchem Zustand der Schlüssel der Datenbank ist.
+///
+/// **Warum drei Werte und nicht zwei.** Vorher gab es nur eine Passphrase
+/// oder `null`. Damit war „hier gibt es keine Verschlüsselung" nicht von
+/// „ich komme gerade nicht an den Schlüssel" zu unterscheiden. Die Folge:
+/// Die App öffnete im Zweifel unverschlüsselt, traf auf eine verschlüsselte
+/// Datei, hielt sie für kaputt — und legte sie neu an. Ein
+/// vorübergehender Fehler des Schlüsselspeichers kostete so den gesamten
+/// Ereignisstrom.
+enum DatabaseKeyState {
+  /// Der Schlüssel liegt vor.
+  ready,
+
+  /// Auf diesem Gerät wurde nie einer angelegt. Auf dem Linux-Rechner ist das
+  /// der Normalfall — dort gibt es keinen Schlüsselspeicher. Eine vorhandene
+  /// Datei kann dann nur im Klartext liegen, und genau so wird sie geöffnet.
+  none,
+
+  /// Es gab einen, er ist gerade nicht zu bekommen. Die Datei ist dann mit
+  /// hoher Wahrscheinlichkeit verschlüsselt. **Hier wird nichts geöffnet und
+  /// nichts gelöscht** — ein Startfehler ist billiger als ein Datenverlust.
+  unavailable,
+}
+
+/// Antwort der Systemseite auf die Frage nach dem Datenbankschlüssel.
+final class DatabaseKeyResult {
+  final DatabaseKeyState state;
+
+  /// Nur bei [DatabaseKeyState.ready] gesetzt.
+  final String? key;
+
+  const DatabaseKeyResult(this.state, [this.key]);
+
+  static const absent = DatabaseKeyResult(DatabaseKeyState.none);
+  static const unavailable = DatabaseKeyResult(DatabaseKeyState.unavailable);
+
+  /// Liest die Antwort von `DatabaseKey.passphrase` (Kotlin).
+  ///
+  /// Alles, was nicht eindeutig ist — fehlender Zustand, unbekannter
+  /// Zustand, `ready` ohne Schlüssel —, gilt als [DatabaseKeyState.unavailable].
+  /// Die Richtung ist Absicht: Im Zweifel nicht anfassen.
+  factory DatabaseKeyResult.fromMessage(Map<String, Object?>? message) {
+    final key = message?['key'];
+    return switch (message?['state']) {
+      'ready' when key is String && key.isNotEmpty =>
+        DatabaseKeyResult(DatabaseKeyState.ready, key),
+      'none' => absent,
+      _ => unavailable,
+    };
+  }
+}
+
+/// Der Schlüssel ist angelegt, aber gerade nicht zu bekommen.
+///
+/// Absichtlich ein eigener Typ und keine `null`-Rückgabe: Der Aufrufer soll
+/// genau diesen Fall erkennen und die Datenbank **nicht** anfassen. Was
+/// [toString] sagt, steht auf dem Startbildschirm (`AxiomGate`) — deshalb ein
+/// Satz und keine Fehlernummer.
+final class DatabaseKeyUnavailable implements Exception {
+  const DatabaseKeyUnavailable();
+
+  @override
+  String toString() =>
+      'Der Schlüsselspeicher des Geräts antwortet gerade nicht. '
+      'AXIOM lässt die Datenbank deshalb zu: Ohne Schlüssel wäre die '
+      'vorhandene Datei nicht lesbar, und weiterzumachen hieße, sie zu '
+      'verlieren. Ein erneuter Start nach dem nächsten Entsperren genügt '
+      'in der Regel.';
+}
+
 /// Wohin eine Benachrichtigung führt.
 ///
 /// Die Zeichenketten sind Intent-Actions und stehen genauso in
@@ -102,27 +172,43 @@ abstract final class AndroidBridge {
 
   // ── Schlüssel der Datenbank ───────────────────────────────────────────
 
-  /// Die Passphrase für `PRAGMA key`, oder `null`.
+  /// Wie lange auf den Schlüsselspeicher gewartet wird.
   ///
-  /// `null` heißt: unverschlüsselt weiterarbeiten. Das ist auf dem
-  /// Linux-Rechner der Normalfall — dort gibt es keinen Schlüsselspeicher,
-  /// in den man etwas legen könnte, das die eigene Anmeldung überdauert;
-  /// eine Schlüsseldatei neben der Datenbank wäre eine Attrappe. Auf Android
-  /// heißt `null`, dass der Keystore nicht antwortet. Beides ist ein
-  /// Zustand, kein Fehler, und beides wird im Systeminspektor angezeigt
-  /// statt verschwiegen.
+  /// Deutlich mehr als [_timeout], und das ist der Punkt. Beim allerersten
+  /// Start erzeugt der Keystore einen StrongBox-Schlüssel, synchron auf dem
+  /// Android-Hauptthread; fünf Sekunden reichten dafür nicht immer. Lief die
+  /// Zeit ab, kam auf dieser Seite `null` an, während Kotlin fertig wurde und
+  /// den Schlüssel ablegte — die App legte eine Klartextdatenbank an und
+  /// verwarf sie beim nächsten Start als unlesbar. Warten ist hier billiger
+  /// als aufgeben: Solange läuft der Startbildschirm.
+  static const Duration _keyTimeout = Duration(seconds: 30);
+
+  /// Der Zustand des Datenbankschlüssels, mit Passphrase für `PRAGMA key`.
+  ///
+  /// Drei Zustände, nicht zwei — siehe [DatabaseKeyState]. Ohne
+  /// Systembrücke (Linux-Rechner) gibt es keinen Schlüsselspeicher, in den
+  /// man etwas legen könnte, das die eigene Anmeldung überdauert; eine
+  /// Schlüsseldatei neben der Datenbank wäre eine Attrappe. Das ist
+  /// [DatabaseKeyState.none] und ein Zustand, kein Fehler — der
+  /// Systeminspektor zeigt ihn an, statt ihn zu verschweigen.
+  ///
+  /// Antwortet die Systemseite gar nicht, ist das **nicht** dasselbe:
+  /// Vorher wurde auch daraus `null`, also „unverschlüsselt öffnen". Jede
+  /// Zeitüberschreitung führte damit auf den Löschpfad in `providers.dart`.
   ///
   /// Kein Zwischenspeicher: Der Aufruf passiert genau einmal pro Start,
   /// bevor die Datenbank geöffnet wird. Eine Passphrase, die länger als
   /// nötig in einem Feld liegt, ist eine Passphrase mehr im Speicherabbild.
-  static Future<String?> databaseKey() async {
-    if (!isSupported) return null;
+  static Future<DatabaseKeyResult> databaseKey() async {
+    if (!isSupported) return DatabaseKeyResult.absent;
     try {
-      return await _channel
-          .invokeMethod<String>('databaseKey')
-          .timeout(_timeout);
+      return DatabaseKeyResult.fromMessage(
+        await _channel
+            .invokeMapMethod<String, Object?>('databaseKey')
+            .timeout(_keyTimeout),
+      );
     } on Object {
-      return null;
+      return DatabaseKeyResult.unavailable;
     }
   }
 
