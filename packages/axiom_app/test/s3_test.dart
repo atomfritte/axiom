@@ -34,8 +34,8 @@ void main() {
       );
       await pumpPhone(tester, h.wrap(const FocusScreen()));
 
-      expect(find.text('WORAUF'), findsOneWidget);
-      expect(find.text('WIE LANGE'), findsOneWidget);
+      expect(find.text('Worauf'), findsOneWidget);
+      expect(find.text('Wie lange'), findsOneWidget);
       expect(find.text('Fokus starten'), findsOneWidget);
     });
 
@@ -113,9 +113,9 @@ void main() {
       await h.seedChannels();
       await pumpPhone(tester, h.wrap(const SensationScreen()));
 
-      expect(find.text('REIZBEDARF'), findsOneWidget);
+      expect(find.text('Reizbedarf'), findsOneWidget);
       expect(find.text('VERDIENT'), findsOneWidget);
-      expect(find.textContaining('KANÄLE'), findsOneWidget);
+      expect(find.textContaining('Kanäle'), findsOneWidget);
     });
 
     testWidgets('Fokusminuten verdienen Reizzeit', (tester) async {
@@ -319,8 +319,8 @@ void main() {
   group('Ungeeichte Regeln sind markiert (G2)', () {
     testWidgets('der Systeminspektor weist darauf hin', (tester) async {
       await pumpPhone(tester, h.wrap(const SystemScreen()));
-      expect(find.text('EICHUNG'), findsOneWidget);
-      expect(find.text('BASELINE LÄUFT'), findsOneWidget);
+      expect(find.text('Eichung'), findsOneWidget);
+      expect(find.text('Baseline läuft'), findsOneWidget);
       expect(find.textContaining('geschätzten Gewichten'), findsWidgets);
     });
 

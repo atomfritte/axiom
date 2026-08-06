@@ -114,7 +114,8 @@ class _AtomizeSheetState extends ConsumerState<_AtomizeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('ZERLEGEN'), style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('Zerlegen'),
+                style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             Text(_task.title,
                 style: Theme.of(context).textTheme.headlineMedium),
@@ -231,11 +232,16 @@ class _ShapeChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: Space.md, vertical: Space.sm),
+            horizontal: Space.lg, vertical: Space.md),
         decoration: BoxDecoration(
-          color: selected ? p.signal.withValues(alpha: 0.18) : p.panel,
+          // Ungewaehlt war das hier `panel` mit Haarlinienrahmen — in einem
+          // Blatt ist `panel` der Untergrund selbst, also blieb vom Chip nur
+          // der Rahmen uebrig. Jetzt traegt die Vertiefung, wie bei den
+          // Reglern: Der Chip liegt im Grund, gewaehlt kommt er heraus.
+          color: selected ? p.signal.withValues(alpha: 0.16) : p.well,
           borderRadius: BorderRadius.circular(Radii.control),
-          border: Border.all(color: selected ? p.signal : p.rule),
+          border: Border.all(
+              color: selected ? p.signal : Colors.transparent, width: 1.5),
         ),
         child: Text(
           shape.label,
@@ -250,6 +256,22 @@ class _ShapeChip extends StatelessWidget {
 
 /// Wie schwer fällt DER erste Schritt? Zeigt die Zielmarke mit an, damit
 /// sichtbar ist, wann die Zerlegung fein genug ist.
+///
+/// **Warum hier gefüllt wird und im Check-in nicht.** Die Regler im
+/// Check-in fragen nach einer *Stelle* zwischen zwei benannten Enden; dort
+/// steht genau ein Feld erhoben da. Diese Skala fragt nach einer *Menge*
+/// und vergleicht sie mit einer Marke — dafür ist die Länge des gefüllten
+/// Laufs die Aussage, nicht die Position eines einzelnen Feldes.
+///
+/// **Warum die Farbe nicht mehr umschlägt.** Vorher waren die Felder bis
+/// zur Zielmarke grün und darüber kupfern. Das ist gut/schlecht in zwei
+/// Farben, über eine Zahl, die der Nutzer gerade selbst geschätzt hat — und
+/// gemeint ist nicht „falsch", sondern „weiter weg als heute erreichbar"
+/// (R7). Entfernung zeigt diese Oberfläche über Position, nicht über Farbe:
+/// Die Zielmarke steht als Kerbe unter der Skala, und wer darüber hinaus
+/// füllt, sieht das, ohne dass ihm jemand eine Farbe dazu sagt. Die eine
+/// Stelle, an der Kupfer bleibt, ist der Hinweis darunter — er sagt in
+/// Worten, was zu tun ist.
 class _EnergyPicker extends StatelessWidget {
   final int value;
   final int target;
@@ -273,9 +295,9 @@ class _EnergyPicker extends StatelessWidget {
               child: Text(context.t('Wie schwer fällt dieser Schritt?'),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
+            const SizedBox(width: Space.md),
             Text(context.t('ZIEL ≤ {0}', [target]),
-                style: monoStyle(context,
-                    size: 10.5, spacing: 0.6, color: p.calm)),
+                style: readingStyle(context, size: 13.5, color: p.inkFaint)),
           ],
         ),
         const SizedBox(height: Space.md),
@@ -293,23 +315,34 @@ class _EnergyPicker extends StatelessWidget {
                     onChanged(i);
                   },
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 40,
-                    margin: EdgeInsets.only(right: i < 10 ? 3 : 0),
-                    decoration: BoxDecoration(
-                      color: value >= i
-                          ? (i <= target ? p.calm : p.caution)
-                              .withValues(alpha: value == i ? 0.9 : 0.22)
-                          : p.base,
-                      borderRadius: BorderRadius.circular(2),
-                      border: Border.all(
-                        color: value == i
-                            ? (i <= target ? p.calm : p.caution)
-                            : i == target
-                                ? p.calm.withValues(alpha: 0.5)
-                                : p.rule,
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 44,
+                        margin: EdgeInsets.only(right: i < 10 ? 3 : 0),
+                        decoration: BoxDecoration(
+                          color: value >= i
+                              ? p.signal
+                                  .withValues(alpha: value == i ? 1 : 0.3)
+                              : p.well,
+                          // Radius 2 hiess: gefraeste Kante. Auf zehn
+                          // Feldern nebeneinander liest sich das als Raster
+                          // eines Messschiebers — die Oberflaeche soll aber
+                          // nicht praezise wirken, sondern anfassbar sein.
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
-                    ),
+                      // Die Zielmarke — eine Kerbe unter dem Feld, das die
+                      // Grenze ist. Sie steht unabhaengig vom gewaehlten
+                      // Wert da; wer darueber hinaus fuellt, sieht es an der
+                      // Laenge des Laufs.
+                      const SizedBox(height: Space.xs),
+                      Container(
+                        height: 2,
+                        margin: EdgeInsets.only(right: i < 10 ? 3 : 0),
+                        color: i == target ? p.inkFaint : Colors.transparent,
+                      ),
+                    ],
                   ),
                 ),
               ),

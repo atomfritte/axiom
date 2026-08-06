@@ -8,6 +8,23 @@
 /// direkte Zugang zur Meta-Work-Falle (D3). Deshalb zaehlt die hier
 /// verbrachte Zeit voll auf das Tagesbudget, und Aenderungen sind gesperrt,
 /// sobald es aufgebraucht ist.
+///
+/// **Was hier nicht mehr steht — und warum.** „System" war zuletzt der Ort
+/// fuer alles, was anderswo nicht hinpasste: neun Dinge von der Textgroesse
+/// bis zur Aufgabenliste. Zwei davon sind kein System, sondern Inhalt, und
+/// sie sind hier ersatzlos gestrichen:
+///
+///  * **Aufgaben** — der Bestand. Er stand zusaetzlich als erste Zeile in
+///    der Mulde auf „Jetzt". Zwei Wege zu einer Liste sind kein
+///    Entgegenkommen, sondern zwei Orte, an denen man sie suchen kann.
+///  * **Vorfälle** — das Ereignisprotokoll (M10). Es steht jetzt fest in der
+///    Mulde auf „Jetzt", nicht mehr nur bei offener Nachbetrachtung. Einen
+///    Vorfall haelt man in dem Moment fest, in dem er passiert, und in dem
+///    Moment ist man nicht im Konfigurationsschirm.
+///
+/// Was bleibt, laesst sich in einem Satz sagen: **die Maschine** — was sie
+/// kostet, wie weit sie geeicht ist, wie sie eingestellt ist, und wo man
+/// nachliest, warum sie etwas gesagt hat.
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -29,8 +46,6 @@ import 'check_screen.dart';
 import 'expert_screen.dart';
 import 'help_screen.dart';
 import 'rule_editor_screen.dart';
-import 'signal_screen.dart';
-import 'tasks_screen.dart';
 import 'vault_screen.dart';
 
 class SystemScreen extends ConsumerStatefulWidget {
@@ -113,92 +128,95 @@ class _SystemScreenState extends ConsumerState<SystemScreen> {
               const SizedBox(height: Space.xl),
               const _DisplaySettings(),
 
-              const SizedBox(height: Space.xl),
-              SectionLabel(context.t('Einrichten')),
-              _LinkRow(
-                icon: Icons.bolt_outlined,
-                label: context.t('Erfassen'),
-                detail: context.t(
-                  'Sieben Wege hinein — Widget, Benachrichtigung, Stift, Sprache',
-                ),
-                target: const ChannelsScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.fact_check_outlined,
-                label: context.t('Systemcheck'),
-                detail: context.t('Was das Gerät wirklich freigegeben hat'),
-                target: const CheckScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.desktop_windows_outlined,
-                label: context.t('Expertenmodus'),
-                detail: context.t('Regeln und Listen am großen Bildschirm — aus, bis du ihn startest'),
-                target: const ExpertScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.monitor_heart_outlined,
-                label: context.t('Datenquellen'),
-                detail: context.t('Schlaf und Bewegung aus Health Connect'),
-                target: const SourcesScreen(),
-              ),
-
+              // **„Nachsehen" steht jetzt vor „Einrichten".** Der Kommentar
+              // oben sagt, die Reihenfolge richte sich nach Aufmerksamkeit
+              // und nicht nach Systematik — sie tat es nur nicht: Ganz oben
+              // stand, was man **einmal** einrichtet, darunter das, was man
+              // immer wieder aufschlaegt. „Warum hat es das gerade gesagt"
+              // ist die haeufigste Frage an diesen Schirm; sie fuehrt ins
+              // Regelwerk, und das lag hinter vier Einrichtungszeilen.
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Nachsehen')),
-              _LinkRow(
-                icon: Icons.checklist_outlined,
-                label: context.t('Aufgaben'),
-                detail: context.t(
-                  'Alles Eingetragene, in der Reihenfolge der Auswahl',
-                ),
-                target: const TasksScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.rule,
-                label: context.t('Regelwerk'),
-                detail: context.t('{0} Regeln, jede lesbar und abschaltbar', [
-                  rt.rules.length,
-                ]),
-                target: const RulesScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.history_toggle_off,
-                label: context.t('Vorfälle'),
-                detail: context.t(
-                  'Emotionale Spitzen festhalten und einordnen',
-                ),
-                target: const SignalScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.help_outline,
-                label: context.t('Hilfe'),
-                detail: context.t(
-                  'Wozu jeder Bildschirm da ist und wie eine Regel entscheidet',
-                ),
-                target: const HelpScreen(),
-              ),
-              const SizedBox(height: Space.sm),
-              _LinkRow(
-                icon: Icons.lock_outline,
-                label: context.t('Daten'),
-                detail: context.t(
-                  'Verschlüsselter Export, Import, Wirkfenster',
-                ),
-                target: const VaultScreen(),
+              _LinkGroup(
+                rows: [
+                  _LinkRow(
+                    icon: Icons.rule,
+                    label: context.t('Regelwerk'),
+                    detail: context.t('{0} Regeln, jede lesbar und abschaltbar', [
+                      rt.rules.length,
+                    ]),
+                    target: const RulesScreen(),
+                  ),
+                  _LinkRow(
+                    icon: Icons.help_outline,
+                    label: context.t('Hilfe'),
+                    detail: context.t(
+                      'Wozu jeder Bildschirm da ist und wie eine Regel entscheidet',
+                    ),
+                    target: const HelpScreen(),
+                  ),
+                  _LinkRow(
+                    icon: Icons.lock_outline,
+                    label: context.t('Daten'),
+                    detail: context.t(
+                      'Verschlüsselter Export, Import, Wirkfenster',
+                    ),
+                    target: const VaultScreen(),
+                  ),
+                ],
               ),
 
               const SizedBox(height: Space.xl),
+              SectionLabel(context.t('Einrichten')),
+              // Vorher stand hier jede Zeile als eigene Karte mit acht
+              // Pixeln Luft dazwischen: vier bzw. fuenf schwebende Flaechen,
+              // die alle gleich weit weg wirkten. Eine Gruppe, die
+              // zusammengehoert, ist **eine** Flaeche mit Haarlinien darin —
+              // dann traegt der Abschnittstitel die Ordnung und nicht der
+              // Zwischenraum.
+              _LinkGroup(
+                rows: [
+                  _LinkRow(
+                    icon: Icons.bolt_outlined,
+                    // Hiess „Erfassen" — genau wie der Knopf auf „Jetzt",
+                    // der etwas ganz anderes tut. Ein Wort fuer zwei Dinge
+                    // ist teurer als ein laengeres Wort: Wer hier tippt,
+                    // will erfassen und landet in einer Einstellungsseite.
+                    label: context.t('Erfassungswege'),
+                    detail: context.t(
+                      'Sieben Wege hinein — Widget, Benachrichtigung, Stift, Sprache',
+                    ),
+                    target: const ChannelsScreen(),
+                  ),
+                  _LinkRow(
+                    icon: Icons.monitor_heart_outlined,
+                    label: context.t('Datenquellen'),
+                    detail: context.t('Schlaf und Bewegung aus Health Connect'),
+                    target: const SourcesScreen(),
+                  ),
+                  _LinkRow(
+                    icon: Icons.desktop_windows_outlined,
+                    label: context.t('Expertenmodus'),
+                    detail: context.t('Regeln und Listen am großen Bildschirm — aus, bis du ihn startest'),
+                    target: const ExpertScreen(),
+                  ),
+                  _LinkRow(
+                    icon: Icons.fact_check_outlined,
+                    label: context.t('Systemcheck'),
+                    detail: context.t('Was das Gerät wirklich freigegeben hat'),
+                    target: const CheckScreen(),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: Space.xxl),
               Text(
-                context.t('SCHEMA v{0} · {1} REGELN', [
+                context.t('Schema v{0} · {1} Regeln', [
                   kSchemaVersion,
                   rt.rules.length,
                 ]),
-                style: monoStyle(context, size: 11, color: p.inkFaint),
+                style: readingStyle(context,
+                    size: 12.5, weight: FontWeight.w400, color: p.inkFaint),
               ),
             ],
           );
@@ -221,15 +239,26 @@ class _BudgetCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Hiess „Meta-Work-Budget", waehrend dieselbe Zahl unten auf
+          // „Jetzt" „Zeit im System heute" hiess. Zwei Namen fuer einen
+          // Messwert sind schlimmer als zwei Anzeigen: Man haelt sie fuer
+          // zwei Zahlen und sucht nach dem Unterschied. Jetzt derselbe Name
+          // an beiden Orten — und der deutsche statt des Jargons.
           Text(
-            context.t('META-WORK-BUDGET'),
+            context.t('Zeit im System heute'),
             style: Theme.of(context).textTheme.labelSmall,
           ),
           const SizedBox(height: Space.sm),
+          // Die Zahl bleibt in der Messfarbe, auch wenn der Deckel erreicht
+          // ist. Vorher wechselte sie dort nach Kupfer — dieselbe Groesse in
+          // zwei Farben liest sich als „gut" und „schlecht", und damit war
+          // aus einem Messwert eine Note geworden (R7). Dass der Deckel
+          // erreicht ist, sagt der Rahmen der Karte und der Satz darunter;
+          // beides meldet einen *Zustand* und darf faerben.
           BigReading(
             value: '${used.inMinutes}',
             unit: context.t('/ {0} min heute', [kMetaBudget.inMinutes]),
-            valueColor: over ? p.caution : p.ink,
+            valueColor: p.signal,
           ),
           const SizedBox(height: Space.md),
           Text(
@@ -293,7 +322,10 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
         TextSize.larger => 'XL',
       },
       context.t(const ['AUTO', 'DUNKEL', 'HELL'][brightness]),
-      context.t(scheme.label).toUpperCase(),
+      // Ohne `.toUpperCase()`: „INSTRUMENT" sind zehn gesperrte
+      // Grossbuchstaben. Die Ausnahme fuer Plaketten reicht bis sieben
+      // Zeichen — bis dahin liest man Formen, danach Buchstaben.
+      context.t(scheme.label),
     ].join(' · ');
 
     return Column(
@@ -360,11 +392,14 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
         _ChoiceRow(
           icon: Icons.palette_outlined,
           label: context.t('Farbschema'),
-          hint: context.t(scheme.label),
+          // Ohne Hinweis rechts: Seit die Plaketten normal geschrieben sind,
+          // stand dort dasselbe Wort wie auf der ausgewaehlten Plakette
+          // darunter. Bei „Textgröße" ist es anders — „M" und „Normal" sagen
+          // nicht dasselbe.
           options: [
             for (final s in AxiomScheme.values)
               (
-                key: context.t(s.label).toUpperCase(),
+                key: context.t(s.label),
                 selected: s == scheme,
                 onTap: () => ref.read(schemeProvider.notifier).set(s),
               ),
@@ -380,6 +415,16 @@ class _DisplaySettingsState extends ConsumerState<_DisplaySettings> {
 ///
 /// Zeigt zugeklappt, was gilt — nicht bloss den Namen der Gruppe. Eine
 /// Kopfzeile ohne Zustand zwingt zum Aufklappen, nur um nachzusehen.
+///
+/// **Sieht aus wie eine `SectionLabel`, ist aber von Hand gesetzt.** Der
+/// Baustein legt vor seinen Anhang einen `Spacer`, und der teilt sich den
+/// freien Platz mit der Zusammenfassung — bei „DE · M · AUTO · Instrument"
+/// blieb von „Anzeige" ein „An…" uebrig. Die Schrift kommt deshalb aus
+/// `sectionStyle` (dieselbe Rolle, direkt greifbar), der Aufbau von hier.
+///
+/// Was der Sonderweg vorher zusaetzlich kostete, ist weg: „ANZEIGE" stand
+/// als einzige Marke des Schirms in gesperrten Versalien, die Zusammenfassung
+/// in Schreibmaschine.
 class _FoldHeader extends StatelessWidget {
   final String label;
   final String summary;
@@ -400,15 +445,10 @@ class _FoldHeader extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(Radii.control),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: Space.sm),
+        padding: const EdgeInsets.only(bottom: Space.md),
         child: Row(
           children: [
-            // Bewusst kein `SectionLabel`: Dessen Trennlinie beansprucht
-            // den Platz, den hier die Zusammenfassung braucht. Und eine
-            // abgeschnittene Zusammenfassung zwingt zum Aufklappen, nur um
-            // nachzusehen — genau das, was das Zuklappen sparen soll.
-            Text(label.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall),
+            Text(label, style: sectionStyle(context)),
             const SizedBox(width: Space.md),
             if (!open) ...[
               Expanded(
@@ -416,11 +456,15 @@ class _FoldHeader extends StatelessWidget {
                   summary,
                   textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: monoStyle(context, size: 11, color: p.inkFaint),
+                  style: readingStyle(context,
+                      size: 12.5,
+                      weight: FontWeight.w400,
+                      color: p.inkFaint),
                 ),
               ),
               const SizedBox(width: Space.sm),
-            ],
+            ] else
+              const Spacer(),
             Icon(open ? Icons.expand_less : Icons.expand_more,
                 size: 18, color: p.inkDim),
           ],
@@ -467,7 +511,11 @@ class _ChoiceRow extends StatelessWidget {
                 ),
               ),
               if (hint != null)
-                Text(hint!, style: monoStyle(context, size: 12)),
+                Text(hint!,
+                    style: readingStyle(context,
+                        size: 13.5,
+                        weight: FontWeight.w400,
+                        color: p.inkDim)),
             ],
           ),
           const SizedBox(height: Space.md),
@@ -524,7 +572,6 @@ class _Chip extends StatelessWidget {
           // im Gehen daneben, und Danebentreffen kostet hier einen zweiten
           // Anlauf [D2].
           constraints: const BoxConstraints(minWidth: 56, minHeight: 48),
-          alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(
             horizontal: Space.md,
             vertical: Space.sm,
@@ -534,15 +581,31 @@ class _Chip extends StatelessWidget {
             borderRadius: BorderRadius.circular(Radii.control),
             border: Border.all(color: selected ? p.signal : p.rule),
           ),
-          child: Text(
-            label,
-            style: monoStyle(
-              context,
-              size: 12.5,
-              weight: FontWeight.w600,
-              color: selected
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : p.inkDim,
+          // **Hier stand `alignment: Alignment.center` am `Container`.**
+          // `Container` baut daraus ein `Align` ohne Faktoren, und ein
+          // solches `Align` nimmt sich die volle angebotene Breite. Im
+          // `Wrap` darueber war das die ganze Kartenbreite — jede Plakette
+          // wurde so breit wie der Schirm, und aus „DE EN" bzw.
+          // „S M L XL" wurden zwei bzw. vier volle Zeilen untereinander.
+          // Der Kommentar am `Wrap` sagt seit jeher „umbrechend statt in
+          // einer Zeile gequetscht"; nebeneinander gestanden haben sie nie.
+          //
+          // `Center` mit `widthFactor`/`heightFactor` 1 misst sich am Text;
+          // die Mindestmasse von oben gelten weiter, und darin wird
+          // zentriert.
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              style: readingStyle(
+                context,
+                size: 13.5,
+                weight: FontWeight.w600,
+                color: selected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : p.inkDim,
+              ),
             ),
           ),
         ),
@@ -635,7 +698,7 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
             const SizedBox(height: Space.md),
             Text(
               _lastResult!,
-              style: monoStyle(context, size: 11, color: p.signal),
+              style: readingStyle(context, size: 13.5, color: p.signal),
             ),
           ],
           if (action != null) ...[
@@ -657,11 +720,18 @@ class _HealthCardState extends ConsumerState<_HealthCard> {
           // Datenschutzzusage ausgerechnet auf dem Schirm fuer
           // Gesundheitsdaten. Was bleibt, ist die engere, getestete Zusage
           // aus ADR-0005 — und der ehrliche Hinweis auf die eine Ausnahme.
+          // Der Datenschutzsatz stand in Schreibmaschine in 10,5 px — also
+          // unter der Lesegrenze und im Ton einer Fussnote im Kleingedruckten.
+          // Ausgerechnet die Zusage darueber, was das Geraet weitergibt, darf
+          // nicht wie ein Lizenztext aussehen.
           Text(
             context.t(
               'Health Connect ist eine Schnittstelle des Geräts. AXIOM liest nur und ruft nichts von sich aus auf. Solange der Expertenmodus läuft, sind diese Werte im lokalen Netz abrufbar.',
             ),
-            style: monoStyle(context, size: 10.5, color: p.inkFaint),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: p.inkFaint),
           ),
         ],
       ),
@@ -757,7 +827,7 @@ class _IssuesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.t('NICHT GELADEN · {0}', [issues.length]),
+            context.t('Nicht geladen · {0}', [issues.length]),
             style: Theme.of(context).textTheme.labelSmall,
           ),
           const SizedBox(height: Space.sm),
@@ -781,6 +851,10 @@ class _IssuesCard extends StatelessWidget {
     );
   }
 }
+
+/// `intervene` → `Intervene`. Gleiche Schreibweise wie im Regeleditor.
+String _capitalized(String name) =>
+    name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
 
 /// Abgeleitete Werte, deren Formelgewichte bis zur Kalibrierung geschaetzt
 /// sind. Regeln, die darauf pruefen, werden markiert — damit sichtbar
@@ -835,13 +909,15 @@ class _RuleTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Space.sm),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: Container(
-          decoration: BoxDecoration(
+        // Karte statt Rahmen: Achtzehn haarliniengerahmte Kaesten
+        // untereinander sind ein Gitter, und in einem Gitter ist alles gleich
+        // weit weg. `Panel` traegt Flaeche, Radius und Schatten; das
+        // `ClipRRect` haelt den Tipp-Effekt der `ExpansionTile` in den Ecken.
+        child: Panel(
+          padding: EdgeInsets.zero,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(Radii.panel),
-            border: Border.all(color: p.rule),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: ExpansionTile(
+            child: ExpansionTile(
             // Farbe am Tile statt am Container — sonst verdeckt der
             // DecoratedBox die Ink-Effekte des ListTile.
             backgroundColor: p.panel,
@@ -849,22 +925,28 @@ class _RuleTile extends StatelessWidget {
             shape: const Border(),
             collapsedShape: const Border(),
             tilePadding: const EdgeInsets.symmetric(horizontal: Space.lg),
+            // Ohne diese Zeile zentriert `ExpansionTile` seine Kinder. Jedes
+            // Feld war damit so breit wie seine laengste Zeile und schwebte
+            // mittig — „Bedingung", „Aktion" und „Grenzen" standen an drei
+            // verschiedenen linken Kanten, obwohl jedes intern sauber links
+            // ausgerichtet ist. Nur „Begruendung" sah richtig aus, weil ihr
+            // Fliesstext ohnehin die volle Breite fuellt.
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
             childrenPadding: const EdgeInsets.fromLTRB(
               Space.lg,
               0,
               Space.lg,
               Space.lg,
             ),
+            // Die Regel-ID als `RuleStamp` statt als Text in
+            // Schreibmaschine. Sie ist damit dasselbe Zeichen wie ueberall
+            // sonst in der App — und der einzige Ort, an dem Monospace noch
+            // steht, ist genau der, an dem sie etwas bedeutet (G2).
             title: Row(
               children: [
-                Text(
-                  rule.id,
-                  style: monoStyle(
-                    context,
-                    size: 12,
-                    weight: FontWeight.w600,
-                    color: shadow ? p.inkFaint : p.info,
-                  ),
+                RuleStamp(
+                  ruleId: rule.id,
+                  color: shadow ? p.inkFaint : p.info,
                 ),
                 const SizedBox(width: Space.md),
                 Expanded(
@@ -887,23 +969,41 @@ class _RuleTile extends StatelessWidget {
                 spacing: Space.sm,
                 runSpacing: Space.xs,
                 children: [
+                  // „INTERVENE" waren neun Grossbuchstaben. Die vier Stufen
+                  // sind Fachbegriffe des Regelwerks, stehen genau so in
+                  // jeder YAML-Datei und werden deshalb nicht uebersetzt —
+                  // aber sie brauchen keine Versalien, um Begriffe zu sein.
+                  // Der Regeleditor schreibt sie schon so.
                   _Tag(
-                    text: shadow ? 'SHADOW' : rule.severity.name.toUpperCase(),
+                    text: _capitalized(shadow ? 'shadow' : rule.severity.name),
                     color: shadow ? p.inkFaint : p.signal,
                   ),
                   if (rule.deficit != null)
                     _Tag(text: rule.deficit!, color: p.inkDim),
+                  // Bleibt in Versalien, obwohl neun Zeichen: „UNGEEICHT" ist
+                  // hier keine Ueberschrift, sondern der **Name** einer
+                  // Markierung — die Eichungskarte weiter oben verweist mit
+                  // genau diesem Wort darauf („betroffene Regeln sind unten
+                  // mit UNGEEICHT markiert"). Wer ihn aendert, aendert beide
+                  // Stellen.
                   if (_isUngauged)
                     _Tag(
                       text: context.t('Ungeeicht').toUpperCase(),
                       color: p.caution,
                     ),
+                  // Die Befolgungsquote war gruen ab 40 % und kupfern
+                  // darunter. Das ist die person-naechste Zahl der ganzen
+                  // App — „wie oft hast du getan, was dir gesagt wurde" —
+                  // und in zwei Farben liest sie sich als Zeugnis. Sie ist
+                  // ein Messwert und traegt deshalb die Messfarbe, wie jeder
+                  // andere auch (R7, D10). Was sie bedeutet, entscheidet das
+                  // Review, nicht die Farbe.
                   if (followRate != null)
                     _Tag(
                       text: context.t('{0}% befolgt', [
                         (followRate * 100).round(),
                       ]),
-                      color: followRate < 0.4 ? p.caution : p.calm,
+                      color: p.signal,
                     ),
                 ],
               ),
@@ -948,19 +1048,25 @@ class _RuleTile extends StatelessWidget {
                 value: rule.then.type.token,
                 mono: true,
               ),
+              // Ab hier keine Schreibmaschine mehr: Grenzen und Statistik
+              // sind Messwerte, kein woertlich abzutippender Text. Sie
+              // laufen mit Tabellenziffern in der Hausschrift und stehen
+              // damit genauso sauber untereinander, ohne den Ton eines
+              // Terminalprotokolls. Woertlich bleiben nur Bedingung und
+              // Aktion — die stehen so in der YAML-Datei.
               _Field(
                 label: context.t('Grenzen'),
-                mono: true,
                 value:
                     'Priorität ${rule.priority} · '
                     'Abstand ${rule.cooldown.minInterval.inMinutes} min'
                     '${rule.cooldown.maxPerDay == null ? "" : " · max ${rule.cooldown.maxPerDay}/Tag"}'
                     '${rule.cooldown.exponentialBackoff ? " · Backoff" : ""}',
+                figures: true,
               ),
               if (stats != null)
                 _Field(
                   label: context.t('Letzte 7 Tage'),
-                  mono: true,
+                  figures: true,
                   value:
                       '${stats!.fires}× gefeuert · '
                       '${stats!.suppressed}× verdrängt · '
@@ -970,10 +1076,10 @@ class _RuleTile extends StatelessWidget {
               if (skipReason != null)
                 _Field(
                   label: context.t('Gerade inaktiv'),
-                  mono: true,
                   value: _skipText(context, skipReason!),
                 ),
             ],
+            ),
           ),
         ),
       ),
@@ -1020,29 +1126,85 @@ class _RuleTile extends StatelessWidget {
 class _Field extends StatelessWidget {
   final String label;
   final String value;
+
+  /// Woertlich abzutippen — Bedingungsbaum, Aktionstoken. Nur dafuer.
   final bool mono;
-  const _Field({required this.label, required this.value, this.mono = false});
+
+  /// Ein Messwert: Hausschrift mit Tabellenziffern.
+  final bool figures;
+
+  const _Field({
+    required this.label,
+    required this.value,
+    this.mono = false,
+    this.figures = false,
+  });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: Space.md),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: Theme.of(context).textTheme.labelSmall,
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Ohne `.toUpperCase()`: „BEGRÜNDUNG" und „GERADE INAKTIV" waren
+          // gesperrte Versalien — die Wortform faellt dabei weg.
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: Space.xs),
+          Text(
+            value,
+            style: mono
+                ? monoStyle(context, size: 12.5)
+                : figures
+                    ? readingStyle(context,
+                        size: 14,
+                        weight: FontWeight.w400,
+                        height: 1.5,
+                        color: p.inkDim)
+                    : Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mehrere Wege als **eine** Flaeche.
+///
+/// Die Karten waren einzeln, mit acht Pixeln Luft dazwischen. Auf einem
+/// Schirm mit neun davon las sich das als neun gleich weit entfernte Dinge,
+/// und der Abschnittstitel darueber ordnete nichts mehr — er stand nur da.
+/// Eine Gruppe ist jetzt eine Karte mit Haarlinien; die Reihenfolge und das
+/// Ziel jeder Zeile bleiben unveraendert.
+class _LinkGroup extends StatelessWidget {
+  final List<_LinkRow> rows;
+  const _LinkGroup({required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Panel(
+      padding: EdgeInsets.zero,
+      // Ohne Clip laeuft die Tippflaeche der ersten und letzten Zeile ueber
+      // die abgerundeten Ecken der Karte hinaus.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.panel),
+        child: Column(
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0)
+                Padding(
+                  padding: const EdgeInsets.only(left: Space.xxl + Space.md),
+                  child: Divider(color: p.rule, height: 1),
+                ),
+              rows[i],
+            ],
+          ],
         ),
-        const SizedBox(height: Space.xs),
-        Text(
-          value,
-          style: mono
-              ? monoStyle(context, size: 11.5)
-              : Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _LinkRow extends StatelessWidget {
@@ -1061,34 +1223,56 @@ class _LinkRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return Panel(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Space.lg,
-        vertical: Space.md,
-      ),
+    return InkWell(
       onTap: () => Navigator.of(
         context,
       ).push(MaterialPageRoute<void>(builder: (_) => target)),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: p.inkDim),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.bodyLarge),
-                Text(detail, style: Theme.of(context).textTheme.bodySmall),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg,
+          vertical: Space.lg,
+        ),
+        child: Row(
+          // Das Zeichen sass mittig zur zweizeiligen Beschreibung und stand
+          // damit neben nichts. Es gehoert auf die Hoehe der Zeile, die es
+          // bezeichnet.
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(icon, size: 19, color: p.inkDim),
             ),
-          ),
-          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-        ],
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 2),
+                  Text(detail, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+/// Eine Marke an einer Regel: Stufe, Defizit, Eichstand, Befolgungsquote.
+///
+/// Hier standen 9,5 px Schreibmaschine in einem Kasten mit 2 px Radius.
+/// Beides zog in dieselbe Richtung: `monoStyle` hob die Groesse still auf
+/// die Lesegrenze an, sodass der Kasten enger sass als die Schrift darin,
+/// und der harte Radius machte aus vier Marken vier kleine Kaesten. Jetzt:
+/// Hausschrift mit Tabellenziffern, Radius wie bei jedem anderen kleinen
+/// Bedienelement.
 class _Tag extends StatelessWidget {
   final String text;
   final Color color;
@@ -1096,16 +1280,16 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 2),
     decoration: BoxDecoration(
       border: Border.all(color: color.withValues(alpha: 0.4)),
-      borderRadius: BorderRadius.circular(2),
+      borderRadius: BorderRadius.circular(Radii.control),
     ),
     child: Text(
       text,
-      style: monoStyle(
+      style: readingStyle(
         context,
-        size: 9.5,
+        size: 12.5,
         weight: FontWeight.w600,
         color: color,
       ),
@@ -1128,11 +1312,11 @@ class _Limit extends StatelessWidget {
         ),
         Text(
           value,
-          style: monoStyle(
+          style: readingStyle(
             context,
-            size: 12,
-            weight: FontWeight.w500,
-            color: context.axiom.ink,
+            size: 15,
+            weight: FontWeight.w600,
+            color: context.axiom.signal,
           ),
         ),
       ],
@@ -1180,8 +1364,12 @@ class RulesScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: Space.lg, vertical: Space.md),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.add, size: 19, color: p.signal),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(Icons.add, size: 19, color: p.signal),
+                    ),
                     const SizedBox(width: Space.md),
                     Expanded(
                       child: Column(
@@ -1189,6 +1377,7 @@ class RulesScreen extends ConsumerWidget {
                         children: [
                           Text(context.t('Neue Regel'),
                               style: Theme.of(context).textTheme.bodyLarge),
+                          const SizedBox(height: 2),
                           Text(
                             context.t('Geführt, mit Vorschau gegen den Zustand von jetzt'),
                             style: Theme.of(context).textTheme.bodySmall,
@@ -1196,7 +1385,12 @@ class RulesScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+                    const SizedBox(width: Space.sm),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child:
+                          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+                    ),
                   ],
                 ),
               ),
@@ -1244,11 +1438,12 @@ class RulesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: Space.md),
               Text(
-                context.t('SCHEMA v{0} · {1} REGELN', [
+                context.t('Schema v{0} · {1} Regeln', [
                   kSchemaVersion,
                   rt.rules.length,
                 ]),
-                style: monoStyle(context, size: 11, color: p.inkFaint),
+                style: readingStyle(context,
+                    size: 12.5, weight: FontWeight.w400, color: p.inkFaint),
               ),
             ],
           );

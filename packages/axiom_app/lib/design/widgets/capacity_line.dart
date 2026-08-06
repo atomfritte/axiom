@@ -71,14 +71,23 @@ final class CapacityLine extends StatelessWidget {
             spacing: Space.md,
             runSpacing: Space.xs,
             children: [
-              Text(context.t('AKTIVIERUNGSENERGIE'),
+              // War „AKTIVIERUNGSENERGIE" und „KAPAZITÄT 61" in gesperrten
+              // Versalien und Schreibmaschine. Neunzehn Grossbuchstaben am
+              // Stueck liest niemand als Wort, sondern Buchstabe fuer
+              // Buchstabe — teuer ausgerechnet auf dem Schirm, der die
+              // Antwort auf „was jetzt" tragen soll.
+              Text(context.t('Aktivierungsenergie'),
                   style: Theme.of(context).textTheme.labelSmall),
-              Text(context.t('KAPAZITÄT {0}', [capacity]),
-                  style: monoStyle(context,
-                      size: 11,
-                      weight: FontWeight.w600,
-                      spacing: 0.8,
-                      color: p.signal)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(context.t('Kapazität'),
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(width: Space.sm),
+                  Text('$capacity',
+                      style: readingStyle(context, size: 15, color: p.signal)),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: Space.md),
@@ -143,6 +152,11 @@ final class CapacityLine extends StatelessWidget {
 /// hier drei deutsche Woerter mitten in einer sonst englischen Oberflaeche,
 /// und kein Test konnte das sehen: Der i18n-Test sucht `context.t(...)`,
 /// und genau das war hier nicht moeglich.
+///
+/// Sie bleiben in Versalien, wo alles andere sie verloren hat: LEICHT, HIER
+/// und SCHWER sind vier bis sechs Zeichen, und unter sieben liest man Formen
+/// statt Buchstaben. Ein Skalenstrich ist ausserdem keine Ueberschrift —
+/// hier soll nichts gelesen, sondern verortet werden.
 typedef CapacityLabels = ({String easy, String here, String hard});
 
 final class _CapacityLinePainter extends CustomPainter {
@@ -282,9 +296,10 @@ final class _CapacityLinePainter extends CustomPainter {
         text: TextSpan(
           text: '+$count',
           style: TextStyle(
-            fontFamily: Fonts.mono,
-            fontSize: 10,
-            letterSpacing: 0.4,
+            fontFamily: Fonts.sans,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            fontFeatures: kTabularFigures,
             color: palette.inkFaint,
           ),
         ),
@@ -298,7 +313,12 @@ final class _CapacityLinePainter extends CustomPainter {
         canvas,
         Offset(
           math.max(0, left),
-          math.max(0, topY - painter.height / 2),
+          // Der Anschlag lag bei 0 und damit exakt auf der Oberkante — die
+          // Randglaettung der Schrift malte dann eine Zeile darueber, also
+          // in die Kopfzeile. Zwei Pixel Luft kosten optisch nichts und
+          // halten die Beschriftung sicher in der Leinwand; der Stapel
+          // darunter beginnt ohnehin erst bei y = 6.
+          math.max(2, topY - painter.height / 2),
         ),
       );
     });
@@ -310,9 +330,10 @@ final class _CapacityLinePainter extends CustomPainter {
         text: TextSpan(
           text: text,
           style: TextStyle(
-            fontFamily: Fonts.mono,
-            fontSize: 10,
-            letterSpacing: 0.6,
+            fontFamily: Fonts.sans,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
             color: color,
           ),
         ),

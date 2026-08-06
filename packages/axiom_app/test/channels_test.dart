@@ -119,11 +119,11 @@ void main() {
     testWidgets('der Systemscreen führt hin', (tester) async {
       await pumpPhone(tester, h.wrap(const SystemScreen()));
       await tester.dragUntilVisible(
-        find.text('Erfassen'),
+        find.text('Erfassungswege'),
         find.byType(ListView),
         const Offset(0, -300),
       );
-      expect(find.text('Erfassen'), findsOneWidget);
+      expect(find.text('Erfassungswege'), findsOneWidget);
       expect(find.textContaining('Widget, Benachrichtigung, Stift'),
           findsOneWidget);
     });

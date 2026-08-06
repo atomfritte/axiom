@@ -548,7 +548,12 @@ class _ProseViewState extends State<ProseView> {
                         width: marker,
                         child: Text(
                           ordered ? '${n + 1}.' : '·',
-                          style: monoStyle(context, size: 14, color: p.inkFaint),
+                          // War Monospace. Eine Aufzaehlungsnummer ist keine
+                          // Codestelle — sie muss nur untereinander stehen,
+                          // und dafuer sind Tabellenziffern da.
+                          style: readingStyle(context,
+                              size: 15, weight: FontWeight.w500,
+                              color: p.inkFaint),
                         ),
                       ),
                       Expanded(
@@ -570,6 +575,8 @@ class _ProseViewState extends State<ProseView> {
           padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.md, Space.md),
           decoration: BoxDecoration(
             color: p.panel,
+            borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(Radii.control)),
             border: Border(left: BorderSide(color: p.signal, width: 2)),
           ),
           child: Text.rich(_inline(context, spans, text.bodyMedium)),
@@ -720,7 +727,11 @@ class _ProseFigure extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: kProseImageMaxWidth),
               child: Text(
                 caption,
-                style: monoStyle(context, size: 12.5, color: p.inkFaint),
+                // Eine Bildunterschrift ist Fliesstext, kein Protokoll.
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: p.inkFaint),
               ),
             ),
           ],

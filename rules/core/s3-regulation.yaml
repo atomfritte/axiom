@@ -6,8 +6,8 @@
 # schloss sie wieder — deshalb konnte ein Zwilling von R-110 hier unbemerkt
 # liegen. Der Ist-Stand:
 #
-#   LIVE    R-020, R-050, R-051, R-052, R-070 — sie sprechen
-#           R-090 — severity: enforce, verändert das Systemverhalten (L3)
+#   LIVE    R-020, R-050, R-051, R-070 — sie sprechen
+#           R-052, R-090 — severity: enforce, verändern das Systemverhalten
 #   SHADOW  R-140 — läuft stumm mit, wird nur protokolliert
 #
 # Die Schwellen stammen aus weights.yaml und sind noch ungeeicht; der
@@ -86,6 +86,19 @@
   cooldown: { minutes: 180, max_per_day: 2, backoff: exponential }
   enabled: true
 
+# Hier stand `severity: intervene`. Damit war die Regel sechs von sieben
+# Stunden tot: Ihr Fenster reicht von 22:00 bis 05:00, die Ruhezeit aus
+# limits.yaml von 23:00 bis 06:30, und die Ruhezeit lässt nur `enforce`
+# durch. Von 23:00 bis 05:00 traf die Bedingung jedes Mal zu und wurde jedes
+# Mal mit SkipReason.quietHours verworfen — genau der Fall, den die
+# Begründung als Zweck nennt („eine Bestellung um 01:00"), konnte nie
+# eintreten. Übrig blieb die Stunde 22:00–22:59.
+#
+# Von den drei möglichen Auflösungen ist das Heben der Severity die einzige,
+# die die Regel behält: Ein auf 22:00–22:59 gekürztes Fenster wäre ehrlich,
+# aber es hätte den Namen „Nachtbestellung" ohne die Nacht behalten. Und die
+# Ruhezeit selbst gilt für alle Regeln — sie wegen einer zu öffnen, wäre der
+# teuerste Weg.
 - id: R-052
   title: "Nachtbestellung abfangen"
   title_en: "Intercept night-time orders"
@@ -94,12 +107,21 @@
     Nachts sind Regulationsreserve und Impulskontrolle am niedrigsten,
     während Verfügbarkeit und Novelty am höchsten sind. Eine Bestellung
     um 01:00 wird um 09:00 fast nie noch gewollt. Der Cooldown bis zum
-    Morgen kostet nichts und fängt den Großteil ab.
+    Morgen kostet nichts und fängt den Großteil ab. Verbindlich, nicht
+    laut: Die Regel ruft nicht, sie legt eine Wartezeit vor Kanäle, die im
+    ruhigen Zustand selbst dafür freigegeben wurden — kein Verbot, nur
+    Latenz. Ohne diese Verbindlichkeit läge ihr Fenster fast vollständig in
+    der Ruhezeit, und sie bliebe genau in den Stunden stumm, für die sie
+    geschrieben ist.
   rationale_en: >
     At night, regulation reserve and impulse control are at their lowest
     while availability and novelty are at their highest. An order placed at
     01:00 is almost never still wanted at 09:00. A cooldown until morning
-    costs nothing and catches most of it.
+    costs nothing and catches most of it. Binding, not loud: the rule does
+    not call out, it puts a waiting period in front of channels you
+    authorised for it yourself while calm — no ban, only latency. Without
+    that binding force its window would sit almost entirely inside quiet
+    hours, and it would stay silent in exactly the hours it was written for.
   when:
     all:
       - time_between: ["22:00", "05:00"]
@@ -108,7 +130,7 @@
     action: start_cooldown
     params: { cooldown_until: "09:00", checklist: personal_purchase }
   priority: 90
-  severity: intervene
+  severity: enforce
   cooldown: { minutes: 240, max_per_day: 2 }
   enabled: true
 
@@ -184,6 +206,23 @@
   enabled: true
 
 # ── M2 Task Kernel ──────────────────────────────────────────────────────
+#
+# OFFEN an R-020: Die Bedingung fragt nicht, ob es überhaupt etwas zu
+# zerlegen gibt. Sie liest `capacity` und `active_slot`; der Aufgabenbestand
+# kommt darin nicht vor. Auf einem leeren Gerät trifft sie zu und fordert
+# zum Zerlegen auf, wo nichts liegt — eine Ausgabe, die man nicht ausführen
+# kann, ist keine (G1). Sichtbar wird das erst in der Oberfläche: Ohne
+# Kandidaten fällt now_screen.dart auf die allgemeine Entscheidungskarte
+# zurück.
+#
+# Reparabel ist das hier nicht, sondern nur im Regelwortschatz: Es fehlt
+# eine Zahl der Art `atomize_candidates` — offene Aufgaben im Zustand
+# `ready`, die bei der aktuellen Kapazität nicht startbar sind (die Menge,
+# die `Atomizer.candidates` ohnehin schon berechnet). Sie müsste in
+# `RuleVocabulary.numerics`, in `RuntimeContext` und in
+# `StateEvalContext.numeric` stehen; dann bekäme R-020 die Zeile
+# `- atomize_candidates: { gte: 1 }`. Solange die Zahl fehlt, hält
+# r020_atomize_test.dart die Lücke fest.
 
 - id: R-020
   title: "Wichtig, aber nicht startbar — zerlegen statt anmahnen"

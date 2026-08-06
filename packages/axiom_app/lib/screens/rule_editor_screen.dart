@@ -65,12 +65,14 @@ Future<void> showRuleEditor(
     return;
   }
   if (!context.mounted) return;
-  await Navigator.of(context).push<void>(MaterialPageRoute(
-    builder: (_) => RuleEditorScreen(
-      existing: existing,
-      overridesShipped: overridesShipped,
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => RuleEditorScreen(
+        existing: existing,
+        overridesShipped: overridesShipped,
+      ),
     ),
-  ));
+  );
 }
 
 /// Der Deckel greift. Sachlich, mit Regel-ID, ohne Vorwurf.
@@ -90,16 +92,23 @@ class _BudgetReached extends StatelessWidget {
         children: [
           RuleStamp(ruleId: 'R-010', color: p.info),
           const SizedBox(height: Space.lg),
-          Text(context.t('Regelwerk heute zu'),
-              style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            context.t('Regelwerk heute zu'),
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: Space.md),
           Text(
-            context.t('{0} Minuten im System sind heute verbraucht. Regeln zu schreiben ist ab jetzt bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen — und eine Regel abschalten geht weiterhin.', [kMetaBudget.inMinutes]),
+            context.t(
+              '{0} Minuten im System sind heute verbraucht. Regeln zu schreiben ist ab jetzt bis morgen zu. Erfassen, Arbeiten und Nachsehen bleiben offen — und eine Regel abschalten geht weiterhin.',
+              [kMetaBudget.inMinutes],
+            ),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Space.md),
           Text(
-            context.t('Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.'),
+            context.t(
+              'Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.',
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.xl),
@@ -127,15 +136,18 @@ class RuleEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<RuleEditorScreen> createState() => _RuleEditorScreenState();
 }
 
-class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTimed<RuleEditorScreen> {
+class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen>
+    with MetaTimed<RuleEditorScreen> {
   @override
   String get metaScreen => 'rules';
 
   late final _title = TextEditingController(text: widget.existing?.title ?? '');
-  late final _rationale =
-      TextEditingController(text: widget.existing?.rationale.trim() ?? '');
+  late final _rationale = TextEditingController(
+    text: widget.existing?.rationale.trim() ?? '',
+  );
   late final _actionText = TextEditingController(
-      text: widget.existing?.then.params['text']?.toString() ?? '');
+    text: widget.existing?.then.params['text']?.toString() ?? '',
+  );
 
   late String _id;
   late String? _deficit = widget.existing?.deficit;
@@ -204,13 +216,21 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
   List<String> get _problems {
     final problems = <String>[];
     if (_title.text.trim().length < 3) {
-      problems.add(context.t('Der Titel fehlt. Er steht später in der Meldung.'));
+      problems.add(
+        context.t('Der Titel fehlt. Er steht später in der Meldung.'),
+      );
     }
     if (_rationale.text.trim().length < 40) {
-      problems.add(context.t('Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.'));
+      problems.add(
+        context.t(
+          'Die Begründung ist zu kurz. Sie erscheint im Systeminspektor und muss in einem halben Jahr noch erklären, warum es diese Regel gibt.',
+        ),
+      );
     }
     if (_cooldownMinutes < 1) {
-      problems.add(context.t('Ohne Abstand meldet sich die Regel beliebig oft.'));
+      problems.add(
+        context.t('Ohne Abstand meldet sich die Regel beliebig oft.'),
+      );
     }
     try {
       _root.build();
@@ -229,7 +249,8 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
         deficit: _deficit,
         when: _root.build(),
         then: core.Action(_action, {
-          if (_action == ActionType.notify && _actionText.text.trim().isNotEmpty)
+          if (_action == ActionType.notify &&
+              _actionText.text.trim().isNotEmpty)
             'text': _actionText.text.trim(),
         }),
         priority: _priority,
@@ -268,10 +289,16 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
     await HapticFeedback.mediumImpact();
     if (!mounted) return;
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(context.t('Gespeichert. Die Regel läuft sieben Tage stumm mit — im Systeminspektor siehst du, wie oft sie gefeuert hätte.')),
-      duration: const Duration(seconds: 4),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context.t(
+            'Gespeichert. Die Regel läuft sieben Tage stumm mit — im Systeminspektor siehst du, wie oft sie gefeuert hätte.',
+          ),
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   Future<void> _reset() async {
@@ -280,11 +307,17 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
     ref.invalidate(runtimeProvider);
     if (!mounted) return;
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(widget.overridesShipped
-          ? context.t('Zurückgesetzt auf die mitgelieferte Fassung.')
-          : context.t('Regel entfernt. Die Nummer wird nicht wiederverwendet.')),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          widget.overridesShipped
+              ? context.t('Zurückgesetzt auf die mitgelieferte Fassung.')
+              : context.t(
+                  'Regel entfernt. Die Nummer wird nicht wiederverwendet.',
+                ),
+        ),
+      ),
+    );
   }
 
   // ── Aufbau ────────────────────────────────────────────────────────────
@@ -310,7 +343,11 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
-            Space.lg, Space.lg, Space.lg, Space.huge),
+          Space.lg,
+          Space.lg,
+          Space.lg,
+          Space.huge,
+        ),
         children: [
           // Reihenfolge nach dem tatsächlichen Vorgehen, nicht nach der
           // Struktur der Datei: Man hat zuerst einen Gedanken („wenn wenig
@@ -329,7 +366,9 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
           ),
           const SizedBox(height: Space.sm),
           Text(
-            context.t('Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.'),
+            context.t(
+              'Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.',
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
 
@@ -377,18 +416,24 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
             textCapitalization: TextCapitalization.sentences,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: context.t('Was diese Regel verhindern oder auslösen soll'),
+              hintText: context.t(
+                'Was diese Regel verhindern oder auslösen soll',
+              ),
             ),
           ),
           const SizedBox(height: Space.sm),
           Text(
-            context.t('Pflichtfeld. Jede Ausgabe von AXIOM nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.'),
+            context.t(
+              'Pflichtfeld. Jede Ausgabe von AXIOM nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.',
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: Space.lg),
-          Text(context.t('Worauf sie einzahlt'),
-              style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: Space.sm),
+          // War Fliesstext in 17 px und damit lauter als die
+          // Abschnittsmarken darueber — eine Unterfrage, die groesser stand
+          // als die Frage. Die Zuordnung zu einem Defizit ist ohnehin ein
+          // eigener Abschnitt, also traegt sie jetzt auch eine Marke.
+          const SizedBox(height: Space.xl),
+          SectionLabel(context.t('Worauf sie einzahlt')),
           _DeficitPicker(
             value: _deficit,
             onChanged: (value) => setState(() => _deficit = value),
@@ -408,7 +453,9 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
             value: _cooldownMinutes,
             unit: context.t('min'),
             steps: const [15, 30, 60, 120, 240, 480, 1440],
-            meaning: context.t('Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.'),
+            meaning: context.t(
+              'Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.',
+            ),
             onChanged: (value) => setState(() => _cooldownMinutes = value),
           ),
           const SizedBox(height: Space.md),
@@ -428,7 +475,9 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
             value: _priority,
             unit: '',
             steps: const [10, 30, 50, 70, 90],
-            meaning: context.t('Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.'),
+            meaning: context.t(
+              'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.',
+            ),
             onChanged: (value) => setState(() => _priority = value),
           ),
 
@@ -440,10 +489,15 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.t('Regel aktiv'),
-                          style: Theme.of(context).textTheme.bodyLarge),
                       Text(
-                        context.t('Ausgeschaltet bleibt sie erhalten, wird aber nicht ausgewertet.'),
+                        context.t('Regel aktiv'),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: Space.xs),
+                      Text(
+                        context.t(
+                          'Ausgeschaltet bleibt sie erhalten, wird aber nicht ausgewertet.',
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -465,14 +519,18 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.t('Fehlt noch'),
-                      style: Theme.of(context).textTheme.labelSmall),
+                  Text(
+                    context.t('Fehlt noch'),
+                    style: sectionStyle(context, color: p.caution),
+                  ),
                   const SizedBox(height: Space.sm),
                   for (final problem in problems)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: Space.xs),
-                      child: Text('· $problem',
-                          style: Theme.of(context).textTheme.bodySmall),
+                      padding: const EdgeInsets.only(bottom: Space.sm),
+                      child: Text(
+                        '· $problem',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
                 ],
               ),
@@ -483,11 +541,15 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.t('SIEBEN TAGE STUMM'),
-                      style: Theme.of(context).textTheme.labelSmall),
+                  Text(
+                    context.t('Sieben Tage stumm'),
+                    style: sectionStyle(context, color: p.info),
+                  ),
                   const SizedBox(height: Space.sm),
                   Text(
-                    context.t('Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.'),
+                    context.t(
+                      'Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.',
+                    ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -504,9 +566,11 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
             Center(
               child: TextButton(
                 onPressed: _reset,
-                child: Text(widget.overridesShipped
-                    ? context.t('Auf Auslieferungsstand zurücksetzen')
-                    : context.t('Regel entfernen')),
+                child: Text(
+                  widget.overridesShipped
+                      ? context.t('Auf Auslieferungsstand zurücksetzen')
+                      : context.t('Regel entfernen'),
+                ),
               ),
             ),
           ],
@@ -538,18 +602,28 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> with MetaTi
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(sheet.t('ALS YAML'),
-                style: Theme.of(sheet).textTheme.labelSmall),
+            Text(sheet.t('Als YAML'), style: sectionStyle(sheet)),
             const SizedBox(height: Space.md),
             Text(
-              sheet.t('Genau so kann die Regel nach rules/ zurück — der Editor ist keine Einbahnstraße.'),
+              sheet.t(
+                'Genau so kann die Regel nach rules/ zurück — der Editor ist keine Einbahnstraße.',
+              ),
               style: Theme.of(sheet).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.md),
+            // YAML bleibt Schreibmaschine: Es wird kopiert und Zeichen fuer
+            // Zeichen mit `rules/core/` verglichen. Die Mulde sagt dasselbe
+            // noch einmal — hier wird abgelesen, nicht bedient.
             Flexible(
-              child: SingleChildScrollView(
-                child: SelectableText(yaml,
-                    style: monoStyle(sheet, size: 12.5)),
+              child: Well(
+                padding: const EdgeInsets.all(Space.md),
+                radius: BorderRadius.circular(Radii.control),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    yaml,
+                    style: monoStyle(sheet, size: 12.5),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: Space.md),
@@ -588,103 +662,116 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.axiom;
-    return Panel(
-      accent: depth > 0 ? p.rule : null,
-      padding: EdgeInsets.all(depth > 0 ? Space.md : Space.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Wrap statt Row: Bei grosser Schrift und in der zweiten
-          // Verschachtelungsebene passen Umschalter, NICHT und Schliessen
-          // nicht mehr nebeneinander. Ein ueberlaufender Row schneidet
-          // ausgerechnet das Schliessen ab.
-          Wrap(
-            spacing: Space.sm,
-            runSpacing: Space.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _Segmented(
-                options: [
-                  (value: false, label: context.t('ALLE')),
-                  (value: true, label: context.t('EINE VON')),
-                ],
-                value: group.any,
-                onChanged: (value) {
-                  group.any = value;
-                  onChanged();
-                },
-              ),
-              _NotToggle(
-                on: group.negated,
-                onChanged: (value) {
-                  group.negated = value;
-                  onChanged();
-                },
-              ),
-              if (onRemove != null)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: onRemove,
-                  tooltip: context.t('Gruppe entfernen'),
-                ),
-            ],
-          ),
-          const SizedBox(height: Space.sm),
-          for (var i = 0; i < group.children.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Space.sm),
-              child: switch (group.children[i]) {
-                final DraftGroup child => _GroupCard(
-                    group: child,
-                    depth: depth + 1,
-                    context_: context_,
-                    onChanged: onChanged,
-                    onRemove: () {
-                      group.children.removeAt(i);
-                      onChanged();
-                    },
-                  ),
-                final DraftLeaf leaf => _LeafCard(
-                    leaf: leaf,
-                    context_: context_,
-                    onChanged: onChanged,
-                    onRemove: group.children.length == 1 && depth == 0
-                        ? null
-                        : () {
-                            group.children.removeAt(i);
-                            onChanged();
-                          },
-                  ),
+    // **Verschachtelung als Tiefe, nicht als Rahmen.** Vorher war jede Ebene
+    // dieselbe Karte, die tieferen mit einem Haarlinienrahmen — drei
+    // ineinandergeschachtelte Kaesten, die alle gleich weit vorn lagen. Wer
+    // eine Gruppe in einer Gruppe liest, muss sehen, was *worin* liegt: Die
+    // aeussere Ebene ist eine Karte, alles darin eine Mulde. Dieselbe
+    // Bildsprache wie die Reichweitenkante — tiefer heisst weiter innen,
+    // nicht weniger wert.
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Wrap statt Row: Bei grosser Schrift und in der zweiten
+        // Verschachtelungsebene passen Umschalter, NICHT und Schliessen
+        // nicht mehr nebeneinander. Ein ueberlaufender Row schneidet
+        // ausgerechnet das Schliessen ab.
+        // Abstand `lg` statt `sm`: Die Verknuepfung („Alle / Eine von") und
+        // die Verneinung („Nicht") sind zwei verschiedene Fragen. Standen
+        // sie im selben engen Raster, las man drei gleichrangige Schalter.
+        Wrap(
+          spacing: Space.lg,
+          runSpacing: Space.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _Segmented(
+              options: [
+                (value: false, label: context.t('Alle')),
+                (value: true, label: context.t('Eine von')),
+              ],
+              value: group.any,
+              onChanged: (value) {
+                group.any = value;
+                onChanged();
               },
             ),
-          Wrap(
-            spacing: Space.sm,
-            children: [
-              TextButton.icon(
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(context.t('Bedingung')),
-                onPressed: () {
-                  group.children.add(DraftLeaf());
+            _NotToggle(
+              on: group.negated,
+              onChanged: (value) {
+                group.negated = value;
+                onChanged();
+              },
+            ),
+            if (onRemove != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: onRemove,
+                tooltip: context.t('Gruppe entfernen'),
+              ),
+          ],
+        ),
+        const SizedBox(height: Space.sm),
+        for (var i = 0; i < group.children.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.sm),
+            child: switch (group.children[i]) {
+              final DraftGroup child => _GroupCard(
+                group: child,
+                depth: depth + 1,
+                context_: context_,
+                onChanged: onChanged,
+                onRemove: () {
+                  group.children.removeAt(i);
                   onChanged();
                 },
               ),
-              // Verschachtelung nur bis zur dritten Ebene: Drei sind lesbar,
-              // vier sind ein Programm.
-              if (depth < 2)
-                TextButton.icon(
-                  icon: const Icon(Icons.account_tree_outlined, size: 18),
-                  label: Text(context.t('Gruppe')),
-                  onPressed: () {
-                    group.children
-                        .add(DraftGroup(any: !group.any, children: [DraftLeaf()]));
-                    onChanged();
-                  },
-                ),
-            ],
+              final DraftLeaf leaf => _LeafCard(
+                leaf: leaf,
+                context_: context_,
+                onChanged: onChanged,
+                onRemove: group.children.length == 1 && depth == 0
+                    ? null
+                    : () {
+                        group.children.removeAt(i);
+                        onChanged();
+                      },
+              ),
+            },
           ),
-        ],
-      ),
+        Wrap(
+          spacing: Space.sm,
+          children: [
+            TextButton.icon(
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(context.t('Bedingung')),
+              onPressed: () {
+                group.children.add(DraftLeaf());
+                onChanged();
+              },
+            ),
+            // Verschachtelung nur bis zur dritten Ebene: Drei sind lesbar,
+            // vier sind ein Programm.
+            if (depth < 2)
+              TextButton.icon(
+                icon: const Icon(Icons.account_tree_outlined, size: 18),
+                label: Text(context.t('Gruppe')),
+                onPressed: () {
+                  group.children.add(
+                    DraftGroup(any: !group.any, children: [DraftLeaf()]),
+                  );
+                  onChanged();
+                },
+              ),
+          ],
+        ),
+      ],
+    );
+
+    if (depth == 0) return Panel(child: content);
+    return Well(
+      padding: const EdgeInsets.all(Space.md),
+      radius: BorderRadius.circular(Radii.control),
+      child: content,
     );
   }
 }
@@ -723,8 +810,8 @@ class _LeafCard extends StatelessWidget {
       LeafKind.timeRange =>
         '${ctx.localNow.hour.toString().padLeft(2, '0')}:'
             '${ctx.localNow.minute.toString().padLeft(2, '0')}',
-      LeafKind.minutesSince => ctx.minutesSince(leaf.event)?.toString() ??
-          context.t('nie'),
+      LeafKind.minutesSince =>
+        ctx.minutesSince(leaf.event)?.toString() ?? context.t('nie'),
       LeafKind.countToday => '${ctx.countToday(leaf.event)}',
     };
   }
@@ -744,8 +831,8 @@ class _LeafCard extends StatelessWidget {
           color: holds == null
               ? p.rule
               : holds
-                  ? p.calm.withValues(alpha: 0.6)
-                  : p.rule,
+              ? p.calm.withValues(alpha: 0.6)
+              : p.rule,
         ),
       ),
       child: Column(
@@ -783,20 +870,28 @@ class _LeafCard extends StatelessWidget {
           ),
           const SizedBox(height: Space.sm),
           ..._fields(context),
+          // Der Istwert war Schreibmaschine in 12 px — der wichtigste Wert
+          // dieser Zeile, gesetzt wie eine Fussnote. Er ist ein Messwert:
+          // Hausschrift mit Tabellenziffern, eine Stufe groesser.
           if (actual != null) ...[
             const SizedBox(height: Space.sm),
             Row(
               children: [
                 Icon(
-                  holds == true ? Icons.check_circle_outline : Icons.circle_outlined,
-                  size: 15,
+                  holds == true
+                      ? Icons.check_circle_outline
+                      : Icons.circle_outlined,
+                  size: 16,
                   color: holds == true ? p.calm : p.inkFaint,
                 ),
                 const SizedBox(width: Space.sm),
                 Text(
                   context.t('jetzt: {0}', [actual]),
-                  style: monoStyle(context,
-                      size: 12, color: holds == true ? p.calm : p.inkDim),
+                  style: readingStyle(
+                    context,
+                    size: 14,
+                    color: holds == true ? p.calm : p.inkDim,
+                  ),
                 ),
               ],
             ),
@@ -807,167 +902,178 @@ class _LeafCard extends StatelessWidget {
   }
 
   List<Widget> _fields(BuildContext context) => switch (leaf.kind) {
-        LeafKind.number => [
-            _Dropdown<String>(
-              value: leaf.variable,
-              items: [
-                for (final v in RuleVocabulary.numerics)
-                  (value: v.id, label: context.t(v.label)),
-              ],
-              onChanged: (id) {
-                leaf.variable = id;
-                onChanged();
-              },
-            ),
-            const SizedBox(height: Space.sm),
-            _meaning(context,
-                RuleVocabulary.numeric(leaf.variable)?.meaning ?? ''),
-            const SizedBox(height: Space.sm),
-            // Grenzen aus dem Wortschatz statt fest 0..100: Sonst liesse sich
-            // „Stunden bis zur Frist" nicht ueber 100 stellen und „Rest nach
-            // dem Anlauf" gar nicht unter null — also genau dort nicht, wo
-            // die Variable etwas aussagt.
-            _OpAndNumber(
-              leaf: leaf,
-              onChanged: onChanged,
-              max: RuleVocabulary.numeric(leaf.variable)?.max.toInt() ?? 100,
-              min: RuleVocabulary.numeric(leaf.variable)?.min.toInt() ?? 0,
-            ),
-          ],
-        LeafKind.choice => [
-            _Dropdown<String>(
-              value: leaf.variable,
-              items: [
-                for (final v in RuleVocabulary.symbolics)
-                  (value: v.id, label: context.t(v.label)),
-              ],
-              onChanged: (id) {
-                leaf.variable = id;
-                leaf.symbol =
-                    RuleVocabulary.symbolic(id)!.values.keys.first;
-                onChanged();
-              },
-            ),
-            const SizedBox(height: Space.sm),
-            Row(
-              children: [
-                _Segmented<bool>(
-                  options: [
-                    (value: true, label: context.t('IST')),
-                    (value: false, label: context.t('IST NICHT')),
-                  ],
-                  value: leaf.op == CompareOp.eq,
-                  onChanged: (isEq) {
-                    leaf.op = isEq ? CompareOp.eq : CompareOp.ne;
-                    onChanged();
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
-                for (final entry
-                    in RuleVocabulary.symbolic(leaf.variable)!.values.entries)
-                  _ValueChip(
-                    label: context.t(entry.value),
-                    selected: leaf.symbol == entry.key,
-                    onTap: () {
-                      leaf.symbol = entry.key;
-                      onChanged();
-                    },
-                  ),
-              ],
-            ),
-            // Der Ort hat keine feste Werteliste — sie entsteht im Gebrauch.
-            // Ohne dieses Feld liesse sich im Editor nur „kein Ort" prüfen,
-            // und die Variable wäre ein Angebot, das nicht einlöst, was es
-            // verspricht.
-            if (RuleVocabulary.symbolic(leaf.variable)!.freeform) ...[
-              const SizedBox(height: Space.sm),
-              TextFormField(
-                key: ValueKey('freeform-${leaf.variable}'),
-                initialValue:
-                    RuleVocabulary.symbolic(leaf.variable)!
-                            .values
-                            .containsKey(leaf.symbol)
-                        ? ''
-                        : leaf.symbol,
-                decoration: InputDecoration(
-                  isDense: true,
-                  labelText: context.t('oder ein eigener Wert'),
-                ),
-                onChanged: (value) {
-                  final trimmed = value.trim();
-                  if (trimmed.isEmpty) return;
-                  leaf.symbol = trimmed;
-                  onChanged();
-                },
-              ),
+    LeafKind.number => [
+      _Dropdown<String>(
+        value: leaf.variable,
+        items: [
+          for (final v in RuleVocabulary.numerics)
+            (value: v.id, label: context.t(v.label)),
+        ],
+        onChanged: (id) {
+          leaf.variable = id;
+          onChanged();
+        },
+      ),
+      const SizedBox(height: Space.sm),
+      _meaning(context, RuleVocabulary.numeric(leaf.variable)?.meaning ?? ''),
+      const SizedBox(height: Space.sm),
+      // Grenzen aus dem Wortschatz statt fest 0..100: Sonst liesse sich
+      // „Stunden bis zur Frist" nicht ueber 100 stellen und „Rest nach
+      // dem Anlauf" gar nicht unter null — also genau dort nicht, wo
+      // die Variable etwas aussagt.
+      _OpAndNumber(
+        leaf: leaf,
+        onChanged: onChanged,
+        max: RuleVocabulary.numeric(leaf.variable)?.max.toInt() ?? 100,
+        min: RuleVocabulary.numeric(leaf.variable)?.min.toInt() ?? 0,
+      ),
+    ],
+    LeafKind.choice => [
+      _Dropdown<String>(
+        value: leaf.variable,
+        items: [
+          for (final v in RuleVocabulary.symbolics)
+            (value: v.id, label: context.t(v.label)),
+        ],
+        onChanged: (id) {
+          leaf.variable = id;
+          leaf.symbol = RuleVocabulary.symbolic(id)!.values.keys.first;
+          onChanged();
+        },
+      ),
+      const SizedBox(height: Space.sm),
+      Row(
+        children: [
+          _Segmented<bool>(
+            options: [
+              (value: true, label: context.t('Ist')),
+              (value: false, label: context.t('Ist nicht')),
             ],
-          ],
-        LeafKind.timeRange => [
-            Row(
-              children: [
-                Expanded(
-                  child: _TimeField(
-                    label: context.t('von'),
-                    minutes: leaf.fromMinutes,
-                    onChanged: (m) {
-                      leaf.fromMinutes = m;
-                      onChanged();
-                    },
-                  ),
-                ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: _TimeField(
-                    label: context.t('bis'),
-                    minutes: leaf.toMinutes,
-                    onChanged: (m) {
-                      leaf.toMinutes = m;
-                      onChanged();
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Space.sm),
-            _meaning(context,
-                context.t('Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.')),
-          ],
-        LeafKind.minutesSince || LeafKind.countToday => [
-            _Dropdown<String>(
-              value: leaf.event,
-              items: [
-                for (final e in RuleVocabulary.events)
-                  (value: e.id, label: context.t(e.label)),
-              ],
-              onChanged: (id) {
-                leaf.event = id;
+            value: leaf.op == CompareOp.eq,
+            onChanged: (isEq) {
+              leaf.op = isEq ? CompareOp.eq : CompareOp.ne;
+              onChanged();
+            },
+          ),
+        ],
+      ),
+      const SizedBox(height: Space.sm),
+      Wrap(
+        spacing: Space.sm,
+        runSpacing: Space.sm,
+        children: [
+          for (final entry in RuleVocabulary.symbolic(
+            leaf.variable,
+          )!.values.entries)
+            _ValueChip(
+              label: context.t(entry.value),
+              selected: leaf.symbol == entry.key,
+              onTap: () {
+                leaf.symbol = entry.key;
                 onChanged();
               },
             ),
-            const SizedBox(height: Space.sm),
-            _OpAndNumber(
-              leaf: leaf,
-              onChanged: onChanged,
-              max: leaf.kind == LeafKind.minutesSince ? 1440 : 20,
+        ],
+      ),
+      // Der Ort hat keine feste Werteliste — sie entsteht im Gebrauch.
+      // Ohne dieses Feld liesse sich im Editor nur „kein Ort" prüfen,
+      // und die Variable wäre ein Angebot, das nicht einlöst, was es
+      // verspricht.
+      if (RuleVocabulary.symbolic(leaf.variable)!.freeform) ...[
+        const SizedBox(height: Space.sm),
+        TextFormField(
+          key: ValueKey('freeform-${leaf.variable}'),
+          initialValue:
+              RuleVocabulary.symbolic(
+                leaf.variable,
+              )!.values.containsKey(leaf.symbol)
+              ? ''
+              : leaf.symbol,
+          decoration: InputDecoration(
+            isDense: true,
+            labelText: context.t('oder ein eigener Wert'),
+          ),
+          onChanged: (value) {
+            final trimmed = value.trim();
+            if (trimmed.isEmpty) return;
+            leaf.symbol = trimmed;
+            onChanged();
+          },
+        ),
+      ],
+    ],
+    LeafKind.timeRange => [
+      Row(
+        children: [
+          Expanded(
+            child: _TimeField(
+              label: context.t('von'),
+              minutes: leaf.fromMinutes,
+              onChanged: (m) {
+                leaf.fromMinutes = m;
+                onChanged();
+              },
             ),
-            if (leaf.kind == LeafKind.minutesSince) ...[
-              const SizedBox(height: Space.sm),
-              _meaning(context,
-                  context.t('Ein Ereignis, das nie eintrat, gilt als unendlich lange her. Für „läuft seit" braucht es zusätzlich eine Bedingung darauf, dass überhaupt etwas läuft.')),
-            ],
-          ],
-      };
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: _TimeField(
+              label: context.t('bis'),
+              minutes: leaf.toMinutes,
+              onChanged: (m) {
+                leaf.toMinutes = m;
+                onChanged();
+              },
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: Space.sm),
+      _meaning(
+        context,
+        context.t(
+          'Über Mitternacht hinweg erlaubt — 22:00 bis 05:00 meint die Nacht.',
+        ),
+      ),
+    ],
+    LeafKind.minutesSince || LeafKind.countToday => [
+      _Dropdown<String>(
+        value: leaf.event,
+        items: [
+          for (final e in RuleVocabulary.events)
+            (value: e.id, label: context.t(e.label)),
+        ],
+        onChanged: (id) {
+          leaf.event = id;
+          onChanged();
+        },
+      ),
+      const SizedBox(height: Space.sm),
+      _OpAndNumber(
+        leaf: leaf,
+        onChanged: onChanged,
+        max: leaf.kind == LeafKind.minutesSince ? 1440 : 20,
+      ),
+      if (leaf.kind == LeafKind.minutesSince) ...[
+        const SizedBox(height: Space.sm),
+        _meaning(
+          context,
+          context.t(
+            'Ein Ereignis, das nie eintrat, gilt als unendlich lange her. Für „läuft seit" braucht es zusätzlich eine Bedingung darauf, dass überhaupt etwas läuft.',
+          ),
+        ),
+      ],
+    ],
+  };
 
-  Widget _meaning(BuildContext context, String text) => Text(
-        text,
-        style: monoStyle(context, size: 11.5, color: context.axiom.inkFaint),
-      );
+  /// Was eine Groesse bedeutet — der Satz, der das Regelschreiben erst
+  /// moeglich macht.
+  ///
+  /// Stand in Schreibmaschine, 11,5 px, in der blassesten Farbe der Palette:
+  /// zwei Zeilen Erklaerung, gesetzt wie ein Debug-Protokoll. Es ist ein
+  /// deutscher Satz und wird jetzt auch so gesetzt.
+  Widget _meaning(BuildContext context, String text) =>
+      Text(text, style: Theme.of(context).textTheme.bodySmall);
 }
 
 class _OpAndNumber extends StatelessWidget {
@@ -985,32 +1091,32 @@ class _OpAndNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: _Dropdown<CompareOp>(
-              value: leaf.op,
-              items: [
-                for (final entry in RuleVocabulary.operatorLabels.entries)
-                  (value: entry.key, label: context.t(entry.value)),
-              ],
-              onChanged: (op) {
-                leaf.op = op;
-                onChanged();
-              },
-            ),
-          ),
-          const SizedBox(width: Space.md),
-          _NumberField(
-            value: leaf.number.toInt(),
-            max: max,
-            min: min,
-            onChanged: (value) {
-              leaf.number = value;
-              onChanged();
-            },
-          ),
-        ],
-      );
+    children: [
+      Expanded(
+        child: _Dropdown<CompareOp>(
+          value: leaf.op,
+          items: [
+            for (final entry in RuleVocabulary.operatorLabels.entries)
+              (value: entry.key, label: context.t(entry.value)),
+          ],
+          onChanged: (op) {
+            leaf.op = op;
+            onChanged();
+          },
+        ),
+      ),
+      const SizedBox(width: Space.md),
+      _NumberField(
+        value: leaf.number.toInt(),
+        max: max,
+        min: min,
+        onChanged: (value) {
+          leaf.number = value;
+          onChanged();
+        },
+      ),
+    ],
+  );
 }
 
 // ── Bausteine ───────────────────────────────────────────────────────────
@@ -1030,24 +1136,26 @@ class _Dropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<T>(
-        initialValue: value,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(
-              horizontal: Space.md, vertical: Space.md),
-        ),
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: context.axiom.ink,
-            ),
-        items: [
-          for (final item in items)
-            DropdownMenuItem(value: item.value, child: Text(item.label)),
-        ],
-        onChanged: (v) {
-          if (v != null) onChanged(v);
-        },
-      );
+    initialValue: value,
+    isExpanded: true,
+    decoration: const InputDecoration(
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.md,
+      ),
+    ),
+    style: Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: context.axiom.ink),
+    items: [
+      for (final item in items)
+        DropdownMenuItem(value: item.value, child: Text(item.label)),
+    ],
+    onChanged: (v) {
+      if (v != null) onChanged(v);
+    },
+  );
 }
 
 class _NumberField extends StatelessWidget {
@@ -1084,8 +1192,7 @@ class _NumberField extends StatelessWidget {
             child: Text(
               '$value',
               textAlign: TextAlign.center,
-              style: monoStyle(context,
-                  size: 16, weight: FontWeight.w500, color: p.ink),
+              style: readingStyle(context, size: 18, color: p.signal),
             ),
           ),
           _Step(icon: Icons.add, onTap: () => onChanged(_up())),
@@ -1099,8 +1206,8 @@ class _NumberField extends StatelessWidget {
   int get _stepSize => max > 100
       ? 15
       : max > 20
-          ? 5
-          : 1;
+      ? 5
+      : 1;
 
   int _up() => (value + _stepSize).clamp(min, max);
   int _down() => (value - _stepSize).clamp(min, max);
@@ -1113,16 +1220,90 @@ class _Step extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, size: 18, color: context.axiom.inkDim),
+    onTap: () {
+      HapticFeedback.selectionClick();
+      onTap();
+    },
+    child: SizedBox(
+      width: 48,
+      height: 48,
+      child: Icon(icon, size: 18, color: context.axiom.inkDim),
+    ),
+  );
+}
+
+/// Eine Plakette, die sich auf ihren Inhalt zusammenzieht.
+///
+/// **Der Fehler, den das behebt.** Alle drei Plaketten dieses Editors waren
+/// als `Container(alignment: Alignment.center, …)` gebaut. Ein `Container`
+/// mit `alignment` wickelt sein Kind in ein `Align`, und ein `Align` ohne
+/// Faktor **fuellt die angebotene Breite**. In einer `Row` faellt das nicht
+/// auf (dort ist die Breite unbegrenzt), in einem `Wrap` schon: Dort bekommt
+/// jedes Kind die volle Zeilenbreite angeboten — und aus „Alle · Eine von ·
+/// Nicht" nebeneinander wurden drei bildschirmbreite Balken untereinander.
+/// Genau so sah der Bedingungsbaum aus: ein Formular aus Balken statt einer
+/// Reihe Schalter.
+///
+/// Deshalb hier `Row(mainAxisSize: min)` statt `alignment`: Es zentriert
+/// senkrecht (das war der Zweck) und zieht sich waagerecht zusammen. Die
+/// Mindesthoehe bleibt — ein Tippziel unter 44 px trifft man nicht.
+class _Chip extends StatelessWidget {
+  final Widget child;
+  final bool selected;
+  final Color border;
+  final Color? fill;
+  final double minHeight;
+  final EdgeInsets padding;
+  final VoidCallback onTap;
+
+  const _Chip({
+    required this.child,
+    required this.selected,
+    required this.border,
+    required this.onTap,
+    this.fill,
+    this.minHeight = 44,
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: Space.md,
+      vertical: Space.sm,
+    ),
+  });
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    // Ausgewaehlt sagte bisher nur die Farbe. Eine Vorlesehilfe sieht
+    // keine Farbe.
+    selected: selected,
+    child: GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        constraints: BoxConstraints(minHeight: minHeight),
+        padding: padding,
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(Radii.control),
+          border: Border.all(color: border),
         ),
-      );
+        // `Flexible`, damit ein Chip schrumpfen kann statt ueberzulaufen.
+        //
+        // Im `Wrap` bekommt jedes Kind unbegrenzte Breite — ein Chip, der
+        // breiter wird als die Zeile, laeuft dort einfach hinaus. Genau
+        // das passierte, als die Beschriftung von Schreibmaschine 12 px
+        // auf Hausschrift 13,5 px w600 wechselte: 24 px ueber den Rand,
+        // mitten im Regeleditor. Die Breite muss deshalb von aussen
+        // kommen (siehe `_Segmented`), und hier darf der Text nachgeben.
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [Flexible(child: child)],
+        ),
+      ),
+    ),
+  );
 }
 
 class _Segmented<T> extends StatelessWidget {
@@ -1139,41 +1320,42 @@ class _Segmented<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return Wrap(
-      spacing: Space.xs,
-      children: [
-        for (final option in options)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onChanged(option.value);
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 40),
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: Space.md, vertical: Space.sm),
-              decoration: BoxDecoration(
-                color: option.value == value
+    // `LayoutBuilder`, weil ein `Wrap` seinen Kindern keine Breite vorgibt.
+    // Ohne diese Grenze kann ein einzelner Chip breiter werden als die Zeile,
+    // und dann hilft auch `Flexible` im Chip nichts — es braucht erst etwas,
+    // wogegen es nachgeben kann.
+    return LayoutBuilder(
+      builder: (context, constraints) => Wrap(
+        spacing: Space.xs,
+        runSpacing: Space.xs,
+        children: [
+          for (final option in options)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+              child: _Chip(
+                selected: option.value == value,
+                onTap: () => onChanged(option.value),
+                minHeight: 40,
+                fill: option.value == value
                     ? p.signal.withValues(alpha: 0.85)
                     : p.panel,
-                borderRadius: BorderRadius.circular(Radii.control),
-                border: Border.all(
-                    color: option.value == value ? p.signal : p.rule),
-              ),
-              child: Text(
-                option.label,
-                style: monoStyle(context,
-                    size: 12,
-                    weight: FontWeight.w600,
+                border: option.value == value ? p.signal : p.rule,
+                // War Schreibmaschine in 12 px. Ein Umschalter ist beschriftet,
+                // nicht abgetippt — und „ALLE / EINE VON" gesperrt in Versalien
+                // stand ausgerechnet ueber der Stelle, an der man versteht, wie
+                // die Bedingung verknuepft ist.
+                child: Text(
+                  option.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: option.value == value
                         ? Theme.of(context).colorScheme.onPrimary
-                        : p.inkDim),
+                        : p.inkDim,
+                  ),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1192,29 +1374,15 @@ class _ValueChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.md, vertical: Space.sm),
-        decoration: BoxDecoration(
-          color: selected ? p.signal.withValues(alpha: 0.85) : p.panel,
-          borderRadius: BorderRadius.circular(Radii.control),
-          border: Border.all(color: selected ? p.signal : p.rule),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: selected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : p.inkDim,
-              ),
+    return _Chip(
+      selected: selected,
+      onTap: onTap,
+      fill: selected ? p.signal.withValues(alpha: 0.85) : p.panel,
+      border: selected ? p.signal : p.rule,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: selected ? Theme.of(context).colorScheme.onPrimary : p.inkDim,
         ),
       ),
     );
@@ -1229,28 +1397,19 @@ class _NotToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onChanged(!on);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 40, minWidth: 56),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-        decoration: BoxDecoration(
-          color: on ? p.caution.withValues(alpha: 0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.control),
-          border: Border.all(color: on ? p.caution : p.rule),
-        ),
-        child: Text(
-          context.t('NICHT'),
-          style: monoStyle(context,
-              size: 11,
-              weight: FontWeight.w600,
-              color: on ? p.caution : p.inkFaint),
-        ),
+    return _Chip(
+      selected: on,
+      onTap: () => onChanged(!on),
+      minHeight: 40,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
+      fill: on ? p.caution.withValues(alpha: 0.2) : null,
+      border: on ? p.caution : p.rule,
+      child: Text(
+        context.t('Nicht'),
+        style: sectionStyle(context, color: on ? p.caution : p.inkFaint),
       ),
     );
   }
@@ -1270,7 +1429,8 @@ class _TimeField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    final text = '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
+    final text =
+        '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
         '${(minutes % 60).toString().padLeft(2, '0')}';
     return GestureDetector(
       onTap: () async {
@@ -1292,11 +1452,8 @@ class _TimeField extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label,
-                style: monoStyle(context, size: 10.5, color: p.inkFaint)),
-            Text(text,
-                style: monoStyle(context,
-                    size: 16, weight: FontWeight.w500, color: p.ink)),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            Text(text, style: readingStyle(context, size: 18, color: p.signal)),
           ],
         ),
       ),
@@ -1313,29 +1470,44 @@ class _HoldsBadge extends StatelessWidget {
     final p = context.axiom;
     final (text, icon, color) = switch (holds) {
       true => (
-          context.t('Trifft mit dem Zustand von jetzt zu.'),
-          Icons.check_circle_outline,
-          p.calm,
-        ),
+        context.t('Trifft mit dem Zustand von jetzt zu.'),
+        Icons.check_circle_outline,
+        p.calm,
+      ),
       false => (
-          context.t('Trifft mit dem Zustand von jetzt nicht zu.'),
-          Icons.circle_outlined,
-          p.inkDim,
-        ),
+        context.t('Trifft mit dem Zustand von jetzt nicht zu.'),
+        Icons.circle_outlined,
+        p.inkDim,
+      ),
       null => (
-          context.t('Noch unvollständig — unten steht, was fehlt.'),
-          Icons.error_outline,
-          p.caution,
-        ),
+        context.t('Noch unvollständig — unten steht, was fehlt.'),
+        Icons.error_outline,
+        p.caution,
+      ),
     };
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: Space.sm),
-        Expanded(
-          child: Text(text, style: monoStyle(context, size: 12, color: color)),
-        ),
-      ],
+    // Die Aussage ist der halbe Nutzen dieses Editors — sie stand in
+    // Schreibmaschine, 12 px. Jetzt Lesegroesse: Wer sie ueberliest, schreibt
+    // Schwellen ins Blaue.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1364,17 +1536,17 @@ class _DeficitPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Wrap(
-        spacing: Space.sm,
-        runSpacing: Space.sm,
-        children: [
-          for (final entry in _labels.entries)
-            _ValueChip(
-              label: '${entry.key} · ${context.t(entry.value)}',
-              selected: value == entry.key,
-              onTap: () => onChanged(value == entry.key ? null : entry.key),
-            ),
-        ],
-      );
+    spacing: Space.sm,
+    runSpacing: Space.sm,
+    children: [
+      for (final entry in _labels.entries)
+        _ValueChip(
+          label: '${entry.key} · ${context.t(entry.value)}',
+          selected: value == entry.key,
+          onTap: () => onChanged(value == entry.key ? null : entry.key),
+        ),
+    ],
+  );
 }
 
 class _ActionPicker extends StatelessWidget {
@@ -1398,13 +1570,24 @@ class _ActionPicker extends StatelessWidget {
         ),
         if (spec != null) ...[
           const SizedBox(height: Space.sm),
-          Text(context.t(spec.meaning),
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            context.t(spec.meaning),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ],
     );
   }
 }
+
+/// `intervene` → `Intervene`.
+///
+/// Die vier Stufen sind Fachbegriffe des Regelwerks und stehen genau so in
+/// jeder YAML-Datei — sie werden deshalb **nicht** uebersetzt. Was sie nicht
+/// brauchten, waren Versalien: „INTERVENE" sind neun Grossbuchstaben, und die
+/// Wortform, an der man das Wort erkennt, faellt dabei weg.
+String _capitalized(String name) =>
+    name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
 
 class _SeverityPicker extends StatelessWidget {
   final Severity value;
@@ -1415,27 +1598,30 @@ class _SeverityPicker extends StatelessWidget {
     Severity.info: 'Erscheint nur im Rückblick.',
     Severity.nudge: 'Still, wegwischbar.',
     Severity.intervene: 'Sichtbar, erwartet eine Antwort.',
-    Severity.enforce: 'Verändert Systemverhalten. Nur für Regeln, die du im '
+    Severity.enforce:
+        'Verändert Systemverhalten. Nur für Regeln, die du im '
         'ruhigen Zustand selbst verbindlich gesetzt hast.',
   };
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Segmented<Severity>(
-            options: [
-              for (final severity in Severity.values)
-                (value: severity, label: severity.name.toUpperCase()),
-            ],
-            value: value,
-            onChanged: onChanged,
-          ),
-          const SizedBox(height: Space.sm),
-          Text(context.t(_meaning[value]!),
-              style: Theme.of(context).textTheme.bodySmall),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _Segmented<Severity>(
+        options: [
+          for (final severity in Severity.values)
+            (value: severity, label: _capitalized(severity.name)),
         ],
-      );
+        value: value,
+        onChanged: onChanged,
+      ),
+      const SizedBox(height: Space.sm),
+      Text(
+        context.t(_meaning[value]!),
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    ],
+  );
 }
 
 class _Stepper extends StatelessWidget {
@@ -1459,29 +1645,29 @@ class _Stepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Panel(
-        padding: const EdgeInsets.all(Space.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    padding: const EdgeInsets.all(Space.md),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: Space.md),
+        Wrap(
+          spacing: Space.sm,
+          runSpacing: Space.sm,
           children: [
-            Text(label, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
-                for (final step in steps)
-                  _ValueChip(
-                    label: step == 0 && zeroLabel != null
-                        ? zeroLabel!
-                        : '$step $unit'.trim(),
-                    selected: step == value,
-                    onTap: () => onChanged(step),
-                  ),
-              ],
-            ),
-            const SizedBox(height: Space.sm),
-            Text(meaning, style: Theme.of(context).textTheme.bodySmall),
+            for (final step in steps)
+              _ValueChip(
+                label: step == 0 && zeroLabel != null
+                    ? zeroLabel!
+                    : '$step $unit'.trim(),
+                selected: step == value,
+                onTap: () => onChanged(step),
+              ),
           ],
         ),
-      );
+        const SizedBox(height: Space.sm),
+        Text(meaning, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ),
+  );
 }

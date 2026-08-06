@@ -80,28 +80,21 @@ class _BodyStripState extends ConsumerState<BodyStrip> {
               child: Semantics(
                 button: true,
                 label: context.t('{0} erledigt', [signal.label]),
-                child: GestureDetector(
-                  onTap: () => _ack(signal),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    // Feste Hoehe waere hier falsch: Sie haelt genau so lange,
-                    // bis jemand die Schrift groesser stellt.
-                    constraints: const BoxConstraints(minHeight: 60),
-                    padding: const EdgeInsets.symmetric(vertical: Space.sm),
-                    margin: EdgeInsets.only(
-                      right: signal == BodySignal.eyes ? 0 : Space.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _justAcked.contains(signal.key)
-                          ? p.calm.withValues(alpha: 0.18)
-                          : p.panel,
-                      borderRadius: BorderRadius.circular(Radii.control),
-                      border: Border.all(
-                        color: _justAcked.contains(signal.key)
-                            ? p.calm
-                            : p.rule,
-                      ),
-                    ),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: signal == BodySignal.eyes ? 0 : Space.sm,
+                  ),
+                  // Vorher ein `Container` mit Haarlinienrahmen. Vier
+                  // gerahmte Kaesten nebeneinander sind ein Gitter; die
+                  // Leiste steht auf dem Seitengrund, also traegt hier der
+                  // Schatten die Aussage — genau dafuer gibt es [Panel].
+                  child: Panel(
+                    onTap: () => _ack(signal),
+                    accent: _justAcked.contains(signal.key) ? p.calm : null,
+                    // Feste Hoehe waere hier falsch: Sie haelt genau so
+                    // lange, bis jemand die Schrift groesser stellt.
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: Space.xs, vertical: Space.md),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -109,19 +102,22 @@ class _BodyStripState extends ConsumerState<BodyStrip> {
                           _justAcked.contains(signal.key)
                               ? Icons.check
                               : signal.icon,
-                          size: 18,
+                          size: 20,
                           color: _justAcked.contains(signal.key)
                               ? p.calm
                               : p.inkDim,
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: Space.xs + 2),
                         Text(
                           signal.label,
                           textAlign: TextAlign.center,
-                          style: monoStyle(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          // War Schreibmaschine. Eine Kachelbeschriftung ist
+                          // kein Messwert und kein Befehl — sie laeuft in der
+                          // Hausschrift wie jede andere Marke.
+                          style: sectionStyle(
                             context,
-                            size: 12,
-                            spacing: 0.4,
                             color: _justAcked.contains(signal.key)
                                 ? p.calm
                                 : p.inkFaint,
@@ -140,6 +136,16 @@ class _BodyStripState extends ConsumerState<BodyStrip> {
 }
 
 // ── Schlaf (M8) ─────────────────────────────────────────────────────────
+
+/// Stundenzahl in der eingestellten Sprache.
+///
+/// „7.5 Stunden" ist im Deutschen keine Zahl, sondern ein Tippfehler — und
+/// er stand ausgerechnet an der Stelle, die den staerksten Einzelfaktor der
+/// Kapazitaet meldet. Dieselbe Regel wie in der Herleitungstafel.
+String _hours(BuildContext context, double value) {
+  final text = value.toStringAsFixed(1);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
+}
 
 Future<bool> showSleepSheet(BuildContext context) async =>
     await showModalBottomSheet<bool>(
@@ -163,14 +169,21 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
   int _quality = 3;
   bool _saving = false;
 
-  static DateTime _guessBedtime() {
-    final now = DateTime.now();
-    final yesterday = now.subtract(const Duration(days: 1));
+  /// Heute — aus dem Clock-Port, nicht aus `DateTime.now()`.
+  ///
+  /// Hier stand zweimal `DateTime.now()`. Damit rechnete das Blatt mit einer
+  /// anderen Uhr als die Engine, und im Test hing sein Inhalt an der
+  /// Wanduhr des Rechners: Dasselbe Referenzbild sah morgens anders aus als
+  /// abends. Die Uhr kommt jetzt von dort, wo alle anderen sie auch holen.
+  DateTime get _today => ref.read(clockProvider).nowLocal();
+
+  DateTime _guessBedtime() {
+    final yesterday = _today.subtract(const Duration(days: 1));
     return DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 30);
   }
 
-  static DateTime _guessWaketime() {
-    final now = DateTime.now();
+  DateTime _guessWaketime() {
+    final now = _today;
     return DateTime(now.year, now.month, now.day, 7, 0);
   }
 
@@ -245,14 +258,16 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
             ),
             const SizedBox(height: Space.md),
             Center(
+              // War Schreibmaschine in w300, und unter sechs Stunden kupfern.
+              // Beides ist weg: Die Stundenzahl ist das Ergebnis der beiden
+              // Uhrzeiten darueber, also ein Messwert wie jeder andere — und
+              // ein Messwert traegt genau eine Farbe (R7). Kupfer sagte hier
+              // „zu wenig geschlafen", also ein Urteil ueber eine Nacht, die
+              // ohnehin vorbei ist. Was daraus folgt, rechnet die Kapazitaet
+              // aus; sie muss es nicht auch noch anmalen.
               child: Text(
-                context.t('{0} Stunden', [hours.toStringAsFixed(1)]),
-                style: TextStyle(
-                  fontFamily: Fonts.mono,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w300,
-                  color: hours < 6 ? p.caution : p.ink,
-                ),
+                context.t('{0} Stunden', [_hours(context, hours)]),
+                style: readingStyle(context, size: 28, color: p.signal),
               ),
             ),
             const SizedBox(height: Space.xl),
@@ -261,29 +276,31 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
               context.t('Hat es getragen?'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.md),
+            // Dieselbe Bauart wie die Regler im Check-in-Blatt: genau ein
+            // erhobenes Feld, der Rest liegt zurueck. Vorher war alles bis
+            // zur gewaehlten Stufe gruen gefuellt — ein Balken, der bei 5
+            // voll ist, und damit eine Bestleistung statt einer Ablesung.
             Row(
               children: [
                 for (var i = 1; i <= 5; i++)
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _quality = i);
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        height: 44,
-                        margin: EdgeInsets.only(right: i < 5 ? 6 : 0),
-                        decoration: BoxDecoration(
-                          color: _quality >= i
-                              ? p.calm.withValues(
-                                  alpha: _quality == i ? 0.9 : 0.28,
-                                )
-                              : p.panel,
-                          borderRadius: BorderRadius.circular(Radii.control),
-                          border: Border.all(
-                            color: _quality == i ? p.calm : p.rule,
+                    child: Semantics(
+                      selected: _quality == i,
+                      label: context.t('{0} Stufe {1} von 5',
+                          [context.t('Hat es getragen?'), i]),
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _quality = i);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 52,
+                          margin: EdgeInsets.only(right: i < 5 ? Space.sm : 0),
+                          decoration: BoxDecoration(
+                            color: _quality == i ? p.signal : p.well,
+                            borderRadius: BorderRadius.circular(Radii.control),
                           ),
                         ),
                       ),
@@ -291,7 +308,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
                   ),
               ],
             ),
-            const SizedBox(height: Space.xs + 2),
+            const SizedBox(height: Space.sm),
             ScaleEnds(
               low: context.t('gar nicht'),
               high: context.t('vollständig'),
@@ -302,7 +319,7 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
               onPressed: _saving ? null : _save,
               child: Text(context.t('Eintragen')),
             ),
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.xs),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -330,37 +347,50 @@ class _TimeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    return Panel(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Space.lg,
-        vertical: Space.md,
-      ),
-      onTap: () async {
-        final time = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(value),
-        );
-        if (time == null) return;
-        onChanged(
-          DateTime(value.year, value.month, value.day, time.hour, time.minute),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.xs),
-          Text(
-            '${value.hour.toString().padLeft(2, "0")}:'
-            '${value.minute.toString().padLeft(2, "0")}',
-            style: TextStyle(
-              fontFamily: Fonts.mono,
-              fontSize: 20,
-              fontWeight: FontWeight.w300,
-              color: p.ink,
-            ),
+    final radius = BorderRadius.circular(Radii.control);
+    // Hier stand ein [Panel]. Das ist auf einem Bildschirm richtig und in
+    // einem Blatt falsch: Das Blatt **ist** bereits die erhobene Flaeche
+    // (`panel`), eine Karte darauf war im Hellen weiss auf weiss und nur an
+    // ihrem Schatten zu erahnen. Innerhalb eines Blattes zeigt eine
+    // Vertiefung, wo etwas einzugeben ist — dieselbe Sprache wie bei den
+    // Reglern.
+    return Material(
+      color: p.well,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: () async {
+          final time = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay.fromDateTime(value),
+          );
+          if (time == null) return;
+          onChanged(
+            DateTime(
+                value.year, value.month, value.day, time.hour, time.minute),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.lg,
+            vertical: Space.md,
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: Space.xs),
+              // War Schreibmaschine in w300. Eine Uhrzeit ist ein Messwert:
+              // Hausschrift mit Tabellenziffern, damit 07:00 und 23:30
+              // dieselbe Breite haben.
+              Text(
+                '${value.hour.toString().padLeft(2, "0")}:'
+                '${value.minute.toString().padLeft(2, "0")}',
+                style: readingStyle(context, size: 24, color: p.ink),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

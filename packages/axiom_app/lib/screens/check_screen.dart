@@ -134,14 +134,26 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
                       ? context.t('Die Brücke antwortet. Alles Weitere hier sind echte Werte des Geräts.')
                       : context.t('Die Brücke antwortet nicht. Dann ist keine Systemfunktion nutzbar und jede Zeile unten steht auf leeren Werten — das ist ein Fehler in AXIOM, nicht am Gerät.'),
                 ),
-                _Line(
-                  label: context.t('System'),
-                  value: 'Android ${_values['release']} '
-                      '(API ${_values['sdkInt']})',
-                ),
-                _Line(
-                  label: context.t('Modell'),
-                  value: '${_values['manufacturer']} ${_values['model']}',
+                // Die beiden Angaben des Geräts stehen in einer eigenen
+                // Karte. Vorher hingen sie nackt zwischen zwei Karten und
+                // sahen aus, als hätte jemand vergessen, sie einzuräumen.
+                Panel(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: Space.lg, vertical: Space.md),
+                  child: Column(
+                    children: [
+                      _Line(
+                        label: context.t('System'),
+                        value: 'Android ${_values['release']} '
+                            '(API ${_values['sdkInt']})',
+                      ),
+                      Divider(color: p.rule, height: Space.lg),
+                      _Line(
+                        label: context.t('Modell'),
+                        value: '${_values['manufacturer']} ${_values['model']}',
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: Space.xl),
@@ -324,6 +336,18 @@ class _CheckScreenState extends ConsumerState<CheckScreen>
 }
 
 /// Eine Prüfzeile: Zustand, Erklärung, und wo nötig der Weg dorthin.
+///
+/// **Nur das Offene ist markiert.** Vorher trug jede Zeile einen farbigen
+/// Rahmen: Grün für erledigt, Kupfer für offen. Auf einem Schirm mit zehn
+/// davon war das ein Gitter aus zehn gerahmten Kästen — und in einem Gitter
+/// ist alles gleich weit weg. Ausgerechnet die zwei Zeilen, die eine Handlung
+/// brauchen, standen nicht heraus.
+///
+/// Grün ist zusätzlich eine Note („richtig gemacht"), und eine erteilte
+/// Freigabe ist keine Leistung, sondern ein Zustand des Geräts. Jetzt:
+/// erledigte Zeilen liegen ruhig auf dem Grund, mit einem kleinen Haken;
+/// offene bekommen den kupfernen Rand und den Knopf. Kupfer, nicht Rot — ein
+/// fehlendes Systemrecht ist eine Aufgabe, kein Vorwurf (D10).
 class _Check extends StatelessWidget {
   final bool ok;
   final String label;
@@ -345,16 +369,21 @@ class _Check extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),
       child: Panel(
-        // Kupfer, nicht Rot: Ein fehlendes Systemrecht ist eine Aufgabe,
-        // kein Fehler und schon gar kein Vorwurf (D10).
-        accent: ok ? p.calm.withValues(alpha: 0.4) : p.caution.withValues(alpha: 0.5),
+        accent: ok ? null : p.caution.withValues(alpha: 0.5),
+        padding: const EdgeInsets.all(Space.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(ok ? Icons.check_circle_outline : Icons.error_outline,
-                    size: 19, color: ok ? p.calm : p.caution),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                      ok ? Icons.check_circle_outline : Icons.error_outline,
+                      size: 19,
+                      color: ok ? p.inkFaint : p.caution),
+                ),
                 const SizedBox(width: Space.md),
                 Expanded(
                   child: Text(label,
@@ -363,20 +392,30 @@ class _Check extends StatelessWidget {
               ],
             ),
             const SizedBox(height: Space.sm),
-            Text(detail, style: Theme.of(context).textTheme.bodySmall),
-            if (!ok && action != null && onAction != null) ...[
-              const SizedBox(height: Space.md),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await HapticFeedback.selectionClick();
-                    await onAction!();
-                  },
-                  child: Text(action!),
-                ),
+            // Eingerückt auf die Höhe der Beschriftung: Der Erklärtext gehört
+            // zur Zeile darüber und nicht an den Kartenrand.
+            Padding(
+              padding: const EdgeInsets.only(left: 19 + Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(detail, style: Theme.of(context).textTheme.bodySmall),
+                  if (!ok && action != null && onAction != null) ...[
+                    const SizedBox(height: Space.md),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await HapticFeedback.selectionClick();
+                          await onAction!();
+                        },
+                        child: Text(action!),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -391,14 +430,23 @@ class _Line extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: Space.xs),
+        padding: const EdgeInsets.symmetric(vertical: Space.sm),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(label,
                   style: Theme.of(context).textTheme.bodyMedium),
             ),
-            Text(value, style: monoStyle(context, size: 12.5)),
+            const SizedBox(width: Space.md),
+            // War Schreibmaschine. „Android 16 (API 36)" ist nichts, was
+            // jemand abtippt — es ist eine Angabe des Geräts, also ein
+            // Messwert, und Messwerte laufen in der Hausschrift mit
+            // Tabellenziffern.
+            Text(value,
+                textAlign: TextAlign.right,
+                style: readingStyle(context,
+                    size: 14, weight: FontWeight.w500)),
           ],
         ),
       );

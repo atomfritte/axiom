@@ -90,7 +90,14 @@
     silences the app.
   when:
     all:
-      - time_between: ["22:30", "23:15"]
+      # Hier stand ["22:30", "23:15"]. Die Ruhezeit beginnt um 23:00
+      # (limits.yaml) und lässt nur `enforce` durch — die letzten fünfzehn
+      # Minuten des Fensters waren also stumm: Die Bedingung traf zu, die
+      # Regel sprach nicht. Gekürzt statt verbindlich gemacht, weil eine
+      # verbindliche Abendgrenze der eigenen Begründung widerspräche („wer
+      # um halb elf angeschrien wird, schaltet die App stumm"). Die
+      # Ruhezeit *ist* der Wind-down; die Regel gehört davor.
+      - time_between: ["22:30", "22:59"]
       - not: { active_slot: { eq: focus } }
   then:
     action: notify
@@ -152,35 +159,66 @@
   cooldown: { minutes: 240, max_per_day: 1 }
   enabled: true
 
-# ── M3 Time Anchor ──────────────────────────────────────────────────────
-# Die eigentlichen Ankererinnerungen laufen über exakte Alarme, nicht über
-# die Regel-Engine — sie brauchen Minutengenauigkeit. Diese Regel deckt nur
-# den Fall ab, dass gar keine Anker gepflegt werden.
+# ── M0 Rückmeldung ──────────────────────────────────────────────────────
+#
+# R-130 stand bis zum 06.08.2026 unter „M3 Time Anchor" und hieß „Termine
+# eintragen". Ihre Begründung handelte von gepflegten Zeitankern — gemessen
+# hat die Bedingung davon nie etwas: Sie liest Uhrzeit, Wochentag, ob heute
+# erfasst wurde, und wie lange keine Entscheidung mehr beantwortet wurde.
+# Keine ihrer Variablen kennt Anker. Wer den Titel las, hielt eine
+# Ankerprüfung für vorhanden, die es nicht gab (G2).
+#
+# Von den zwei möglichen Auflösungen ist nur eine ohne neue Variable
+# erreichbar: den Text an die Bedingung bringen. Anker liegen in einer
+# eigenen Tabelle, nicht im Ereignisstrom, und der Regelwortschatz
+# (rule_vocabulary.dart) hat keine Zahl dafür — ohne eine Größe wie
+# `anchors_upcoming` lässt sich „es sind keine Anker gepflegt" gar nicht
+# formulieren. Das ist damit offen, nicht erledigt: Die ursprüngliche
+# Absicht braucht eine eigene Regel mit eigener ID, sobald die Zahl da ist.
+# (Die Ankererinnerungen selbst laufen ohnehin über exakte Alarme, nicht
+# über die Regel-Engine — sie brauchen Minutengenauigkeit. M3 ist von
+# dieser Regel also nie getragen worden.)
+#
+# Die Wochentagszeile nimmt jetzt beide freien Tage aus. Vorher stand dort
+# nur `ne: sat`, und nirgends stand, ob der Sonntag mitgemeint war. Das
+# Fenster 08:00–09:30 ist ein Werktagsmorgen; an einem freien Morgen um acht
+# ist eine offene Rückmeldung kein Befund.
 
 - id: R-130
-  title: "Termine eintragen"
-  title_en: "Enter appointments"
-  deficit: D4
+  title: "Seit einem Tag ist keine Entscheidung beantwortet"
+  title_en: "No decision answered for a day"
+  deficit: D9
   rationale: >
-    Pünktlichkeit ist bei diesem Profil erfolgreich kompensiert — und genau
-    das ist teuer: Puffer, ständiges Nachrechnen, Dauerspannung vor jedem
-    Termin. Eingetragene Anker verlagern diese Rechnung vom Kopf ins System.
-    Solange keine gepflegt werden, läuft die Kompensation weiter wie bisher.
+    Die Rückmeldung unter einer Entscheidung ist die einzige Stelle, an der
+    das Regelwerk erfährt, ob es richtig lag. Ohne sie bleibt der Abstand
+    jeder Regel, wie er ist — der exponentielle Backoff hängt an abgelehnten
+    Entscheidungen —, und im Wochenreview steht nur, wie oft etwas gefeuert
+    hat, nicht ob es getragen hat. Was nicht sichtbar zurückkommt, existiert
+    nicht: Eine unbeantwortete Entscheidung verschwindet genauso lautlos wie
+    eine Notiz, die im Eingang liegen bleibt. Gemeldet wird der Zustand
+    einmal am Morgen und nur, wenn das System sonst benutzt wird — wer heute
+    schon etwas erfasst hat, ist da; die Rückmeldung fehlt trotzdem seit
+    einem Tag.
   rationale_en: >
-    Punctuality is successfully compensated in this profile — and that
-    is exactly what costs: buffers, constant recalculation, background
-    tension before every appointment. Entered anchors move that calculation
-    out of the head and into the system. As long as none are kept, the
-    compensation carries on as before.
+    The feedback below a decision is the only place where the rule set
+    learns whether it was right. Without it, every rule keeps the interval
+    it has — the exponential backoff hangs on rejected decisions — and the
+    weekly review only shows how often something fired, not whether it
+    helped. What does not visibly come back does not exist: an unanswered
+    decision disappears as quietly as a note left sitting in the inbox. The
+    state is reported once in the morning, and only while the system is
+    otherwise in use — whoever captured something today is present; the
+    feedback is still a day old.
   when:
     all:
       - time_between: ["08:00", "09:30"]
       - weekday: { ne: sat }
+      - weekday: { ne: sun }
       - count_today: { event: capture, gte: 1 }
       - minutes_since: { event: decision_feedback, gte: 1440 }
   then:
     action: log_only          # SHADOW: erst beobachten, ob das nervt
-    params: { hint: anchors }
+    params: { hint: decision_feedback }
   priority: 30
   severity: info
   cooldown: { minutes: 1440, max_per_day: 1, backoff: exponential }

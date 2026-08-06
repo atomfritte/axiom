@@ -58,7 +58,7 @@ void main() {
       );
       await pumpPhone(tester, h.wrap(const AnchorsScreen()));
       // 20 Fahrt + 10 Puffer + 15 fertigmachen + 10 aussteigen = 55
-      expect(find.text('VORLAUF 55 MIN'), findsOneWidget);
+      expect(find.text('Vorlauf 55 min'), findsOneWidget);
     });
 
     testWidgets('die Hauptansicht führt den nächsten Schritt oben',
@@ -182,7 +182,7 @@ void main() {
       );
       await pumpPhone(tester, h.wrap(const NowScreen()));
 
-      expect(find.text('JETZT'), findsOneWidget);
+      expect(find.text('Jetzt'), findsOneWidget);
       expect(find.text('Ordner holen'), findsOneWidget);
     });
 
@@ -338,12 +338,12 @@ void main() {
       await pumpPhone(tester, h.wrap(const ReviewScreen()));
 
       for (final label in [
-        'MESSPUNKTE ERFASST',
-        'KOMPENSATIONSLAST',
-        'ERFASST UND EINSORTIERT',
-        'REIZBEDARF GEPLANT GEDECKT',
-        'IMPULSE ABGEFANGEN',
-        'ZEIT IM SYSTEM GEGEN ZEIT GESPART',
+        'Messpunkte erfasst',
+        'Kompensationslast',
+        'Erfasst und einsortiert',
+        'Reizbedarf geplant gedeckt',
+        'Impulse abgefangen',
+        'Zeit im System gegen Zeit gespart',
       ]) {
         await tester.dragUntilVisible(
           find.text(label),
@@ -357,7 +357,7 @@ void main() {
 
     testWidgets('der Zeitdeckel läuft sichtbar mit', (tester) async {
       await pumpPhone(tester, h.wrap(const ReviewScreen()));
-      expect(find.text('ZEITDECKEL'), findsOneWidget);
+      expect(find.text('Zeitdeckel'), findsOneWidget);
       expect(find.text('von 2 min'), findsOneWidget);
       await unmount(tester);
     });

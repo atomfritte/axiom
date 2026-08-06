@@ -134,16 +134,20 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
         children: [
           Row(
             children: [
-              Text(context.t('ERFASSEN'),
+              Text(context.t('Erfassen'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(width: Space.md),
               if (_savedCount > 0)
                 Expanded(
+                  // War Schreibmaschine in 11 px. Ein Zaehler ist ein
+                  // Messwert und laeuft in der Hausschrift mit
+                  // Tabellenziffern; `calm` bleibt, weil „gespeichert" ein
+                  // Zustand ist und keine Ablesung.
                   child: Text(context.t('{0} gespeichert', [_savedCount]),
                       textAlign: TextAlign.right,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: monoStyle(context, size: 11, color: p.calm)),
+                      style: readingStyle(context, size: 13.5, color: p.calm)),
                 ),
             ],
           ),
@@ -153,7 +157,7 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
             focusNode: _focus,
             autofocus: true,
             maxLines: 4,
-            minLines: 2,
+            minLines: 3,
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _save(),
@@ -185,22 +189,22 @@ class _CaptureSheetState extends ConsumerState<_CaptureSheet> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: Space.lg),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _saving ? null : () => _save(keepOpen: true),
-                  child: Text(context.t('Speichern & weiter')),
-                ),
-              ),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _saving ? null : () => _save(),
-                  child: Text(context.t('Speichern')),
-                ),
-              ),
-            ],
+          // Hier standen beide Knoepfe nebeneinander, gleich breit. Das las
+          // sich als Frage („welchen von beiden?") und kostete in der
+          // Drei-Sekunden-Strecke genau die Entscheidung, die dieses Blatt
+          // dem Nutzer abnehmen soll (G1). Es gibt eine gemeinte Handlung —
+          // speichern und weg. Der Stapelmodus steht darunter, erreichbar
+          // und nicht gleichrangig.
+          FilledButton(
+            onPressed: _saving ? null : () => _save(),
+            child: Text(context.t('Speichern')),
+          ),
+          const SizedBox(height: Space.xs),
+          Center(
+            child: TextButton(
+              onPressed: _saving ? null : () => _save(keepOpen: true),
+              child: Text(context.t('Speichern & weiter')),
+            ),
           ),
         ],
       ),

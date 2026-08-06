@@ -314,7 +314,7 @@ class _ChapterList extends StatelessWidget {
     final p = context.axiom;
     if (chapters.isEmpty) {
       return EmptyState(
-        label: context.t('KEINE KAPITEL'),
+        label: context.t('Keine Kapitel'),
         headline: context.t('Die Hilfe ist nicht mitgeliefert'),
         body: context.t(
           'Unter assets/help/de/ liegt keine Textdatei. Die App läuft davon unberührt weiter — es gibt nur nichts nachzulesen.',
@@ -333,6 +333,12 @@ class _ChapterList extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: Space.lg),
+        // Die Kapitelnummer lief in Schreibmaschine, der Kurzname auch. Beides
+        // ist keins von beidem, wofuer Mono gedacht ist: Die Nummer ist ein
+        // Messwert (Tabellenziffern reichen, damit „06" unter „12" flucht),
+        // der Kurzname ist ein Wort. Zusammen sahen vierzehn Zeilen aus wie
+        // ein Verzeichnislisting — ausgerechnet an der Stelle, an der die
+        // Uebersicht fehlt und man ohnehin schon verunsichert ist.
         for (final chapter in chapters.where((c) => !c.isIndex))
           Padding(
             padding: const EdgeInsets.only(bottom: Space.sm),
@@ -344,20 +350,18 @@ class _ChapterList extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Text(
-                    chapter.number,
-                    style: monoStyle(
-                      context,
-                      size: 12,
-                      weight: FontWeight.w600,
-                      color: p.info,
+                  SizedBox(
+                    width: 30,
+                    child: Text(
+                      chapter.number,
+                      style: readingStyle(context, size: 14, color: p.info),
                     ),
                   ),
                   const SizedBox(width: Space.md),
                   Expanded(
                     child: Text(
                       chapter.slug,
-                      style: monoStyle(context, size: 13),
+                      style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
                   Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
@@ -553,12 +557,7 @@ class _HelpChapterScreenState extends ConsumerState<HelpChapterScreen> {
             child: Center(
               child: Text(
                 _number,
-                style: monoStyle(
-                  context,
-                  size: 13,
-                  weight: FontWeight.w600,
-                  color: p.info,
-                ),
+                style: readingStyle(context, size: 15, color: p.info),
               ),
             ),
           ),
@@ -581,7 +580,7 @@ class _HelpChapterScreenState extends ConsumerState<HelpChapterScreen> {
             )
           else if (_failure != null)
             EmptyState(
-              label: context.t('NICHT GELADEN'),
+              label: context.t('Nicht geladen'),
               headline: context.t('Dieses Kapitel fehlt'),
               body: context.t(
                 'Die Datei ist nicht mitgeliefert. Die anderen Kapitel sind davon unberührt.',
@@ -642,22 +641,27 @@ class _Marks extends StatelessWidget {
     final p = context.axiom;
     final entries = anchors.keys.toList()..sort();
 
+    // Die Sprungmarken liegen in einer Mulde, nicht auf einer Karte: Sie sind
+    // das Inhaltsverzeichnis *dieses* Kapitels und stehen damit unter dem
+    // Text, nicht ueber ihm. Eine erhobene Karte haette hier mit dem Kapitel
+    // selbst um die Aufmerksamkeit konkurriert.
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.xl),
-      child: Panel(
+      child: Well(
         padding: const EdgeInsets.symmetric(
           horizontal: Space.lg,
           vertical: Space.sm,
         ),
+        radius: BorderRadius.circular(Radii.panel),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.md),
             Text(
-              context.t('IN DIESEM KAPITEL'),
-              style: Theme.of(context).textTheme.labelSmall,
+              context.t('In diesem Kapitel'),
+              style: sectionStyle(context),
             ),
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.xs),
             for (final index in entries)
               if (blocks[index] case ProseHeading(:final plain))
                 InkWell(
@@ -880,7 +884,7 @@ class _Hits extends StatelessWidget {
     final p = context.axiom;
     if (hits.isEmpty) {
       return EmptyState(
-        label: context.t('KEIN TREFFER'),
+        label: context.t('Kein Treffer'),
         headline: context.t('Dazu steht nichts in der Hilfe'),
         body: context.t(
           'Gesucht wird im Text der Kapitel, ohne Wortstammerkennung. Ein kürzeres Wort trifft oft mehr.',
@@ -891,11 +895,7 @@ class _Hits extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.t('{0} Fundstellen', [hits.length]),
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
-        const SizedBox(height: Space.md),
+        SectionLabel(context.t('{0} Fundstellen', [hits.length])),
         for (final hit in hits)
           Padding(
             padding: const EdgeInsets.only(bottom: Space.sm),
@@ -908,13 +908,11 @@ class _Hits extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    hit.number,
-                    style: monoStyle(
-                      context,
-                      size: 12,
-                      weight: FontWeight.w600,
-                      color: p.info,
+                  SizedBox(
+                    width: 30,
+                    child: Text(
+                      hit.number,
+                      style: readingStyle(context, size: 14, color: p.info),
                     ),
                   ),
                   const SizedBox(width: Space.md),

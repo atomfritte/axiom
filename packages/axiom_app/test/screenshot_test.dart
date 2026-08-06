@@ -22,9 +22,13 @@ import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/state_screen.dart';
 import 'package:axiom_app/screens/system_screen.dart';
 import 'package:axiom_app/screens/tasks_screen.dart';
+import 'package:axiom_app/design/theme.dart';
+import 'package:axiom_app/design/tokens.dart';
+import 'package:axiom_app/state/providers.dart';
 import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'harness.dart';
@@ -72,13 +76,44 @@ void main() {
   setUp(() => h = TestHarness.create());
   tearDown(() => h.dispose());
 
+  /// Wie `TestHarness.wrap`, nur mit waehlbarem Farbschema.
+  ///
+  /// **Warum das hier steht und nicht im Geruest.** `wrap` nimmt kein Schema
+  /// entgegen, und die Referenzbilder zeigten deshalb jahrelang genau eine
+  /// der acht Paletten: `instrument`, dunkel — dazu ein einziges helles Bild.
+  /// `contrast`, `muted` und `workbench` hat nie jemand angesehen. Das ist
+  /// nicht theoretisch: `muted` ist die Fassung, die abends laeuft (D8), und
+  /// `workbench` die einzige mit blauem Signal und weissen Flaechen. Wenn
+  /// eine Erhebung, eine Mulde oder eine Haarlinie in einem dieser Schemata
+  /// verschwindet, faellt es ohne Bild nicht auf.
+  ///
+  /// Das Geruest bleibt unangetastet — andere Tests haengen daran.
+  Widget wrapScheme(
+    Widget child, {
+    required Brightness brightness,
+    required AxiomScheme scheme,
+  }) =>
+      ProviderScope(
+        overrides: [
+          clockProvider.overrideWithValue(h.clock),
+          runtimeProvider.overrideWith((ref) async => h.runtime),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildAxiomTheme(brightness: brightness, scheme_: scheme),
+          home: child,
+        ),
+      );
+
   Future<void> shoot(
     WidgetTester tester,
     String name,
     Widget widget, {
     Brightness brightness = Brightness.dark,
+    AxiomScheme scheme = AxiomScheme.instrument,
   }) async {
-    await pumpPhone(tester, h.wrap(widget, brightness: brightness));
+    await pumpPhone(
+        tester, wrapScheme(widget, brightness: brightness, scheme: scheme));
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('screenshots/$name.png'),
@@ -106,7 +141,9 @@ void main() {
     await shoot(tester, '03-jetzt-leer', const NowScreen());
   });
 
-  testWidgets('04 jetzt — mit Aufgaben', (tester) async {
+  /// Der Bestand, an dem die Reichweitenkante etwas zu zeigen hat: zwei
+  /// Aufgaben ueber und drei unter der heutigen Kapazitaet.
+  Future<void> seedNow() async {
     h.completeOnboarding();
     await h.runtime.checkIn(energy: 4, focus: 4, mood: 4, stimNeed: 3);
     for (final (title, ae, stakes) in [
@@ -129,6 +166,10 @@ void main() {
       travel: const Duration(minutes: 25),
       location: 'Praxis',
     );
+  }
+
+  testWidgets('04 jetzt — mit Aufgaben', (tester) async {
+    await seedNow();
     await shoot(tester, '04-jetzt-aufgaben', const NowScreen());
   });
 
@@ -360,4 +401,80 @@ void main() {
     await shoot(tester, '08-jetzt-hell', const NowScreen(),
         brightness: Brightness.light);
   });
+
+  // ── Die drei anderen Schemata ───────────────────────────────────────────
+  //
+  // Bis hierher zeigen alle Bilder `instrument`. Vier Schemata sind aber
+  // keine Geschmacksfrage, sondern vier Umgebungen (siehe `AxiomScheme`):
+  // Sonne, Abend, grosser Bildschirm. Jedes bekommt denselben Hauptschirm,
+  // damit sich Erhebung, Mulde und Messfarbe nebeneinander vergleichen
+  // lassen — genau das war ohne Bild nicht pruefbar.
+
+  testWidgets('20 jetzt — kontrast', (tester) async {
+    await seedNow();
+    await shoot(tester, '20-jetzt-kontrast', const NowScreen(),
+        scheme: AxiomScheme.contrast);
+  });
+
+  testWidgets('21 jetzt — gedämpft', (tester) async {
+    await seedNow();
+    await shoot(tester, '21-jetzt-gedaempft', const NowScreen(),
+        scheme: AxiomScheme.muted);
+  });
+
+  testWidgets('22 jetzt — werkbank', (tester) async {
+    await seedNow();
+    await shoot(tester, '22-jetzt-werkbank', const NowScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.workbench);
+  });
+
+  // Der Zustandsschirm traegt die Herleitungstafel — die eine Stelle, an der
+  // Messwerte, Terme und Summe untereinander stehen (G2). In der Werkbank
+  // ist das Signal blau statt bernstein; wenn die Messfarbe irgendwo als
+  // Note gelesen wird, dann hier.
+  testWidgets('23 zustand — werkbank', (tester) async {
+    h.completeOnboarding();
+    await h.runtime.checkIn(
+      energy: 3,
+      focus: 2,
+      mood: 3,
+      stimNeed: 4,
+      compensation: 4,
+      recovery: 2,
+      slot: 'evening',
+    );
+    await shoot(tester, '23-zustand-werkbank', const StateScreen(),
+        brightness: Brightness.light, scheme: AxiomScheme.workbench);
+  });
+
+  // Die Herleitung, aufgeklappt.
+  //
+  // G2 verlangt: kein Score ohne sichtbare Formel. Sichtbar ist die Formel
+  // aber erst nach einem Tippen, und **kein** Referenzbild hat sie bisher
+  // gezeigt — genau die Tafel, deren Termsumme früher eine andere Zahl
+  // ergab als die Anzeige darüber, war die einzige Stelle des Entwurfs ohne
+  // Bild.
+  testWidgets('24 zustand — herleitung aufgeklappt', (tester) async {
+    h.completeOnboarding();
+    await h.runtime.checkIn(
+      energy: 3,
+      focus: 2,
+      mood: 3,
+      stimNeed: 4,
+      compensation: 4,
+      recovery: 2,
+      slot: 'evening',
+    );
+    await pumpPhone(
+        tester,
+        wrapScheme(const StateScreen(),
+            brightness: Brightness.dark, scheme: AxiomScheme.instrument));
+    await tester.tap(find.text('Kapazität').first);
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('screenshots/24-herleitung.png'),
+    );
+  });
 }
+

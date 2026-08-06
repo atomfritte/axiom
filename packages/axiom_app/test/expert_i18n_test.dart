@@ -134,11 +134,18 @@ void main() {
       // Ein kopierter deutscher Satz ist schlimmer als ein fehlender: Der
       // fehlende faellt auf, der kopierte sieht nach getaner Arbeit aus.
       // Ausgenommen sind Woerter, die in beiden Sprachen gleich lauten.
+      //
+      // Die Liste ist mit den gesperrten Versalien kuerzer geworden: AUTO,
+      // KAPAZITÄT, LAST und ENGLISH standen hier, weil sie in Versalien in
+      // beiden Sprachen gleich aussahen. In normaler Schreibweise
+      // unterscheiden sie sich wieder („Kapazität" gegen „Capacity"), und
+      // was sich unterscheidet, braucht keine Ausnahme.
       const same = {
-        'AUTO', 'INSTRUMENT', 'Board', 'Review', 'Check-in', 'Check-in (c)',
-        'YAML', 'Start', 'Focus', 'Fokus', 'Status', 'Details', 'Server',
-        'ENGLISH', 'IN {0} H', 'START {0}/10', 'KAPAZITÄT', 'LAST',
-        '{0} (optional)',
+        // Gleich in beiden Sprachen, seit die Versalien weg sind.
+        'YAML',
+        'Auto', 'Instrument', 'Board', 'Review', 'Check-in', 'Check-in (c)',
+        'yaml', 'Start', 'Focus', 'Fokus', 'Status', 'Details', 'Server',
+        'in {0} h', 'Start {0}/10', '{0} (optional)',
       };
       final copied = <String>[];
       englishTable().forEach((de, en) {

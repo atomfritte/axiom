@@ -11,6 +11,7 @@ import 'package:axiom_app/screens/now_screen.dart';
 import 'package:axiom_app/screens/place_sheet.dart';
 import 'package:axiom_app/screens/tasks_screen.dart';
 import 'package:axiom_core/axiom_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'harness.dart';
@@ -40,7 +41,7 @@ void main() {
       expect(find.text('Dichtungsring kaufen'), findsWidgets);
       expect(find.text('Anfangen'), findsOneWidget);
       // Sie steht mit ihrem Ort da, statt heimlich zu verschwinden [D9].
-      expect(find.text('BAUMARKT'), findsWidgets);
+      expect(find.text('Baumarkt'), findsWidgets);
     });
 
     testWidgets('die Ortszeile erscheint erst, wenn es etwas zu sehen gibt',
@@ -120,10 +121,10 @@ void main() {
 
       await pumpPhone(tester, h.wrap(const TasksScreen()));
       expect(find.text('Dichtungsring kaufen'), findsOneWidget);
-      expect(find.textContaining('ANDERSWO'), findsOneWidget);
+      expect(find.textContaining('Anderswo'), findsOneWidget);
       // Und nicht unter dem falschen Grund: Mit der Startenergie hat es
       // nichts zu tun.
-      expect(find.textContaining('NICHT IN REICHWEITE'), findsNothing);
+      expect(find.textContaining('Nicht in Reichweite'), findsNothing);
     });
   });
 
@@ -144,10 +145,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PlaceChips), findsNothing);
       // Der bekannte Ort steht zur Wahl, ohne dass er getippt werden muss.
-      expect(find.text('Baumarkt'), findsOneWidget);
+      //
+      // Eingegrenzt auf das Blatt: Seit die Aufgabenkarte den Ort als
+      // eigene Plakette zeigt, steht „Baumarkt" zweimal auf dem Schirm —
+      // einmal als Angabe an der Aufgabe, einmal als Angebot im Blatt.
+      // Gemeint ist hier das Angebot, und nur das ist antippbar.
+      final angebot = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Baumarkt'),
+      );
+      expect(angebot, findsOneWidget);
 
       // Zweiter Tipp: der Ort.
-      await tester.tap(find.text('Baumarkt'));
+      await tester.tap(angebot);
       await tester.pumpAndSettle();
       expect(await h.runtime.currentPlace(), 'Baumarkt');
     });
@@ -248,7 +258,7 @@ void main() {
         decayAt: h.clock.nowLocal().add(const Duration(hours: 2)),
       );
       await pumpPhone(tester, h.wrap(const TasksScreen()));
-      expect(find.textContaining('ANLAUF'), findsOneWidget);
+      expect(find.textContaining('Anlauf'), findsOneWidget);
       await unmount(tester);
 
       h.dispose();
@@ -262,7 +272,7 @@ void main() {
         decayAt: h.clock.nowLocal().add(const Duration(days: 4)),
       );
       await pumpPhone(tester, h.wrap(const TasksScreen()));
-      expect(find.textContaining('ANLAUF'), findsNothing);
+      expect(find.textContaining('Anlauf'), findsNothing);
     });
 
     test('R-140 ist ausgeliefert und laeuft stumm mit', () async {

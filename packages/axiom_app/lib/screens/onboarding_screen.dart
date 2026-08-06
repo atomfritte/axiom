@@ -69,7 +69,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Fortschritt als Skala — passend zur Instrumentensprache.
+            // Fortschritt als Skala.
+            //
+            // Hier standen 2 px hohe, rechtwinklig abgeschnittene Striche und
+            // daneben ein Zaehler in Schreibmaschine. Beides sah nach
+            // Ladebalken aus — die haerteste Kante auf dem ersten Schirm, den
+            // jemand von AXIOM sieht. Jetzt runde Enden und der Zaehler als
+            // Messwert (Tabellenziffern), damit „3/6" beim Weiterblaettern
+            // nicht springt.
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   Space.lg, Space.lg, Space.lg, Space.sm),
@@ -79,15 +86,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     Expanded(
                       child: AnimatedContainer(
                         duration: Motion.quick,
-                        height: 2,
+                        height: 3,
                         margin: EdgeInsets.only(
-                            right: i < _pageCount - 1 ? 4 : 0),
-                        color: i <= _page ? p.signal : p.rule,
+                            right: i < _pageCount - 1 ? 5 : 0),
+                        decoration: BoxDecoration(
+                          color: i <= _page ? p.signal : p.rule,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
                       ),
                     ),
                   const SizedBox(width: Space.lg),
                   Text('${_page + 1}/$_pageCount',
-                      style: monoStyle(context, size: 11)),
+                      style: readingStyle(context,
+                          size: 13, weight: FontWeight.w500,
+                          color: p.inkFaint)),
                 ],
               ),
             ),
@@ -176,22 +188,30 @@ class _Page extends StatelessWidget {
   /// Zusagen unten („Keine Streaks, die brechen können") existierten dann
   /// schlicht nicht, bis man scrollte. Fuer eine Zusage ist das der
   /// schlechteste denkbare Zustand.
+  ///
+  /// **Was sich an der Aufteilung geaendert hat.** Hier stand
+  /// `eyebrow.toUpperCase()` — die Rubrik erschien als gesperrte Versalie
+  /// („WAS DAS HIER IST"), also ausgerechnet auf dem ersten Schirm der App in
+  /// der Schreibweise eines Beipackzettels. Sie steht jetzt in normaler
+  /// Schreibweise und in der Signalfarbe: eine kurze farbige Marke ueber
+  /// einer grossen ruhigen Zeile. Dazu mehr Luft oben und zwischen den
+  /// Abschnitten — ein erster Eindruck darf grosszuegig sein, hier wird
+  /// gelesen und nicht bedient.
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding:
-            const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.lg),
+        padding: const EdgeInsets.fromLTRB(
+            Space.lg, Space.xxl, Space.lg, Space.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (leading != null) ...[
               Align(alignment: Alignment.centerLeft, child: leading!),
-              const SizedBox(height: Space.xxl),
+              const SizedBox(height: Space.huge),
             ],
-            Text(eyebrow.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall),
+            Text(eyebrow, style: sectionStyle(context, color: context.axiom.signal)),
             const SizedBox(height: Space.md),
             Text(title, style: Theme.of(context).textTheme.displayMedium),
-            const SizedBox(height: Space.xl),
+            const SizedBox(height: Space.xxl),
             ...children,
           ],
         ),
@@ -210,11 +230,11 @@ class _PageWhat extends StatelessWidget {
           _Para(
             context.t('AXIOM misst deinen Zustand, wendet Regeln darauf an, die du selbst setzt, und nennt dir eine nächste Handlung. Mit Begründung und der Regel, die sie erzeugt hat.'),
           ),
-          const SizedBox(height: Space.lg),
+          const SizedBox(height: Space.xl),
           _Para(
             context.t('Der Unterschied zu anderen Apps: Hier wird nicht gefragt, was du tun willst — sondern in welchem Zustand du bist. Was heute außerhalb deiner Reichweite liegt, wird gar nicht erst gezeigt.'),
           ),
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
           _NotList([
             context.t('Keine Streaks, die brechen können'),
             context.t('Keine Erinnerung, die dir Vorwürfe macht'),
@@ -289,16 +309,18 @@ class _PageLine extends StatelessWidget {
       eyebrow: context.t('Das zentrale Bild'),
       title: context.t('Die\nKapazitätslinie.'),
       children: [
-        Panel(child: CapacityLine(capacity: 55, tasks: demo)),
-        const SizedBox(height: Space.lg),
+        // Die eine erhobene Flaeche dieser Seite: Das Bild ist der Inhalt,
+        // der Text darunter erklaert es nur.
+        Panel(reachable: true, child: CapacityLine(capacity: 55, tasks: demo)),
+        const SizedBox(height: Space.xl),
         _Para(
           context.t('Aufgaben sitzen auf einer Skala: Wie schwer fällt der Start? Der Strich zeigt, wie viel Anlauf du heute hast.'),
         ),
-        const SizedBox(height: Space.md),
+        const SizedBox(height: Space.lg),
         _Para(
           context.t('Was links davon liegt, ist in Reichweite. Was rechts davon liegt, ist heute zu schwer — und wird dir deshalb nicht vorgehalten. Das ist eine Messung, kein Urteil über dich.'),
         ),
-        const SizedBox(height: Space.md),
+        const SizedBox(height: Space.lg),
         _Para(
           context.t('Bleibt etwas Wichtiges rechts der Linie liegen, schlägt AXIOM vor, es in kleinere Schritte zu zerlegen, bis ein Teil links landet.'),
         ),
@@ -350,20 +372,10 @@ class _PageFirstCheckin extends ConsumerWidget {
             },
             child: Text(context.t('Check-in machen')),
           ),
-        const SizedBox(height: Space.xl),
-        Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.t('DIE ERSTEN 14 TAGE'),
-                  style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: Space.sm),
-              Text(
-                context.t('In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        const SizedBox(height: Space.xxl),
+        _Note(
+          label: context.t('Die ersten 14 Tage'),
+          body: context.t('In dieser Zeit gibt AXIOM absichtlich keine Empfehlungen. Es misst nur. Regeln, die auf geratenen Werten beruhen, liegen falsch — und eine App, die einmal offensichtlich danebenliegt, macht man nicht wieder auf.'),
         ),
       ],
     );
@@ -434,27 +446,13 @@ class _PageHealthState extends ConsumerState<_PageHealth> {
         _Para(
           context.t('Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.'),
         ),
-        const SizedBox(height: Space.xl),
-        Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.t('WAS GELESEN WIRD'),
-                  style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: Space.sm),
-              Text(
-                context.t('Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: Space.md),
-              Text(
-                context.t('Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        const SizedBox(height: Space.xxl),
+        _Note(
+          label: context.t('Was gelesen wird'),
+          body: context.t('Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.'),
+          second: context.t('Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.'),
         ),
-        const SizedBox(height: Space.xl),
+        const SizedBox(height: Space.xxl),
         _PermissionRow(
           title: context.t('Health Connect verbinden'),
           body: switch (_availability) {
@@ -569,19 +567,10 @@ class _PagePermissionsState extends ConsumerState<_PagePermissions> {
         _Para(
           context.t('Standort und App-Nutzung werden nicht abgefragt — die brauchen erst spätere Module, und dann fragst du selbst danach.'),
         ),
-        const SizedBox(height: Space.xl),
-        Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.t('DANACH'), style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: Space.sm),
-              Text(
-                context.t('Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        const SizedBox(height: Space.xxl),
+        _Note(
+          label: context.t('Danach'),
+          body: context.t('Unter System → Erfassen findest du alle Wege in die App: Widget, dauerhafte Benachrichtigung mit Direkteingabe, Schnelleinstellung, S-Pen und Sprache. Such dir aus, was bei dir wirklich funktioniert.'),
         ),
       ],
     );
@@ -604,6 +593,42 @@ class _Para extends StatelessWidget {
       );
 }
 
+/// Ein ruhiger Nachsatz in einer Mulde.
+///
+/// Hier standen dreimal fast dieselben zwoelf Zeilen: eine Karte mit einer
+/// Versalien-Rubrik („DIE ERSTEN 14 TAGE", „WAS GELESEN WIRD", „DANACH") und
+/// Kleintext darunter. Drei erhobene Karten auf einer Seite, die sonst nur
+/// Fliesstext hat, sagen dreimal „hier ist etwas Wichtiges" — und damit
+/// keinmal. Jetzt eine **Mulde**: Sie liegt unter dem Text statt darueber und
+/// nimmt genau die Rolle ein, die dieser Nachsatz hat.
+class _Note extends StatelessWidget {
+  final String label;
+  final String body;
+
+  /// Zweiter Absatz. Nur die Health-Connect-Seite braucht ihn.
+  final String? second;
+
+  const _Note({required this.label, required this.body, this.second});
+
+  @override
+  Widget build(BuildContext context) => Well(
+        padding: const EdgeInsets.all(Space.lg),
+        radius: BorderRadius.circular(Radii.panel),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: sectionStyle(context)),
+            const SizedBox(height: Space.sm),
+            Text(body, style: Theme.of(context).textTheme.bodySmall),
+            if (second != null) ...[
+              const SizedBox(height: Space.md),
+              Text(second!, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ],
+        ),
+      );
+}
+
 class _NotList extends StatelessWidget {
   final List<String> items;
   const _NotList(this.items);
@@ -615,18 +640,25 @@ class _NotList extends StatelessWidget {
       children: [
         for (final item in items)
           Padding(
-            padding: const EdgeInsets.only(bottom: Space.md),
+            padding: const EdgeInsets.only(bottom: Space.lg),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Container(width: 10, height: 1, color: p.inkFaint),
+                  padding: const EdgeInsets.only(top: 11),
+                  child: Container(
+                    width: 12,
+                    height: 1.5,
+                    decoration: BoxDecoration(
+                      color: p.signal,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: Space.md),
                 Expanded(
                   child: Text(item,
-                      style: Theme.of(context).textTheme.bodyMedium),
+                      style: Theme.of(context).textTheme.bodyLarge),
                 ),
               ],
             ),
@@ -648,14 +680,16 @@ class _Step extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(n,
-            style: TextStyle(
-              fontFamily: Fonts.mono,
-              fontSize: 20,
-              fontWeight: FontWeight.w300,
-              color: p.signal,
-            )),
-        const SizedBox(width: Space.lg),
+        // War Schreibmaschine in w300 — eine duenne 20-px-Ziffer, die auf
+        // dem Geraet halb verschwand. Eine Schrittnummer ist ein Messwert:
+        // Hausschrift mit Tabellenziffern, damit 1, 2 und 3 exakt
+        // untereinander stehen.
+        SizedBox(
+          width: 26,
+          child: Text(n,
+              style: readingStyle(context, size: 20, color: p.signal)),
+        ),
+        const SizedBox(width: Space.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,10 +748,15 @@ class _PermissionRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (!granted)
-              Text(context.t('ERLAUBEN'),
-                  style: monoStyle(context,
-                      size: 10.5, weight: FontWeight.w600, color: p.signal)),
+            // War „ERLAUBEN" in Schreibmaschine, 10,5 px. Acht gesperrte
+            // Versalien in der kleinsten Groesse der App — der Knopf, auf den
+            // es hier ankommt, war das am schlechtesten lesbare Element der
+            // Zeile.
+            if (!granted) ...[
+              const SizedBox(width: Space.sm),
+              Text(context.t('Erlauben'),
+                  style: sectionStyle(context, color: p.signal)),
+            ],
           ],
         ),
       ),

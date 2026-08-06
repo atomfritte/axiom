@@ -126,7 +126,7 @@ void main() {
       expect(save.onPressed, isNull,
           reason: 'Ohne Begründung ist die Ausgabe nicht auditierbar (G2)');
       expect(find.textContaining('Begründung ist zu kurz'), findsOneWidget);
-      expect(find.text('SIEBEN TAGE STUMM'), findsNothing,
+      expect(find.text('Sieben Tage stumm'), findsNothing,
           reason: 'Die Zusage steht erst da, wenn es etwas zu speichern gibt');
     });
 
@@ -182,7 +182,7 @@ void main() {
       );
 
       final save = tester.widget<FilledButton>(await saveButton(tester));
-      expect(find.text('SIEBEN TAGE STUMM'), findsOneWidget);
+      expect(find.text('Sieben Tage stumm'), findsOneWidget);
       expect(save.onPressed, isNotNull);
     });
   });

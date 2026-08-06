@@ -19,7 +19,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme.dart';
 import '../design/tokens.dart';
-import '../design/widgets/instruments.dart';
 import '../i18n/i18n.dart';
 import '../state/providers.dart';
 
@@ -79,7 +78,7 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('ORT'),
+            Text(context.t('Ort'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
             Text(
@@ -121,10 +120,17 @@ class _PlaceSheetState extends ConsumerState<_PlaceSheet> {
                   _entry.text.trim().isEmpty ? null : _pick(_entry.text.trim()),
               child: Text(context.t('Setzen')),
             ),
-            const SizedBox(height: Space.md),
+            const SizedBox(height: Space.lg),
+            // War komplett in Schreibmaschine gesetzt, weil ein
+            // Broadcast-Name darin vorkommt. Der Name ist ein Wort in einem
+            // Satz — der Satz ist Fliesstext und wird gelesen, nicht
+            // abgetippt. Wer ihn tatsaechlich abtippt, findet ihn auch so.
             Text(
               context.t('Eine Geräteroutine kann das auch: Broadcast de.atomfritte.axiom.PLACE mit dem Zusatz „place". Ohne Standortberechtigung.'),
-              style: monoStyle(context, size: 11, color: p.inkFaint),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: p.inkFaint),
             ),
           ],
         ),
@@ -147,30 +153,74 @@ class _Choice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    final radius = BorderRadius.circular(Radii.control);
+    // Hier stand ein [Panel]. Im Hellen war das eine weisse Karte auf einem
+    // weissen Blatt: Von vier Zeilen war nur die gewaehlte zu sehen, die
+    // anderen drei erschienen als Schatten ohne Koerper. Innerhalb eines
+    // Blattes liegt Waehlbares im Grund und kommt heraus, wenn es gewaehlt
+    // ist — dieselbe Sprache wie bei den Reglern im Check-in.
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),
-      child: Panel(
-        accent: selected ? p.signal.withValues(alpha: 0.55) : null,
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.lg, vertical: Space.md),
-        onTap: onTap,
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 18,
-              color: selected ? p.signal : p.inkFaint,
+      child: Material(
+        color: selected ? p.signal.withValues(alpha: 0.14) : p.well,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: selected ? p.signal : Colors.transparent,
+                width: 1.5,
+              ),
             ),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Text(label,
-                  style: Theme.of(context).textTheme.bodyLarge),
+            padding: const EdgeInsets.symmetric(
+                horizontal: Space.lg, vertical: Space.lg),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  size: 20,
+                  color: selected ? p.signal : p.inkFaint,
+                ),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: Text(label,
+                      style: Theme.of(context).textTheme.bodyLarge),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Auswahl-Chips in der Sprache dieser Oberflaeche — gewaehlt kommt heraus,
+/// ungewaehlt liegt in der Mulde. Ohne das setzt Material
+/// `secondaryContainer` (in dieser Palette ein Blau) und damit eine zweite
+/// Farbe fuer dieselbe Aussage. Gehoert nach `theme.dart`; bis dahin steht
+/// dasselbe Stueck in jeder Datei mit Chips.
+ChipThemeData _chipLook(BuildContext context) {
+  final p = context.axiom;
+  return ChipThemeData(
+    backgroundColor: p.well,
+    selectedColor: p.signal.withValues(alpha: 0.16),
+    showCheckmark: false,
+    side: BorderSide.none,
+    labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.ink),
+    secondaryLabelStyle:
+        Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.signal),
+    padding: const EdgeInsets.symmetric(
+        horizontal: Space.md, vertical: Space.sm),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Radii.control),
+    ),
+  );
 }
 
 /// Ortswahl beim Sortieren einer Notiz.
@@ -211,30 +261,33 @@ class PlaceChips extends StatelessWidget {
         Text(context.t('Nur nötig, wenn die Aufgabe woanders nicht geht. Kein Standortzugriff — nur ein Name.'),
             style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: Space.md),
-        Wrap(
-          spacing: Space.sm,
-          runSpacing: Space.sm,
-          children: [
-            ChoiceChip(
-              label: Text(context.t('überall')),
-              selected: value == null,
-              onSelected: (_) => onChanged(null),
-            ),
-            for (final place in options)
+        ChipTheme(
+          data: _chipLook(context),
+          child: Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
               ChoiceChip(
-                label: Text(place),
-                selected: value != null &&
-                    place.toLowerCase() == value!.toLowerCase(),
-                onSelected: (_) => onChanged(place),
+                label: Text(context.t('überall')),
+                selected: value == null,
+                onSelected: (_) => onChanged(null),
               ),
-            ActionChip(
-              label: Text(context.t('Ort …')),
-              onPressed: () async {
-                final entered = await _askForPlace(context);
-                if (entered != null) onChanged(entered);
-              },
-            ),
-          ],
+              for (final place in options)
+                ChoiceChip(
+                  label: Text(place),
+                  selected: value != null &&
+                      place.toLowerCase() == value!.toLowerCase(),
+                  onSelected: (_) => onChanged(place),
+                ),
+              ActionChip(
+                label: Text(context.t('Ort …')),
+                onPressed: () async {
+                  final entered = await _askForPlace(context);
+                  if (entered != null) onChanged(entered);
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );

@@ -38,7 +38,8 @@ class BaselineCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.t('BASELINE'), style: Theme.of(context).textTheme.labelSmall),
+              Text(context.t('Baseline'),
+                  style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(
                 context.t('Noch nicht gestartet. Sie beginnt, sobald das Onboarding abgeschlossen ist.'),
@@ -57,7 +58,7 @@ class BaselineCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(context.t('GEEICHT'),
+                    Text(context.t('Geeicht'),
                         style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: Space.xs),
                     Text(
@@ -96,12 +97,15 @@ class _CollectingCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(context.t('BASELINE LÄUFT'),
+                child: Text(context.t('Baseline läuft'),
                     style: Theme.of(context).textTheme.labelSmall),
               ),
-              Text(context.t('TAG {0}', [progress.day]),
-                  style: monoStyle(context,
-                      size: 11, weight: FontWeight.w600, color: p.info)),
+              // Bewusst ein Satz mit Platzhalter statt Marke plus Zahl:
+              // „Tag" allein steht in der Woerterliste schon als
+              // Haeufigkeitsangabe („Daily") und haette hier „Daily 7"
+              // ergeben.
+              Text(context.t('Tag {0}', [progress.day]),
+                  style: readingStyle(context, size: 14, color: p.signal)),
             ],
           ),
           const SizedBox(height: Space.lg),
@@ -119,9 +123,9 @@ class _CollectingCard extends StatelessWidget {
           if (!compact) ...[
             const SizedBox(height: Space.lg),
             Container(
-              padding: const EdgeInsets.all(Space.md),
+              padding: const EdgeInsets.all(Space.lg),
               decoration: BoxDecoration(
-                border: Border.all(color: p.rule),
+                color: p.well,
                 borderRadius: BorderRadius.circular(Radii.control),
               ),
               child: Text(
@@ -143,8 +147,13 @@ class _CriterionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
-    final color = criterion.isMet ? p.calm : p.info;
 
+    // Hier lag beides in einer Farbe: `isMet ? calm : info` faerbte Haken,
+    // Zaehler und Balken zugleich. Der Zaehler und der Balken sind aber
+    // Messungen (wie weit von wie weit), und Messungen tragen ausnahmslos
+    // `signal` — sonst liest sich eine halbvolle Baseline als „noch nicht
+    // gut genug" (R7). Der Haken bleibt ein Zustand: erfuellt oder nicht,
+    // und dafuer ist `calm` da.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -159,25 +168,33 @@ class _CriterionRow extends StatelessWidget {
             ),
             const SizedBox(width: Space.sm),
             Expanded(
-              child: Text(criterion.label.toUpperCase(),
+              child: Text(criterion.label,
                   style: Theme.of(context).textTheme.labelSmall),
             ),
             Text(
               '${criterion.current} / ${criterion.required}',
-              style: monoStyle(context,
-                  size: 12, weight: FontWeight.w500, color: color),
+              style: readingStyle(context, size: 13.5, color: p.signal),
             ),
           ],
         ),
-        const SizedBox(height: Space.xs + 1),
+        const SizedBox(height: Space.sm),
         LayoutBuilder(
           builder: (context, c) => Stack(
             children: [
-              Container(height: 3, color: p.rule),
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  color: p.rule,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
               Container(
                 height: 3,
                 width: c.maxWidth * criterion.progress,
-                color: color,
+                decoration: BoxDecoration(
+                  color: p.signal,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
               ),
             ],
           ),
@@ -205,7 +222,7 @@ class _ReadyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('BASELINE VOLLSTÄNDIG'),
+          Text(context.t('Baseline vollständig'),
               style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
           Text(context.t('Genug Daten zum Eichen.'),
@@ -218,7 +235,7 @@ class _ReadyCard extends StatelessWidget {
 
           if (!compact) ...[
             const SizedBox(height: Space.xl),
-            Text(context.t('WAS ZU TUN IST'),
+            Text(context.t('Was zu tun ist'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
 
@@ -271,8 +288,7 @@ class _Step extends StatelessWidget {
         SizedBox(
           width: 22,
           child: Text(n,
-              style: monoStyle(context,
-                  size: 14, weight: FontWeight.w600, color: p.signal)),
+              style: readingStyle(context, size: 15, color: p.signal)),
         ),
         Expanded(
           child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
@@ -308,16 +324,18 @@ class _CommandBlock extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(Space.md),
         decoration: BoxDecoration(
-          color: p.base,
+          color: p.well,
           borderRadius: BorderRadius.circular(Radii.control),
-          border: Border.all(color: p.rule),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
+              // Bleibt Monospace, und zwar zu Recht: Das hier wird abgetippt
+              // oder kopiert. Wo ein Bindestrich steht und wo ein
+              // Unterstrich, ist hier die Information.
               child: Text(command,
-                  style: monoStyle(context, size: 11, color: p.inkDim)),
+                  style: monoStyle(context, size: 12.5, color: p.inkDim)),
             ),
             const SizedBox(width: Space.sm),
             Icon(Icons.copy, size: 14, color: p.inkFaint),

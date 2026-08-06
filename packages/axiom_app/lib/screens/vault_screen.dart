@@ -84,8 +84,7 @@ class _StorageCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('ABLAGE'),
-              style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('Ablage'), style: sectionStyle(context)),
           const SizedBox(height: Space.sm),
           Row(
             children: [
@@ -190,12 +189,15 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.axiom;
+    // Der Export ist der Grund, aus dem dieser Schirm geoeffnet wird — also
+    // die eine erhobene Flaeche. Alles andere darunter liegt ruhig auf dem
+    // Grund (G1: eine Handlung, nicht vier gleich laute Kaesten).
     return Panel(
+      reachable: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('EXPORT'), style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('Export'), style: sectionStyle(context)),
           const SizedBox(height: Space.sm),
           Text(
             context.t('Alle Ereignisse in eine verschlüsselte Datei. Ohne das Kennwort ist sie nicht lesbar — auch nicht von dir.'),
@@ -229,16 +231,13 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
                   SnackBar(content: Text(context.t('Pfad kopiert.'))),
                 );
               },
-              child: Container(
-                width: double.infinity,
+              // Ein Dateipfad ist woertlich Abzutippendes — hier bleibt
+              // Schreibmaschine richtig. Der Rahmen weicht der Mulde: Was
+              // abgelesen wird, liegt tiefer als das, was bedient wird.
+              child: Well(
                 padding: const EdgeInsets.all(Space.md),
-                decoration: BoxDecoration(
-                  color: p.base,
-                  borderRadius: BorderRadius.circular(Radii.control),
-                  border: Border.all(color: p.rule),
-                ),
-                child: Text(_lastPath!,
-                    style: monoStyle(context, size: 10.5)),
+                radius: BorderRadius.circular(Radii.control),
+                child: Text(_lastPath!, style: monoStyle(context, size: 12.5)),
               ),
             ),
           ],
@@ -318,7 +317,7 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('IMPORT'), style: Theme.of(context).textTheme.labelSmall),
+          Text(context.t('Import'), style: sectionStyle(context)),
           const SizedBox(height: Space.sm),
           Text(
             context.t('Spielt fehlende Ereignisse ein. Vorhandene bleiben unberührt — der Import ist wiederholbar, und zwei Geräte gleichen sich an, ohne dass etwas verlorengeht.'),
@@ -380,8 +379,12 @@ class _ImportCardState extends ConsumerState<_ImportCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // War Schreibmaschine: Die Zusammenfassung ist ein Satz mit
+                  // Zahlen darin, kein Protokollauszug. Tabellenziffern
+                  // reichen, damit die Zahlen ruhig stehen.
                   Text(_result!.summary,
-                      style: monoStyle(context, size: 12, color: p.ink)),
+                      style: readingStyle(context,
+                          size: 15, weight: FontWeight.w500, color: p.ink)),
                   const SizedBox(height: Space.xs),
                   Text(
                     context.t('Aus Export vom {0}.{1}. · Schema v{2}', [_result!.manifest.createdAt.toLocal().day, _result!.manifest.createdAt.toLocal().month, _result!.manifest.schemaVersion]),
@@ -459,18 +462,19 @@ class _MedSection extends ConsumerWidget {
 
               if (enabled) ...[
                 const SizedBox(height: Space.lg),
+                // Der Stand des laufenden Fensters lief in Schreibmaschine —
+                // ein deutscher Satz mit einer Minutenzahl darin, und die
+                // Zahl war der einzige Grund dafuer. Jetzt ein Messwert in
+                // Hausschrift, in einer Mulde statt in einem Rahmen.
                 if (state?.active != null)
-                  Container(
-                    width: double.infinity,
+                  Well(
                     padding: const EdgeInsets.all(Space.md),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: p.info.withValues(alpha: 0.5)),
-                      borderRadius: BorderRadius.circular(Radii.control),
-                    ),
+                    radius: BorderRadius.circular(Radii.control),
                     child: Text(
                       _describeWindow(
                           context, state!.active!, ref.watch(nowProvider)),
-                      style: monoStyle(context, size: 12, color: p.ink),
+                      style: readingStyle(context,
+                          size: 16, weight: FontWeight.w500, color: p.ink),
                     ),
                   ),
                 const SizedBox(height: Space.md),
@@ -481,12 +485,12 @@ class _MedSection extends ConsumerWidget {
                 ),
                 if (entries.isNotEmpty) ...[
                   const SizedBox(height: Space.lg),
-                  Text(context.t('LETZTE EINTRÄGE'),
-                      style: Theme.of(context).textTheme.labelSmall),
+                  Text(context.t('Letzte Einträge'),
+                      style: sectionStyle(context)),
                   const SizedBox(height: Space.sm),
                   for (final entry in entries.take(5))
                     Padding(
-                      padding: const EdgeInsets.only(bottom: Space.xs),
+                      padding: const EdgeInsets.only(bottom: Space.sm),
                       child: Row(
                         children: [
                           Expanded(
@@ -496,11 +500,19 @@ class _MedSection extends ConsumerWidget {
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
+                          const SizedBox(width: Space.md),
+                          // Datum und Uhrzeit stehen untereinander in einer
+                          // Liste — genau dafuer gibt es Tabellenziffern; die
+                          // 11-px-Schreibmaschine war dafuer nie noetig und
+                          // lag unter der Lesbarkeitsgrenze.
                           Text(
                             '${entry.takenAt.day}.${entry.takenAt.month}. '
                             '${entry.takenAt.hour.toString().padLeft(2, "0")}:'
                             '${entry.takenAt.minute.toString().padLeft(2, "0")}',
-                            style: monoStyle(context, size: 11),
+                            style: readingStyle(context,
+                                size: 14,
+                                weight: FontWeight.w400,
+                                color: p.inkDim),
                           ),
                         ],
                       ),
@@ -591,7 +603,7 @@ class _MedSheetState extends ConsumerState<_MedSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('EINNAHME'), style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('Einnahme'), style: sectionStyle(context)),
             const SizedBox(height: Space.md),
             TextField(
               controller: _label,

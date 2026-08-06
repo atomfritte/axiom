@@ -34,11 +34,11 @@ void main() {
       h.completeOnboarding();
       await pumpPhone(tester, h.wrap(const SystemScreen()));
 
-      expect(find.text('EICHUNG'), findsOneWidget);
-      expect(find.text('BASELINE LÄUFT'), findsOneWidget);
-      expect(find.text('TAGE'), findsOneWidget);
-      expect(find.text('MESSPUNKTE'), findsOneWidget);
-      expect(find.text('NÄCHTE'), findsOneWidget);
+      expect(find.text('Eichung'), findsOneWidget);
+      expect(find.text('Baseline läuft'), findsOneWidget);
+      expect(find.text('Tage'), findsOneWidget);
+      expect(find.text('Messpunkte'), findsOneWidget);
+      expect(find.text('Nächte'), findsOneWidget);
     });
 
     testWidgets('jede Bedingung nennt Stand und Ziel', (tester) async {
@@ -68,8 +68,8 @@ void main() {
       h.clock.advance(const Duration(days: 20));
       await pumpPhone(tester, h.wrap(const SystemScreen()));
 
-      expect(find.text('BASELINE LÄUFT'), findsOneWidget);
-      expect(find.text('BASELINE VOLLSTÄNDIG'), findsNothing);
+      expect(find.text('Baseline läuft'), findsOneWidget);
+      expect(find.text('Baseline vollständig'), findsNothing);
     });
 
     testWidgets('der Hinweis verschwindet nicht nach Tag 14', (tester) async {
@@ -78,7 +78,7 @@ void main() {
       await pumpPhone(tester, h.wrap(const NowScreen()));
 
       // Frueher verschwand das Badge genau dann, wenn es relevant wurde.
-      expect(find.textContaining('BASELINE TAG'), findsOneWidget);
+      expect(find.textContaining('Baseline Tag'), findsOneWidget);
     });
   });
 
@@ -104,8 +104,8 @@ void main() {
       await completeBaseline();
       await pumpPhone(tester, h.wrap(const SystemScreen()));
 
-      expect(find.text('BASELINE VOLLSTÄNDIG'), findsOneWidget);
-      expect(find.text('WAS ZU TUN IST'), findsOneWidget);
+      expect(find.text('Baseline vollständig'), findsOneWidget);
+      expect(find.text('Was zu tun ist'), findsOneWidget);
       expect(find.textContaining('calibrate.dart'), findsOneWidget);
       expect(find.textContaining('weights.yaml'), findsOneWidget);
       expect(find.textContaining('sync_rules.dart'), findsOneWidget);
@@ -115,7 +115,7 @@ void main() {
         (tester) async {
       await completeBaseline();
       await pumpPhone(tester, h.wrap(const NowScreen()));
-      expect(find.textContaining('BASELINE TAG'), findsNothing);
+      expect(find.textContaining('Baseline Tag'), findsNothing);
     });
   });
 }

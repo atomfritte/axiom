@@ -14,6 +14,16 @@ global_limits:
 
   # Nur severity=enforce darf durchbrechen — und enforce gibt es nur für
   # Regeln, die der Nutzer im ruhigen Zustand selbst autorisiert hat.
+  #
+  # Diese Grenze wird nach der SEVERITY geprüft, nicht nach der Aktion
+  # (rule_engine.dart, _limitCheck). Eine Regel, die gar nichts sagt,
+  # sondern nur eine Wartezeit setzt, wird dadurch nachts genauso
+  # zurückgehalten wie eine, die aufweckt — obwohl die Ruhezeit gegen
+  # Lärm gedacht ist und nicht gegen Zustandsänderungen. Das kostete
+  # R-052 sechs von sieben Stunden, bis sie auf `enforce` gehoben wurde,
+  # und es kostete R-110 die letzten fünfzehn Minuten ihres Fensters.
+  # Wer das sauberer will, prüft in _limitCheck die Aktion mit: Was
+  # nichts ausspielt, braucht keine Ruhezeit.
   quiet_hours: ["23:00", "06:30"]
 
   # Regeln unterhalb dieser Konfidenz feuern nicht.

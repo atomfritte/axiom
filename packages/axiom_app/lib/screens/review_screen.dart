@@ -89,6 +89,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   Widget build(BuildContext context) {
     _runtime ??= ref.watch(runtimeProvider).value;
     final review = ref.watch(reviewProvider(widget.scope));
+    final p = context.axiom;
 
     return Scaffold(
       appBar: AppBar(
@@ -122,12 +123,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             if (data.verdicts.isNotEmpty) ...[
               const SizedBox(height: Space.xl),
               SectionLabel(context.t('Regelwerk · {0} offen', [data.verdicts.length])),
-              for (final verdict in data.verdicts)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Space.sm),
-                  child: _VerdictCard(verdict: verdict),
+              // Achtzehn Befunde als achtzehn schwebende Karten waren eine
+              // Wand — jede gleich weit weg, keine Ordnung darin. Eine Liste,
+              // die zusammengehoert, ist eine Flaeche mit Haarlinien.
+              // Reihenfolge unveraendert.
+              Panel(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < data.verdicts.length; i++) ...[
+                      if (i > 0) Divider(color: p.rule, height: 1),
+                      _VerdictRow(verdict: data.verdicts[i]),
+                    ],
+                  ],
                 ),
-              const SizedBox(height: Space.sm),
+              ),
+              const SizedBox(height: Space.md),
               Text(
                 widget.scope.allowsRuleChanges
                     ? context.t('Regeländerungen gehören in dieses Zeitfenster — und nur hierher.')
@@ -191,7 +202,7 @@ class _TimeCapNotice extends StatelessWidget {
     return Row(
       children: [
         Flexible(
-          child: Text(context.t('ZEITDECKEL'),
+          child: Text(context.t('Zeitdeckel'),
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall),
         ),
@@ -204,8 +215,15 @@ class _TimeCapNotice extends StatelessWidget {
                     [minutes, seconds.toString().padLeft(2, "0")]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: monoStyle(context,
-                size: 13,
+            // Tabellenziffern statt Schreibmaschine: Eine mitlaufende Uhr
+            // darf nicht zappeln, und genau dafuer gibt es sie — den
+            // Terminalton dazu brauchte sie nie.
+            //
+            // Die Farbe bleibt: Der Deckel ist ein *Zustand* (gleich zu),
+            // kein Messwert. Kupfer meldet hier keine Note, sondern dass
+            // sich das Verhalten des Schirms in zwei Minuten aendert.
+            style: readingStyle(context,
+                size: 14,
                 weight: FontWeight.w600,
                 color: minutes < 2 ? p.caution : p.inkDim),
           ),
@@ -215,7 +233,8 @@ class _TimeCapNotice extends StatelessWidget {
           child: Text(context.t('von {0} min', [scope.timeCap.inMinutes]),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
-              style: monoStyle(context, size: 11, color: p.inkFaint)),
+              style: readingStyle(context,
+                  size: 12.5, weight: FontWeight.w400, color: p.inkFaint)),
         ),
       ],
     );
@@ -237,10 +256,6 @@ class _MetricCardState extends State<_MetricCard> {
   Widget build(BuildContext context) {
     final p = context.axiom;
     final m = widget.metric;
-    // Die Farbe traegt die Bewertung, der Pfeil nur die Richtung der Zahl.
-    // Beides in ein Symbol zu packen liest sich zwangslaeufig falsch: Bei
-    // "Messpunkte erfasst" ist mehr gut, bei "Kompensationslast" schlecht.
-    final accent = m.needsAttention ? p.caution : p.calm;
 
     return Panel(
       onTap: () => setState(() => _expanded = !_expanded),
@@ -250,7 +265,10 @@ class _MetricCardState extends State<_MetricCard> {
           Row(
             children: [
               Expanded(
-                child: Text(context.t(m.label).toUpperCase(),
+                // Ohne `.toUpperCase()`: „ZEIT IM SYSTEM GEGEN ZEIT GESPART"
+                // sind dreissig gesperrte Grossbuchstaben. Die Wortform
+                // faellt dabei weg, man liest Buchstabe fuer Buchstabe.
+                child: Text(context.t(m.label),
                     style: Theme.of(context).textTheme.labelSmall),
               ),
               if (m.trend != null)
@@ -274,35 +292,49 @@ class _MetricCardState extends State<_MetricCard> {
                   ),
                 ),
               ],
+              const SizedBox(width: Space.sm),
+              AnimatedRotation(
+                turns: _expanded ? 0.5 : 0,
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : Motion.quick,
+                child: Icon(Icons.keyboard_arrow_down,
+                    size: 16, color: p.inkFaint),
+              ),
             ],
           ),
           const SizedBox(height: Space.sm),
+          // War Schreibmaschine in 19 px. Der Wert ist ein Messwert, kein
+          // abzutippender Text — er laeuft in der Hausschrift mit
+          // Tabellenziffern und steht damit genauso sauber untereinander.
           Text(context.p(m.valueSource),
-              style: TextStyle(
-                fontFamily: Fonts.mono,
-                fontSize: 19,
-                fontWeight: FontWeight.w400,
-                color: p.ink,
-              )),
+              style: readingStyle(context, size: 21, color: p.ink)),
           if (m.consequence != null) ...[
-            const SizedBox(height: Space.md),
-            Container(
-              padding: const EdgeInsets.all(Space.md),
-              decoration: BoxDecoration(
-                border: Border.all(color: accent.withValues(alpha: 0.4)),
-                borderRadius: BorderRadius.circular(Radii.control),
-              ),
+            const SizedBox(height: Space.lg),
+            // Vorher ein Kasten mit farbigem Rahmen: gruen, wenn die Zahl in
+            // Ordnung war, kupfern, wenn nicht. Gruen ist ein Lob, Kupfer ein
+            // Vorwurf — beides sind Noten auf einem Messwert (R7). Jetzt eine
+            // Mulde: Die Folge liegt sichtbar tiefer als die Zahl, ohne dass
+            // eine Farbe sie bewertet. Dass eine Zahl Aufmerksamkeit braucht,
+            // sagt der kupferne Punkt oben; er ist ein Zustand, keine Note.
+            Well(
+              padding: const EdgeInsets.all(Space.lg),
+              radius: BorderRadius.circular(Radii.control),
               child: Text(context.t(m.consequence!),
                   style: Theme.of(context).textTheme.bodySmall),
             ),
           ],
           if (_expanded) ...[
-            const SizedBox(height: Space.md),
-            Text(context.t('SO WIRD GERECHNET'),
+            const SizedBox(height: Space.lg),
+            Text(context.t('So wird gerechnet'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.xs),
             Text(context.t(m.derivation),
-                style: monoStyle(context, size: 11.5)),
+                style: readingStyle(context,
+                    size: 14,
+                    weight: FontWeight.w400,
+                    height: 1.5,
+                    color: p.inkDim)),
           ],
         ],
       ),
@@ -310,9 +342,15 @@ class _MetricCardState extends State<_MetricCard> {
   }
 }
 
-class _VerdictCard extends StatelessWidget {
+/// Ein Befund am Regelwerk: welche Regel, welcher Vorschlag, warum.
+///
+/// War eine eigene Karte je Befund; jetzt eine Zeile in der Liste darueber.
+/// Das Etikett stand in Schreibmaschine in 10 px — also unter der Lesegrenze,
+/// die `monoStyle` dann still auf 12,5 anhob, sodass es nie so aussah, wie es
+/// im Quelltext stand.
+class _VerdictRow extends StatelessWidget {
   final RuleVerdict verdict;
-  const _VerdictCard({required this.verdict});
+  const _VerdictRow({required this.verdict});
 
   @override
   Widget build(BuildContext context) {
@@ -321,14 +359,14 @@ class _VerdictCard extends StatelessWidget {
     // Literal nicht hinter `Text(`, deshalb blieben zwei von drei
     // Etiketten in der englischen Oberflaeche deutsch.
     final (label, color) = switch (verdict.verdict) {
-      RuleAction.retire => (context.t('STREICHEN'), p.caution),
-      RuleAction.widen => (context.t('ZU ENG'), p.info),
-      RuleAction.resolveConflict => (context.t('KONFLIKT'), p.signal),
+      RuleAction.retire => (context.t('Streichen'), p.caution),
+      RuleAction.widen => (context.t('Zu eng'), p.info),
+      RuleAction.resolveConflict => (context.t('Konflikt'), p.signal),
     };
 
-    return Panel(
+    return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
+          horizontal: Space.lg, vertical: Space.lg),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -338,9 +376,7 @@ class _VerdictCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: monoStyle(context,
-                        size: 10, weight: FontWeight.w600, color: color)),
+                Text(label, style: sectionStyle(context, color: color)),
                 const SizedBox(height: 2),
                 Text(context.t(verdict.reason),
                     style: Theme.of(context).textTheme.bodySmall),

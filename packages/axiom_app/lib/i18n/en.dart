@@ -22,9 +22,11 @@ const Map<String, String> kEnglish = {
   ' · kostet etwas': ' · has a cost',
   ', Daten veraltet': ', data is stale',
   ', zeigt die Begruendung': ', shows the reasoning',
-  'AKTIVIERUNGSENERGIE': 'ACTIVATION ENERGY',
-  'ANKER ÄNDERN': 'EDIT ANCHOR',
-  'ANLAUF {0} H': 'RUN-UP {0} H',
+  'Aktivierungsenergie':
+      'Activation energy',
+  'Anker ändern':
+      'Edit anchor',
+  'Anlauf {0} h': 'Run-up {0} h',
   'AUF': 'ON',
   'AUSLÖSEN': 'TRIGGER',
   'AXIOM': 'AXIOM',
@@ -114,10 +116,11 @@ const Map<String, String> kEnglish = {
           'reliably accepts.',
   'Aussteigen': 'Step out',
   'Außerhalb des Fensters.': 'Outside the window.',
-  'BASELINE': 'BASELINE',
-  'BASELINE LÄUFT': 'BASELINE RUNNING',
-  'BASELINE TAG {0}': 'BASELINE DAY {0}',
-  'BASELINE VOLLSTÄNDIG': 'BASELINE COMPLETE',
+  'Baseline':
+      'Baseline',
+  'Baseline läuft':
+      'Baseline running',
+  'Baseline Tag {0}': 'Baseline day {0}',
   'Baseline vollständig': 'Baseline complete',
   'Baumarkt, Büro, Zuhause …': 'Hardware store, office, home …',
   'Bedingung': 'Condition',
@@ -152,11 +155,15 @@ const Map<String, String> kEnglish = {
   'Cooldown läuft': 'cooldown running',
   'Cooldowns, die abgelaufen sind, ohne dass die Handlung ausgeführt wurde.':
       'Cooldowns that ran out without the action being carried out.',
-  'DA SEIN UM': 'BE THERE AT',
-  'DANACH': 'AFTERWARDS',
-  'DATEN ALT': 'STALE DATA',
+  'Da sein um':
+      'Be there at',
+  'Danach':
+      'Afterwards',
+  'Daten alt':
+      'Stale data',
   'DEINE FRAGEN': 'YOUR QUESTIONS',
-  'DIE ERSTEN 14 TAGE': 'THE FIRST 14 DAYS',
+  'Die ersten 14 Tage':
+      'The first 14 days',
   'Damals: {0}/5': 'At the time: {0}/5',
   'Damit Erinnerungen auf die Minute kommen.':
       'So reminders arrive to the minute.',
@@ -265,10 +272,13 @@ const Map<String, String> kEnglish = {
   'Drei\nSystemrechte.': 'Three\npermissions.',
   'EINGANG LEER': 'INBOX EMPTY',
   'EINNAHME': 'INTAKE',
-  'EINORDNUNG': 'REVIEW',
+  'Einordnung':
+      'Where this stands',
   'ERFASSEN': 'CAPTURE',
-  'ERLAUBEN': 'ALLOW',
-  'EXPORT': 'EXPORT',
+  'Erlauben':
+      'Allow',
+  'Export':
+      'Export',
   'Eichung': 'Calibration',
   'Eigene Frage…': 'Your own question…',
   'Eigenen Kanal anlegen': 'Add your own channel',
@@ -348,7 +358,8 @@ const Map<String, String> kEnglish = {
   'Für die nächsten Tage nur Pflicht und Erholung. Dass dieser Modus greift, ist der Zweck des Systems — nicht dein Versagen.':
       'For the next few days: obligations and recovery only. This mode kicking '
           'in is what the system is for.',
-  'GEEICHT': 'CALIBRATED',
+  'Geeicht':
+      'Calibrated',
   'GESCHÜTZT': 'PROTECTED',
   'Gab es Erhaltungsmodus-Tage? Was ging voraus?':
       'Were there maintenance-mode days? What came before them?',
@@ -403,8 +414,10 @@ const Map<String, String> kEnglish = {
       'High. What is not planned now happens unplanned.',
   'Homescreen-Widget': 'Home screen widget',
   'Häufungen · 30 Tage': 'Clusters · 30 days',
-  'IM RÜCKBLICK': 'IN HINDSIGHT',
-  'IMPORT': 'IMPORT',
+  'Im Rückblick':
+      'In hindsight',
+  'Import':
+      'Import',
   'INS BETT': 'TO BED',
   'Im Benachrichtigungsbereich bleiben': 'Stay in the notification shade',
   'Im Normalbereich.': 'In the normal range.',
@@ -431,9 +444,11 @@ const Map<String, String> kEnglish = {
           'adding to them.',
   'KANAL': 'CHANNEL',
   'KAPAZITÄT {0}': 'CAPACITY {0}',
-  'KEINE ANKER': 'NO ANCHORS',
+  'Keine Anker':
+      'No anchors',
   'KEINE TRIGGER': 'NO TRIGGERS',
-  'KONFLIKT': 'CONFLICT',
+  'Konflikt':
+      'Conflict',
   'Kalt duschen': 'Cold shower',
   'Kanal speichern': 'Save channel',
   'Kannte ich das vor heute?': 'Did I know about this before today?',
@@ -469,7 +484,8 @@ const Map<String, String> kEnglish = {
       'Accumulated effort of structuring everyday life.',
   'Kurz durchgehen': 'Quick pass',
   'Körper': 'Body',
-  'LETZTE EINTRÄGE': 'RECENT ENTRIES',
+  'Letzte Einträge':
+      'Recent entries',
   'Langes Tippen auf das App-Symbol': 'Long press on the app icon',
   'Langes Tippen auf den Homescreen → Widgets → AXIOM.':
       'Long press the home screen → Widgets → AXIOM.',
@@ -486,7 +502,6 @@ const Map<String, String> kEnglish = {
   'Läuft. Benachrichtigungen sind stumm.':
       'Running. Notifications are silenced.',
   'Läuft…': 'Running…',
-  'META-WORK-BUDGET': 'META-WORK BUDGET',
   'Mache ich': 'Doing it',
   'Meldungen pro Stunde': 'Notifications per hour',
   'Messen': 'Measure',
@@ -508,12 +523,17 @@ const Map<String, String> kEnglish = {
   'Morgen: ein Anker, eine Aufgabe.': 'Tomorrow: one anchor, one task.',
   'Musik, laut': 'Music, loud',
   'März': 'March',
-  'NACHBETRACHTUNG': 'HINDSIGHT',
-  'NACHBETRACHTUNG · {0} OFFEN': 'HINDSIGHT · {0} OPEN',
-  'NEUER ANKER': 'NEW ANCHOR',
-  'NICHT GELADEN · {0}': 'NOT LOADED · {0}',
+  'Nachbetrachtung':
+      'Hindsight',
+  'Nachbetrachtung · {0} offen':
+      'Hindsight · {0} open',
+  'Neuer Anker':
+      'New anchor',
+  'Nicht geladen · {0}':
+      'Not loaded · {0}',
   'NICHTS ANLIEGEND': 'NOTHING PENDING',
-  'NICHTS ERFASST': 'NOTHING CAPTURED',
+  'Nichts erfasst':
+      'Nothing captured',
   'NICHTS IN REICHWEITE': 'NOTHING IN REACH',
   'Nachmittag.': 'Afternoon.',
   'Nicht freigegeben': 'Not granted',
@@ -619,13 +639,16 @@ const Map<String, String> kEnglish = {
   'Ruhezeit': 'quiet hours',
   'Ruhig gerade.': 'Quiet right now.',
   'S-Pen': 'S Pen',
-  'SCHEMA v{0} · {1} REGELN': 'SCHEMA v{0} · {1} RULES',
+  'Schema v{0} · {1} Regeln':
+      'Schema v{0} · {1} rules',
   'SCHLAF': 'SLEEP',
-  'SO WIRD GERECHNET': 'HOW THIS IS CALCULATED',
+  'So wird gerechnet':
+      'How this is calculated',
   'SORTIEREN': 'SORT',
   'START FEHLGESCHLAGEN': 'STARTUP FAILED',
   'START {0}/10': 'START {0}/10',
-  'STREICHEN': 'RETIRE',
+  'Streichen':
+      'Retire',
   'SYSTEM': 'SYSTEM',
   'Samsung Modi und Routinen': 'Samsung Modes and Routines',
   'Samsung beendet Hintergrund-Apps aggressiv. Ohne diese Ausnahme feuern Erinnerungen unzuverlässig.':
@@ -671,7 +694,8 @@ const Map<String, String> kEnglish = {
   'Stärkster einzelner Modulator der Kapazität.':
       'Single strongest modulator of capacity.',
   'System': 'System',
-  'TAG {0}': 'DAY {0}',
+  'Tag {0}':
+      'Day {0}',
   'TRIGGER': 'TRIGGERS',
   'Tag': 'Daily',
   'Tage': 'days',
@@ -712,7 +736,8 @@ const Map<String, String> kEnglish = {
           'voice. Pick whichever actually works for you.',
   'VERDIENT': 'EARNED',
   'VORFALL': 'INCIDENT',
-  'VORLAUF {0} MIN': 'LEAD TIME {0} MIN',
+  'Vorlauf {0} min':
+      'Lead time {0} min',
   'VORSCHLAG': 'SUGGESTION',
   'Verbrauchte Konzentrationszeit seit heute früh.':
       'Concentration time spent since this morning.',
@@ -735,8 +760,10 @@ const Map<String, String> kEnglish = {
   'WARTEZEIT LÄUFT': 'WAITING PERIOD RUNNING',
   'WARTEZEIT VORBEI': 'WAITING PERIOD OVER',
   'WARUM ES DIESE REGEL GIBT': 'WHY THIS RULE EXISTS',
-  'WAS VORHER PASSIEREN MUSS': 'WHAT HAS TO HAPPEN FIRST',
-  'WAS ZU TUN IST': 'WHAT TO DO',
+  'Was vorher passieren muss':
+      'What has to happen first',
+  'Was zu tun ist':
+      'What to do',
   'WIEDEREINSTIEG': 'RE-ENTRY',
   'Wann setzt es bei dir ein?': 'When does it set in for you?',
   'War schon': 'Already was',
@@ -814,10 +841,12 @@ const Map<String, String> kEnglish = {
   'Worauf': 'On what',
   'Wovon habe ich mich lautlos verabschiedet?': 'What did I quietly let go of?',
   'ZEIT IN AXIOM HEUTE': 'TIME IN AXIOM TODAY',
-  'ZEITDECKEL': 'TIME CAP',
+  'Zeitdeckel':
+      'Time cap',
   'ZERLEGEN': 'SPLIT',
   'ZIEL ≤ {0}': 'TARGET ≤ {0}',
-  'ZU ENG': 'TOO NARROW',
+  'Zu eng':
+      'Too narrow',
   'ZU GROSS FÜR HEUTE': 'TOO BIG FOR TODAY',
   'ZULETZT STEHENGEBLIEBEN': 'WHERE YOU LEFT OFF',
   'Zeigt die nächste Handlung dauerhaft — auch auf dem Sperrbildschirm. Mit einem Tipp auf „Erfassen" tippst du direkt in die Benachrichtigung, ohne zu entsperren und ohne die App zu öffnen.':
@@ -1061,7 +1090,8 @@ const Map<String, String> kEnglish = {
   'Regeln schreiben, die Aufgabenliste mit allen Feldern überblicken, den Ereignisstrom lesen — am großen Bildschirm, auf den echten Daten dieses Geräts.':
       'Write rules, see the task list with every field, read the event '
           'stream — on a big screen, on this device’s real data.',
-  'AUS': 'OFF',
+  'Aus':
+      'Off',
   'Der Server läuft nur, solange du ihn eingeschaltet lässt. Kein Autostart, kein Wiederanlaufen nach einem Neustart.':
       'The server runs only while you leave it on. No autostart, no restart '
           'after a reboot.',
@@ -1148,11 +1178,16 @@ const Map<String, String> kEnglish = {
   'Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.':
       'If two rules fire at once, the higher rank wins. On a tie the number '
           'decides — never chance.',
-  'ALLE': 'ALL',
-  'EINE VON': 'ONE OF',
-  'NICHT': 'NOT',
-  'IST': 'IS',
-  'IST NICHT': 'IS NOT',
+  'Alle':
+      'All',
+  'Eine von':
+      'One of',
+  'Nicht':
+      'Not',
+  'Ist':
+      'Is',
+  'Ist nicht':
+      'Is not',
   'Gruppe': 'Group',
   'Gruppe entfernen': 'Remove group',
   'Bedingung entfernen': 'Remove condition',
@@ -1180,7 +1215,8 @@ const Map<String, String> kEnglish = {
           'to still explain in six months why this rule exists.',
   'Ohne Abstand meldet sich die Regel beliebig oft.':
       'Without an interval the rule can speak up arbitrarily often.',
-  'SIEBEN TAGE STUMM': 'SEVEN DAYS SILENT',
+  'Sieben Tage stumm':
+      'Seven days silent',
   'Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.':
       'From saving on, the rule runs along and gets logged but says nothing. '
           'The rule inspector shows how often it would have fired — then you '
@@ -1194,7 +1230,8 @@ const Map<String, String> kEnglish = {
       'Reset to the shipped version.',
   'Regel entfernt. Die Nummer wird nicht wiederverwendet.':
       'Rule removed. The number will not be reused.',
-  'ALS YAML': 'AS YAML',
+  'Als YAML':
+      'As YAML',
   'Als YAML zeigen': 'Show as YAML',
   'Genau so kann die Regel nach rules/ zurück — der Editor ist keine Einbahnstraße.':
       'Exactly like this the rule can go back into rules/ — the editor is not '
@@ -1431,8 +1468,8 @@ const Map<String, String> kEnglish = {
       'Sleep and\nsteps.',
   'Der Schlaf der letzten Nächte ist der stärkste Einzelfaktor der Kapazität. Selbst eingetragen fehlt er genau an den Tagen, an denen er zählt — deshalb liest AXIOM ihn lieber aus Health Connect.':
       'The last few nights of sleep are the single strongest factor in capacity. Entered by hand it is missing on exactly the days it matters — so AXIOM would rather read it from Health Connect.',
-  'WAS GELESEN WIRD':
-      'WHAT IS READ',
+  'Was gelesen wird':
+      'What is read',
   'Schlafzeiten und Schritte pro Tag. Sonst nichts — kein Puls, kein Gewicht, kein Standort. Geschrieben wird nie: AXIOM legt nichts in Health Connect ab.':
       'Sleep times and steps per day. Nothing else — no heart rate, no weight, no location. Nothing is ever written: AXIOM puts nothing into Health Connect.',
   'Die Daten bleiben auf dem Gerät und gehen in zwei Werte ein: Kapazität und Schlafschuld. Beides steht unter Zustand mit seiner Herleitung.':
@@ -1473,8 +1510,8 @@ const Map<String, String> kEnglish = {
       'This is not a punishment, it is the point: building a system is always more stimulating than the task it was built for.',
   'Verstanden':
       'Understood',
-  'FREIGABE ANGEFRAGT':
-      'APPROVAL REQUESTED',
+  'Freigabe angefragt':
+      'Approval requested',
   'Steht dieselbe Zahl auf dem Bildschirm, vor dem du sitzt?':
       'Is the same number on the screen you are sitting at?',
   'Wenn nicht, hat jemand anders angefragt. Dann ablehnen — das kostet nichts außer einem zweiten Versuch.':
@@ -1491,8 +1528,8 @@ const Map<String, String> kEnglish = {
       'Split',
   'Zerlegt · {0}':
       'Split · {0}',
-  'SCHRITTE OFFEN: {0}':
-      'STEPS OPEN: {0}',
+  'Schritte offen: {0}':
+      'Steps open: {0}',
   'Diese Aufgaben sind durch ihre Teilschritte vertreten. Sie kommen zurück, sobald kein Schritt mehr offen ist.':
       'These tasks are represented by their steps. They come back once no step is open any more.',
 
@@ -1509,14 +1546,14 @@ const Map<String, String> kEnglish = {
       'Search',
   '{0} Fundstellen':
       '{0} places found',
-  'KEIN TREFFER':
-      'NO MATCH',
+  'Kein Treffer':
+      'No match',
   'Dazu steht nichts in der Hilfe':
       'The help says nothing about that',
   'Gesucht wird im Text der Kapitel, ohne Wortstammerkennung. Ein kürzeres Wort trifft oft mehr.':
       'The search runs over the chapter text, without stemming. A shorter word often matches more.',
-  'KEINE KAPITEL':
-      'NO CHAPTERS',
+  'Keine Kapitel':
+      'No chapters',
   'Die Hilfe ist nicht mitgeliefert':
       'The help is not bundled',
   'Unter assets/help/de/ liegt keine Textdatei. Die App läuft davon unberührt weiter — es gibt nur nichts nachzulesen.':
@@ -1527,14 +1564,14 @@ const Map<String, String> kEnglish = {
       'This chapter has no English version yet. What follows is the German one.',
   'Kapitel {0} gibt es nicht.':
       'There is no chapter {0}.',
-  'NICHT GELADEN':
-      'NOT LOADED',
+  'Nicht geladen':
+      'Not loaded',
   'Dieses Kapitel fehlt':
       'This chapter is missing',
   'Die Datei ist nicht mitgeliefert. Die anderen Kapitel sind davon unberührt.':
       'The file is not bundled. The other chapters are untouched by that.',
-  'IN DIESEM KAPITEL':
-      'IN THIS CHAPTER',
+  'In diesem Kapitel':
+      'In this chapter',
   'Kapitel {0}':
       'Chapter {0}',
   'Übersicht':
@@ -1655,7 +1692,8 @@ const Map<String, String> kEnglish = {
       'HARD',
   // Zustand der Ablage — Datenbildschirm.
   'Wo die Daten liegen': 'Where the data sits',
-  'ABLAGE': 'STORAGE',
+  'Ablage':
+      'Storage',
   'Verschlüsselt': 'Encrypted',
   'Nicht verschlüsselt': 'Not encrypted',
   'Die Datei ist ohne Schlüssel nicht lesbar. Der Schlüssel liegt im Schlüsselspeicher des Geräts und kann ihn nicht verlassen. Wer das entsperrte Gerät in der Hand hält, kommt trotzdem heran — dagegen hilft nur das Bildschirmschloss.':
@@ -1673,4 +1711,30 @@ const Map<String, String> kEnglish = {
       'Captured but not answered yet. Neither a task nor dropped.',
   'Stunden seit der ältesten unbeantworteten Erfassung. Die aussagekräftigere der beiden Zahlen: Zehn Notizen von heute sind harmlos, eine von vor drei Wochen heißt, dass niemand mehr hinsieht.':
       'Hours since the oldest unanswered capture. The more telling of the two numbers: ten notes from today are harmless, one from three weeks ago means nobody is looking any more.',
+  // Umbau der Informationsarchitektur: die Wege unter der Reichweitenkante,
+  // die Werkzeuge als Zeilen, und was die Herleitungstafel jetzt ausweist.
+  'Werkzeuge': 'Tools',
+  'Erfassungswege': 'Capture routes',
+  'Kein Termin hinterlegt.': 'No appointment on file.',
+  '{0} hinterlegt, keiner steht heute an': '{0} on file, none due today',
+  'Fällig · {0} min': 'Due · {0} min',
+  'Zahlen des Tages · {0} min': 'The day\u2019s numbers · {0} min',
+  'Vertiefung mit Zeitdeckel und Ausstiegsanker':
+      'Deep work with a time cap and an exit anchor',
+  'Kanäle, Budget und der nächste geplante Slot':
+      'Channels, budget and the next planned slot',
+  'Wartezeit zwischen Impuls und Handlung':
+      'A waiting period between impulse and action',
+  'Läuft seit {0} min': 'Running for {0} min',
+  // Reichweitenkante, Zustandsschirm und Herleitungstafel.
+  'Reichweite heute': 'Reach today',
+  'Reichweitenkante. Reichweite heute {0}.': 'Reach edge. Reach today {0}.',
+  'Weitere Messwerte': 'Further readings',
+  'Summe der Terme': 'Sum of the terms',
+  'Angezeigt': 'Displayed',
+  'Konfidenz {0}': 'Confidence {0}',
+  'Rundung und Grenze 0 bis 100': 'Rounding and clamp to 0\u2013100',
+  'Stufen': 'Levels',
+  'mehr zeigen': 'show more',
+  'weniger zeigen': 'show less',
 };

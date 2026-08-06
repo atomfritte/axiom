@@ -11,12 +11,18 @@
 /// Vier gleiche Werte entstehen im Alltag von selbst: Die Triage startet bei
 /// AE 5, jede Zerlegung erzeugt einen ersten Schritt mit AE 2. Wer den
 /// Regler stehen lässt, hat den Fall nach vier Notizen.
+///
+/// Dazu die Kopfzeile: Sie stand bis zu dieser Runde als
+/// „AKTIVIERUNGSENERGIE" und „KAPAZITÄT 61" da — neunzehn Großbuchstaben am
+/// Stück in Schreibmaschine, auf dem Bild, das die Frage „was kann ich jetzt
+/// anfangen" vorbewusst beantworten soll.
 library;
 
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:axiom_app/design/theme.dart';
+import 'package:axiom_app/design/tokens.dart';
 import 'package:axiom_app/design/widgets/capacity_line.dart';
 import 'package:axiom_core/axiom_core.dart';
 import 'package:flutter/material.dart';
@@ -128,5 +134,23 @@ void main() {
     expect(differing, greaterThan(0),
         reason: 'Acht Aufgaben sehen aus wie drei — der Hinweis auf die '
             'fünf weiteren fehlt');
+  });
+
+  testWidgets('die Kopfzeile schreit nicht und der Messwert steht in signal',
+      (tester) async {
+    await _pump(tester, _sameEnergy(2));
+
+    expect(find.text('Aktivierungsenergie'), findsOneWidget);
+    expect(find.text('AKTIVIERUNGSENERGIE'), findsNothing);
+    expect(find.text('KAPAZITÄT 100'), findsNothing);
+
+    // Die Zahl steht getrennt von ihrer Beschriftung: So bekommt sie
+    // Tabellenziffern, und so lässt sie sich vorlesen, ohne dass ein
+    // Übersetzer sie aus einem fertigen Satz zurückrechnen muss.
+    final value = tester.widget<Text>(find.text('100'));
+    expect(value.style?.color, AxiomPalette.dark.signal);
+    expect(value.style?.fontFamily, Fonts.sans);
+    expect(value.style?.fontFeatures,
+        contains(const FontFeature.tabularFigures()));
   });
 }

@@ -273,6 +273,13 @@ ValidationReport validateRules(Directory dir) {
           if (unknown.isNotEmpty) {
             errors.add('$where: unbekannte Variablen: ${unknown.join(", ")}');
           }
+          final unknownEvents = _unknownEvents(condition.referencedVariables);
+          if (unknownEvents.isNotEmpty) {
+            errors.add('$where: unbekannte Ereignisse in minutes_since / '
+                'count_today: ${unknownEvents.join(", ")}. Ein Ereignis, das '
+                'niemand schreibt, macht die Bedingung nicht ungueltig, '
+                'sondern still wirkungslos.');
+          }
         } on ConditionError catch (e) {
           errors.add('$where: ${e.message}');
         }
@@ -339,8 +346,45 @@ final _knownVariables = <String>{
   'time_between',
 };
 
+/// Die Ereignisnamen, auf die sich `minutes_since` und `count_today`
+/// beziehen duerfen.
+///
+/// Abgeglichen wird gegen [EventType], nicht gegen `RuleVocabulary.events`:
+/// Der Wortschatz ist die kuratierte Auswahl fuer den Regeleditor und laesst
+/// interne Buchungen wie `decision_feedback` bewusst weg — geschrieben und
+/// ausgewertet werden sie trotzdem. Die Frage hier ist nicht „wuerde der
+/// Editor das anbieten", sondern „gibt es dieses Ereignis ueberhaupt".
+final _knownEvents = <String>{
+  for (final type in EventType.values) _snakeCase(type.name),
+};
+
+/// `decisionFeedback` -> `decision_feedback`. Genau die Umformung, mit der
+/// die App ihre Zaehler beschriftet (`RuntimeContext.countTodayByEvent`).
+String _snakeCase(String camel) => camel.replaceAllMapped(
+      RegExp('[A-Z]'),
+      (m) => '_${m.group(0)!.toLowerCase()}',
+    );
+
 List<String> _unknownVariables(Set<String> referenced) => referenced
     .where((v) => !v.startsWith('event:') && !_knownVariables.contains(v))
+    .toList()
+  ..sort();
+
+/// Ereignisnamen, die es nicht gibt.
+///
+/// Hier stand nichts: `_unknownVariables` uebersprang jede Variable mit
+/// `event:`-Praefix, und damit war der Ereignisname der einzige Teil einer
+/// Bedingung, den niemand geprueft hat. Ein Tippfehler darin macht die
+/// Regel nicht ungueltig, sondern **still wirkungslos** — und zwar in beide
+/// Richtungen: `count_today` auf ein unbekanntes Ereignis ist immer 0, und
+/// `minutes_since` gilt als „unendlich lange her". Je nach
+/// Vergleichsrichtung feuert die Regel danach nie oder immer. Genau diese
+/// Klasse hatte R-010 schon einmal: Sie prueft auf einen Ereignistyp, den
+/// niemand schreibt.
+List<String> _unknownEvents(Set<String> referenced) => referenced
+    .where((v) => v.startsWith('event:'))
+    .map((v) => v.substring('event:'.length))
+    .where((name) => !_knownEvents.contains(name))
     .toList()
   ..sort();
 

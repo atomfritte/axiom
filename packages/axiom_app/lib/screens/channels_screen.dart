@@ -60,15 +60,23 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
         padding: const EdgeInsets.fromLTRB(
             Space.lg, Space.lg, Space.lg, Space.huge),
         children: [
+          // Der Aufschlagsatz traegt den Grund fuer den ganzen Schirm — er
+          // stand in Sekundaergroesse. Jetzt Fliesstext in Lesegroesse.
           Text(
             context.t('Zwischen Einfall und Notiz liegen wenige Sekunden. Was in dieser Zeit nicht festgehalten ist, ist weg. Deshalb gibt es mehrere Wege — such dir den, der bei dir wirklich funktioniert.'),
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: p.inkDim,
+                ),
           ),
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
 
           // ── Dauerhafte Anzeige ───────────────────────────────────────
           SectionLabel(context.t('Dauerhafte Anzeige')),
+          // Die eine erhobene Flaeche dieses Schirms. Sie ist der schnellste
+          // Weg in die App und damit das, was hier in die Hand geht (G1);
+          // alle anderen Kanaele liegen ruhig auf dem Grund.
           Panel(
+            reachable: true,
             accent: _presence ? p.calm.withValues(alpha: 0.45) : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,9 +103,16 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> with MetaTimed<
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: Space.md),
+                // War Schreibmaschine in 11 px. Das ist kein Messwert und
+                // nichts zum Abtippen, sondern der Satz, der den Kanal
+                // verkauft — und er stand in der kleinsten, technischsten
+                // Schrift des Schirms.
                 Text(
                   context.t('Der schnellste Weg, den das Gerät hergibt: zwei Sekunden statt zehn.'),
-                  style: monoStyle(context, size: 11, color: p.signal),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: p.signal),
                 ),
                 if (_presenceTrouble != null) ...[
                   Divider(color: p.rule, height: Space.xl),
@@ -426,18 +441,19 @@ class _ChannelCard extends StatelessWidget {
                 ),
               ),
             ],
+            // Der Hinweis lag in einem gerahmten Kasten und lief in
+            // Schreibmaschine, 11 px. Beides war falsch begruendet: Mono war
+            // wohl der eingebetteten Broadcast-Namen wegen gewaehlt, aber der
+            // Rest des Kastens ist ein deutscher Satz — und der wurde dadurch
+            // zum Kleingedruckten, das man ueberspringt. Jetzt eine Mulde
+            // (Rahmen raus, Tiefe rein) mit Text in Lesegroesse.
             if (hint != null) ...[
               const SizedBox(height: Space.md),
-              Container(
-                width: double.infinity,
+              Well(
                 padding: const EdgeInsets.all(Space.md),
-                decoration: BoxDecoration(
-                  color: p.base,
-                  borderRadius: BorderRadius.circular(Radii.control),
-                  border: Border.all(color: p.rule),
-                ),
+                radius: BorderRadius.circular(Radii.control),
                 child: Text(hint!,
-                    style: monoStyle(context, size: 11, color: p.inkDim)),
+                    style: Theme.of(context).textTheme.bodySmall),
               ),
             ],
           ],

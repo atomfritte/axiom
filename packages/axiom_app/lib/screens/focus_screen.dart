@@ -106,8 +106,13 @@ class _StartPaneState extends ConsumerState<_StartPane> {
                       child: Text(task.title,
                           style: Theme.of(context).textTheme.bodyLarge),
                     ),
+                    const SizedBox(width: Space.md),
+                    // War Schreibmaschine in 11 px. Startenergie ist ein
+                    // Messwert: Hausschrift mit Tabellenziffern, damit
+                    // 2/10 und 10/10 untereinander fluchten.
                     Text('${task.activationEnergy}/10',
-                        style: monoStyle(context, size: 11)),
+                        style: readingStyle(context,
+                            size: 13.5, color: p.inkFaint)),
                   ],
                 ),
               ),
@@ -161,10 +166,12 @@ class _BreadcrumbCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final crumb = ref.watch(breadcrumbProvider).value;
     if (crumb == null || crumb.isEmpty) return const SizedBox.shrink();
-    final p = context.axiom;
 
+    // Hier stand ein blauer Rahmen. Auf einem Schirm mit vier Karten
+    // untereinander zieht jeder Rahmen Aufmerksamkeit an eine Stelle, an der
+    // nichts zu tun ist — die Notiz ist etwas zum Lesen, keine Handlung.
+    // Erhoben ist unten der Knopf.
     return Panel(
-      accent: p.info.withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -199,7 +206,11 @@ class _LiveSlotHint extends StatelessWidget {
             promoted
                 ? context.t('Die Restzeit steht in der Statusleiste, auf dem Sperrbildschirm und in der Now Bar. Du musst hier nicht nachsehen.')
                 : context.t('Die Restzeit steht als laufende Benachrichtigung im Benachrichtigungsbereich.'),
-            style: monoStyle(context, size: 11, color: context.axiom.inkFaint),
+            // War Schreibmaschine — ein Satz zum Lesen, kein Messwert.
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: context.axiom.inkFaint),
           ),
         );
       },
@@ -237,23 +248,26 @@ class _MinutePicker extends StatelessWidget {
               },
               behavior: HitTestBehavior.opaque,
               child: Container(
-                height: 52,
+                height: 56,
                 alignment: Alignment.center,
                 margin: EdgeInsets.only(
                     right: option == allowed.last ? 0 : Space.sm),
                 decoration: BoxDecoration(
-                  color: value == option
-                      ? p.signal.withValues(alpha: 0.9)
-                      : p.panel,
+                  // Ungewaehlt lag hier `panel` mit Haarlinienrahmen — auf
+                  // dem Seitengrund war das eine Karte, und fuenf Karten
+                  // nebeneinander sehen alle gleich waehlbar aus. Jetzt
+                  // liegen sie flach auf dem Grund und die gewaehlte kommt
+                  // heraus.
+                  color: value == option ? p.signal : p.panel,
                   borderRadius: BorderRadius.circular(Radii.control),
-                  border:
-                      Border.all(color: value == option ? p.signal : p.rule),
+                  boxShadow: value == option ? null : Shadows.resting(p),
+                  border: p.isDark ? Border.all(color: p.rim) : null,
                 ),
+                // War Schreibmaschine. Eine Minutenzahl ist ein Messwert.
                 child: Text(
                   '$option',
-                  style: monoStyle(context,
-                      size: 14,
-                      weight: FontWeight.w500,
+                  style: readingStyle(context,
+                      size: 16,
                       color: value == option
                           ? Theme.of(context).colorScheme.onPrimary
                           : p.inkDim),
@@ -282,18 +296,22 @@ class _RunningPane extends ConsumerWidget {
     final ratio =
         (elapsed.inSeconds / session.planned.inSeconds).clamp(0.0, 1.5);
 
-    final accent = switch (verdict?.action) {
-      FocusAction.hardStop => p.caution,
-      FocusAction.clearInterrupt => p.signal,
-      _ => p.calm,
-    };
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(
           Space.lg, Space.lg, Space.lg, Space.huge),
       children: [
+        // Hier lag ein farbiger Rahmen um die Karte, dessen Ton vom Urteil
+        // des Governors abhing: gruen bei „geschuetzt", kupfern bei „jetzt
+        // beenden". Das faerbte die laufende Sitzung selbst ein — als waere
+        // die Arbeit gut oder schlecht, je nachdem wie lange sie schon
+        // laeuft. Das Urteil steht eine Karte tiefer, mit seinem Namen und
+        // seiner Begruendung; hier gehoert es nicht hin (R7).
+        //
+        // Was die Karte stattdessen traegt, ist Griffhoehe: Sie ist das
+        // Einzige, was jetzt laeuft, und deshalb die einzige erhobene
+        // Flaeche des Schirms (G1).
         Panel(
-          accent: accent.withValues(alpha: 0.55),
+          reachable: true,
           padding: const EdgeInsets.all(Space.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,41 +324,57 @@ class _RunningPane extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: Space.xl),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+              // War Schreibmaschine in w300 — 44 px duenn und blass. Die
+              // verstrichene Zeit ist der Messwert dieses Schirms und
+              // laeuft jetzt wie jeder andere: Hausschrift, Tabellenziffern,
+              // Signalfarbe.
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
                   Text(
                     '${elapsed.inMinutes}',
-                    style: TextStyle(
-                      fontFamily: Fonts.mono,
-                      fontSize: 44,
-                      fontWeight: FontWeight.w300,
-                      color: p.ink,
-                    ),
+                    style: readingStyle(context,
+                        size: 46, height: 1.0, color: p.signal),
                   ),
-                  Text(context.t(' / {0} min', [session.planned.inMinutes]),
-                      style: monoStyle(context, size: 14)),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Text(
+                        context.t(' / {0} min', [session.planned.inMinutes]),
+                        style: readingStyle(context,
+                            size: 15, color: p.inkFaint)),
+                  ),
                 ],
               ),
-              const SizedBox(height: Space.md),
+              const SizedBox(height: Space.lg),
               LayoutBuilder(
                 builder: (context, c) => Stack(
                   children: [
-                    Container(height: 3, color: p.rule),
+                    // Runde Enden wie bei jeder anderen Skala der App: Das
+                    // ist eine Marke auf einer Strecke, kein Wettlauf gegen
+                    // eine Ziellinie.
                     Container(
-                      height: 3,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: p.rule,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Container(
+                      height: 4,
                       width: c.maxWidth * ratio.clamp(0.0, 1.0),
-                      color: accent,
+                      decoration: BoxDecoration(
+                        color: p.signal,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ],
                 ),
               ),
               if (ratio > 1.0) ...[
-                const SizedBox(height: Space.sm),
+                const SizedBox(height: Space.md),
                 Text(
                   context.t('{0} min darüber', [session.overrun(now).inMinutes]),
-                  style: monoStyle(context, size: 11, color: p.signal),
+                  style: readingStyle(context, size: 13.5, color: p.inkDim),
                 ),
               ],
             ],
@@ -421,10 +455,11 @@ class _VerdictCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: monoStyle(context,
-                  size: 10.5, weight: FontWeight.w600, spacing: 0.8,
-                  color: color)),
+          // War Schreibmaschine in 10,5 px. Die Farbe bleibt: Sie steht
+          // hier nicht fuer einen Messwert, sondern fuer einen Zustand des
+          // Governors — geschuetzt, Hinweis, Unterbrechung, beenden. Ein
+          // Zustand darf eine Rolle haben, eine Ablesung nicht (R7).
+          Text(label, style: sectionStyle(context, color: color)),
           const SizedBox(height: Space.sm),
           Text(context.p(verdict.reason),
               style: Theme.of(context).textTheme.bodyMedium),

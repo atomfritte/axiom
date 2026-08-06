@@ -1,22 +1,20 @@
-/// R-130 — „Termine eintragen" (M3 Time Anchor).
+/// R-130 — „Seit einem Tag ist keine Entscheidung beantwortet".
 ///
-/// Puenktlichkeit ist bei diesem Profil erfolgreich kompensiert — und genau
-/// das ist teuer: Puffer, staendiges Nachrechnen, Dauerspannung vor jedem
-/// Termin [D4]. Eingetragene Anker verlagern diese Rechnung vom Kopf ins
-/// System.
+/// Die Rueckmeldung unter einer Entscheidung ist die einzige Stelle, an der
+/// das Regelwerk erfaehrt, ob es richtig lag: Der exponentielle Backoff
+/// haengt an abgelehnten Entscheidungen, und das Wochenreview sieht sonst
+/// nur Feuerraten. Was nicht sichtbar zurueckkommt, existiert nicht [D9].
 ///
-/// **Befund, den dieser Test festhaelt.** Die Bedingung misst etwas anderes
-/// als der Titel sagt. Sie liest vier Dinge — Uhrzeit, Wochentag, ob heute
-/// schon etwas erfasst wurde und wann zuletzt eine Entscheidung beantwortet
-/// wurde — und keines davon hat mit Ankern zu tun. Ob welche gepflegt
-/// werden, prueft sie nicht; im Regelwortschatz gibt es dafuer auch keine
-/// Variable. Was sie tatsaechlich beschreibt, ist „jemand benutzt das System
-/// noch, antwortet aber seit einem Tag nicht mehr auf Entscheidungen".
-///
-/// Zwei Dinge daempfen das: Die Regel steht auf `log_only` (SHADOW) und
-/// `severity: info`, spricht also gar nicht, sondern wird nur protokolliert
-/// — und genau dafuer ist die Schattenzeit da. Wer sie live stellt, sollte
-/// vorher wissen, was sie zaehlt. Deshalb steht es hier.
+/// **Warum die Regel heute anders heisst.** Sie hiess „Termine eintragen"
+/// und ihre Begruendung handelte von gepflegten Zeitankern — gemessen hat
+/// die Bedingung davon nie etwas. Sie liest vier Dinge: Uhrzeit, Wochentag,
+/// ob heute etwas erfasst wurde, und wie lange keine Entscheidung mehr
+/// beantwortet wurde. Keine dieser Variablen kennt Anker, und im
+/// Regelwortschatz gibt es dafuer auch keine — Anker liegen in einer eigenen
+/// Tabelle, nicht im Ereignisstrom. Von den zwei moeglichen Aufloesungen war
+/// nur eine ohne neue Variable erreichbar: den Text an die Bedingung
+/// bringen. Der Test unten haelt fest, dass die Bedingung seither das misst,
+/// was ueber ihr steht.
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -32,6 +30,9 @@ Condition r130() => Condition.fromMap({
         },
         {
           'weekday': {'ne': 'sat'},
+        },
+        {
+          'weekday': {'ne': 'sun'},
         },
         {
           'count_today': {'event': 'capture', 'gte': 1},
@@ -78,7 +79,7 @@ void main() {
     });
   });
 
-  group('R-130 nimmt den Samstag aus — und nur ihn', () {
+  group('R-130 nimmt beide freien Tage aus', () {
     test('Montag: ja', () {
       expect(r130().eval(contextOn(3)), isTrue);
     });
@@ -91,20 +92,20 @@ void main() {
       expect(r130().eval(contextOn(8)), isFalse);
     });
 
-    test('Sonntag: ja', () {
-      // Festgehalten, nicht behoben: Die Zeile nimmt nur den Samstag aus.
-      // Ob der Sonntag mitgemeint war, steht nirgends — die Begruendung
-      // erwaehnt das Wochenende gar nicht. Solange die Regel im Schatten
-      // laeuft, ist das folgenlos; wer sie live stellt, entscheidet hier.
-      expect(r130().eval(contextOn(9)), isTrue);
+    test('Sonntag: nein', () {
+      // Vorher stand in der Bedingung nur `ne: sat`, und nirgends stand, ob
+      // der Sonntag mitgemeint war. Das Fenster 08:00–09:30 ist ein
+      // Werktagsmorgen; an einem freien Morgen um acht ist eine offene
+      // Rueckmeldung kein Befund.
+      expect(r130().eval(contextOn(9)), isFalse);
     });
   });
 
-  group('Was die Bedingung wirklich misst', () {
+  group('Was die Bedingung misst', () {
     test('ohne Erfassung heute schweigt sie', () {
-      // Die Regel meldet sich nur bei jemandem, der das System heute schon
-      // benutzt hat. Mit Ankern hat das nichts zu tun — es ist ein
-      // Lebenszeichen, kein Befund ueber Termine.
+      // Gemeldet wird nur bei jemandem, der das System heute schon benutzt
+      // hat. Eine fehlende Rueckmeldung bei jemandem, der gar nicht da war,
+      // ist kein Befund, sondern ein freier Tag.
       expect(r130().eval(contextOn(3, capturesToday: 0)), isFalse);
     });
 
@@ -128,14 +129,31 @@ void main() {
       expect(r130().eval(contextOn(3, sinceFeedback: null)), isTrue);
     });
 
-    test('keine der Variablen bezieht sich auf Anker', () {
-      // Der Kern des Befunds in einer Zeile. Faellt dieser Test um, weil
-      // jemand eine Ankervariable ergaenzt hat, ist der Befund behoben —
-      // und der Test die Stelle, an der man das mitbekommt.
+    test('sie misst genau das, was ueber ihr steht', () {
+      // Der Kern der Korrektur in einer Zeile: Der Titel spricht von einer
+      // ausbleibenden Rueckmeldung, und `event:decision_feedback` ist die
+      // Variable, die das traegt. Solange diese Menge so aussieht, decken
+      // sich Text und Bedingung.
       expect(
         r130().referencedVariables,
         {'time_between', 'weekday', 'event:capture', 'event:decision_feedback'},
       );
+    });
+
+    test('der Regelwortschatz hat weiterhin keine Zahl fuer Anker', () {
+      // Die urspruengliche Absicht („es sind keine Anker gepflegt") ist
+      // damit nicht erledigt, sondern offen: Sie laesst sich gar nicht
+      // formulieren. Waechter — sobald jemand eine solche Zahl ergaenzt,
+      // faellt dieser Test um, und dann gehoert die Absicht als eigene
+      // Regel mit eigener ID zurueck.
+      final anchorish = [
+        for (final v in RuleVocabulary.numerics) v.id,
+        for (final v in RuleVocabulary.symbolics) v.id,
+        for (final e in RuleVocabulary.events) e.id,
+      ].where((id) => id.contains('anchor') || id.contains('appointment'));
+      expect(anchorish, isEmpty,
+          reason: 'Es gibt jetzt eine Ankervariable — R-130 hat sie nicht '
+              'gebraucht, aber die Regel, die sie ersetzen sollte, schon');
     });
   });
 

@@ -107,13 +107,56 @@ void main() {
       expect(anchor.isActive(DateTime(2026, 8, 3, 14, 30)), isFalse);
     });
 
-    test('meldet Rückstand, wenn ein Schritt deutlich überfällig ist', () {
+    test('ohne Erledigt-Vermerk zählt jeder vergangene Schritt als offen',
+        () {
       final anchor = anchorAt(14, 0);
       // 13:20 — "Laufendes abschließen" (13:00) und "Fertigmachen" (13:10)
-      // liegen beide zurück.
+      // liegen beide zurück, und nichts ist quittiert.
       expect(anchor.isBehind(DateTime(2026, 8, 3, 13, 20)), isTrue);
       // Kurz nach einem Schritt noch kein Rückstand — fünf Minuten Toleranz.
       expect(anchor.isBehind(DateTime(2026, 8, 3, 13, 2)), isFalse);
+    });
+
+    test('mit Erledigt-Vermerk unterscheidet sich „im Zeitplan" von '
+        "„hinterher\"", () {
+      // Der Punkt der Methode. Um 13:20 sieht die Uhr in beiden Fällen
+      // dasselbe: Zwei Schrittzeiten liegen zurück. Ob das Rückstand ist,
+      // entscheidet allein, was quittiert wurde.
+      final anchor = anchorAt(14, 0);
+      final at = DateTime(2026, 8, 3, 13, 20);
+
+      // Kontext verlassen (13:00) und Fertigmachen (13:10) sind erledigt,
+      // als Nächstes steht Losgehen um 13:25 an — pünktlich.
+      expect(anchor.isBehind(at, lastDone: AnchorStepKind.prepare), isFalse);
+
+      // Nur der Kontextwechsel ist erledigt: Fertigmachen war um 13:10
+      // dran und hat noch nicht begonnen.
+      expect(anchor.isBehind(at, lastDone: AnchorStepKind.leaveContext),
+          isTrue);
+    });
+
+    test('nennt den Schritt, um den es geht — nicht nur, dass es einen gibt',
+        () {
+      // Eine Meldung „hinterher" ohne Gegenstand ist eine Bewertung. Mit
+      // Gegenstand ist sie eine Information (R7).
+      final overdue = anchorAt(14, 0).overdueStep(
+        DateTime(2026, 8, 3, 13, 20),
+        lastDone: AnchorStepKind.leaveContext,
+      );
+      expect(overdue?.kind, AnchorStepKind.prepare);
+      expect(overdue?.at, DateTime(2026, 8, 3, 13, 10));
+    });
+
+    test('ist alles quittiert, gibt es keinen Rückstand', () {
+      expect(
+        anchorAt(14, 0)
+            .isBehind(DateTime(2026, 8, 3, 13, 50), lastDone: AnchorStepKind.depart),
+        isFalse,
+      );
+    });
+
+    test('nach dem Termin bleibt es still — auch ohne Vermerk', () {
+      expect(anchorAt(14, 0).isBehind(DateTime(2026, 8, 3, 15, 0)), isFalse);
     });
   });
 

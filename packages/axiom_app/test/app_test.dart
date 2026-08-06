@@ -9,8 +9,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:axiom_app/app.dart';
+import 'package:axiom_app/design/tokens.dart';
 import 'package:axiom_app/design/widgets/capacity_line.dart';
 import 'package:axiom_app/design/widgets/instruments.dart';
+import 'package:axiom_app/screens/anchors_screen.dart';
 import 'package:axiom_app/screens/capture_sheet.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
 import 'package:axiom_app/screens/rule_editor_screen.dart';
@@ -53,6 +55,27 @@ void main() {
       await pumpPhone(tester, h.wrap(const HomeShellGate()));
       final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(bar.destinations, hasLength(3));
+    });
+
+    testWidgets('die Zurücktaste führt auf „Jetzt", nicht aus der App',
+        (tester) async {
+      // Vorher schloss die Zurücktaste auf jedem Nebenreiter die App. Auf
+      // Android ist das der häufigste Griff überhaupt, und er bedeutet dort
+      // „eine Ebene höher". Wer bloß nachsehen wollte, verlor damit die
+      // Handlung, wegen der er die App geöffnet hatte [D9].
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const HomeShellGate()));
+
+      await tester.tap(find.text('System'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SystemScreen), findsOneWidget);
+
+      await tester.state<NavigatorState>(find.byType(Navigator).first)
+          .maybePop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NowScreen), findsOneWidget);
+      expect(find.byType(SystemScreen), findsNothing);
     });
   });
 
@@ -122,8 +145,66 @@ void main() {
       await pumpPhone(tester, h.wrap(const NowScreen()));
 
       // Fünf startbare Aufgaben, aber nur EIN "Jetzt"-Block.
-      expect(find.text('JETZT'), findsOneWidget);
+      expect(find.text('Jetzt'), findsOneWidget);
       expect(find.text('Anfangen').evaluate().length, lessThanOrEqualTo(1));
+    });
+
+    testWidgets('genau eine Fläche liegt in Griffhöhe', (tester) async {
+      // Die Karte ist nicht deshalb die Handlung, weil „Jetzt" darübersteht,
+      // sondern weil sie als einzige über dem Grund schwebt. Vorher trug
+      // fast jede Fläche dieses Schirms einen farbigen Rahmen, und zwölf
+      // gerahmte Kästen untereinander sind ein Gitter: alles gleich weit
+      // weg, jede Fläche ein Angebot. Das ist kein Layoutgeschmack — es ist
+      // die Frage, ob man die eine Handlung vorbewusst findet (G1).
+      h.completeOnboarding();
+      for (var i = 0; i < 4; i++) {
+        await h.runtime.createTask(
+          title: 'Aufgabe $i', activationEnergy: 2, salience: 5, stakes: 5);
+      }
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      final raised = tester
+          .widgetList<Panel>(find.byType(Panel))
+          .where((p) => p.reachable)
+          .length;
+      expect(raised, 1);
+    });
+
+    testWidgets('die Reichweitenkante trennt beide Schirme', (tester) async {
+      // Sie ist keine Verzierung: Über ihr steht, was heute in die Hand
+      // geht, unter ihr, was da ist und heute nicht. Ohne sie ist die
+      // Mulde nur eine zweite Farbe.
+      h.completeOnboarding();
+      await h.runtime.createTask(
+        title: 'Wohnung streichen', activationEnergy: 9, salience: 5,
+        stakes: 5);
+
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+      expect(find.byType(ReachEdge), findsOneWidget);
+      expect(find.byType(Well), findsOneWidget);
+      await unmount(tester);
+
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+      expect(find.byType(ReachEdge), findsOneWidget);
+      expect(find.byType(Well), findsOneWidget);
+    });
+
+    testWidgets('ein Messwert steht an genau einem Ort', (tester) async {
+      // Unter der Kante standen Kapazität, Kompensationslast und Reizbedarf
+      // als Balken samt aufklappbarer Herleitung — dieselben drei, die einen
+      // Reiter weiter auf „Zustand" stehen. „Reichweite heute 61" und
+      // „Kapazität 61" waren dabei dieselbe Zahl unter zwei Namen, drei
+      // Zentimeter auseinander. Zwei Anzeigen desselben Messwerts lesen sich
+      // als zwei Aussagen (R7), und jede davon ist auf diesem Schirm ein
+      // zweites Angebot neben der einen Handlung (G1).
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+      expect(find.byType(ReachEdge), findsOneWidget);
+      expect(find.byType(InstrumentBar), findsNothing);
+      await unmount(tester);
+
+      await pumpPhone(tester, h.wrap(const StateScreen()));
+      expect(find.byType(InstrumentBar), findsWidgets);
     });
 
     testWidgets('eine angefangene Aufgabe bleibt sichtbar und abschließbar',
@@ -185,6 +266,79 @@ void main() {
     });
   });
 
+  group('Die Wege unter der Kante', () {
+    /// Die Mulde ist der Bestandsnachweis der App: Was es gibt, steht hier,
+    /// und zwar **immer an derselben Stelle**. Vorher erschien jede Zeile
+    /// nur bei Inhalt — ein Weg, den es nur manchmal gibt, wird jedes Mal
+    /// neu gesucht [D9].
+    const wege = ['Aufgaben', 'Eingang', 'Anker', 'Tag-Review', 'Vorfälle'];
+
+    testWidgets('jeder Weg hat einen festen Platz, auch wenn nichts da ist',
+        (tester) async {
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      for (final label in wege) {
+        await tester.dragUntilVisible(
+          find.text(label),
+          find.byType(ListView),
+          const Offset(0, -200),
+        );
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+    });
+
+    testWidgets('ein Anker lässt sich anlegen, bevor es einen gibt',
+        (tester) async {
+      // Die Ankerverwaltung hing allein am Streifen über der Kante, und den
+      // gibt es nur, wenn schon ein Anker mit nächstem Schritt existiert.
+      // Der erste Anker war aus der laufenden App heraus nicht anzulegen —
+      // nur über eine Geräteverknüpfung, die man dafür kennen muss.
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+      await tester.dragUntilVisible(
+        find.text('Anker'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.tap(find.text('Anker'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AnchorsScreen), findsOneWidget);
+      await unmount(tester);
+    });
+
+    testWidgets('der Rückblick bleibt erreichbar, wenn er nicht fällig ist',
+        (tester) async {
+      // Er hing an `isReviewDue`. Nach dem Abhaken war der Schirm mit den
+      // Zahlen der letzten Tage bis zum nächsten Fälligkeitsfenster nirgends
+      // mehr zu öffnen — obwohl genau dort steht, was die Woche ergeben hat.
+      h.completeOnboarding();
+      h.runtime.markReviewDone(ReviewScope.day);
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      await tester.dragUntilVisible(
+        find.text('Tag-Review'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      expect(find.text('Tag-Review'), findsOneWidget);
+      // Und ohne die Behauptung, er sei fällig.
+      expect(find.textContaining('Fällig'), findsNothing);
+    });
+
+    test('„System" ist kein zweiter Ort für Inhalte', () {
+      // Aufgabenliste und Vorfallprotokoll standen dort ein zweites Mal.
+      // Zwei Wege zu einer Liste sind kein Entgegenkommen, sondern zwei
+      // Orte, an denen man sie suchen kann — und „System" wurde damit zur
+      // Restekiste statt zur Maschine.
+      final source =
+          File('lib/screens/system_screen.dart').readAsStringSync();
+      expect(source, isNot(contains('TasksScreen')));
+      expect(source, isNot(contains('SignalScreen')));
+    });
+  });
+
   group('Die Liste ist erreichbar, aber nicht der Standardweg', () {
     testWidgets('zeigt den ganzen Bestand, auch das Laufende',
         (tester) async {
@@ -221,6 +375,44 @@ void main() {
       expect(find.text('Was ist die allererste Handlung?'), findsOneWidget);
     });
 
+    testWidgets('unter der Kante wird nichts angeboten außer dem Weg nach oben',
+        (tester) async {
+      // Die Tiefzone hatte bisher denselben Knopfsatz wie die Zone darüber
+      // — „Anfangen" inklusive. Das ist ein Angebot, das die Messung
+      // daneben im selben Atemzug zurücknimmt: Die Startenergie liegt über
+      // der heutigen Kapazität, und genau deshalb steht die Aufgabe hier
+      // unten. Ein Weg, der ins Leere führt, kostet mehr als keiner (G1).
+      h.completeOnboarding();
+      await h.runtime.createTask(
+        title: 'Wohnung streichen', activationEnergy: 10, salience: 5,
+        stakes: 5);
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      expect(find.textContaining('Nicht in Reichweite'), findsOneWidget);
+      expect(find.text('Anfangen'), findsNothing);
+      expect(find.text('Zerlegen'), findsOneWidget);
+      // Und trotzdem abhakbar: Dass etwas auf anderem Weg erledigt wurde,
+      // muss sich immer eintragen lassen [D9].
+      expect(find.text('Erledigt'), findsOneWidget);
+    });
+
+    testWidgets('unter der Kante wird nichts ausgegraut', (tester) async {
+      // Ausgegraut hieße „unwichtig"; gemeint ist „heute nicht erreichbar".
+      // Der Unterschied ist der ganze Punkt der Signatur — deshalb behält
+      // der Titel dort seine Textrolle und damit seinen vollen Kontrast
+      // (R7, D10).
+      h.completeOnboarding();
+      await h.runtime.createTask(
+        title: 'Wohnung streichen', activationEnergy: 10, salience: 5,
+        stakes: 5);
+      await pumpPhone(tester, h.wrap(const TasksScreen()));
+
+      final palette = AxiomScheme.instrument.palette(Brightness.dark);
+      final title = tester.widget<Text>(find.text('Wohnung streichen'));
+      expect(title.style?.color, isNot(palette.inkFaint));
+      expect(title.style?.decoration, isNot(TextDecoration.lineThrough));
+    });
+
     testWidgets('eine zerlegte Aufgabe bleibt sichtbar und zerlegbar',
         (tester) async {
       // Vorher stand sie nirgends: nicht bei „In Reichweite", nicht bei
@@ -237,8 +429,8 @@ void main() {
       await pumpPhone(tester, h.wrap(const TasksScreen()));
 
       expect(find.text('Steuerunterlagen sortieren'), findsOneWidget);
-      expect(find.text('ZERLEGT · 1'), findsOneWidget);
-      expect(find.text('SCHRITTE OFFEN: 1'), findsOneWidget);
+      expect(find.text('Zerlegt · 1'), findsOneWidget);
+      expect(find.text('Schritte offen: 1'), findsOneWidget);
       // Sie steht nicht neben ihren eigenen Schritten zur Wahl (G1) …
       expect(find.text('Anfangen'), findsOneWidget);
       // … laesst sich aber weiter zerlegen.
@@ -295,7 +487,7 @@ void main() {
       await pumpPhone(tester, morning.wrap(const NowScreen()));
       expect(find.textContaining('R-'), findsWidgets);
       // … und die laufende Aufgabe bleibt daneben sichtbar.
-      expect(find.text('LÄUFT'), findsWidgets);
+      expect(find.text('Läuft'), findsWidgets);
       expect(find.text('Etwas Angefangenes'), findsWidgets);
     });
 
@@ -308,7 +500,7 @@ void main() {
           title: 'Aufgabe $i', activationEnergy: 2, salience: 5, stakes: 5);
       }
       await pumpPhone(tester, h.wrap(const NowScreen()));
-      expect(find.text('JETZT'), findsOneWidget);
+      expect(find.text('Jetzt'), findsOneWidget);
       expect(find.text('Anfangen').evaluate().length, lessThanOrEqualTo(1));
     });
   });
@@ -382,8 +574,8 @@ void main() {
 
       await tester.tap(find.textContaining('Check-in Morgen').first);
       await tester.pumpAndSettle();
-      expect(find.text('BEGRÜNDUNG'), findsOneWidget);
-      expect(find.text('BEDINGUNG'), findsOneWidget);
+      expect(findLabel('Begründung'), findsOneWidget);
+      expect(findLabel('Bedingung'), findsOneWidget);
     });
 
     testWidgets('Messwerte lassen sich zur Herleitung aufklappen',
@@ -392,9 +584,13 @@ void main() {
       await pumpPhone(tester, h.wrap(const StateScreen()));
 
       expect(find.byType(InstrumentBar), findsWidgets);
-      await tester.tap(find.text('KAPAZITÄT'));
+      await tester.tap(find.text('Kapazität'));
       await tester.pumpAndSettle();
-      expect(find.text('SO WIRD GERECHNET'), findsOneWidget);
+      expect(find.text('So wird gerechnet'), findsOneWidget);
+      // Und die Rechnung geht auf: Ohne Summe und Rest stand die sichtbare
+      // Formel neben einer anderen gerechneten (G2).
+      expect(find.text('Summe der Terme'), findsOneWidget);
+      expect(find.text('Angezeigt'), findsOneWidget);
     });
   });
 
@@ -449,7 +645,8 @@ void main() {
         tester,
         h.wrap(Scaffold(body: CapacityLine(capacity: 50, tasks: tasks))),
       );
-      expect(find.text('KAPAZITÄT 50'), findsOneWidget);
+      expect(find.text('Kapazität'), findsOneWidget);
+      expect(find.text('50'), findsOneWidget);
       expect(find.textContaining('2 startbar'), findsOneWidget);
     });
 
@@ -505,11 +702,11 @@ void main() {
       h.completeOnboarding();
       await pumpPhone(tester, h.wrap(const NowScreen()));
       await tester.dragUntilVisible(
-        find.text('ZEIT IN AXIOM HEUTE'),
+        find.text('Zeit im System heute'),
         find.byType(ListView),
         const Offset(0, -250),
       );
-      expect(find.text('ZEIT IN AXIOM HEUTE'), findsOneWidget);
+      expect(find.text('Zeit im System heute'), findsOneWidget);
       expect(find.textContaining('/12 min'), findsOneWidget);
     });
 
@@ -527,14 +724,14 @@ void main() {
       h.completeOnboarding();
       await pumpPhone(tester, h.wrap(const StateScreen()));
       for (final label in [
-        'KAPAZITÄT',
-        'KOMPENSATIONSLAST',
-        'REIZBEDARF',
-        'FOKUSLAST HEUTE',
-        'REGULATIONSRESERVE',
-        'SCHLAFSCHULD',
+        'Kapazität',
+        'Kompensationslast',
+        'Reizbedarf',
+        'Fokuslast heute',
+        'Regulationsreserve',
+        'Schlafschuld',
       ]) {
-        expect(find.text(label), findsOneWidget, reason: label);
+        expect(findLabel(label), findsOneWidget, reason: label);
       }
     });
 
@@ -542,7 +739,7 @@ void main() {
       h.completeOnboarding();
       await pumpPhone(tester, h.wrap(const StateScreen()));
       await tester.dragUntilVisible(
-        find.text('EINORDNUNG'),
+        findLabel('Einordnung'),
         find.byType(ListView),
         const Offset(0, -200),
       );
@@ -573,6 +770,18 @@ void main() {
     });
   });
 }
+
+/// Findet eine Beschriftung, ohne ihre Schreibweise festzuschreiben.
+///
+/// Ob eine Marke „Kapazität" oder „KAPAZITÄT" heisst, ist eine Frage der
+/// Typografie, und die entscheidet `typography_test.dart`. Die Tests hier
+/// halten etwas anderes fest — dass die Angabe ueberhaupt dasteht. Beides in
+/// derselben Zusicherung zu vermischen macht diese Datei bei jeder
+/// Schriftaenderung rot, ohne dass etwas fehlen wuerde.
+Finder findLabel(String text) => find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').toUpperCase() == text.toUpperCase(),
+      description: 'Text „$text" (Schreibweise egal)',
+    );
 
 /// Gate ohne Splash-Verzoegerung fuer Tests.
 class HomeShellGate extends StatelessWidget {

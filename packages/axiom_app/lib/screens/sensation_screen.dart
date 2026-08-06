@@ -96,18 +96,20 @@ class _NeedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.axiom;
     final need = snapshot.state.sensationNeed;
 
+    // Hier lag ab 70 ein kupferner Rahmen um die Karte. Reizbedarf ist eine
+    // Ablesung, kein Alarm: „hoch" heisst nicht „falsch", es heisst „was
+    // jetzt nicht geplant wird, passiert ungeplant" — und genau das steht
+    // eine Zeile tiefer in Worten. Ein Rahmen darum haette daraus eine Note
+    // gemacht (R7, G3).
     return Panel(
-      accent: need >= 70 ? p.caution.withValues(alpha: 0.5) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InstrumentBar(
             label: context.t('Reizbedarf'),
             value: need,
-            color: p.caution,
             reading: switch (need) {
               >= 85 => context.t('Hoch. Was jetzt nicht geplant wird, passiert ungeplant.'),
               >= 70 => context.t('Deutlich. Ein Slot wäre fällig.'),
@@ -136,10 +138,16 @@ class _BudgetCard extends StatelessWidget {
         children: [
           Text(context.t('VERDIENT'), style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: Space.sm),
+          // War gruen, wenn Guthaben da ist, und grau, wenn nicht. Grün sagt
+          // „gut gemacht", grau sagt „noch nichts geleistet" — beides sind
+          // Noten ueber verdiente Minuten. Es ist eine Ablesung wie jede
+          // andere und traegt deshalb dieselbe Farbe wie jede andere (R7).
+          // Dass nichts da ist, sagt schon die Null; der Satz darunter sagt,
+          // dass ein Slot trotzdem geht.
           BigReading(
             value: '${budget.availableMinutes}',
             unit: context.t('min offen'),
-            valueColor: budget.hasCredit ? p.calm : p.inkDim,
+            valueColor: p.signal,
             size: 32,
           ),
           const SizedBox(height: Space.md),
@@ -162,8 +170,11 @@ class _SuggestionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.axiom;
+    // Der Vorschlag ist die eine Handlung dieses Schirms — also die eine
+    // erhobene Flaeche (G1). Vorher ein Signalrahmen; der sagte dasselbe
+    // wie die drei anderen Rahmen daneben, naemlich nichts.
     return Panel(
-      accent: p.signal.withValues(alpha: 0.5),
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,8 +184,10 @@ class _SuggestionCard extends ConsumerWidget {
           Text(channel.label,
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: Space.sm),
+          // War Schreibmaschine. Dauer und Intensitaet sind Messwerte.
           Text(context.t('{0} min · Intensität {1}/5', [channel.typical.inMinutes, channel.intensity]),
-              style: monoStyle(context, size: 12)),
+              style: readingStyle(context,
+                  size: 14, weight: FontWeight.w400, color: p.inkDim)),
           const SizedBox(height: Space.xl),
           FilledButton(
             onPressed: () => _log(context, ref, channel, planned: true),
@@ -200,6 +213,10 @@ class _ChannelRow extends ConsumerWidget {
       child: Row(
         children: [
           // Intensität als Skala, nicht als Zahl — sofort ablesbar.
+          // Kupfer hiess hier „Achtung, stark". Intensitaet ist eine
+          // Eigenschaft des Kanals, keine Warnung davor — Reizbedarf wird
+          // budgetiert, nicht moralisiert (G3). Dieselbe Messfarbe wie
+          // ueberall, unterschieden wird ueber die Hoehe der Striche.
           Row(
             children: [
               for (var i = 1; i <= 5; i++)
@@ -207,7 +224,7 @@ class _ChannelRow extends ConsumerWidget {
                   width: 3,
                   height: 4.0 + i * 3,
                   margin: const EdgeInsets.only(right: 2),
-                  color: i <= channel.intensity ? p.caution : p.rule,
+                  color: i <= channel.intensity ? p.signal : p.rule,
                 ),
             ],
           ),
@@ -218,9 +235,11 @@ class _ChannelRow extends ConsumerWidget {
               children: [
                 Text(channel.label,
                     style: Theme.of(context).textTheme.bodyLarge),
+                const SizedBox(height: 2),
                 Text(
                   context.t('{0} min{1}', [channel.typical.inMinutes, channel.hasCost ? context.t(' · kostet etwas') : ""]),
-                  style: monoStyle(context, size: 10.5),
+                  style: readingStyle(context,
+                      size: 13.5, weight: FontWeight.w400, color: p.inkFaint),
                 ),
               ],
             ),
@@ -262,6 +281,38 @@ Future<void> _log(
 }
 
 // ── Kanal anlegen ───────────────────────────────────────────────────────
+
+/// Auswahl-Chips in der Sprache dieser Oberflaeche.
+///
+/// Material setzt fuer einen gewaehlten Chip `secondaryContainer` — in
+/// dieser Palette ein Blau. Direkt unter einer Skala, deren Auswahl
+/// bernsteinfarben ist, sind das zwei Farben fuer dieselbe Aussage
+/// („das hier ist gewaehlt"). Ein Haken zusaetzlich zur Fuellung sagt es
+/// ein drittes Mal.
+///
+/// Ungewaehlt liegt der Chip in der Mulde, gewaehlt kommt er heraus —
+/// genau wie die Regler und die Ortszeilen.
+///
+/// **Der richtige Ort dafuer ist `theme.dart`** (`chipTheme`), dann gilt es
+/// auch fuer Eingang und Aufgaben. Solange es den Eintrag dort nicht gibt,
+/// steht dasselbe Stueck in den drei Dateien, die Chips zeigen.
+ChipThemeData _chipLook(BuildContext context) {
+  final p = context.axiom;
+  return ChipThemeData(
+    backgroundColor: p.well,
+    selectedColor: p.signal.withValues(alpha: 0.16),
+    showCheckmark: false,
+    side: BorderSide.none,
+    labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.ink),
+    secondaryLabelStyle:
+        Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.signal),
+    padding: const EdgeInsets.symmetric(
+        horizontal: Space.md, vertical: Space.sm),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Radii.control),
+    ),
+  );
+}
 
 class _ChannelSheet extends ConsumerStatefulWidget {
   final SensationChannel? existing;
@@ -329,7 +380,12 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
             const SizedBox(height: Space.xl),
 
             Text(context.t('Wie stark'), style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: Space.sm),
+            const SizedBox(height: Space.md),
+            // Vorher kupfern und bis zur gewaehlten Stufe gefuellt. Kupfer
+            // ist die Aufmerksamkeitsfarbe — sie sagte hier „je staerker,
+            // desto bedenklicher", und das ist genau die Moralisierung, die
+            // G3 ausschliesst. Der Lauf bleibt: Intensitaet ist eine Menge,
+            // keine Stelle zwischen zwei Enden.
             Row(
               children: [
                 for (var i = 1; i <= 5; i++)
@@ -341,16 +397,14 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
                       },
                       behavior: HitTestBehavior.opaque,
                       child: Container(
-                        height: 44,
-                        margin: EdgeInsets.only(right: i < 5 ? 6 : 0),
+                        height: 52,
+                        margin: EdgeInsets.only(right: i < 5 ? Space.sm : 0),
                         decoration: BoxDecoration(
                           color: _intensity >= i
-                              ? p.caution.withValues(
-                                  alpha: _intensity == i ? 0.9 : 0.28)
-                              : p.panel,
+                              ? p.signal.withValues(
+                                  alpha: _intensity == i ? 1 : 0.3)
+                              : p.well,
                           borderRadius: BorderRadius.circular(Radii.control),
-                          border: Border.all(
-                              color: _intensity == i ? p.caution : p.rule),
                         ),
                       ),
                     ),
@@ -361,17 +415,21 @@ class _ChannelSheetState extends ConsumerState<_ChannelSheet> {
             const SizedBox(height: Space.xl),
             Text(context.t('Wie lange typischerweise'),
                 style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              children: [
-                for (final option in [5, 15, 30, 45, 60, 90])
-                  ChoiceChip(
-                    label: Text(context.t('{0} min', [option])),
-                    selected: _minutes == option,
-                    onSelected: (_) => setState(() => _minutes = option),
-                  ),
-              ],
+            const SizedBox(height: Space.md),
+            ChipTheme(
+              data: _chipLook(context),
+              child: Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  for (final option in [5, 15, 30, 45, 60, 90])
+                    ChoiceChip(
+                      label: Text(context.t('{0} min', [option])),
+                      selected: _minutes == option,
+                      onSelected: (_) => setState(() => _minutes = option),
+                    ),
+                ],
+              ),
             ),
 
             const SizedBox(height: Space.lg),

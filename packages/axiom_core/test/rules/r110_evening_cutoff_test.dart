@@ -6,13 +6,17 @@
 /// Kompensationsaufwand und Reizbedarf, was den Abendkonsum steigert [D8].
 /// Der Ausstiegsanker bricht den Kreis an seiner schwaechsten Stelle.
 ///
-/// **Befund, den dieser Test festhaelt.** Das Fenster in der YAML reicht bis
-/// 23:15, die Ruhezeit beginnt um 23:00 (rules/core/limits.yaml). Die
-/// letzten fuenfzehn Minuten sind stumm: Die Bedingung trifft zu, die Regel
-/// spricht nicht, weil nur `enforce` die Ruhezeit brechen darf. Das ist
-/// weniger schwer als bei R-052 — der Kern des Fensters bleibt erreichbar —,
-/// aber es ist dieselbe Sorte Luecke: eine Zusage in der Regeldatei, die die
-/// Grenzen daneben zuruecknehmen.
+/// **Was dieser Test festhaelt.** Das Fenster reichte bis 23:15, die
+/// Ruhezeit beginnt um 23:00 (rules/core/limits.yaml). Die letzten fuenfzehn
+/// Minuten waren stumm: Die Bedingung traf zu, die Regel sprach nicht, weil
+/// nur `enforce` die Ruhezeit brechen darf. Seit dem 06.08.2026 endet das
+/// Fenster um 22:59 — gekuerzt statt verbindlich gemacht, weil eine
+/// verbindliche Abendgrenze der eigenen Begruendung widerspraeche („wer um
+/// halb elf angeschrien wird, schaltet die App stumm"). Die Ruhezeit *ist*
+/// der Wind-down; diese Regel gehoert davor.
+///
+/// Der Test prueft deshalb beides: dass das Fenster dort endet, wo die
+/// Ruhezeit beginnt, und dass jede Minute darin auch am Geraet ankommt.
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -24,7 +28,7 @@ import '../helpers.dart';
 Condition r110() => Condition.fromMap({
       'all': [
         {
-          'time_between': ['22:30', '23:15'],
+          'time_between': ['22:30', '22:59'],
         },
         {
           'not': {
@@ -63,12 +67,13 @@ void main() {
       expect(r110().eval(contextAt(22, 30)), isTrue);
     });
 
-    test('23:15 noch', () {
-      expect(r110().eval(contextAt(23, 15)), isTrue);
+    test('22:59 noch — die letzte Minute vor der Ruhezeit', () {
+      expect(r110().eval(contextAt(22, 59)), isTrue);
     });
 
-    test('23:16 nicht mehr', () {
-      expect(r110().eval(contextAt(23, 16)), isFalse);
+    test('23:00 nicht mehr — ab hier ist die Ruhezeit der Wind-down', () {
+      expect(r110().eval(contextAt(23, 0)), isFalse);
+      expect(r110().eval(contextAt(23, 15)), isFalse);
     });
 
     test('am Nachmittag nicht', () {
@@ -93,35 +98,38 @@ void main() {
     });
   });
 
-  group('Was am Geraet davon uebrig bleibt', () {
-    test('bis 22:59 spricht sie', () {
-      for (final at in [
-        DateTime(2026, 8, 3, 22, 30),
-        DateTime(2026, 8, 3, 22, 59),
-      ]) {
+  group('Kein Teil des Fensters faellt der Ruhezeit zum Opfer', () {
+    test('jede Minute des Fensters kommt auch am Geraet an', () {
+      // Der eigentliche Punkt der Kuerzung: Was in der YAML steht, muss
+      // sprechen koennen. Ein Fenster, dessen Rand von den Grenzen daneben
+      // zurueckgenommen wird, ist eine Zusage, die niemand einloest (G2).
+      for (var minute = 30; minute <= 59; minute++) {
+        final at = DateTime(2026, 8, 3, 22, minute);
         expect(
-          fireOnce(r110Rule(), ctx: contextAt(at.hour, at.minute), nowLocal: at)
-              .fired,
+          fireOnce(r110Rule(), ctx: contextAt(22, minute), nowLocal: at).fired,
           isTrue,
+          reason: 'Um 22:$minute muss die Abendgrenze durchkommen',
         );
       }
     });
 
-    test('ab 23:00 nicht mehr, obwohl das Fenster bis 23:15 reicht', () {
+    test('nach 23:00 ist die Bedingung selbst falsch, nicht nur unterdrueckt',
+        () {
+      // Vorher reichte das Fenster bis 23:15 und die Bedingung traf dort
+      // zu — verworfen wurde sie erst von der Ruhezeit, mit
+      // SkipReason.quietHours. Der Unterschied ist nicht kosmetisch: Eine
+      // Regel, die zutrifft und unterdrueckt wird, taucht im Systeminspektor
+      // als unterdrueckt auf und sieht nach einem Konflikt aus, den es nie
+      // gab.
       for (final at in [
         DateTime(2026, 8, 3, 23, 0),
         DateTime(2026, 8, 3, 23, 15),
       ]) {
-        expect(r110().eval(contextAt(at.hour, at.minute)), isTrue,
-            reason: 'Die Bedingung trifft zu');
+        expect(r110().eval(contextAt(at.hour, at.minute)), isFalse);
         final outcome =
             fireOnce(r110Rule(), ctx: contextAt(at.hour, at.minute), nowLocal: at);
         expect(outcome.fired, isFalse);
-        expect(
-          outcome.reason,
-          SkipReason.quietHours,
-          reason: 'Die letzten fuenfzehn Minuten des Fensters sind stumm',
-        );
+        expect(outcome.reason, SkipReason.conditionFalse);
       }
     });
   });

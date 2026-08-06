@@ -70,9 +70,11 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
         children: [
           Text(
             context.t('Regeln schreiben, die Aufgabenliste mit allen Feldern überblicken, den Ereignisstrom lesen — am großen Bildschirm, auf den echten Daten dieses Geräts.'),
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: p.inkDim,
+                ),
           ),
-          const SizedBox(height: Space.xl),
+          const SizedBox(height: Space.xxl),
 
           // Eine offene Freigabeanfrage schlaegt alles andere: Sie ist
           // zeitkritisch, und sie ist der Moment, in dem der Vergleich
@@ -94,8 +96,7 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.t('AUS'),
-                      style: Theme.of(context).textTheme.labelSmall),
+                  Text(context.t('Aus'), style: sectionStyle(context)),
                   const SizedBox(height: Space.sm),
                   Text(
                     context.t('Der Server läuft nur, solange du ihn eingeschaltet lässt. Kein Autostart, kein Wiederanlaufen nach einem Neustart.'),
@@ -228,6 +229,19 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
 }
 
 /// Adresse und PIN — die zwei Dinge, die man am Rechner braucht.
+///
+/// **Warum die drei Werte in einer Mulde liegen.** Adresse, PIN und
+/// Fingerabdruck werden nicht bedient, sondern *abgelesen* und Zeichen fuer
+/// Zeichen an einem zweiten Geraet verglichen. Genau dafuer ist die Mulde da:
+/// Was tiefer liegt, ist nicht weniger wert — es ist eine andere Handlung.
+/// Vorher standen sie frei auf der Karte, mit einem Rahmen in Signalfarbe
+/// darum, und Fliesstext, Ueberschrift und abzutippender Wert sahen gleich
+/// weit weg aus.
+///
+/// Schreibmaschine bleibt hier richtig und ist der Grund, aus dem es sie
+/// ueberhaupt noch gibt: Ein Fingerabdruck wird verglichen, eine PIN
+/// abgetippt. Was **nicht** dazugehoerte, war der Satz ueber die Abschaltung
+/// nach dreissig Minuten — der ist Prosa und steht jetzt auch so da.
 class _Running extends StatelessWidget {
   final ExpertStatus status;
   const _Running({required this.status});
@@ -236,47 +250,53 @@ class _Running extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return Panel(
-      accent: p.signal.withValues(alpha: 0.6),
+      reachable: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('LÄUFT'),
-              style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
-          Text(context.t('Im Browser öffnen'),
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: Space.xs),
-          SelectableText(
-            status.address ?? '',
-            style: monoStyle(context,
-                size: 19, weight: FontWeight.w500, color: p.ink),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: p.signal, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: Space.sm),
+              Text(context.t('Läuft'),
+                  style: sectionStyle(context, color: p.signal)),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          _Readout(
+            label: context.t('Im Browser öffnen'),
+            value: status.address ?? '',
+            size: 19,
+            color: p.ink,
           ),
           if (status.fallbackAddress != null) ...[
-            const SizedBox(height: Space.sm),
-            Text(context.t('Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:'),
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: Space.xs),
-            SelectableText(
-              status.fallbackAddress!,
-              style: monoStyle(context, size: 15, color: p.inkDim),
+            const SizedBox(height: Space.md),
+            _Readout(
+              label: context.t('Falls der Name nicht aufgeht — in manchen Netzen ist Multicast gesperrt:'),
+              value: status.fallbackAddress!,
+              size: 15,
+              color: p.inkDim,
             ),
           ],
-          const SizedBox(height: Space.lg),
-          Text(context.t('PIN — gilt nur für diesen Start'),
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: Space.xs),
-          SelectableText(
-            _spaced(status.pin ?? ''),
-            style: monoStyle(context,
-                size: 30, weight: FontWeight.w600, color: p.signal, spacing: 4),
+          const SizedBox(height: Space.md),
+          _Readout(
+            label: context.t('PIN — gilt nur für diesen Start'),
+            value: _spaced(status.pin ?? ''),
+            size: 30,
+            spacing: 4,
+            color: p.signal,
           ),
-          const SizedBox(height: Space.lg),
-          Text(context.t('Fingerabdruck des Zertifikats'),
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: Space.xs),
-          SelectableText(
-            status.fingerprint ?? '',
-            style: monoStyle(context, size: 12.5, color: p.calm),
+          const SizedBox(height: Space.md),
+          _Readout(
+            label: context.t('Fingerabdruck des Zertifikats'),
+            value: status.fingerprint ?? '',
+            size: 12.5,
+            color: p.calm,
           ),
           const SizedBox(height: Space.sm),
           Text(
@@ -286,13 +306,14 @@ class _Running extends StatelessWidget {
 
           const SizedBox(height: Space.lg),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.timer_outlined, size: 15, color: p.inkFaint),
+              Icon(Icons.timer_outlined, size: 16, color: p.inkFaint),
               const SizedBox(width: Space.sm),
               Expanded(
                 child: Text(
                   context.t('Schaltet sich ohne Anfrage nach 30 Minuten ab.'),
-                  style: monoStyle(context, size: 12, color: p.inkFaint),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ],
@@ -311,6 +332,47 @@ class _Running extends StatelessWidget {
     }
     return buffer.toString();
   }
+}
+
+/// Ein Wert zum Ablesen: Beschriftung darueber, Wert in der Mulde.
+class _Readout extends StatelessWidget {
+  final String label;
+  final String value;
+  final double size;
+  final Color color;
+  final double? spacing;
+
+  const _Readout({
+    required this.label,
+    required this.value,
+    required this.size,
+    required this.color,
+    this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Die Beschriftung steht **ueber** der Mulde, nicht darin: In der
+          // Mulde liegt nur, was abgelesen wird. Ein erklaerender Satz darin
+          // haette genau die Trennung wieder aufgehoben, um die es hier geht.
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: Space.xs),
+          Well(
+            padding: const EdgeInsets.all(Space.md),
+            radius: BorderRadius.circular(Radii.control),
+            child: SelectableText(
+              value,
+              style: monoStyle(context,
+                  size: size,
+                  weight: FontWeight.w600,
+                  color: color,
+                  spacing: spacing ?? 0.2),
+            ),
+          ),
+        ],
+      );
 }
 
 class _Point extends StatelessWidget {
@@ -355,13 +417,14 @@ class _Approval extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.axiom;
     return Panel(
+      reachable: true,
       accent: p.signal,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('FREIGABE ANGEFRAGT'),
-              style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
+          Text(context.t('Freigabe angefragt'),
+              style: sectionStyle(context, color: p.signal)),
+          const SizedBox(height: Space.lg),
           Center(
             child: Text(
               number,
@@ -369,7 +432,7 @@ class _Approval extends StatelessWidget {
                   size: 56, weight: FontWeight.w600, color: p.signal),
             ),
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.lg),
           Text(
             context.t('Steht dieselbe Zahl auf dem Bildschirm, vor dem du sitzt?'),
             style: Theme.of(context).textTheme.titleMedium,

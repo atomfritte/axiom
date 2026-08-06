@@ -122,6 +122,26 @@ class _GateState extends ConsumerState<AxiomGate> {
 
 /// Flache Navigation. Drei Ziele, nicht mehr — jeder weitere Reiter ist
 /// eine Entscheidung, die der Nutzer treffen muss, bevor er irgendwo ist.
+///
+/// **Warum genau diese drei.** Jeder Reiter beantwortet eine andere Frage,
+/// und keine Frage wird an zwei Orten beantwortet:
+///
+///  * **Jetzt** — was tue ich als Naechstes, und was liegt sonst noch da.
+///  * **Zustand** — warum zeigt es heute so wenig. Der Schirm haelt die
+///    sechs Messwerte samt Herleitung (G2) und den Check-in. Er hat seinen
+///    Platz behalten, weil „Jetzt" die drei wichtigsten davon nicht mehr
+///    ein zweites Mal zeigt; solange es das tat, war der Reiter eine
+///    laengere Fassung des halben Hauptschirms.
+///  * **System** — die Maschine: was sie kostet, wie sie geeicht und
+///    eingestellt ist, warum sie etwas gesagt hat.
+///
+/// **Was ausdruecklich keinen Reiter bekommt: die Aufgabenliste.** Sie ist
+/// das am haeufigsten verlinkte Ziel der App und waere damit der
+/// naechstliegende Kandidat. Genau deshalb nicht: Eine Liste, die von
+/// ueberall einen Tipp entfernt ist, ist eine staendige Einladung,
+/// auszuwaehlen statt anzufangen — und die Auswahl aus einer Liste ist die
+/// Entscheidung, die G1 dem Nutzer abnehmen soll. Sie liegt einen Tipp
+/// hinter der Kante auf „Jetzt", und dort bleibt sie.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -154,31 +174,47 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screenAt(_index),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) {
-          HapticFeedback.selectionClick();
-          setState(() => _index = i);
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.adjust_outlined),
-            selectedIcon: Icon(Icons.adjust),
-            label: context.t('Jetzt'),
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: context.t('Zustand'),
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune),
-            label: context.t('System'),
-          ),
-        ],
+    // Zurueck fuehrt auf „Jetzt", nicht aus der App.
+    //
+    // Vorher gab es diesen Zweig nicht: Wer auf „Zustand" oder „System"
+    // stand und die Zuruecktaste drueckte, schloss AXIOM. Auf Android ist
+    // das der haeufigste Griff ueberhaupt, und er bedeutet dort „eine Ebene
+    // hoeher" — nicht „beenden". Wer danach zurueckkommt, steht wieder auf
+    // „Jetzt" und muss den Weg neu gehen; wer bloss nachsehen wollte,
+    // verliert dabei die Handlung, wegen der er die App geoeffnet hat [D9].
+    return PopScope(
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        HapticFeedback.selectionClick();
+        setState(() => _index = 0);
+      },
+      child: Scaffold(
+        body: _screenAt(_index),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) {
+            HapticFeedback.selectionClick();
+            setState(() => _index = i);
+          },
+          destinations: [
+            NavigationDestination(
+              icon: Icon(Icons.adjust_outlined),
+              selectedIcon: Icon(Icons.adjust),
+              label: context.t('Jetzt'),
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.show_chart_outlined),
+              selectedIcon: Icon(Icons.show_chart),
+              label: context.t('Zustand'),
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.tune_outlined),
+              selectedIcon: Icon(Icons.tune),
+              label: context.t('System'),
+            ),
+          ],
+        ),
       ),
     );
   }

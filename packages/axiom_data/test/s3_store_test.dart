@@ -136,17 +136,36 @@ void main() {
       );
     });
 
-    test('eine Sitzung über Mitternacht zählt am Folgetag nicht mehr mit',
+    test('eine Sitzung über Mitternacht wird auf beide Tage aufgeteilt',
         () async {
-      // Gezählt wird nach *Beginn* der Sitzung, nicht nach Überschneidung
-      // mit dem Tag. Wer um 23:30 anfängt und um 01:00 aufhört, bekommt für
-      // keinen der beiden Tage die vollen Minuten gutgeschrieben.
-      //
-      // Dieser Test hält den heutigen Stand fest, keinen Vorsatz: Wer die
-      // Zählung auf Überschneidung umstellt, ändert ihn mit.
+      // Gezählt wird die Überschneidung mit dem Tag, nicht der Beginn der
+      // Sitzung. Vorher zählte diese Sitzung mit ihren vollen 90 Minuten
+      // auf den 2. und mit null auf den 3. — obwohl 60 davon am 3. lagen.
       clock.set(DateTime(2026, 8, 2, 23, 30));
       await store.startFocus(sessionOf());
       clock.advance(const Duration(minutes: 90));
+      await store.endFocus('f1', at: clock.nowLocal());
+
+      expect(await store.focusMinutesToday(DateTime(2026, 8, 2, 23, 59)), 30,
+          reason: '23:30 bis Mitternacht');
+      expect(await store.focusMinutesToday(DateTime(2026, 8, 3, 10)), 60,
+          reason: 'Mitternacht bis 01:00');
+    });
+
+    test('eine offene Sitzung über Mitternacht zählt bis jetzt, nicht bis '
+        'Tagesende', () async {
+      // Sonst bekäme der Tag um 00:05 bereits die vollen 24 Stunden
+      // gutgeschrieben. Was noch nicht passiert ist, ist kein Guthaben.
+      clock.set(DateTime(2026, 8, 2, 22, 0));
+      await store.startFocus(sessionOf());
+
+      expect(await store.focusMinutesToday(DateTime(2026, 8, 3, 0, 40)), 40);
+    });
+
+    test('eine Sitzung von gestern zählt heute gar nicht mehr', () async {
+      clock.set(DateTime(2026, 8, 2, 9, 0));
+      await store.startFocus(sessionOf());
+      clock.advance(const Duration(minutes: 50));
       await store.endFocus('f1', at: clock.nowLocal());
 
       expect(await store.focusMinutesToday(DateTime(2026, 8, 3, 10)), 0);

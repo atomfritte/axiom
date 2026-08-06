@@ -4,6 +4,36 @@
 /// Auswahl aus einer Liste ist genau die Entscheidung, die bei niedriger
 /// Kapazitaet am teuersten ist (G1). Die vollstaendige Liste bleibt
 /// erreichbar, ist aber nie der Standardweg.
+///
+/// **Was die Reichweitenkante hier geaendert hat.** Vorher standen auf diesem
+/// Schirm bis zu zwoelf Karten untereinander, fast jede mit farbigem Rahmen:
+/// die Handlung, die Streifen, die Hinweise, die Kapazitaetsleiste, der
+/// Zustand. Zehn gerahmte Kaesten sind ein Gitter, und ein Gitter hat keine
+/// Ordnung — alles ist gleich weit weg, und jede Flaeche sieht aus wie ein
+/// Angebot. Formal stand dort eine Handlung; gelesen wurde eine Auswahl.
+///
+/// Jetzt teilt die Kante den Schirm in zwei Zonen:
+///
+///  * **Darueber** liegt, was heute in die Hand geht: Kopfzeile, die wenigen
+///    Streifen, die den Vorschlag mitbestimmen — und **genau eine erhobene
+///    Karte**, die Handlung. Sie ist die einzige Flaeche des Schirms mit
+///    Griffhoehe ([Shadows.reachable]).
+///  * **Darunter** beginnt die Mulde: alles, was da ist und heute nicht die
+///    Handlung ist — Bestand, Eingang, Anker, Rueckblick, Vorfaelle,
+///    Werkzeuge, Koerper. Ohne Karten, ohne Ausgrauen, in vollem
+///    Textkontrast, und **in immer derselben Reihenfolge**. Was hier liegt,
+///    ist nicht weniger wert, es ist weiter weg.
+///
+/// **Kein Messwert steht auf diesem Schirm zweimal.** Zuerst fiel die
+/// Kapazitaetsleiste weg — sie zeigte dieselbe Zahl wie die Kante, nur ein
+/// zweites Mal und mit eigener Skala. Uebrig blieben drei `InstrumentBar`
+/// unten in der Mulde: Kapazitaet, Kompensationslast, Reizbedarf, jede mit
+/// aufklappbarer Herleitung — dieselben drei, die einen Reiter weiter auf
+/// „Zustand" stehen. „Reichweite heute 61" und „Kapazitaet 61" standen drei
+/// Zentimeter auseinander. Auch die sind weg. Ein Messwert hat einen Ort;
+/// zwei Anzeigen desselben Werts lesen sich als zwei Aussagen (R7), und auf
+/// diesem Schirm ist jede davon ein zweites Angebot neben der einen
+/// Handlung (G1).
 library;
 
 import 'package:axiom_core/axiom_core.dart';
@@ -14,7 +44,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../design/widgets/anchor_chain.dart';
-import '../design/widgets/capacity_line.dart';
 import '../design/widgets/instruments.dart';
 import '../state/providers.dart';
 import '../state/runtime.dart';
@@ -51,93 +80,77 @@ class NowScreen extends ConsumerWidget {
           error: (e, _) => _ErrorPane(error: e),
           data: (snap) => RefreshIndicator(
             onRefresh: () async => refreshAxiom(ref),
+            // Kein Rand an der Liste selbst: Die Mulde geht von Kante zu
+            // Kante, sonst ist sie ein weiterer Kasten auf dem Grund statt
+            // dessen Boden. Die Zone darueber bringt ihren Rand mit.
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                  Space.lg, Space.lg, Space.lg, Space.huge * 2),
+              padding: EdgeInsets.zero,
               children: [
-                _Header(snapshot: snap),
-                if (snap.regime.level != LoadLevel.l0) ...[
-                  const SizedBox(height: Space.lg),
-                  _RegimeBanner(snapshot: snap),
-                ],
-                if (snap.activeIntercept != null) ...[
-                  const SizedBox(height: Space.lg),
-                  _InterceptStrip(run: snap.activeIntercept!),
-                ],
-                // Hängt der Fokus an der laufenden Aufgabe, steht die Zeit
-                // schon auf deren Karte. Zweimal dasselbe wäre eine Liste
-                // mit einem Eintrag.
-                if (snap.focus != null &&
-                    !snap.tasks.any((t) =>
-                        t.state == TaskState.active &&
-                        t.id == snap.focus!.anchorTaskId)) ...[
-                  const SizedBox(height: Space.lg),
-                  _FocusStrip(snapshot: snap),
-                ],
-                if (snap.nextStep != null) ...[
-                  const SizedBox(height: Space.lg),
-                  _AnchorStrip(next: snap.nextStep!),
-                ],
-                // Die Regel bekommt die Karte, die laufende Aufgabe diesen
-                // Streifen. Ohne ihn waere sie in genau dem Moment
-                // unsichtbar, in dem etwas anderes dazwischenkommt — und
-                // das ist der Moment, in dem man sie am ehesten vergisst.
-                if (snap.decision != null && snap.decisionRule != null)
-                  for (final task in snap.tasks
-                      .where((t) => t.state == TaskState.active)) ...[
-                    const SizedBox(height: Space.lg),
-                    _RunningStrip(task: task),
-                  ],
-                // Steht direkt über der Handlung, weil er sie mitbestimmt:
-                // Was hier vorgeschlagen wird, hängt am gesetzten Ort. Ein
-                // Filter, den man nicht sieht, wirkt wie ein Fehler (G2).
-                //
-                // Erscheint nur, wenn es etwas zu sehen gibt — solange keine
-                // Aufgabe einen Ort trägt und keiner gesetzt ist, ist die
-                // Zeile eine Einstellung ohne Wirkung, und die gehört nicht
-                // auf den Hauptbildschirm (D3).
-                if (snap.place != null ||
-                    snap.tasks.any((t) => t.place != null && isTaskOpen(t))) ...[
-                  const SizedBox(height: Space.lg),
-                  _PlaceStrip(snapshot: snap),
-                ],
-                const SizedBox(height: Space.xl),
-                _PrimaryAction(snapshot: snap),
-                if (inbox.isNotEmpty) ...[
-                  const SizedBox(height: Space.md),
-                  _InboxTeaser(count: inbox.length),
-                ],
-                const SizedBox(height: Space.md),
-                const _BaselineTeaser(),
-                const _PostMortemTeaser(),
-                const _ReviewTeaser(),
-                const SizedBox(height: Space.xxl),
-                // Die Leiste zeigt den Bestand schon als Balken — sie ist
-                // der natuerliche Weg zur vollstaendigen Liste. Erreichbar,
-                // aber nie der Standardweg (G1).
-                Panel(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                        builder: (_) => const TasksScreen()),
-                  ),
-                  child: CapacityLine(
-                    capacity: snap.state.capacity,
-                    tasks: snap.tasks
-                        .where((t) => t.state == TaskState.ready)
-                        .toList(),
-                    highlightTaskId: snap.startable.firstOrNull?.id,
-                    onOpen: true,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Space.lg, Space.lg, Space.lg, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Header(snapshot: snap),
+                      if (snap.regime.level != LoadLevel.l0) ...[
+                        const SizedBox(height: Space.lg),
+                        _RegimeBanner(snapshot: snap),
+                      ],
+                      if (snap.activeIntercept != null) ...[
+                        const SizedBox(height: Space.lg),
+                        _InterceptStrip(run: snap.activeIntercept!),
+                      ],
+                      // Hängt der Fokus an der laufenden Aufgabe, steht die
+                      // Zeit schon auf deren Karte. Zweimal dasselbe wäre
+                      // eine Liste mit einem Eintrag.
+                      if (snap.focus != null &&
+                          !snap.tasks.any((t) =>
+                              t.state == TaskState.active &&
+                              t.id == snap.focus!.anchorTaskId)) ...[
+                        const SizedBox(height: Space.lg),
+                        _FocusStrip(snapshot: snap),
+                      ],
+                      if (snap.nextStep != null) ...[
+                        const SizedBox(height: Space.lg),
+                        _AnchorStrip(next: snap.nextStep!),
+                      ],
+                      // Die Regel bekommt die Karte, die laufende Aufgabe
+                      // diesen Streifen. Ohne ihn wäre sie in genau dem
+                      // Moment unsichtbar, in dem etwas anderes
+                      // dazwischenkommt — und das ist der Moment, in dem man
+                      // sie am ehesten vergisst.
+                      if (snap.decision != null && snap.decisionRule != null)
+                        for (final task in snap.tasks
+                            .where((t) => t.state == TaskState.active)) ...[
+                          const SizedBox(height: Space.lg),
+                          _RunningStrip(task: task),
+                        ],
+                      // Steht direkt über der Handlung, weil er sie
+                      // mitbestimmt: Was hier vorgeschlagen wird, hängt am
+                      // gesetzten Ort. Ein Filter, den man nicht sieht, wirkt
+                      // wie ein Fehler (G2).
+                      //
+                      // Erscheint nur, wenn es etwas zu sehen gibt — solange
+                      // keine Aufgabe einen Ort trägt und keiner gesetzt ist,
+                      // ist die Zeile eine Einstellung ohne Wirkung, und die
+                      // gehört nicht auf den Hauptbildschirm (D3).
+                      if (snap.place != null ||
+                          snap.tasks
+                              .any((t) => t.place != null && isTaskOpen(t))) ...[
+                        const SizedBox(height: Space.lg),
+                        _PlaceStrip(snapshot: snap),
+                      ],
+                      const SizedBox(height: Space.xl),
+                      _PrimaryAction(snapshot: snap),
+                    ],
                   ),
                 ),
-                const SizedBox(height: Space.xxl),
-                _QuickState(snapshot: snap),
-                const SizedBox(height: Space.xl),
-                SectionLabel(context.t('Körper')),
-                const BodyStrip(),
-                const SizedBox(height: Space.xl),
-                _Tools(snapshot: snap),
-                const SizedBox(height: Space.xl),
-                _MetaBudget(used: snap.metaUsedToday),
+                // Der Horizont. Seine Zahl ist die Kapazität — sinkt sie,
+                // sinkt mehr vom Tag unter die Kante, ganz ohne einen Satz
+                // darüber (G1, R7).
+                ReachEdge(capacity: snap.state.capacity),
+                _Below(snapshot: snap, inboxCount: inbox.length),
               ],
             ),
           ),
@@ -147,6 +160,19 @@ class NowScreen extends ConsumerWidget {
         onPressed: () => showCaptureSheet(context),
         backgroundColor: context.axiom.signal,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        // Material gibt einem FAB Stufe 6 mit reinschwarzem Schatten (der
+        // Schattenton kommt aus `ThemeData.shadowColor`, nicht aus der
+        // Palette, und laesst sich am Knopf nicht setzen). Auf dem warmen
+        // Grund dieser Palette las sich das als harter schwarzer Ring um den
+        // Knopf, nicht als Hoehe.
+        //
+        // Ohne Erhebung: Die Griffhoehe dieses Schirms gehoert der einen
+        // Handlung (G1). Der Erfassungsknopf ist immer da, hebt sich durch
+        // seine Farbe deutlich genug ab und muss nicht zusaetzlich schweben.
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
         icon: const Icon(Icons.add),
         label: Text(context.t('Erfassen')),
       ),
@@ -186,9 +212,14 @@ class _Header extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Hier stand `.toUpperCase()` auf Wochentag und Monat:
+              // „MONTAG 3. AUGUST". Achtzehn Grossbuchstaben sind der erste
+              // Text des Tages, und die Wortform faellt dabei weg — man liest
+              // Buchstabe fuer Buchstabe. Normale Schreibweise ist schneller
+              // und leiser, und die Zeile ist ohnehin nur Einordnung.
               Text(
-                '${_weekdays(context)[now.weekday - 1].toUpperCase()} '
-                '${now.day}. ${_months(context)[now.month - 1].toUpperCase()}',
+                '${_weekdays(context)[now.weekday - 1]} '
+                '${now.day}. ${_months(context)[now.month - 1]}',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               const SizedBox(height: Space.xs),
@@ -206,19 +237,24 @@ class _Header extends ConsumerWidget {
           // Flexible mit Ellipse: Bei grosser Schrift ist die Marke breiter
           // als der Platz, den die Begruessung uebrig laesst.
           Flexible(
-              child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: Space.sm, vertical: Space.xs),
-            decoration: BoxDecoration(
-              border: Border.all(color: p.info.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(Radii.control),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: Space.md, vertical: Space.xs),
+              decoration: BoxDecoration(
+                color: p.info.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(Radii.pill),
+              ),
+              // War Schreibmaschine in 10 px. Der Tageszaehler ist ein
+              // Messwert und laeuft jetzt mit Tabellenziffern in der
+              // Hausschrift — derselbe saubere Ziffernstand, ohne den Ton
+              // eines Terminalprotokolls.
+              child: Text(context.t('Baseline Tag {0}', [baseline.day]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: readingStyle(context,
+                      size: 12.5, weight: FontWeight.w600, color: p.info)),
             ),
-            child: Text(context.t('BASELINE TAG {0}', [baseline.day]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: monoStyle(context,
-                    size: 10, weight: FontWeight.w600, color: p.info)),
-          )),
+          ),
       ],
     );
   }
@@ -287,6 +323,26 @@ class _PrimaryAction extends ConsumerWidget {
   }
 }
 
+/// Die Marke ueber der einen Handlung.
+///
+/// Hier stand „JETZT" in gesperrten Versalien. Die Marke ist kurz genug, dass
+/// Versalien erlaubt waeren — aber sie steht ueber der groessten Zeile des
+/// Schirms, und zwei verschiedene Schreibweisen direkt uebereinander lesen
+/// sich als zwei Stimmen. Farbe traegt hier, was vorher die Sperrung tragen
+/// sollte: Die Marke der aktuellen Handlung ist die einzige Beschriftung des
+/// Schirms in [AxiomPalette.signal].
+class _ActionLabel extends StatelessWidget {
+  final String text;
+  final Color? color;
+  const _ActionLabel(this.text, {this.color});
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: sectionStyle(context, color: color ?? context.axiom.signal),
+      );
+}
+
 /// Die Aufgabe, die gerade läuft.
 ///
 /// Solange sie läuft, ist sie die Ausgabe — kein Vorschlag daneben, keine
@@ -306,33 +362,34 @@ class _RunningCard extends ConsumerWidget {
     final elapsed = focus?.elapsed(ref.watch(nowProvider));
 
     return Panel(
-      accent: p.calm.withValues(alpha: 0.6),
+      // Griffhoehe statt Rahmen: Was jetzt in die Hand geht, liegt oben.
+      // Der farbige Rahmen, der hier stand, sagte dasselbe noch einmal und
+      // machte die Karte zu einer von vielen gerahmten (siehe Kopfkommentar).
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(context.t('LÄUFT'),
-                    style: Theme.of(context).textTheme.labelSmall),
-              ),
+              Expanded(child: _ActionLabel(context.t('Läuft'), color: p.calm)),
               if (elapsed != null && focus != null)
                 Text(
                   context.t('{0} von {1} min',
                       [elapsed.inMinutes, focus.planned.inMinutes]),
-                  style: monoStyle(context,
-                      size: 13, weight: FontWeight.w600, color: p.calm),
+                  style: readingStyle(context, size: 14, color: p.calm),
                 ),
             ],
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.sm),
           Text(task.title, style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.xl),
           Row(
             children: [
+              // Gleich breit, nicht 2:1 — der Rueckweg ist absichtlich
+              // genauso prominent wie der Abschluss. Im schmalen Drittel
+              // brach „Zurücklegen" ausserdem mitten im Wort um.
               Expanded(
-                flex: 2,
                 child: FilledButton(
                   onPressed: () async {
                     final runtime = await ref.read(runtimeProvider.future);
@@ -374,35 +431,41 @@ class _DecisionCard extends ConsumerWidget {
     final isCheckin = rule.then.type == ActionType.promptCheckin;
 
     return Panel(
-      accent: p.signal.withValues(alpha: 0.55),
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('JETZT'), style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
+          _ActionLabel(context.t('Jetzt')),
+          const SizedBox(height: Space.sm),
           Text(context.ruleTitle(rule),
               style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.lg),
-          Row(
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               RuleStamp(
                 ruleId: rule.id,
                 color: p.signal,
                 onTap: () => _showRationale(context, rule, decision),
               ),
-              if (rule.deficit != null) ...[
-                const SizedBox(width: Space.sm),
+              if (rule.deficit != null)
                 Text(rule.deficit!,
-                    style: monoStyle(context, size: 11, color: p.inkFaint)),
-              ],
+                    style: readingStyle(context,
+                        size: 12.5, color: p.inkFaint)),
             ],
           ),
           const SizedBox(height: Space.xl),
           Row(
             children: [
+              // 3:2 statt 2:1. Bei 360 px logischer Breite brach die zweite
+              // Beschriftung sonst mitten im Wort um („Erledi/gt"). Die
+              // gemeinte Handlung bleibt dominant, weil sie gefuellt ist und
+              // zuerst steht — nicht, weil sie doppelt so breit waere.
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: FilledButton(
                   onPressed: () async {
                     final runtime = await ref.read(runtimeProvider.future);
@@ -421,6 +484,7 @@ class _DecisionCard extends ConsumerWidget {
               ),
               const SizedBox(width: Space.md),
               Expanded(
+                flex: 2,
                 child: OutlinedButton(
                   onPressed: () async {
                     final runtime = await ref.read(runtimeProvider.future);
@@ -432,7 +496,7 @@ class _DecisionCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: Space.sm),
+          const SizedBox(height: Space.xs),
           Center(
             child: TextButton(
               onPressed: () async {
@@ -469,25 +533,26 @@ class _TaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.axiom;
     return Panel(
-      accent: p.signal.withValues(alpha: 0.55),
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('JETZT'), style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
+          _ActionLabel(context.t('Jetzt')),
+          const SizedBox(height: Space.sm),
           Text(task.title, style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.lg),
-          Row(
+          // War eine `Row`: Bei grosser Schrift lief die Plakettenzeile nach
+          // rechts hinaus. `Wrap` bricht stattdessen um.
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _Chip(label: context.t('START {0}/10', [task.activationEnergy]), color: p.signal),
-              const SizedBox(width: Space.sm),
-              if (rule != null) ...[
-                RuleStamp(ruleId: rule!.id, color: p.info),
-                const SizedBox(width: Space.sm),
-              ],
+              _Tag(label: context.t('Start {0}/10', [task.activationEnergy])),
+              if (rule != null) RuleStamp(ruleId: rule!.id, color: p.info),
               if (task.decayAt != null)
-                _Chip(
+                _Tag(
                   label: _until(context, task.decayAt!, ref.watch(nowProvider)),
                   color: p.info,
                 ),
@@ -495,17 +560,16 @@ class _TaskCard extends ConsumerWidget {
               // unterdrückt — sie steht mit ihrem Ort da. Etwas zu
               // verstecken, das der Nutzer nie eingeschaltet hat, wäre der
               // schlimmere Fehler [D9].
-              if (task.place != null) ...[
-                const SizedBox(width: Space.sm),
-                _Chip(label: task.place!.toUpperCase(), color: p.inkDim),
-              ],
+              if (task.place != null) _Tag(label: task.place!),
             ],
           ),
           const SizedBox(height: Space.xl),
           Row(
             children: [
+              // Siehe `_DecisionCard`: 3:2, sonst bricht „Erledigt" bei
+              // 360 px um.
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: FilledButton(
                   onPressed: () async {
                     final runtime = await ref.read(runtimeProvider.future);
@@ -518,6 +582,7 @@ class _TaskCard extends ConsumerWidget {
               ),
               const SizedBox(width: Space.md),
               Expanded(
+                flex: 2,
                 child: OutlinedButton(
                   onPressed: () async {
                     final runtime = await ref.read(runtimeProvider.future);
@@ -560,7 +625,7 @@ class _AtomizeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.axiom;
     return Panel(
-      accent: p.info.withValues(alpha: 0.5),
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,13 +633,13 @@ class _AtomizeCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(context.t('ZU GROSS FÜR HEUTE'),
-                    style: Theme.of(context).textTheme.labelSmall),
+                child: _ActionLabel(context.t('ZU GROSS FÜR HEUTE'),
+                    color: p.info),
               ),
               if (rule != null) RuleStamp(ruleId: rule!.id, color: p.info),
             ],
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.sm),
           Text(candidate.task.title,
               style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: Space.lg),
@@ -588,7 +653,7 @@ class _AtomizeCard extends ConsumerWidget {
             },
             child: Text(context.t('In einen ersten Schritt zerlegen')),
           ),
-          const SizedBox(height: Space.sm),
+          const SizedBox(height: Space.xs),
           Center(
             child: TextButton(
               onPressed: () async {
@@ -623,18 +688,22 @@ class _EmptyState extends ConsumerWidget {
         snapshot.waiting.length ==
             snapshot.tasks.where((t) => t.state == TaskState.ready).length;
 
+    // Ohne Handlung wird nichts erhoben: Die Karte liegt auf dem Grund. Eine
+    // hervorgehobene Flaeche, die nichts anbietet, waere ein Versprechen
+    // ohne Einloesung (G1).
     return Panel(
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-              waiting
-                  ? context.t('ALLES WARTET')
-                  : blocked
-                      ? context.t('NICHTS IN REICHWEITE')
-                      : context.t('NICHTS ANLIEGEND'),
-              style: Theme.of(context).textTheme.labelSmall),
+          _ActionLabel(
+            waiting
+                ? context.t('ALLES WARTET')
+                : blocked
+                    ? context.t('Nichts in Reichweite')
+                    : context.t('Nichts anliegend'),
+            color: p.inkFaint,
+          ),
           const SizedBox(height: Space.md),
           Text(
             waiting
@@ -676,6 +745,241 @@ class _EmptyState extends ConsumerWidget {
   }
 }
 
+// ── Die Mulde ───────────────────────────────────────────────────────────
+
+/// Alles unter der Reichweitenkante.
+///
+/// **Ohne Karten.** Was hier steht, ist da und heute nicht die Handlung —
+/// Bestand, Eingang, Termine, Rueckblick, Vorfaelle, Werkzeuge, Koerper.
+/// Vorher war jeder dieser Punkte eine eigene gerahmte Kachel, und
+/// untereinander gelesen sahen sie aus wie sechs Angebote neben dem einen,
+/// das gemeint war.
+///
+/// **Und ohne Ausgrauen.** Der Text behaelt seine Rollen und damit seinen
+/// vollen Kontrast; [AxiomPalette.well] ist dafuer eigens knapp bemessen.
+/// Ausgegraut hiesse „unwichtig"; gemeint ist „heute nicht die Handlung".
+///
+/// **Zwei Aenderungen an der Informationsarchitektur, beide mit Folgen:**
+///
+/// 1. **Die drei Messbalken sind weg.** Hier standen Kapazitaet,
+///    Kompensationslast und Reizbedarf als `InstrumentBar` — dieselben
+///    Balken, dieselben Zahlen und dieselbe aufklappbare Herleitung wie auf
+///    dem Zustandsschirm, der einen Reiter weiter liegt. Der Kopfkommentar
+///    dieser Datei sagt seit dem Umbau, die Kapazitaetsleiste sei
+///    weggefallen, weil zwei Anzeigen desselben Messwerts sich als zwei
+///    Aussagen lesen (R7) — genau das stand hier aber weiter: „Reichweite
+///    heute 61" ueber der Kante und „Kapazitaet 61" drei Zentimeter
+///    darunter. Ein Messwert hat einen Ort. Der Ort ist der Reiter
+///    „Zustand"; die Kante nennt die Zahl, die den Tag begrenzt, und mehr
+///    braucht dieser Schirm nicht.
+/// 2. **Feste Plaetze statt Zeilen, die kommen und gehen.** Bestand,
+///    Eingang, Rueckblick und Vorfaelle stehen immer, in immer derselben
+///    Reihenfolge; was fehlt, sagt die Zeile in ihrer zweiten Zeile.
+///    Vorher erschienen sie nur bei Inhalt — mit der Folge, dass der
+///    Rueckblick ausserhalb seines Faelligkeitsfensters und die
+///    Ankerverwaltung ohne bereits angelegten Anker **gar nicht erreichbar**
+///    waren. Ein Weg, den es nur manchmal gibt, wird jedes Mal neu gesucht
+///    [D9]; eine Zeile, die „nichts" meldet, liest man einmal.
+class _Below extends ConsumerWidget {
+  final AxiomSnapshot snapshot;
+  final int inboxCount;
+
+  const _Below({required this.snapshot, required this.inboxCount});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
+    final s = snapshot.state;
+    final pending = ref.watch(pendingPostMortemsProvider).value ?? const [];
+    final due = ref.watch(dueReviewProvider).value;
+    final baseline = ref.watch(baselineProvider).value;
+
+    final open =
+        snapshot.tasks.where((t) => t.state == TaskState.ready).toList();
+    final inReach = open
+        .where((t) =>
+            !snapshot.isWaiting(t.id) &&
+            t.isStartable(s.capacity, atPlace: snapshot.place))
+        .length;
+    final beyond = open.length - inReach;
+
+    // Der Rueckblick laeuft auch ausserhalb seines Fensters — dann eben als
+    // Tagesrueckblick. Er war vorher an `due != null` gebunden und damit
+    // nach dem Abhaken bis zum naechsten Tag nirgends mehr zu oeffnen,
+    // obwohl der Schirm die Zahlen der letzten Tage zeigt.
+    final reviewScope = due ?? ReviewScope.day;
+
+    final passages = <Widget>[
+      _WellRow(
+        icon: Icons.checklist_outlined,
+        title: context.t('Aufgaben'),
+        // Dieselben Zahlen wie auf der Aufgabenliste, aus derselben
+        // Bedingung gerechnet. Zwei Schirme, die verschiedene Staende
+        // melden, kosten mehr Vertrauen, als beide zusammen aufbauen.
+        detail: switch ((inReach, beyond)) {
+          (0, 0) => context.t('Noch keine Aufgaben erfasst.'),
+          (0, final b) => context.t('Nicht in Reichweite · {0}', [b]),
+          (final r, 0) => context.t('In Reichweite · {0}', [r]),
+          (final r, final b) => context.t(
+              '{0} startbar · {1} heute außerhalb der Reichweite', [r, b]),
+        },
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
+        ),
+      ),
+      _WellRow(
+        icon: Icons.inbox_outlined,
+        title: context.t('Eingang'),
+        detail: inboxCount == 0
+            ? context.t('Nichts zu sortieren.')
+            : context.t('{0} {1} auf Sortieren', [
+                inboxCount,
+                inboxCount == 1
+                    ? context.t('Notiz wartet')
+                    : context.t('Notizen warten'),
+              ]),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
+        ),
+      ),
+      // Nur, wenn oben kein Schritt steht: Steht einer, traegt ihn der
+      // Streifen ueber der Kante, und der fuehrt auf denselben Schirm. Zwei
+      // Wege zum selben Ort auf einem Bildschirm sind einer zu viel.
+      if (snapshot.nextStep == null)
+        _WellRow(
+          icon: Icons.schedule_outlined,
+          title: context.t('Anker'),
+          detail: snapshot.anchors.isEmpty
+              ? context.t('Kein Termin hinterlegt.')
+              : context.t('{0} hinterlegt, keiner steht heute an',
+                  [snapshot.anchors.length]),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const AnchorsScreen()),
+          ),
+        ),
+      _WellRow(
+        icon: Icons.done_all,
+        // Der eingesetzte Wert lief hier nicht durch die Uebersetzung — in
+        // der englischen App stand „Woche review". Ein Platzhalterwert ist
+        // Nutzertext wie jeder andere.
+        title: context.t('{0}-Review', [context.t(reviewScope.label)]),
+        detail: due != null
+            ? context.t('Fällig · {0} min', [reviewScope.timeCap.inMinutes])
+            : context.t('Zahlen des Tages · {0} min',
+                [reviewScope.timeCap.inMinutes]),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+              builder: (_) => ReviewScreen(scope: reviewScope)),
+        ),
+      ),
+      _WellRow(
+        icon: Icons.history_toggle_off,
+        title: context.t('Vorfälle'),
+        detail: switch (pending.length) {
+          0 => context.t('Emotionale Spitzen festhalten und einordnen'),
+          1 => context.t('Ein Vorfall wartet auf Einordnung'),
+          final n => context.t('{0} Vorfälle warten auf Einordnung', [n]),
+        },
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const SignalScreen()),
+        ),
+      ),
+      // Die einzige Zeile ohne festen Platz — sie meldet ein *Ereignis*,
+      // keinen Ort, und verschwindet nach dem Eichen fuer immer.
+      if (baseline != null && baseline.isReady)
+        _WellRow(
+          icon: Icons.tune,
+          title: context.t('Baseline vollständig'),
+          detail: context.t('Die Gewichte können jetzt geeicht werden.'),
+          accent: p.signal,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SystemScreen()),
+          ),
+        ),
+    ];
+
+    return Well(
+      // Vollflaechig: Die Mulde ist der Boden des Schirms, nicht ein
+      // weiterer Kasten darauf.
+      radius: BorderRadius.zero,
+      padding: const EdgeInsets.fromLTRB(
+          Space.lg, Space.lg, Space.lg, Space.huge * 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, row) in passages.indexed) ...[
+            if (i > 0) Divider(color: p.rule, height: 1),
+            row,
+          ],
+          const SizedBox(height: Space.xxl),
+          SectionLabel(context.t('Werkzeuge')),
+          _Tools(snapshot: snapshot),
+          const SizedBox(height: Space.xxl),
+          SectionLabel(context.t('Körper')),
+          const BodyStrip(),
+          const SizedBox(height: Space.xxl),
+          _MetaBudget(used: snapshot.metaUsedToday),
+        ],
+      ),
+    );
+  }
+}
+
+/// Eine Zeile in der Mulde: Symbol, Name, Stand, Pfeil.
+///
+/// Kein `Panel`: In der Tiefzone gibt es keine Karten. Getrennt wird durch
+/// eine Haarlinie, nicht durch eine Kante — sechs Kacheln untereinander
+/// waeren wieder ein Gitter.
+class _WellRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String detail;
+  final VoidCallback onTap;
+
+  /// Faerbt Symbol und Pfeil. Nur fuer den einen Fall, in dem die Zeile
+  /// etwas meldet, das ohne sie unbemerkt bliebe (die fertige Baseline).
+  final Color? accent;
+
+  const _WellRow({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    required this.onTap,
+    this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.control),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.md),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: accent ?? p.inkDim),
+            const SizedBox(width: Space.lg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 2),
+                  Text(detail,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Nebenelemente ───────────────────────────────────────────────────────
 
 /// Die geltende Last-Stufe, wenn sie über L0 liegt (M9).
@@ -694,6 +998,8 @@ class _RegimeBanner extends StatelessWidget {
     final regime = snapshot.regime;
     final color = p.forLoadLevel(regime.level.index);
 
+    // Der einzige Rahmen dieses Schirms — und der einzige zulaessige Fall:
+    // Die Karte meldet einen *Zustand*, kein Messwert (siehe `Panel.accent`).
     return Panel(
       accent: color.withValues(alpha: 0.5),
       child: Column(
@@ -706,11 +1012,13 @@ class _RegimeBanner extends StatelessWidget {
                     horizontal: Space.sm, vertical: 2),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(Radii.control),
+                  borderRadius: BorderRadius.circular(Radii.pill),
                 ),
+                // Zwei Zeichen — hier bleiben Versalien, weil sie keine Wortform
+                // haben, die verlorengehen koennte.
                 child: Text(regime.level.name.toUpperCase(),
-                    style: monoStyle(context,
-                        size: 11, weight: FontWeight.w600, color: color)),
+                    style: readingStyle(context,
+                        size: 12.5, weight: FontWeight.w600, color: color)),
               ),
               const SizedBox(width: Space.md),
               Expanded(
@@ -727,7 +1035,7 @@ class _RegimeBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(Space.md),
               decoration: BoxDecoration(
-                border: Border.all(color: p.rule),
+                color: p.well,
                 borderRadius: BorderRadius.circular(Radii.control),
               ),
               child: Text(
@@ -735,6 +1043,75 @@ class _RegimeBanner extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Ein Streifen ueber der Handlung: eine Zeile, ein Tipp, kein Angebot.
+///
+/// Alle Streifen dieses Schirms teilen sich diese Form. Vorher hatte jeder
+/// seinen eigenen farbigen Rahmen und seine eigene Innenaufteilung — und
+/// jeder sah damit aus wie eine zweite Handlung neben der einen (G1). Jetzt
+/// liegen sie flach auf dem Grund; erhoben ist nur die Karte darunter.
+class _Strip extends StatelessWidget {
+  final IconData icon;
+
+  /// Faerbt das Symbol und den Messwert rechts. Ohne Angabe: gedaempft.
+  final Color? accent;
+  final String title;
+  final String detail;
+
+  /// Zahl am rechten Rand — ein Messwert, kein Zusatz.
+  final String? reading;
+  final VoidCallback? onTap;
+
+  const _Strip({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.accent,
+    this.reading,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Panel(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg, vertical: Space.md),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: accent ?? p.inkDim),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge),
+                Text(detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          if (reading != null) ...[
+            const SizedBox(width: Space.md),
+            Text(reading!,
+                style: readingStyle(context,
+                    size: 15, color: accent ?? p.inkDim)),
+          ],
+          if (onTap != null) ...[
+            const SizedBox(width: Space.sm),
+            Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
           ],
         ],
       ),
@@ -756,50 +1133,14 @@ class _FocusStrip extends ConsumerWidget {
     final urgent = verdict?.action == FocusAction.hardStop ||
         verdict?.action == FocusAction.clearInterrupt;
 
-    return Panel(
-      accent: (urgent ? p.signal : p.calm).withValues(alpha: 0.5),
-      padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
+    return _Strip(
+      icon: Icons.center_focus_strong_outlined,
+      accent: urgent ? p.signal : p.calm,
+      title: session.anchorTitle ?? context.t('Fokus läuft'),
+      detail: verdict == null ? context.t('Läuft.') : context.p(verdict.reason),
+      reading: context.t('{0} min', [elapsed.inMinutes]),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const FocusScreen()),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 34,
-            decoration: BoxDecoration(
-              color: urgent ? p.signal : p.calm,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(session.anchorTitle ?? context.t('Fokus läuft'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyLarge),
-                Text(
-                  verdict == null
-                      ? context.t('Läuft.')
-                      : context.p(verdict.reason),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: Space.md),
-          Text(context.t('{0} min', [elapsed.inMinutes]),
-              style: monoStyle(context,
-                  size: 13,
-                  weight: FontWeight.w600,
-                  color: urgent ? p.signal : p.inkDim)),
-        ],
       ),
     );
   }
@@ -821,48 +1162,23 @@ class _PlaceStrip extends ConsumerWidget {
     final place = snapshot.place;
     final elsewhere = snapshot.elsewhere.length;
 
-    return Panel(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
+    return _Strip(
+      icon: place == null ? Icons.place_outlined : Icons.place,
+      accent: place == null ? null : p.signal,
+      title: place ?? context.t('Kein Ort'),
+      // Zustandsbeschreibung, keine Bewertung: Was der Filter gerade tut,
+      // steht da — nicht, was man tun sollte [R7].
+      detail: place == null
+          ? context.t('Alles steht zur Auswahl.')
+          : elsewhere == 0
+              ? context.t('Nichts liegt woanders.')
+              : elsewhere == 1
+                  ? context.t('Eine Aufgabe gehört woanders hin.')
+                  : context.t('{0} Aufgaben gehören woanders hin.', [elsewhere]),
       onTap: () => showPlaceSheet(
         context,
         current: place,
         known: snapshot.knownPlaces,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            place == null ? Icons.place_outlined : Icons.place,
-            size: 18,
-            color: place == null ? p.inkDim : p.signal,
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(place ?? context.t('Kein Ort'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyLarge),
-                Text(
-                  // Zustandsbeschreibung, keine Bewertung: Was der Filter
-                  // gerade tut, steht da — nicht, was man tun sollte [R7].
-                  place == null
-                      ? context.t('Alles steht zur Auswahl.')
-                      : elsewhere == 0
-                          ? context.t('Nichts liegt woanders.')
-                          : elsewhere == 1
-                              ? context.t('Eine Aufgabe gehört woanders hin.')
-                              : context.t('{0} Aufgaben gehören woanders hin.',
-                                  [elsewhere]),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-        ],
       ),
     );
   }
@@ -879,148 +1195,110 @@ class _InterceptStrip extends ConsumerWidget {
     final now = ref.watch(nowProvider);
     final released = !run.isActive(now);
 
-    return Panel(
-      accent: p.signal.withValues(alpha: 0.55),
-      padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
+    return _Strip(
+      icon: released ? Icons.lock_open : Icons.hourglass_bottom,
+      accent: p.signal,
+      title: run.triggerLabel,
+      detail: released
+          ? context.t('Wartezeit vorbei')
+          : context.t('Wartezeit läuft'),
+      reading:
+          released ? null : context.t('{0} min', [run.remaining(now).inMinutes]),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const InterceptScreen()),
-      ),
-      child: Row(
-        children: [
-          Icon(released ? Icons.lock_open : Icons.hourglass_bottom,
-              size: 18, color: p.signal),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(run.triggerLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyLarge),
-                Text(
-                  released ? context.t('Wartezeit vorbei') : context.t('Wartezeit läuft'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          if (!released)
-            Text(context.t('{0} min', [run.remaining(now).inMinutes]),
-                style: monoStyle(context,
-                    size: 13, weight: FontWeight.w600, color: p.signal)),
-        ],
       ),
     );
   }
 }
 
+/// Die laufende Aufgabe, während eine Regel die Hauptkarte belegt.
+///
+/// Schmal und ohne Knöpfe: Sie ist hier kein Angebot, sondern eine
+/// Erinnerung daran, dass etwas offen ist. Der Tipp führt zur Liste, wo sie
+/// sich abschließen lässt.
+class _RunningStrip extends ConsumerWidget {
+  final Task task;
+  const _RunningStrip({required this.task});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Strip(
+        icon: Icons.play_circle_outline,
+        accent: context.axiom.calm,
+        title: task.title,
+        detail: context.t('Läuft'),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
+        ),
+      );
+}
+
 /// Zugang zu Fokus, Reiz und Bremse.
 ///
-/// Bewusst als Leiste statt als eigene Navigationsreiter: Drei Ziele in der
-/// Navigation, nicht sechs. Jeder weitere Reiter ist eine Entscheidung, die
-/// vor dem eigentlichen Tun steht (G1).
-class _Tools extends StatelessWidget {
+/// Bewusst nicht als eigene Navigationsreiter: Drei Ziele in der Navigation,
+/// nicht sechs. Jeder weitere Reiter ist eine Entscheidung, die vor dem
+/// eigentlichen Tun steht (G1).
+///
+/// **War eine Leiste aus drei gerahmten Kacheln.** Zwei Dinge stimmten daran
+/// nicht. Erstens die Grammatik: In der Mulde gibt es keine Kaesten — alles
+/// andere hier ist eine Zeile mit Symbol, Namen, Stand und Pfeil, und drei
+/// gerahmte Quadrate mittendrin lasen sich als etwas anderer Art. Zweitens
+/// stand unter jedem Symbol nur ein Wort. „Reiz" sagt nicht, was dahinter
+/// liegt; eine Zeile hat Platz fuer den Stand, und der ist die eigentliche
+/// Auskunft.
+///
+/// **Was dabei weggefallen ist:** Der Reiz-Knopf leuchtete kupfern, sobald
+/// der Reizbedarf ueber 70 lag. Das ist eine Farbe an einem Messwert, und
+/// Messwerte bekommen in AXIOM keine Note (R7). Wenn der Bedarf hoch genug
+/// ist, um etwas zu tun, sagt das eine Regel mit Kennung ueber der Kante —
+/// das ist der Weg, den G2 vorsieht. Gefaerbt wird hier nur noch, was
+/// tatsaechlich *laeuft*: ein Zustand, keine Messung.
+class _Tools extends ConsumerWidget {
   final AxiomSnapshot snapshot;
   const _Tools({required this.snapshot});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.axiom;
-    final need = snapshot.state.sensationNeed;
+    final focus = snapshot.focus;
+    final intercept = snapshot.activeIntercept;
+    final now = ref.watch(nowProvider);
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ToolButton(
+        _WellRow(
           icon: Icons.center_focus_strong_outlined,
-          label: snapshot.isFocusing ? context.t('Läuft') : 'Fokus',
-          active: snapshot.isFocusing,
+          title: context.t('Fokus'),
+          detail: focus == null
+              ? context.t('Vertiefung mit Zeitdeckel und Ausstiegsanker')
+              : context.t('Läuft seit {0} min', [focus.elapsed(now).inMinutes]),
+          accent: focus == null ? null : p.calm,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const FocusScreen()),
           ),
         ),
-        const SizedBox(width: Space.sm),
-        _ToolButton(
+        Divider(color: p.rule, height: 1),
+        _WellRow(
           icon: Icons.bolt_outlined,
-          label: context.t('Reiz'),
-          // Auffällig nur, wenn der Bedarf wirklich hoch ist — ein dauerhaft
-          // markierter Knopf wird nicht mehr gesehen.
-          active: need >= 70,
-          activeColor: p.caution,
+          title: context.t('Reiz'),
+          detail: context.t('Kanäle, Budget und der nächste geplante Slot'),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const SensationScreen()),
           ),
         ),
-        const SizedBox(width: Space.sm),
-        _ToolButton(
+        Divider(color: p.rule, height: 1),
+        _WellRow(
           icon: Icons.pan_tool_outlined,
-          label: context.t('Bremse'),
-          active: snapshot.activeIntercept != null,
+          title: context.t('Bremse'),
+          detail: intercept == null
+              ? context.t('Wartezeit zwischen Impuls und Handlung')
+              : context.t('Wartezeit läuft'),
+          accent: intercept == null ? null : p.signal,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const InterceptScreen()),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final Color? activeColor;
-  final VoidCallback onTap;
-
-  const _ToolButton({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.activeColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.axiom;
-    final color = active ? (activeColor ?? p.signal) : p.inkDim;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        // Untergrenze statt fester Höhe. Vorher stand hier `height: 62`;
-        // Symbol und Beschriftung brauchen bei angehobener Schrift mehr, und
-        // die Spalte lief um bis zu 52 px nach unten über — der gelbe Balken
-        // fraß genau die Beschriftung, die sagt, wohin der Knopf führt. [D9]
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 62),
-          padding: const EdgeInsets.symmetric(
-              horizontal: Space.xs, vertical: Space.xs),
-          decoration: BoxDecoration(
-            color: active ? color.withValues(alpha: 0.14) : p.panel,
-            borderRadius: BorderRadius.circular(Radii.control),
-            border: Border.all(color: active ? color : p.rule),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 19, color: color),
-              const SizedBox(height: 3),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: monoStyle(context,
-                      size: 10, spacing: 0.4, color: color)),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1035,13 +1313,9 @@ class _AnchorStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.axiom;
     final now = ref.watch(nowProvider);
-    final minutes = next.step.at.difference(now).inMinutes;
-    final near = minutes <= 20;
 
     return Panel(
-      accent: near ? p.signal.withValues(alpha: 0.5) : null,
       padding: const EdgeInsets.symmetric(
           horizontal: Space.lg, vertical: Space.md),
       onTap: () => Navigator.of(context).push(
@@ -1054,228 +1328,6 @@ class _AnchorStrip extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// Bietet eine faellige Nachbetrachtung an.
-///
-/// Erscheint fruehestens zwoelf Stunden nach dem Vorfall — vorher ist
-/// niemand analysefaehig, und die Aufforderung verlaengert das Ereignis [D10].
-class _PostMortemTeaser extends ConsumerWidget {
-  const _PostMortemTeaser();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pending = ref.watch(pendingPostMortemsProvider).value ?? const [];
-    if (pending.isEmpty) return const SizedBox.shrink();
-    final p = context.axiom;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Space.md),
-      child: Panel(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.lg, vertical: Space.md),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const SignalScreen()),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.history_toggle_off, size: 18, color: p.inkDim),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Text(
-                pending.length == 1
-                    ? context.t('Ein Vorfall wartet auf Einordnung')
-                    : context.t('{0} Vorfälle warten auf Einordnung', [pending.length]),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Meldet, wenn die Baseline vollständig ist.
-///
-/// Ohne diesen Hinweis müsste man selbst daran denken — und genau darauf
-/// kann sich dieses Profil nicht verlassen [D12].
-class _BaselineTeaser extends ConsumerWidget {
-  const _BaselineTeaser();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final baseline = ref.watch(baselineProvider).value;
-    if (baseline == null || !baseline.isReady) return const SizedBox.shrink();
-    final p = context.axiom;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Space.md),
-      child: Panel(
-        accent: p.signal.withValues(alpha: 0.5),
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.lg, vertical: Space.md),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const SystemScreen()),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.tune, size: 18, color: p.signal),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(context.t('Baseline vollständig'),
-                      style: Theme.of(context).textTheme.bodyLarge),
-                  Text(context.t('Die Gewichte können jetzt geeicht werden.'),
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bietet ein fälliges Review an, ohne zu drängen.
-class _ReviewTeaser extends ConsumerWidget {
-  const _ReviewTeaser();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final due = ref.watch(dueReviewProvider).value;
-    if (due == null) return const SizedBox.shrink();
-    final p = context.axiom;
-
-    return Panel(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ReviewScreen(scope: due),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.checklist_outlined, size: 18, color: p.inkDim),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Text(
-              context.t('{0}-Review offen · {1} min', [due.label, due.timeCap.inMinutes]),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-        ],
-      ),
-    );
-  }
-}
-
-class _InboxTeaser extends StatelessWidget {
-  final int count;
-  const _InboxTeaser({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.axiom;
-    return Panel(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg, vertical: Space.md),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.inbox_outlined, size: 18, color: p.inkDim),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Text(
-              context.t('{0} {1} auf Sortieren', [count, count == 1 ? context.t('Notiz wartet') : context.t('Notizen warten')]),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickState extends StatelessWidget {
-  final AxiomSnapshot snapshot;
-  const _QuickState({required this.snapshot});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.axiom;
-    final s = snapshot.state;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionLabel(context.t('Zustand')),
-        Panel(
-          child: Column(
-            children: [
-              InstrumentBar(
-                label: context.t('Kapazität'),
-                value: s.capacity,
-                color: p.signal,
-                reading: _capacityReading(context, s.capacity),
-                breakdown: snapshot.breakdown['capacity'] ?? const [],
-                confidence: s.confidenceOf('capacity'),
-              ),
-              Divider(color: p.rule, height: Space.xl),
-              InstrumentBar(
-                label: context.t('Kompensationslast'),
-                value: s.loadIndex,
-                color: p.forLoadLevel(s.loadLevel.index),
-                reading: _loadReading(context, s.loadLevel),
-                breakdown: snapshot.breakdown['load_index'] ?? const [],
-                confidence: s.confidenceOf('load_index'),
-              ),
-              Divider(color: p.rule, height: Space.xl),
-              InstrumentBar(
-                label: context.t('Reizbedarf'),
-                value: s.sensationNeed,
-                color: p.caution,
-                reading: _sensationReading(context, s.sensationNeed),
-                breakdown: snapshot.breakdown['sensation_need'] ?? const [],
-                confidence: s.confidenceOf('sensation_need'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _capacityReading(BuildContext context, int v) => switch (v) {
-        >= 75 => context.t('Viel möglich heute.'),
-        >= 50 => context.t('Solide Mitte.'),
-        >= 30 => context.t('Begrenzt — Kleines zuerst.'),
-        _ => context.t('Wenig da. Nur das Nötige.'),
-      };
-
-  static String _loadReading(BuildContext context, LoadLevel level) =>
-      switch (level) {
-        LoadLevel.l0 => context.t('Im Normalbereich.'),
-        LoadLevel.l1 => context.t('Erhöht. Im Blick behalten.'),
-        LoadLevel.l2 => context.t('Kritisch. Nichts Neues aufnehmen.'),
-        LoadLevel.l3 => context.t('Erhaltungsmodus. Nur Pflicht und Erholung.'),
-      };
-
-  static String _sensationReading(BuildContext context, int v) => switch (v) {
-        >= 85 => context.t('Hoch. Jetzt planen, was sonst ungeplant passiert.'),
-        >= 70 => context.t('Deutlich. Ein Reiz-Slot wäre fällig.'),
-        >= 40 => context.t('Normal.'),
-        _ => context.t('Gedeckt.'),
-      };
 }
 
 /// Zeigt das Meta-Work-Budget. Die App macht ihre eigenen Kosten sichtbar —
@@ -1292,10 +1344,10 @@ class _MetaBudget extends StatelessWidget {
 
     // Beschriftung und Messwert oben, der Balken darunter über die volle
     // Breite. Vorher standen alle drei in einer Zeile, und beide Texte waren
-    // unflexibel: Bei 360 px und angehobener Schrift lief die Zeile ab etwa
-    // 1,4-facher Skalierung über — der Balken wurde dabei auf null Breite
-    // geklemmt. Ausgerechnet die Anzeige, die G4 sichtbar macht, zeigte dann
-    // gar keinen Füllstand mehr. [D9]
+    // unflexibel: Bei 360 px und angehobener Schrift lief die Zeile über —
+    // der Balken wurde dabei auf null Breite geklemmt. Ausgerechnet die
+    // Anzeige, die G4 sichtbar macht, zeigte dann gar keinen Füllstand
+    // mehr. [D9]
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1304,15 +1356,17 @@ class _MetaBudget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Flexible(
-              child: Text(context.t('ZEIT IN AXIOM HEUTE'),
+              // War „ZEIT IN AXIOM HEUTE" — sechzehn Grossbuchstaben unter
+              // einem Schirm, der sonst keine mehr fuehrt.
+              child: Text(context.t('Zeit im System heute'),
                   style: Theme.of(context).textTheme.labelSmall),
             ),
             const SizedBox(width: Space.md),
             Text(
                 context
                     .t('{0}/{1} min', [used.inMinutes, kMetaBudget.inMinutes]),
-                style: monoStyle(context,
-                    size: 11, color: over ? p.caution : p.inkFaint)),
+                style: readingStyle(context,
+                    size: 13.5, color: over ? p.caution : p.inkFaint)),
           ],
         ),
         const SizedBox(height: Space.sm),
@@ -1333,23 +1387,33 @@ class _MetaBudget extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
+/// Eine Plakette an der Handlung: Messwert oder Randbedingung.
+///
+/// War ein Kasten mit Haarlinienrahmen und Schreibmaschinenschrift in
+/// 10,5 px. Beides ist weg: Der Rahmen zog ein Gitter durch die Zeile, und
+/// „Start 2/10" ist ein Messwert — er gehoert in die Hausschrift mit
+/// Tabellenziffern. Die Vertiefung ([AxiomPalette.well]) sagt dasselbe wie
+/// der Rahmen, ohne eine Linie zu ziehen.
+class _Tag extends StatelessWidget {
   final String label;
-  final Color color;
-  const _Chip({required this.label, required this.color});
+  final Color? color;
+  const _Tag({required this.label, this.color});
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Space.sm, vertical: Space.xs),
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(Radii.control),
-        ),
-        child: Text(label,
-            style: monoStyle(context,
-                size: 10.5, weight: FontWeight.w500, color: color)),
-      );
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: Space.md, vertical: Space.xs),
+      decoration: BoxDecoration(
+        color: p.well,
+        borderRadius: BorderRadius.circular(Radii.pill),
+      ),
+      child: Text(label,
+          style: readingStyle(context,
+              size: 12.5, weight: FontWeight.w600, color: color ?? p.inkDim)),
+    );
+  }
 }
 
 class _ErrorPane extends StatelessWidget {
@@ -1363,12 +1427,16 @@ class _ErrorPane extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('SYSTEM'), style: Theme.of(context).textTheme.labelSmall),
+            Text(context.t('System'),
+                style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.md),
             Text(context.t('AXIOM konnte nicht starten.'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: Space.md),
-            Text('$error', style: monoStyle(context, size: 12)),
+            // Der einzige Monospace-Satz, der auf diesem Schirm uebrig
+            // bleibt — und der einzige richtige: eine Roh-Ausgabe, die
+            // jemand Zeichen fuer Zeichen abliest oder abtippt.
+            Text('$error', style: monoStyle(context, size: 12.5)),
           ],
         ),
       );
@@ -1395,19 +1463,18 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(context.t('WARUM ES DIESE REGEL GIBT'),
+              Text(context.t('Warum es sie gibt'),
                   style: Theme.of(context).textTheme.labelSmall),
               const SizedBox(height: Space.sm),
               Text(decision.explanation,
                   style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: Space.lg),
-              Row(
+              Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
                 children: [
-                  Text(context.t('Stufe {0}', [rule.severity.name]),
-                      style: monoStyle(context, size: 11)),
-                  const SizedBox(width: Space.md),
-                  Text(context.t('Priorität {0}', [rule.priority]),
-                      style: monoStyle(context, size: 11)),
+                  _Tag(label: context.t('Stufe {0}', [rule.severity.name])),
+                  _Tag(label: context.t('Priorität {0}', [rule.priority])),
                 ],
               ),
             ],
@@ -1426,56 +1493,4 @@ void _showRationale(BuildContext context, Rule rule, Decision decision) {
 
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
-}
-
-/// Die laufende Aufgabe, während eine Regel die Hauptkarte belegt.
-///
-/// Schmal und ohne Knöpfe: Sie ist hier kein Angebot, sondern eine
-/// Erinnerung daran, dass etwas offen ist. Der Tipp führt zur Liste, wo sie
-/// sich abschließen lässt.
-class _RunningStrip extends ConsumerWidget {
-  final Task task;
-  const _RunningStrip({required this.task});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.axiom;
-    return Panel(
-      accent: p.calm.withValues(alpha: 0.5),
-      padding:
-          const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.md),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const TasksScreen()),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 34,
-            decoration: BoxDecoration(
-              color: p.calm,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(context.t('LÄUFT'),
-                    style: Theme.of(context).textTheme.labelSmall),
-                const SizedBox(height: 2),
-                Text(task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyLarge),
-              ],
-            ),
-          ),
-          const SizedBox(width: Space.sm),
-          Icon(Icons.chevron_right, size: 18, color: p.inkFaint),
-        ],
-      ),
-    );
-  }
 }

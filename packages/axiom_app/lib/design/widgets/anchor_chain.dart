@@ -37,6 +37,20 @@ final class AnchorChainView extends StatelessWidget {
     final steps = anchor.chain;
     final next = anchor.nextStep(now);
 
+    // **Der naechste Schritt wurde nie hervorgehoben.** Hier stand
+    // `step == next`, und das war immer falsch: `Anchor.chain` ist ein
+    // berechneter Getter, der bei jedem Aufruf neue `AnchorStep`-Objekte
+    // baut, und `AnchorStep` hat kein `==`. Verglichen wurden also zwei
+    // frisch gebaute Objekte aus zwei Aufrufen — nie dasselbe. Folge: kein
+    // Punkt in Signalfarbe, kein fetterer Text, kein „in 30 min". Die
+    // Ankerkette zeigte vier gleich wichtige Zeilen, obwohl genau eine
+    // gemeint war (G1). Im Kompaktmodus fiel dadurch sogar der einzige
+    // Schritt weg, den er zeigen soll.
+    //
+    // Der Index kommt jetzt aus derselben Liste, die auch gezeichnet wird —
+    // damit braucht es gar keine Objektgleichheit.
+    final nextIndex = steps.indexWhere((s) => s.at.isAfter(now));
+
     return Semantics(
       label: context.t('{0} um {1}. Vorlauf {2} Minuten. {3}', [anchor.title, _hhmm(anchor.arriveBy), anchor.leadTime.inMinutes, next == null ? context.t('Vorbei.') : context.t('Als Nächstes: {0} um {1}.', [next.label, _hhmm(next.at)])]),
       excludeSemantics: true,
@@ -50,34 +64,36 @@ final class AnchorChainView extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleLarge),
               ),
               const SizedBox(width: Space.md),
+              // Uhrzeiten waren der Musterfall fuer Monospace: Sie muessen
+              // untereinander fluchten. Genau das leisten Tabellenziffern —
+              // ohne dass ein Termin aussieht wie eine Protokollzeile.
               Text(_hhmm(anchor.arriveBy),
-                  style: monoStyle(context,
-                      size: 15, weight: FontWeight.w600, color: p.ink)),
+                  style: readingStyle(context, size: 16, color: p.ink)),
             ],
           ),
           const SizedBox(height: Space.xs),
           Row(
             children: [
-              Text(context.t('VORLAUF {0} MIN', [anchor.leadTime.inMinutes]),
-                  style: monoStyle(context,
-                      size: 10, spacing: 0.6, color: p.signal)),
+              Text(context.t('Vorlauf {0} min', [anchor.leadTime.inMinutes]),
+                  style: readingStyle(context,
+                      size: 13, weight: FontWeight.w500, color: p.signal)),
               if (anchor.location != null) ...[
                 const SizedBox(width: Space.md),
                 Flexible(
                   child: Text(anchor.location!,
                       overflow: TextOverflow.ellipsis,
-                      style: monoStyle(context, size: 10, spacing: 0.4)),
+                      style: Theme.of(context).textTheme.bodySmall),
                 ),
               ],
             ],
           ),
           const SizedBox(height: Space.lg),
           for (final (index, step) in steps.indexed)
-            if (!compact || step == next || step == steps.last)
+            if (!compact || index == nextIndex || index == steps.length - 1)
               _StepRow(
                 step: step,
                 now: now,
-                isNext: step == next,
+                isNext: index == nextIndex,
                 isLast: index == steps.length - 1,
                 showConnector: !compact,
               ),
@@ -122,14 +138,15 @@ class _StepRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Zeitspalte, monospaced — sie muss untereinander fluchten.
+          // Zeitspalte mit Tabellenziffern — sie muss untereinander
+          // fluchten, und dafuer braucht es keine Schreibmaschine.
           SizedBox(
-            width: 48,
+            width: 52,
             child: Text(
               AnchorChainView._hhmm(step.at),
-              style: monoStyle(context,
-                  size: 13,
-                  weight: isNext ? FontWeight.w600 : FontWeight.w400,
+              style: readingStyle(context,
+                  size: 14,
+                  weight: isNext ? FontWeight.w600 : FontWeight.w500,
                   color: color),
             ),
           ),
@@ -188,7 +205,9 @@ class _StepRow extends StatelessWidget {
                             : minutes < 60
                                 ? context.t('in {0} min', [minutes])
                                 : 'in ${(minutes / 60).toStringAsFixed(1)} h',
-                        style: monoStyle(context, size: 11, color: p.signal),
+                        style: readingStyle(context,
+                            size: 13, weight: FontWeight.w500,
+                            color: p.signal),
                       ),
                     ),
                 ],
@@ -256,10 +275,8 @@ final class NextStepBadge extends StatelessWidget {
               : minutes < 60
                   ? context.t('{0} min', [minutes])
                   : '${(minutes / 60).toStringAsFixed(1)} h',
-          style: monoStyle(context,
-              size: 13,
-              weight: FontWeight.w600,
-              color: near ? p.signal : p.inkDim),
+          style: readingStyle(context,
+              size: 14, color: near ? p.signal : p.inkDim),
         ),
       ],
     );

@@ -42,18 +42,20 @@ class AnchorsScreen extends ConsumerWidget {
                     Space.lg, Space.sm, Space.lg, Space.huge * 2),
                 children: [
                   SectionLabel(context.t('Anstehend · {0}', [snap.anchors.length])),
+                  // Der aktive Anker wird **erhoben**, nicht umrandet. Ein
+                  // Rahmen sagt „markiert", die Hoehe sagt „geht jetzt in die
+                  // Hand" — und genau das unterscheidet den laufenden Anker
+                  // von den anderen (G1). Nie mehr als einer ist aktiv.
                   for (final anchor in snap.anchors)
                     Padding(
                       padding: const EdgeInsets.only(bottom: Space.md),
                       child: Panel(
-                        accent: anchor.isActive(now)
-                            ? context.axiom.signal.withValues(alpha: 0.5)
-                            : null,
+                        reachable: anchor.isActive(now),
                         onTap: () => _edit(context, ref, anchor),
                         child: AnchorChainView(anchor: anchor, now: now),
                       ),
                     ),
-                  const SizedBox(height: Space.lg),
+                  const SizedBox(height: Space.xl),
                   Text(
                     context.t('Die Vorlaufzeit ist die Zeit, die im Kalender nicht steht: aussteigen, fertigmachen, Puffer. Sie erklärt, warum ein Termin mehr kostet als seine Dauer.'),
                     style: Theme.of(context).textTheme.bodySmall,
@@ -61,10 +63,21 @@ class AnchorsScreen extends ConsumerWidget {
                 ],
               ),
       ),
+      // Weiche Kante statt Material-Vorgabe: Der voreingestellte Schatten
+      // eines FAB zeichnet auf hellem Grund einen harten dunklen Ring — die
+      // einzige harte Kante auf einem Schirm, der sonst nur weiche hat.
+      // Erhebung kommt hier aus derselben Quelle wie bei den Karten.
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(context, ref, null),
         backgroundColor: context.axiom.signal,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.panel),
+        ),
         icon: const Icon(Icons.add),
         label: Text(context.t('Termin')),
       ),
@@ -91,7 +104,7 @@ class _EmptyAnchors extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => EmptyState(
-        label: context.t('KEINE ANKER'),
+        label: context.t('Keine Anker'),
         headline: context.t('Nichts terminiert.'),
         body: context.t('Trag einen Termin ein, und AXIOM rechnet rückwärts: wann du losmusst, wann du anfangen musst dich fertigzumachen, und wann Schluss ist mit dem, was du gerade tust.'),
         footnote: context.t('Der letzte Punkt ist der, den man im Kopf immer vergisst.'),
@@ -186,7 +199,6 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.axiom;
     return SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.only(
@@ -199,8 +211,11 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.existing == null ? context.t('NEUER ANKER') : context.t('ANKER ÄNDERN'),
-                style: Theme.of(context).textTheme.labelSmall),
+            Text(
+                widget.existing == null
+                    ? context.t('Neuer Anker')
+                    : context.t('Anker ändern'),
+                style: sectionStyle(context)),
             const SizedBox(height: Space.md),
             TextField(
               controller: _title,
@@ -223,9 +238,7 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
             ),
             const SizedBox(height: Space.xl),
 
-            Text(context.t('WAS VORHER PASSIEREN MUSS'),
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: Space.md),
+            SectionLabel(context.t('Was vorher passieren muss')),
             _MinuteDial(
               label: context.t('Fahrzeit'),
               hint: context.t('Reine Wegzeit ohne Puffer.'),
@@ -256,8 +269,11 @@ class _AnchorSheetState extends ConsumerState<_AnchorSheet> {
             ),
 
             const SizedBox(height: Space.lg),
+            // Die Vorschau ist das Ergebnis der Eingaben und damit die eine
+            // erhobene Flaeche des Blattes — vorher ein Rahmen in Signalfarbe,
+            // der neben den vier Reglern nur eine weitere Umrandung war.
             Panel(
-              accent: p.signal.withValues(alpha: 0.4),
+              reachable: true,
               child: AnchorChainView(
                 anchor: _preview,
                 now: ref.watch(nowProvider),
@@ -318,19 +334,18 @@ class _TimeField extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(context.t('DA SEIN UM'),
-                    style: Theme.of(context).textTheme.labelSmall),
+                Text(context.t('Da sein um'), style: sectionStyle(context)),
                 const SizedBox(height: Space.xs),
+                // War Schreibmaschine in w300, 24 px: die groesste Zahl des
+                // Blattes in der duennsten Schrift, die es hier gibt. Eine
+                // Uhrzeit ist ein Messwert — Hausschrift mit
+                // Tabellenziffern, in der Messfarbe, damit „14:00" beim
+                // Aendern nicht springt.
                 Text(
                   '${value.hour.toString().padLeft(2, "0")}:'
                   '${value.minute.toString().padLeft(2, "0")}'
                   '${isToday ? "" : "  ·  ${value.day}.${value.month}."}',
-                  style: TextStyle(
-                    fontFamily: Fonts.mono,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w300,
-                    color: p.ink,
-                  ),
+                  style: readingStyle(context, size: 27, color: p.signal),
                 ),
               ],
             ),
@@ -374,51 +389,56 @@ class _MinuteDial extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium),
               ),
               Text(context.t('{0} min', [value]),
-                  style: monoStyle(context,
-                      size: 13, weight: FontWeight.w600, color: p.signal)),
+                  style: readingStyle(context, size: 15, color: p.signal)),
             ],
           ),
           const SizedBox(height: 2),
           Text(hint, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: Space.sm),
-          SizedBox(
-            height: scaledHeight(context, 38),
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: options.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
-              itemBuilder: (context, i) {
-                final option = options[i];
-                final selected = option == value;
-                return GestureDetector(
+          // War eine waagerecht scrollende Liste fester Hoehe. Zwei Kosten:
+          // Die letzten Stufen standen halb angeschnitten am Rand und die
+          // uebrigen gar nicht — eine Auswahl, von der man nicht sieht, wie
+          // gross sie ist. Und die feste Hoehe musste ueber `scaledHeight`
+          // nachgezogen werden, sobald jemand die Schrift hochstellte.
+          //
+          // Neun kurze Zahlen passen in zwei Zeilen. `Wrap` zeigt alle,
+          // waechst mit der Schrift und braucht keine verborgene Geste.
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
+              for (final option in options)
+                GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
                     onChanged(option);
                   },
+                  behavior: HitTestBehavior.opaque,
                   child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: Space.lg),
+                    constraints: const BoxConstraints(minWidth: 56),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: Space.md, vertical: Space.sm),
                     decoration: BoxDecoration(
-                      color: selected
+                      color: option == value
                           ? p.signal.withValues(alpha: 0.9)
                           : p.panel,
                       borderRadius: BorderRadius.circular(Radii.control),
-                      border:
-                          Border.all(color: selected ? p.signal : p.rule),
+                      border: Border.all(
+                          color: option == value ? p.signal : p.rule),
                     ),
                     child: Text(
                       '$option',
-                      style: monoStyle(context,
-                          size: 13,
+                      textAlign: TextAlign.center,
+                      style: readingStyle(context,
+                          size: 15,
                           weight: FontWeight.w500,
-                          color: selected
+                          color: option == value
                               ? Theme.of(context).colorScheme.onPrimary
                               : p.inkDim),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+            ],
           ),
         ],
       ),

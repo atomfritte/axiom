@@ -143,18 +143,46 @@ final class Anchor {
   bool isActive(DateTime now) =>
       !now.isBefore(startsAt) && now.isBefore(arriveBy);
 
-  /// Ist ein Schritt überfällig?
+  /// Der erste noch offene Schritt, dessen Zeit mehr als
+  /// [kBehindTolerance] zurückliegt. Null, wenn keiner überfällig ist.
   ///
-  /// Bewusst ohne Alarmton in der Benennung: Der Zustand wird gemeldet,
-  /// nicht bewertet. Ein verpasster Schritt ist eine Information, kein
-  /// Vorwurf (R7).
-  bool isBehind(DateTime now) {
-    final next = nextStep(now);
-    if (next == null) return false;
-    return chain
-        .takeWhile((s) => s != next)
-        .any((s) => s.at.isBefore(now.subtract(const Duration(minutes: 5))));
+  /// **[lastDone] ist der entscheidende Teil.** Aus Kette und Uhr allein
+  /// lässt sich „im Zeitplan" und „hinterher" nicht unterscheiden: Dass die
+  /// Zeit eines Schrittes vorbei ist, heißt nicht, dass er nicht getan
+  /// wurde. Wer um 13:00 den Kontext verlässt und um 13:20 beim
+  /// Fertigmachen ist, liegt exakt im Plan — ohne Erledigt-Vermerk meldete
+  /// diese Methode trotzdem Rückstand, und zwar durchgehend von fünf
+  /// Minuten nach dem ersten Kettenschritt bis zum Termin. Ein Wert, der in
+  /// der halben Kette dasselbe sagt, trägt keine Information.
+  ///
+  /// [lastDone] nennt den letzten Schritt, den der Nutzer quittiert hat.
+  /// Gezählt wird nur, was danach kommt. Ohne Angabe gilt nichts als
+  /// erledigt — dann ist die Antwort so gut wie die Datenlage, und die
+  /// Benennung sagt hier, worauf sie beruht.
+  ///
+  /// Bewusst ohne Alarmton: Der Zustand wird gemeldet, nicht bewertet. Ein
+  /// verpasster Schritt ist eine Information, kein Vorwurf (R7).
+  AnchorStep? overdueStep(DateTime now, {AnchorStepKind? lastDone}) {
+    final steps = chain;
+    // Nach dem Termin gibt es keinen Rückstand mehr — die Meldung wäre ein
+    // Vorwurf ohne Nutzen (R7).
+    if (!steps.last.at.isAfter(now)) return null;
+
+    final limit = now.subtract(kBehindTolerance);
+    for (final step in steps) {
+      // Die Reihenfolge der Aufzählung ist die Reihenfolge der Kette; über
+      // den Index statt über die Listenposition, weil Schritte ohne Dauer
+      // gar nicht in der Kette stehen.
+      if (lastDone != null && step.kind.index <= lastDone.index) continue;
+      if (step.at.isBefore(limit)) return step;
+    }
+    return null;
   }
+
+  /// Ist ein Schritt überfällig? Siehe [overdueStep] — insbesondere dazu,
+  /// was [lastDone] beantwortet und was die Frage ohne ihn wert ist.
+  bool isBehind(DateTime now, {AnchorStepKind? lastDone}) =>
+      overdueStep(now, lastDone: lastDone) != null;
 
   Anchor copyWith({
     String? title,
@@ -179,6 +207,12 @@ final class Anchor {
   @override
   String toString() => 'Anchor($title @ $arriveBy, Vorlauf ${leadTime.inMinutes}min)';
 }
+
+/// Ab wann ein offener Schritt als überfällig gilt.
+///
+/// Stand als `Duration(minutes: 5)` mitten in `isBehind` und war damit die
+/// einzige Zahl der Kette, die man nicht nachschlagen konnte.
+const Duration kBehindTolerance = Duration(minutes: 5);
 
 /// Voreinstellungen. Nach der Baseline aus realen Terminkosten ersetzen.
 const Duration kDefaultPrepare = Duration(minutes: 15);

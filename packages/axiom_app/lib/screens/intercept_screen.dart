@@ -87,23 +87,19 @@ class InterceptScreen extends ConsumerWidget {
       );
 }
 
+/// Hier stand dieselbe Spalte noch einmal von Hand: Marke, Ueberschrift,
+/// Erklaertext. [EmptyState] ist genau dafuer da und bringt zwei Dinge mit,
+/// die die Handarbeit nicht hatte — die richtigen Abstaende und eine
+/// eigene Scrollansicht, wenn der Erklaertext bei grosser Schrift laenger
+/// wird als der Schirm.
 class _EmptyTriggers extends StatelessWidget {
   const _EmptyTriggers();
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(context.t('KEINE TRIGGER'), style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: Space.md),
-          Text(context.t('Noch nichts eingerichtet.'),
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: Space.md),
-          Text(
-            context.t('Ein Trigger ist eine Handlung, die du im Moment tun willst und am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen Fragen.'),
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
+  Widget build(BuildContext context) => EmptyState(
+        label: context.t('KEINE TRIGGER'),
+        headline: context.t('Noch nichts eingerichtet.'),
+        body: context.t('Ein Trigger ist eine Handlung, die du im Moment tun willst und am nächsten Tag oft nicht mehr. Statt sie zu sperren, schiebt AXIOM eine Wartezeit dazwischen — und stellt dir deine eigenen Fragen.'),
       );
 }
 
@@ -132,8 +128,12 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
         ?.where((t) => t.id == run.triggerId)
         .firstOrNull;
 
+    // Die laufende Wartezeit ist das Einzige, worum es auf diesem Schirm
+    // gerade geht — also die einzige erhobene Flaeche (G1). Vorher trug sie
+    // einen Signalrahmen; ein Rahmen sagt „hier ist eine Grenze", die
+    // Griffhoehe sagt „das hier geht jetzt in die Hand".
     return Panel(
-      accent: p.signal.withValues(alpha: 0.55),
+      reachable: true,
       padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,17 +143,15 @@ class _ActiveRunCardState extends ConsumerState<_ActiveRunCard> {
           const SizedBox(height: Space.md),
           Text(run.triggerLabel,
               style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.lg),
 
           if (!released)
+            // War Schreibmaschine in w300, 36 px. Die Restzeit ist der
+            // Messwert dieses Schirms — Hausschrift, Tabellenziffern, damit
+            // beim Herunterzaehlen von 11 auf 9 nichts springt.
             Text(
               context.t('{0} min', [run.remaining(now).inMinutes]),
-              style: TextStyle(
-                fontFamily: Fonts.mono,
-                fontSize: 36,
-                fontWeight: FontWeight.w300,
-                color: p.signal,
-              ),
+              style: readingStyle(context, size: 40, color: p.signal),
             ),
           const SizedBox(height: Space.sm),
           // Vorher `interceptWaitingText` — der fertig zusammengesetzte
@@ -313,21 +311,25 @@ class _TriggerRow extends ConsumerWidget {
                 Text(trigger.label,
                     style: Theme.of(context).textTheme.bodyLarge),
                 const SizedBox(height: 2),
+                // War Schreibmaschine in 10,5 px — unter der Lesegrenze und
+                // im Ton eines Protokolls. Wartezeit und Haltequote sind
+                // Messwerte und laufen mit Tabellenziffern.
                 Text(
                   trigger.releaseAt != null
                       ? context.t('Freigabe {0}', [trigger.releaseAt])
                       : context.t('{0} min warten{1}', [trigger.cooldown.inMinutes, hold == null ? "" : " · ${(hold * 100).round()} % gehalten"]),
-                  style: monoStyle(context,
-                      size: 10.5,
+                  style: readingStyle(context,
+                      size: 13.5,
+                      weight: FontWeight.w400,
                       color: stats?.needsReview == true ? p.caution : p.inkFaint),
                 ),
               ],
             ),
           ),
-          if (!disabled)
-            Text(context.t('AUSLÖSEN'),
-                style: monoStyle(context,
-                    size: 10, weight: FontWeight.w600, color: p.signal)),
+          if (!disabled) ...[
+            const SizedBox(width: Space.md),
+            Text(context.t('AUSLÖSEN'), style: sectionStyle(context, color: p.signal)),
+          ],
         ],
       ),
     );
@@ -335,6 +337,29 @@ class _TriggerRow extends ConsumerWidget {
 }
 
 // ── Trigger anlegen ─────────────────────────────────────────────────────
+
+/// Auswahl-Chips in der Sprache dieser Oberflaeche — gewaehlt kommt heraus,
+/// ungewaehlt liegt in der Mulde. Ohne das setzt Material
+/// `secondaryContainer` (in dieser Palette ein Blau) und damit eine zweite
+/// Farbe fuer dieselbe Aussage. Gehoert nach `theme.dart`; bis dahin steht
+/// dasselbe Stueck in jeder Datei mit Chips.
+ChipThemeData _chipLook(BuildContext context) {
+  final p = context.axiom;
+  return ChipThemeData(
+    backgroundColor: p.well,
+    selectedColor: p.signal.withValues(alpha: 0.16),
+    showCheckmark: false,
+    side: BorderSide.none,
+    labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.ink),
+    secondaryLabelStyle:
+        Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.signal),
+    padding: const EdgeInsets.symmetric(
+        horizontal: Space.md, vertical: Space.sm),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Radii.control),
+    ),
+  );
+}
 
 class _TriggerSheet extends ConsumerStatefulWidget {
   final InterceptTrigger? existing;
@@ -411,25 +436,29 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
             const SizedBox(height: Space.xl),
             Text(context.t('Wie lange warten'),
                 style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              children: [
-                for (final option in [5, 15, 30, 60, 1440])
+            const SizedBox(height: Space.md),
+            ChipTheme(
+              data: _chipLook(context),
+              child: Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  for (final option in [5, 15, 30, 60, 1440])
+                    ChoiceChip(
+                      label: Text(option >= 1440 ? '24 h' : context.t('{0} min', [option])),
+                      selected: _releaseAt == null && _minutes == option,
+                      onSelected: (_) => setState(() {
+                        _minutes = option;
+                        _releaseAt = null;
+                      }),
+                    ),
                   ChoiceChip(
-                    label: Text(option >= 1440 ? '24 h' : context.t('{0} min', [option])),
-                    selected: _releaseAt == null && _minutes == option,
-                    onSelected: (_) => setState(() {
-                      _minutes = option;
-                      _releaseAt = null;
-                    }),
+                    label: Text(context.t('bis 09:00')),
+                    selected: _releaseAt == '09:00',
+                    onSelected: (_) => setState(() => _releaseAt = '09:00'),
                   ),
-                ChoiceChip(
-                  label: Text(context.t('bis 09:00')),
-                  selected: _releaseAt == '09:00',
-                  onSelected: (_) => setState(() => _releaseAt = '09:00'),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: Space.sm),
             Text(
@@ -489,29 +518,33 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
               ],
             ),
 
-            const SizedBox(height: Space.md),
+            const SizedBox(height: Space.lg),
             Text(context.t('ODER EINE VORLAGE'),
                 style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Space.sm),
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
+            // Hier standen `ActionChip`s. Das war die falsche Bauform, und
+            // es hat sichtbar geschadet: Ein Material-Chip setzt seine
+            // Beschriftung **einzeilig** (`maxLines: 1`, `softWrap: false`,
+            // `TextOverflow.fade`). „Was genau löst es, das ich gestern noch
+            // nicht lösen musste?" lief damit rechts aus dem Bild und
+            // verblasste mitten im Satz — ohne Ueberlaufmeldung, weil der
+            // Chip das als vorgesehen betrachtet. Wer die Vorlage nicht
+            // lesen kann, kann sie nicht waehlen.
+            //
+            // Eine Vorlage ist ohnehin kein Chip, sondern ein Satz: volle
+            // Breite, umbrechend, mit dem Plus als Aufforderung.
+            for (final seed in kChecklistSeeds)
+              if (!_checklist.contains(seed))
                 // Gespeichert wird der deutsche Quelltext, angezeigt die
                 // Uebersetzung: Der deutsche Satz ist der Schluessel, also
                 // wandert eine einmal gewaehlte Vorlage bei einem
                 // Sprachwechsel mit. Waere hier der englische Satz abgelegt,
                 // haette die Checkliste dauerhaft die Sprache des Tages, an
                 // dem sie entstand.
-                for (final seed in kChecklistSeeds)
-                  if (!_checklist.contains(seed))
-                    ActionChip(
-                      label: Text(context.t(seed),
-                          style: Theme.of(context).textTheme.bodySmall),
-                      onPressed: () => setState(() => _checklist.add(seed)),
-                    ),
-              ],
-            ),
+                _SeedRow(
+                  text: context.t(seed),
+                  onTap: () => setState(() => _checklist.add(seed)),
+                ),
 
             const SizedBox(height: Space.xl),
             FilledButton(
@@ -545,5 +578,49 @@ class _TriggerSheetState extends ConsumerState<_TriggerSheet> {
       _checklist.add(text);
       _question.clear();
     });
+  }
+}
+
+/// Eine Vorlage zum Uebernehmen — voller Satz, volle Breite.
+///
+/// Liegt in der Mulde wie alles Waehlbare in einem Blatt. Das Plus steht
+/// rechts und sagt, was ein Tipp bewirkt: Der Satz wandert nach oben in die
+/// eigene Liste, er wird nicht ausgewaehlt.
+class _SeedRow extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+
+  const _SeedRow({required this.text, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    final radius = BorderRadius.circular(Radii.control);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.sm),
+      child: Material(
+        color: p.well,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: Space.lg, vertical: Space.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(text,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                ),
+                const SizedBox(width: Space.md),
+                Icon(Icons.add, size: 18, color: p.signal),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

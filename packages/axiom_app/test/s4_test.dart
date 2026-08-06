@@ -57,7 +57,7 @@ void main() {
         triggerClass: TriggerClass.criticism,
       );
       await pumpPhone(tester, h.wrap(const SignalScreen()));
-      expect(find.text('NACHBETRACHTUNG'), findsNothing);
+      expect(find.text('Nachbetrachtung'), findsNothing);
     });
 
     testWidgets('nach zwölf Stunden wird sie angeboten', (tester) async {
@@ -68,7 +68,7 @@ void main() {
       h.clock.advance(const Duration(hours: 14));
       await pumpPhone(tester, h.wrap(const SignalScreen()));
 
-      expect(find.text('NACHBETRACHTUNG'), findsOneWidget);
+      expect(find.text('Nachbetrachtung'), findsOneWidget);
       expect(find.textContaining('genug Abstand'), findsOneWidget);
     });
 
@@ -117,7 +117,7 @@ void main() {
       );
 
       await pumpPhone(tester, h.wrap(const SignalScreen()));
-      expect(find.text('NACHBETRACHTUNG'), findsNothing);
+      expect(find.text('Nachbetrachtung'), findsNothing);
     });
 
     testWidgets('zeigt Häufungen nach Auslöserklasse', (tester) async {
@@ -129,7 +129,7 @@ void main() {
         h.clock.advance(const Duration(hours: 30));
       }
       await pumpPhone(tester, h.wrap(const SignalScreen()));
-      expect(find.textContaining('HÄUFUNGEN'), findsOneWidget);
+      expect(find.textContaining('Häufungen'), findsOneWidget);
       expect(find.text('Zurückweisung'), findsWidgets);
     });
 

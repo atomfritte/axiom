@@ -14,13 +14,44 @@ import '../theme.dart';
 import '../tokens.dart';
 import '../../i18n/i18n.dart';
 
+/// Kommazahl in der eingestellten Sprache.
+///
+/// „67.5" ist im Deutschen keine Zahl, sondern ein Tippfehler. In einer
+/// Herleitung, die beweisen soll, dass die Summe stimmt, faellt genau das
+/// auf — und wer einmal stolpert, rechnet nicht weiter nach.
+String _decimal(BuildContext context, double value, {int digits = 1}) {
+  final text = value.toStringAsFixed(digits);
+  return context.language == AppLanguage.de ? text.replaceAll('.', ',') : text;
+}
+
 /// Eine Messwertzeile: Name, Balken, Zahl — aufklappbar zur Herleitung.
+///
+/// **Jeder Messwert wird in [AxiomPalette.signal] gezeichnet.** Vorher waehlte
+/// die aufrufende Seite eine Farbe je Messwert: Kapazitaet bernstein,
+/// Kompensationslast gruen (ueber `forLoadLevel`), Reizbedarf kupfern,
+/// Fokuslast blau. Untereinander gelesen — und genau so stehen sie auf dem
+/// Zustandsschirm — las sich das als drei bis sechs verschiedene *Urteile*
+/// ueber denselben Menschen. Gruen sagt „gut", Kupfer sagt „Achtung"; beides
+/// sind Noten, und Noten sind hier verboten (R7: Zustandswerte sind
+/// Messwerte).
+///
+/// Unterschieden wird ab jetzt ueber Beschriftung und Position. Farbe
+/// unterscheidet nur noch *Messung* von *Zustand* — und ein Zustand (eine
+/// Laststufe, ein Regime) faerbt sich weiterhin ueber
+/// [AxiomPalette.forLoadLevel], nur eben nicht mehr hier.
 final class InstrumentBar extends StatefulWidget {
   final String label;
 
   /// 0..100.
   final int value;
-  final Color color;
+
+  /// **Wird nicht mehr ausgewertet.**
+  ///
+  /// Der Parameter steht nur noch da, damit die Schirme, die ihn heute
+  /// uebergeben, weiter uebersetzen; er faerbt nichts. Wer ihn an einer
+  /// Aufrufstelle findet, streicht ihn — das ist dann eine Zeile weniger und
+  /// keine Verhaltensaenderung. Danach kann auch dieses Feld weg.
+  final Color? color;
 
   /// Kurze Einordnung ohne Bewertung ("ausgeruht", "hohe Last").
   final String? reading;
@@ -35,7 +66,7 @@ final class InstrumentBar extends StatefulWidget {
     super.key,
     required this.label,
     required this.value,
-    required this.color,
+    this.color,
     this.reading,
     this.breakdown = const [],
     this.confidence = 1.0,
@@ -74,22 +105,25 @@ class _InstrumentBarState extends State<InstrumentBar> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(widget.label.toUpperCase(),
+                    child: Text(widget.label,
                         style: Theme.of(context).textTheme.labelSmall),
                   ),
                   if (stale)
                     Padding(
                       padding: const EdgeInsets.only(right: Space.sm),
-                      child: Text(context.t('DATEN ALT'),
-                          style: monoStyle(context,
-                              size: 9.5, spacing: 0.8, color: p.inkFaint)),
+                      // „DATEN ALT" war neun Zeichen in gesperrten Versalien
+                      // — die Ausnahme gilt nur bis sieben.
+                      child: Text(context.t('Daten alt'),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: p.inkFaint)),
                     ),
                   Text(
                     '${widget.value}',
-                    style: monoStyle(context,
-                        size: 15,
-                        weight: FontWeight.w600,
-                        color: stale ? p.inkFaint : widget.color),
+                    style: readingStyle(context,
+                        size: 17,
+                        color: stale ? p.inkFaint : p.signal),
                   ),
                   if (expandable)
                     Padding(
@@ -103,10 +137,10 @@ class _InstrumentBarState extends State<InstrumentBar> {
                     ),
                 ],
               ),
-              const SizedBox(height: Space.xs + 2),
+              const SizedBox(height: Space.sm),
               _Bar(
                 value: widget.value,
-                color: stale ? p.inkFaint : widget.color,
+                color: stale ? p.inkFaint : p.signal,
                 track: p.rule,
               ),
               if (widget.reading != null) ...[
@@ -122,7 +156,11 @@ class _InstrumentBarState extends State<InstrumentBar> {
                 curve: Motion.instrument,
                 alignment: Alignment.topCenter,
                 child: _expanded
-                    ? _Breakdown(terms: widget.breakdown)
+                    ? _Breakdown(
+                        terms: widget.breakdown,
+                        value: widget.value,
+                        confidence: widget.confidence,
+                      )
                     : const SizedBox(width: double.infinity),
               ),
             ],
@@ -145,7 +183,15 @@ final class _Bar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => Stack(
         children: [
-          Container(height: 4, color: track),
+          // Runde Enden statt geschnittener: Der Balken ist eine Marke auf
+          // einer Skala, kein Fortschrittsbalken mit Ziellinie.
+          Container(
+            height: 4,
+            decoration: BoxDecoration(
+              color: track,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: value / 100, end: value / 100),
             duration: reduceMotion ? Duration.zero : Motion.settle,
@@ -153,7 +199,10 @@ final class _Bar extends StatelessWidget {
             builder: (context, t, _) => Container(
               height: 4,
               width: constraints.maxWidth * t,
-              color: color,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
         ],
@@ -162,51 +211,113 @@ final class _Bar extends StatelessWidget {
   }
 }
 
-/// Die Herleitung: jeder Term mit seinem Beitrag.
+/// Die Herleitungstafel: jeder Term mit seinem Beitrag — **und die Summe.**
+///
+/// **Warum die drei Zeilen unten keine Kosmetik sind.** G2 verlangt, dass
+/// kein Score ohne sichtbare Formel dasteht. Hier standen die Terme, und
+/// darunter stand nichts. Wer nachrechnete, kam auf eine andere Zahl als die
+/// oben angezeigte — bei Konfidenz 0,50 summierten sich sichtbare 67,5 zu
+/// einer angezeigten 60. Eine Formel, die etwas anderes rechnet, als sie
+/// zeigt, erklaert nichts; sie beschaedigt das Vertrauen in alles andere,
+/// was das System behauptet.
+///
+/// Der Kern liefert die fehlende Groesse inzwischen als eigenen Term
+/// („Duenne Datenlage", `state_deriver.dart`). Was noch fehlte, war der
+/// Abschluss: **Summe · Rundung und Grenze · Angezeigt.** Damit ist die
+/// Rechnung Zeile fuer Zeile nachvollziehbar, ohne dass man wissen muss,
+/// was `clamp100` ist.
+///
+/// **Warum die Beitraege nicht mehr gruen und kupfern sind.** Ein negativer
+/// Term ist kein schlechter Term. „Schlafschuld −18" ist eine Messung, keine
+/// Ruege; in Kupfer gesetzt liest sie sich als Vorwurf (R7, D10). Das
+/// Vorzeichen steht ohnehin da — es braucht keine Farbe, die es noch einmal
+/// bewertet. Farbe traegt hier nur die eine Zeile, um die es geht: die
+/// angezeigte Zahl.
 final class _Breakdown extends StatelessWidget {
   final List<Term> terms;
-  const _Breakdown({required this.terms});
+
+  /// Der Wert, der oben steht. Das Ziel der Rechnung.
+  final int value;
+
+  /// 0..1.
+  final double confidence;
+
+  const _Breakdown({
+    required this.terms,
+    required this.value,
+    required this.confidence,
+  });
 
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    final sum = terms.fold(0.0, (a, t) => a + t.contribution);
+    // Der Rest zwischen Termsumme und angezeigtem Wert. Er entsteht durch
+    // Runden und durch die Begrenzung auf 0..100 — und er wird ausgewiesen,
+    // auch wenn er null ist. Gerade die Null ist die Aussage: Es fehlt
+    // nichts.
+    final rest = value - sum;
+
+    Widget row(String label, String amount,
+            {Color? color, FontWeight weight = FontWeight.w500}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: color ?? p.inkDim)),
+              ),
+              const SizedBox(width: Space.md),
+              Text(amount,
+                  style: readingStyle(context,
+                      size: 14, weight: weight, color: color ?? p.inkDim)),
+            ],
+          ),
+        );
+
+    String signed(double v) =>
+        '${v >= 0 ? "+" : "−"}${_decimal(context, v.abs())}';
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: Space.md),
-      padding: const EdgeInsets.all(Space.md),
+      padding: const EdgeInsets.all(Space.lg),
       decoration: BoxDecoration(
-        color: p.base,
+        color: p.well,
         borderRadius: BorderRadius.circular(Radii.control),
-        border: Border.all(color: p.rule),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('SO WIRD GERECHNET'),
-              style: Theme.of(context).textTheme.labelSmall),
+          Row(
+            children: [
+              Expanded(
+                child: Text(context.t('So wird gerechnet'),
+                    style: Theme.of(context).textTheme.labelSmall),
+              ),
+              if (confidence < 1.0)
+                Text(
+                  context.t('Konfidenz {0}',
+                      [_decimal(context, confidence, digits: 2)]),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+            ],
+          ),
           const SizedBox(height: Space.sm),
           for (final term in terms)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.5),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(term.label,
-                        style: monoStyle(context, size: 12, color: p.inkDim)),
-                  ),
-                  Text(
-                    '${term.contribution >= 0 ? "+" : "−"}'
-                    '${term.contribution.abs().toStringAsFixed(1)}',
-                    style: monoStyle(
-                      context,
-                      size: 12,
-                      weight: FontWeight.w500,
-                      color: term.contribution >= 0 ? p.calm : p.caution,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            row(term.label, signed(term.contribution)),
+          const SizedBox(height: Space.sm),
+          Container(height: 1, color: p.rule),
+          const SizedBox(height: Space.sm),
+          row(context.t('Summe der Terme'), _decimal(context, sum)),
+          row(context.t('Rundung und Grenze 0 bis 100'), signed(rest)),
+          row(context.t('Angezeigt'), '$value',
+              color: p.signal, weight: FontWeight.w600),
         ],
       ),
     );
@@ -258,48 +369,91 @@ final class RuleStamp extends StatelessWidget {
   }
 }
 
-/// Karte im Frontplatten-Stil.
+/// Eine Karte — eine Flaeche, die **ueber** dem Grund liegt.
+///
+/// Hier stand ein Haarlinienrahmen um jede Flaeche („Frontplatte"). Das ist
+/// konsequent zum Bild der Instrumententafel und hat eine Nebenwirkung, die
+/// sich erst auf zwoelf Schirmen zeigt: Zehn gerahmte Kaesten untereinander
+/// sind ein Gitter, und ein Gitter hat keine Ordnung — alles ist gleich weit
+/// weg.
+///
+/// Jetzt traegt der Schatten die Aussage. [reachable] hebt die eine Karte
+/// heraus, die jetzt gemeint ist (G1); alle anderen liegen ruhig auf dem
+/// Grund. Im Dunkeln uebernimmt das Kantenlicht ([AxiomPalette.rim]), weil
+/// ein Schatten auf fast schwarzem Grund nichts sagt.
 final class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
+
+  /// Zeichnet doch einen Rahmen, in dieser Farbe. Fuer die wenigen Faelle,
+  /// in denen eine Karte einen *Zustand* meldet (geeicht, vollstaendig) —
+  /// nicht fuer Messwerte.
   final Color? accent;
+
+  /// Griffhoehe: die Karte, die jetzt in die Hand geht.
+  final bool reachable;
+
   final VoidCallback? onTap;
 
   const Panel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(Space.lg),
+    this.padding = const EdgeInsets.all(Space.xl),
     this.accent,
+    this.reachable = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    final radius = BorderRadius.circular(Radii.panel);
     final content = Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: p.panel,
-        borderRadius: BorderRadius.circular(Radii.panel),
-        border: Border.all(color: accent ?? p.rule),
+        // Im Dunkeln ist Griffhoehe eine Helligkeitsstufe, im Hellen nicht:
+        // `panel` ist dort bereits Weiss, und `panelRaised` liegt *darunter*.
+        // Die erhobene Karte sah damit im Hellen matter aus als eine
+        // gewoehnliche — genau verkehrt herum. Im Hellen traegt allein der
+        // Schatten, und das reicht: Er ist dort ohnehin das staerkere Mittel.
+        color: reachable && p.isDark ? p.panelRaised : p.panel,
+        borderRadius: radius,
+        boxShadow: reachable ? Shadows.reachable(p) : Shadows.resting(p),
+        border: accent != null
+            ? Border.all(color: accent!)
+            : (p.isDark ? Border.all(color: p.rim) : null),
       ),
       child: child,
     );
     if (onTap == null) return content;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(Radii.panel),
+      borderRadius: radius,
       child: content,
     );
   }
 }
 
-/// Abschnittsueberschrift im Skalen-Stil.
+/// Abschnittsmarke — normale Schreibweise, kein Trennstrich.
+///
+/// Hier stand `text.toUpperCase()` und dahinter eine Haarlinie ueber die
+/// restliche Breite. Beides ging in dieselbe Richtung und beides kostete:
+/// Gesperrte Versalien sind langsamer zu lesen, weil die Wortform verloren
+/// geht, und ein Strich hinter jeder Ueberschrift zieht ein Lineal ueber
+/// den Schirm, das nichts trennt, was der Abstand nicht schon trennte.
+///
+/// Der Zaehler (`· 3`) steht jetzt als eigenes Stueck rechts neben der
+/// Marke statt in ihr — er ist ein Messwert und laeuft mit Tabellenziffern.
 final class SectionLabel extends StatelessWidget {
   final String text;
+
+  /// Optionale Zahl rechts. Ein Messwert, kein Zusatz zur Ueberschrift.
+  final String? count;
+
   final Widget? trailing;
-  const SectionLabel(this.text, {super.key, this.trailing});
+
+  const SectionLabel(this.text, {super.key, this.count, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -308,29 +462,182 @@ final class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Space.md),
       child: Row(
         children: [
-          // Flexible mit Ellipse: Ohne das erzeugt ein langer Zusatz rechts
-          // negativen Restplatz fuer den Trennstrich — und ein Expanded mit
-          // negativem Raum ist ein Ueberlauf, kein Umbruch.
-          //
-          // Die Gewichte sind nicht kosmetisch: Beide Kinder sind flexibel
-          // und teilten den freien Platz sonst haelftig — „NICHT IN
-          // REICHWEITE · 3" verlor dann seine Zahl an einen Strich, der
-          // nichts sagt. Die Beschriftung bekommt den Vorrang, der Strich
-          // den Rest, und bei sehr grosser Schrift kuerzt weiterhin die
-          // Ellipse statt zu ueberlaufen.
+          // Flexible mit Ellipse: Bei sehr grosser Schrift kuerzt die
+          // Ellipse, statt dass die Zeile ueberlaeuft.
           Flexible(
-            flex: 12,
-            child: Text(text.toUpperCase(),
+            child: Text(text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall),
           ),
-          const SizedBox(width: Space.md),
-          Expanded(flex: 1, child: Container(height: 1, color: p.rule)),
+          if (count != null) ...[
+            const SizedBox(width: Space.sm),
+            Text(count!,
+                style: readingStyle(context, size: 13.5, color: p.inkFaint)),
+          ],
           if (trailing != null) ...[
+            const Spacer(),
             const SizedBox(width: Space.md),
             trailing!,
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// **Die Reichweitenkante** — die Signatur dieses Entwurfs.
+///
+/// Kein Trennstrich, sondern ein Horizont: Darueber liegt, was heute in die
+/// Hand geht, darunter, was da ist und heute nicht. Ihre Hoehe ist ein
+/// Messwert — die Kapazitaet. Sinkt sie, sinkt mehr vom Tag unter die Kante,
+/// ganz ohne einen Satz darueber.
+///
+/// Warum Tiefe und nicht Farbe: Tiefe kodiert **Entfernung**, Farbe haette
+/// „gut/schlecht" gesagt. Was unten liegt, ist nicht schlecht — es ist heute
+/// weiter weg (R7, D10). Und sie beantwortet die teuerste Sekunde bei
+/// niedriger Kapazitaet — „was kann ich jetzt anfangen" — bevor man liest
+/// (G1).
+///
+/// Gehoert immer zwischen die erhobenen Karten und ein [Well]. Ohne die
+/// Mulde darunter ist sie nur eine Zeile.
+final class ReachEdge extends StatelessWidget {
+  /// 0..100.
+  final int capacity;
+
+  const ReachEdge({super.key, required this.capacity});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return Semantics(
+      label: context.t('Reichweitenkante. Reichweite heute {0}.', [capacity]),
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.md),
+        child: Row(
+          children: [
+            Flexible(
+              child: Text(context.t('Reichweite heute'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall),
+            ),
+            const SizedBox(width: Space.sm),
+            Text('$capacity',
+                style: readingStyle(context, size: 19, color: p.signal)),
+            const SizedBox(width: Space.md),
+            // Der Strich laeuft nach rechts aus. Er ist die Kante selbst,
+            // nicht ihre Umrandung — deshalb ohne festes Ende.
+            Expanded(
+              child: Container(
+                height: 2,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(1),
+                  gradient: LinearGradient(colors: [
+                    p.signal.withValues(alpha: 0.55),
+                    p.signal.withValues(alpha: 0.04),
+                  ]),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// **Die Mulde** — die Flaeche unter der Reichweitenkante.
+///
+/// Flutter kennt keinen Innenschatten. Der hier ist gemalt: ein kurzer
+/// Verlauf unter der Oberkante, darueber zwei Haarlinien — aussen faengt
+/// die Kante Licht, innen liegt sie im Schatten. An dieser Abfolge erkennt
+/// das Auge eine Vertiefung und keine zweite Farbe.
+///
+/// **Was hier nicht passiert: Ausgrauen.** Der Text in der Mulde behaelt
+/// seine Rollen und damit seinen vollen Kontrast — [AxiomPalette.well] ist
+/// dafuer eigens knapp bemessen und nachgerechnet. Ausgegraut hiesse
+/// „unwichtig"; gemeint ist „heute nicht in Reichweite". Der Unterschied
+/// ist der ganze Punkt: Was hier liegt, ist nicht weniger wert, es ist
+/// weiter weg.
+///
+/// Die einzige farbige Handlung, die hier stehen darf, ist der Weg nach
+/// oben („zerlegen ›"). Alles andere bleibt Text.
+final class Well extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets padding;
+
+  /// Vollflaechig heisst `BorderRadius.zero` — dann ist die Mulde der Boden
+  /// des Schirms und nicht ein weiterer Kasten darauf.
+  final BorderRadius radius;
+
+  const Well({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(Space.xl),
+    this.radius = const BorderRadius.all(Radius.circular(Radii.well)),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.axiom;
+    return ClipRRect(
+      borderRadius: radius,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            color: p.well,
+            padding: padding,
+            child: child,
+          ),
+          // Innenschatten: das Licht kommt von oben, also faellt es direkt
+          // unter der Kante am wenigsten ein.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 26,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      p.shade.withValues(alpha: p.isDark ? 0.55 : 0.17),
+                      p.shade.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Die Schattenlippe innen …
+          Positioned(
+            top: 1.5,
+            left: 0,
+            right: 0,
+            height: 1.5,
+            child: IgnorePointer(
+              child: ColoredBox(
+                  color: p.shade.withValues(alpha: p.isDark ? 0.7 : 0.14)),
+            ),
+          ),
+          // … und die Lichtlippe aussen.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 1.5,
+            child: IgnorePointer(
+              child: ColoredBox(
+                color: const Color(0xFFFFFFFF)
+                    .withValues(alpha: p.isDark ? 0.05 : 0.85),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -436,7 +743,11 @@ double scaledHeight(BuildContext context, double base) =>
 /// Aufgabe an!" ist eine Handlungsaufforderung ohne Anlass. Hier steht, was
 /// der Fall ist, und woher etwas käme.
 final class EmptyState extends StatelessWidget {
-  /// Kurz, in Versalien — der Zustand als Messwert.
+  /// Kurz, in normaler Schreibweise — der Zustand als Messwert.
+  ///
+  /// Hier stand „Kurz, in Versalien". Gesperrte Versalien sind langsamer zu
+  /// lesen, und der leere Schirm ist ausgerechnet die Stelle, an der jemand
+  /// zum ersten Mal liest, wozu es ihn gibt.
   final String label;
 
   /// Ein Satz, der den Zustand benennt.
@@ -525,21 +836,24 @@ final class BigReading extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.end,
       spacing: Space.sm,
       children: [
+        // War Monospace in w300. Beides ist weg: Die Ziffern stehen jetzt
+        // ueber Tabellenziffern untereinander (der einzige Grund, der je
+        // fuer Mono sprach), und w300 in 34 px sah auf einem Telefon nicht
+        // ruhig aus, sondern blass.
         Text(
           value,
-          style: TextStyle(
-            fontFamily: Fonts.mono,
-            fontSize: size,
-            fontWeight: FontWeight.w300,
-            height: 1.1,
-            color: valueColor ?? p.ink,
-          ),
+          style: readingStyle(context,
+              size: size, height: 1.06, color: valueColor ?? p.ink),
         ),
         Padding(
           // Die Einheit sitzt auf der Grundlinie der Zahl, nicht auf ihrer
           // Oberkante — `Wrap` kennt keine Grundlinie, also von Hand.
           padding: const EdgeInsets.only(bottom: 4),
-          child: Text(unit, style: monoStyle(context, size: 13)),
+          child: Text(unit,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: p.inkFaint)),
         ),
       ],
     );
@@ -559,19 +873,20 @@ final class ScaleEnds extends StatelessWidget {
   const ScaleEnds({super.key, required this.low, required this.high});
 
   @override
-  Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(low,
-                style: monoStyle(context, size: 10.5, spacing: 0.4)),
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Text(high,
-                textAlign: TextAlign.right,
-                style: monoStyle(context, size: 10.5, spacing: 0.4)),
-          ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: context.axiom.inkFaint);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: Text(low, style: style)),
+        const SizedBox(width: Space.md),
+        Expanded(
+          child: Text(high, textAlign: TextAlign.right, style: style),
+        ),
+      ],
+    );
+  }
 }

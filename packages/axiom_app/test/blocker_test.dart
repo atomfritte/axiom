@@ -223,7 +223,7 @@ void main() {
 
       await pumpPhone(tester, h.wrap(const TasksScreen()));
 
-      expect(find.text('WARTET · 1'), findsOneWidget);
+      expect(find.text('Wartet · 1'), findsOneWidget);
       expect(find.text('wartet auf: Ordner holen'), findsOneWidget);
       // Der Blocker zeigt seinen Hebel — die Zahl, aus der die Formel
       // rechnet, steht sichtbar da (G2).

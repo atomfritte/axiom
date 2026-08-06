@@ -65,6 +65,54 @@ void main() {
     expect(report.errors.join(), contains('gibt_es_nicht'));
   });
 
+  group('Ereignisnamen', () {
+    test('ein vertippter Ereignisname ist ein Fehler', () {
+      // Der teuerste Tippfehler im ganzen Regelwerk: Er macht die Regel
+      // nicht ungueltig, sondern still wirkungslos. `count_today` auf ein
+      // Ereignis, das niemand schreibt, ist immer 0 — die Regel unten
+      // feuert damit jeden Tag, ohne dass je etwas passiert waere.
+      final report = check(_rule(when: '''
+  when:
+    all:
+      - count_today: { event: checkim, lt: 1 }
+'''));
+
+      expect(report.isValid, isFalse);
+      expect(report.errors.join(), contains('checkim'));
+      expect(report.errors.join(), contains('still wirkungslos'));
+    });
+
+    test('auch in minutes_since', () {
+      // Hier kippt die Wirkung in die andere Richtung: Ein nie
+      // eingetretenes Ereignis gilt als „unendlich lange her", `gte`
+      // trifft also immer zu.
+      final report = check(_rule(when: '''
+  when:
+    all:
+      - minutes_since: { event: focus_begin, gte: 90 }
+'''));
+
+      expect(report.isValid, isFalse);
+      expect(report.errors.join(), contains('focus_begin'));
+    });
+
+    test('ein interner Ereignistyp zaehlt, auch wenn der Editor ihn nicht '
+        'anbietet', () {
+      // `decision_feedback` steht nicht in RuleVocabulary.events — der
+      // Wortschatz laesst interne Buchungen bewusst weg. Geschrieben wird
+      // das Ereignis trotzdem (Runtime.respondTo), und R-130 wertet es aus.
+      // Wer gegen den Wortschatz statt gegen EventType prueft, wirft genau
+      // die gueltigen Regeln weg.
+      final report = check(_rule(when: '''
+  when:
+    all:
+      - minutes_since: { event: decision_feedback, gte: 1440 }
+'''));
+
+      expect(report.isValid, isTrue);
+    });
+  });
+
   test('eine fehlende Uebersetzung ist eine Warnung, kein Fehler', () {
     // Sichtbar unfertig ist besser als stumm fehlend: Eine deshalb nicht
     // geladene Regel waere schlimmer als der deutsche Satz in der

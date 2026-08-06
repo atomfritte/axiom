@@ -52,21 +52,38 @@ extension S3Store on SqliteEventStore {
     return rows.isEmpty ? null : _toSession(rows.first);
   }
 
-  /// Fokusminuten seit lokalem Tagesbeginn — Grundlage des Reiz-Guthabens.
+  /// Fokusminuten des lokalen Tages — Grundlage des Reiz-Guthabens.
+  ///
+  /// Gezählt wird die **Überschneidung** mit dem Tag, nicht die Sitzung nach
+  /// ihrem Beginn. Vorher stand hier `WHERE started_at >= dayStart` und die
+  /// volle Sitzungsdauer: Eine Sitzung von 23:30 bis 01:00 zählte mit
+  /// neunzig Minuten auf den Vortag und mit null auf den Tag, an dem
+  /// sechzig davon lagen. Für einen Nachtarbeiter war das Reiz-Guthaben
+  /// damit systematisch am falschen Tag [D8] — und ausgerechnet die
+  /// Sitzungen, die über Mitternacht gehen, sind die, nach denen es gebraucht
+  /// wird.
   Future<int> focusMinutesToday(DateTime localNow) async {
     final dayStart =
         DateTime(localNow.year, localNow.month, localNow.day)
             .millisecondsSinceEpoch;
+    final dayEnd = DateTime(localNow.year, localNow.month, localNow.day + 1)
+        .millisecondsSinceEpoch;
+    // Alles, was den Tag berührt: vor Tagesende begonnen und nach
+    // Tagesbeginn beendet — oder noch offen.
     final rows = _db.select(
-      'SELECT started_at, ended_at FROM focus_sessions WHERE started_at >= ?',
-      [dayStart],
+      'SELECT started_at, ended_at FROM focus_sessions '
+      'WHERE started_at < ? AND (ended_at IS NULL OR ended_at > ?)',
+      [dayEnd, dayStart],
     );
     var total = 0;
     for (final row in rows) {
       final started = row['started_at'] as int;
-      final ended = (row['ended_at'] as int?) ??
-          localNow.millisecondsSinceEpoch;
-      total += ((ended - started) / 60000).round();
+      // Eine offene Sitzung zählt bis jetzt, nicht bis Tagesende: Was noch
+      // nicht passiert ist, ist kein Guthaben.
+      final ended = (row['ended_at'] as int?) ?? localNow.millisecondsSinceEpoch;
+      final from = started < dayStart ? dayStart : started;
+      final to = ended > dayEnd ? dayEnd : ended;
+      if (to > from) total += ((to - from) / 60000).round();
     }
     return total;
   }

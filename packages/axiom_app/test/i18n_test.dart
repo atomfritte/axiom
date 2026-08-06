@@ -550,7 +550,7 @@ void main() {
         'Erfassen',
         'Beenden',
         'Slot läuft',
-        'KAPAZITÄT',
+        'Kapazität',
       ]) {
         expect(looksLikeUserText(bad), isTrue, reason: bad);
       }

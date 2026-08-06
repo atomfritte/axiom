@@ -106,6 +106,28 @@ void main() {
         reason: 'Keine Variable des Baums bezieht sich auf den Bestand',
       );
     });
+
+    test('und der Regelwortschatz bietet keine an', () {
+      // Waechter statt Notizzettel. Was fehlt, ist genau eine Zahl:
+      // offene Aufgaben im Zustand `ready`, die bei der aktuellen Kapazitaet
+      // nicht startbar sind — die Menge, die `Atomizer.candidates` ohnehin
+      // schon berechnet und die now_screen.dart als Kandidaten anzeigt.
+      // Sie muesste in RuleVocabulary.numerics, RuntimeContext und
+      // StateEvalContext.numeric stehen; dann bekaeme R-020 die Zeile
+      // `- atomize_candidates: { gte: 1 }`.
+      //
+      // Faellt dieser Test um, weil jemand eine solche Zahl ergaenzt hat,
+      // ist R-020 die erste Regel, die sie braucht.
+      final backlogish = RuleVocabulary.numerics.map((v) => v.id).where((id) =>
+          id.contains('task') ||
+          id.contains('atomize') ||
+          id.contains('startable') ||
+          id.contains('backlog'));
+      expect(backlogish, isEmpty,
+          reason: 'Es gibt jetzt eine Zahl ueber den Aufgabenbestand — '
+              'R-020 sollte sie in ihre Bedingung aufnehmen, sonst fordert '
+              'sie weiter zum Zerlegen auf, wo nichts liegt (G1)');
+    });
   });
 
   group('R-020 und die Systemgrenzen', () {

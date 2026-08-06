@@ -24,6 +24,32 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
 
 ## Aufgenommen
 
+### Ein Name pro Messwert — „Reichweite heute" ist „Kapazität"
+- **Defizit:** D9 — und R7 hängt mit dran
+- **Frühestens:** sobald jemand `instruments.dart` und `state_screen.dart` in einer Hand hat
+- **Warum nicht jetzt:** Die Reichweitenkante beschriftet die Kapazität mit *Reichweite heute*,
+  der Zustandsschirm nennt dieselbe Zahl *Kapazität*, und die Regelbegründungen sprechen von
+  *capacity*. Beim Umbau der Mulde ist die doppelte **Anzeige** verschwunden — auf „Jetzt" stand
+  „Reichweite heute 61" und drei Zentimeter darunter „Kapazität 61". Geblieben ist der doppelte
+  **Name**: derselbe Messwert heißt auf zwei Bildschirmen verschieden, und wer beide sieht, sucht
+  nach dem Unterschied, den es nicht gibt. Zu ändern wären `ReachEdge` in
+  `packages/axiom_app/lib/design/widgets/instruments.dart` und die Kopfzeile in
+  `state_screen.dart` — beides lag außerhalb dieser Runde. Welcher der beiden Namen gewinnt, ist
+  eine echte Frage: „Kapazität" ist der Begriff des Regelwerks, „Reichweite heute" sagt, was die
+  Zahl *tut*. Entscheiden, dann überall gleich schreiben.
+- **Notiert:** 2026-08-06
+
+### „Review" eindeutschen
+- **Defizit:** keins — Sprachkonsistenz
+- **Frühestens:** bei der nächsten Arbeit an `review_screen.dart`
+- **Warum nicht jetzt:** Der Bildschirm heißt `{0}-Review`, also „Tag-Review", „Woche-Review".
+  Das ist ein englisches Wort in einer Oberfläche, deren deutscher Satz zugleich der
+  Übersetzungsschlüssel ist — und „Woche-Review" ist auch als deutsche Fügung falsch gebildet.
+  „Tagesrückblick" und „Wochenrückblick" wären richtig. Die Zeile in der Mulde auf „Jetzt" trägt
+  denselben Namen wie der Bildschirm, absichtlich; sie muss deshalb mitgeändert werden, und
+  `review_screen.dart` gehörte in dieser Runde jemand anderem.
+- **Notiert:** 2026-08-06
+
 ### Die 16 Regeln ohne Test nachziehen
 - **Defizit:** keins — Werkzeugqualität, zahlt auf G2 ein
 - **Frühestens:** eine Regel pro Gelegenheit, nicht als Block
@@ -144,6 +170,8 @@ bereits getroffen ist, bevor der Reiz kommt.
 | Pomodoro als starres Ritual (feste 25/5, Pausenzwang, Pomodoro-Zähler) | Der nützliche Teil — ein sichtbares, begrenztes Zeitfenster — ist M4. Der starre Teil wäre eine Verschlechterung: Ein festes Intervall misst nichts, unterbricht produktiven Hyperfokus (G3) und der Pausenhaushalt ist Meta-Work (D3). Der Zähler wäre ein Streak (D10). Stattdessen: `plannedFocusFor(capacity)` |
 | Multi-User, Rollen, Rechte | Kein Anwendungsfall |
 | UI-Redesign vor S3 | Die klassische Ausweichbaustelle |
+| Die Aufgabenliste als eigener Navigationsreiter | Sie ist das am häufigsten verlinkte Ziel der App und damit der naheliegendste Kandidat für den zweiten Reiter. Genau deshalb nicht: Eine Liste, die von überall einen Tipp entfernt ist, ist eine ständige Einladung, **auszuwählen statt anzufangen** — und die Auswahl aus einer Liste ist die Entscheidung, die G1 dem Nutzer abnehmen soll. Der Bestand liegt einen Tipp hinter der Reichweitenkante auf „Jetzt", mit Stand in der Zeile („3 startbar · 2 heute außerhalb der Reichweite"), und dort bleibt er. Geprüft am 2026-08-06 beim Umbau der Informationsarchitektur |
+| Ein vierter Reiter für „Werkzeuge" (Fokus, Reiz, Bremse) | Drei Ziele in der Navigation, nicht sechs. Jeder Reiter ist eine Entscheidung **vor** dem Tun (G1). Die drei stehen als Zeilen in der Mulde auf „Jetzt", mit ihrem Stand daneben — sichtbar, aber nicht auf Augenhöhe mit der einen Handlung |
 
 ---
 

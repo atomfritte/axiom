@@ -453,7 +453,7 @@ final class ExpertServer {
       .line { stroke: #ECEAE4 } .bar { stroke: #E8A33D }
     }
     @media (prefers-color-scheme: light) {
-      .line { stroke: #15181B } .bar { stroke: #966210 }
+      .line { stroke: #15181B } .bar { stroke: #8E5D0F }
     }
   </style>
   <path class="line" d="M3 13h7M12 13h7" stroke="#838D93" stroke-width="2"/>

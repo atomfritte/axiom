@@ -2,9 +2,15 @@
   Expertenmodus — AXIOM am großen Bildschirm.
 
   Kein zweites AXIOM mit eigenem Geschmack, sondern dasselbe Instrument auf
-  einer Fläche, die mehr trägt: dieselben sechs Paletten aus tokens.dart,
+  einer Fläche, die mehr trägt: dieselben acht Paletten aus tokens.dart,
   dieselben zwei Schriften aus dem App-Bündel, dieselbe Kapazitätslinie.
   Wer beide nebeneinander offen hat, soll keinen Bruch sehen.
+
+  Dieselbe Zusage gilt seit dieser Runde auch für die Typografie, und sie
+  kostete hier am meisten: Mono trägt nur noch die Regel-ID und wörtlich
+  Abzutippendes, Messwerte laufen in der Hausschrift mit Tabellenziffern,
+  gesperrte Versalien sind weg, und jeder Messwert hat dieselbe Farbe.
+  Alles vier stand vorher anders da als in der App.
 
   Was hinzukommt, ist das, was ein Schreibtisch hergibt und eine Hand nicht:
   Bestand NEBEN der Handlung statt an ihrer Stelle, Tastenkürzel, Rohdaten.
@@ -29,11 +35,29 @@
 
 <style>
 /* ── Schriften ─────────────────────────────────────────────────────────
-   Aus dem App-Bündel, ausgeliefert vom Server selbst. Mono trägt jeden
-   Messwert — eine Systemschrift an dieser Stelle macht aus einem
-   abgelesenen Wert einen gemeinten. */
+   Aus dem App-Bündel, ausgeliefert vom Server selbst.
+
+   Hier stand: „Mono trägt jeden Messwert — eine Systemschrift an dieser
+   Stelle macht aus einem abgelesenen Wert einen gemeinten." Die Folge war
+   eine Seite in Schreibmaschine: Chips, Reiterzahlen, Pillen, Skalen,
+   Zeitanker, Abschnittsmarken. Das einzige sachliche Argument dafür war,
+   dass 61 und 88 untereinander fluchten — und genau das leistet
+   `tabular-nums` in der Hausschrift (siehe `kTabularFigures` in
+   tokens.dart). Mono bleibt für zwei Fälle, die keine Messwerte sind: die
+   **Regel-ID** (`.stamp`, damit G2 auf jedem Schirm sofort zu finden ist)
+   und **wörtlichen Text**, den man abtippt, vergleicht oder kopiert —
+   YAML, Fehlerausgaben des Servers, PIN, Freigabezahl.
+
+   Der 600er ist der Grad, in dem Überschriften und Marken stehen. Der
+   Server liefert ihn heute nicht aus (`expert_server.dart` kennt nur 400
+   und 500); die zweite Quelle fängt das auf, und zwar besser als eine
+   fehlende Angabe: Ohne eine 600er-Fläche synthetisiert der Browser ein
+   Fettschreiben aus dem Medium, und das sieht auf großen Graden schmierig
+   aus. Kommt `sans-600.ttf` dazu, greift ohne weitere Änderung der echte
+   Schnitt. */
 @font-face{font-family:Plex;src:url(/font/sans-400.ttf);font-weight:400;font-display:swap}
 @font-face{font-family:Plex;src:url(/font/sans-500.ttf);font-weight:500;font-display:swap}
+@font-face{font-family:Plex;src:url(/font/sans-600.ttf),url(/font/sans-500.ttf);font-weight:600;font-display:swap}
 @font-face{font-family:PlexMono;src:url(/font/mono-400.ttf);font-weight:400;font-display:swap}
 @font-face{font-family:PlexMono;src:url(/font/mono-500.ttf);font-weight:500;font-display:swap}
 
@@ -52,8 +76,8 @@
   --on-signal:var(--base)}
 [data-scheme=instrument][data-mode=light]{
   --base:#F2F1ED;--panel:#FFFFFF;--raised:#FAF9F6;--rule:#CFCCC4;
-  --ink:#15181B;--dim:#4A545B;--faint:#676E74;
-  --signal:#966210;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
+  --ink:#15181B;--dim:#4A545B;--faint:#62686E;
+  --signal:#8E5D0F;--deep:#7A4E08;--calm:#3F6B4F;--caution:#9C4522;--info:#3E6072;
   --on-signal:var(--panel)}
 /* Werkbank — die Vorgabe dieser Oberflaeche.
    Auf dem Telefon bleibt Instrument die Vorgabe; dort ist das Geraet
@@ -62,8 +86,8 @@
 :root,[data-scheme=workbench][data-mode=light],
 [data-scheme=workbench]{
   --base:#F5F6FA;--panel:#FFFFFF;--raised:#F0F2F8;--rule:#DDE1EC;
-  --ink:#20232C;--dim:#565E72;--faint:#666E83;
-  --signal:#0F62D6;--deep:#0A48A0;--calm:#157D4E;--caution:#A9500F;--info:#6A3FBF;
+  --ink:#20232C;--dim:#565E72;--faint:#626A7F;
+  --signal:#0F62D6;--deep:#0A48A0;--calm:#14794C;--caution:#A9500F;--info:#6A3FBF;
   --on-signal:var(--panel)}
 [data-scheme=workbench][data-mode=dark]{
   --base:#12141B;--panel:#1A1D26;--raised:#232733;--rule:#313648;
@@ -87,7 +111,7 @@
   --on-signal:var(--base)}
 [data-scheme=muted][data-mode=light]{
   --base:#F4F0E7;--panel:#FBF8F1;--raised:#FFFDF8;--rule:#D5CDBE;
-  --ink:#221E19;--dim:#57503F;--faint:#746C5E;
+  --ink:#221E19;--dim:#57503F;--faint:#6E6659;
   --signal:#8A5A16;--deep:#6B450F;--calm:#44634A;--caution:#8C4A26;--info:#3F5A66;
   --on-signal:var(--panel)}
 
@@ -100,7 +124,25 @@
 html{font-size:calc(16px * var(--scale,1))}
 body{background:var(--base);color:var(--ink);
   font:400 1rem/1.55 Plex,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:3rem}
-.mono{font-family:PlexMono,ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── Tabellenziffern ───────────────────────────────────────────────────
+   Der einzige sachliche Grund für Monospace war, dass 61 und 88
+   untereinander fluchten. Genau das leistet `tabular-nums` — in der
+   Hausschrift, ohne Schreibmaschinenton. Es steht auf allem, was eine Zahl
+   trägt oder tragen kann, damit eine Spalte nicht davon abhängt, ob die
+   Werte gerade zweistellig sind.
+
+   Ehrlichkeitshalber dasselbe wie in tokens.dart: Das gebündelte IBM Plex
+   Sans führt gar keine Proportionalziffern, alle zehn sind gleich breit —
+   die Angabe ändert heute nichts und hält die Zusage, sobald jemand die
+   Schrift austauscht. */
+.chip,.count,.cell,.pill,.num,.term,.kin,.meta span,.brk .num,.tog,
+.capline text,.dial .val,.dial .ends span,.cond .now,.ev,.value .num,
+.toc .num,#budget-txt,.mono{font-variant-numeric:tabular-nums}
+
+/* Wörtlicher Text: YAML, Fehlerausgaben, Freigabezahl, PIN. Nichts davon
+   ist ein Messwert — es sind Zeichen, auf die es einzeln ankommt. */
+.mono{font-family:PlexMono,ui-monospace,monospace}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:none}
 :focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:2px}
@@ -110,14 +152,18 @@ header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.85r
   backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)}
 .mark{display:flex;align-items:center;gap:.5rem;font-weight:500;letter-spacing:.14em;font-size:.78rem}
 .chips{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
-.chip{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.09em;padding:.28rem .5rem;
-  border:1px solid var(--rule);border-radius:3px;color:var(--dim);white-space:nowrap}
-.chip b{color:var(--ink);font-weight:500}
+/* Kein `text-transform` und keine Sperrung mehr: KAPAZITÄT 62 · LAST 31 ·
+   UNGEEICHT war eine Zeile Beipackzettel über der Oberfläche. Gesperrte
+   Versalien sind langsamer zu lesen, weil die Wortform wegfällt — und
+   gelesen wird die Zeile nur im Vorbeigehen. */
+.chip{font-size:.74rem;padding:.28rem .55rem;
+  border:1px solid var(--rule);border-radius:4px;color:var(--dim);white-space:nowrap}
+.chip b{color:var(--ink);font-weight:600}
 .chip.on{border-color:var(--signal);color:var(--signal)}
 .chip.warn{border-color:var(--caution);color:var(--caution)}
 .spacer{flex:1 1 auto}
 .seg{display:flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
-.seg button{font-family:PlexMono,monospace;font-size:.64rem;letter-spacing:.08em;padding:.3rem .48rem;
+.seg button{font-size:.74rem;padding:.3rem .55rem;
   color:var(--faint);border-right:1px solid var(--rule)}
 .seg button:last-child{border-right:0}
 .seg button[aria-pressed=true]{background:var(--raised);color:var(--signal)}
@@ -138,16 +184,36 @@ main{max-width:1560px;margin:0 auto;padding:1.25rem;display:grid;gap:1.25rem}
 .panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:1.1rem}
 .panel.accent{border-color:color-mix(in srgb,var(--signal) 55%,var(--rule))}
 .panel.calm{border-color:color-mix(in srgb,var(--calm) 55%,var(--rule))}
-.eyebrow{font-family:PlexMono,monospace;font-size:.65rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+/* Die Abschnittsmarke — dieselbe Rolle wie `textTheme.labelSmall` in der
+   App: 13,5 px, w600, Sperrung 0,5 px, normale Schreibweise. Hier stand
+   Monospace in gesperrten Versalien; sichtbar wurde daraus
+   AKTIVIERUNGSENERGIE, ERFASSEN, GEWÄHLTE KLAMMER. Wer eine Marke setzt,
+   schreibt jetzt „Nicht in Reichweite" und nicht „NICHT IN REICHWEITE". */
+.eyebrow{font-size:.845rem;font-weight:600;line-height:1.3;letter-spacing:.037em;color:var(--faint)}
 .sec{display:flex;align-items:center;gap:.75rem;margin:0 0 .7rem}
 .sec .line{flex:1;height:1px;background:var(--rule)}
-h1{font-size:1.65rem;font-weight:400;line-height:1.2;letter-spacing:-.01em}
-h2{font-size:1.05rem;font-weight:500}
+/* w600 statt w400 und optisch nachgezogen (≈ −0,028 × Größe): Große Grade
+   in leichtem Schnitt wirken nicht ruhig, sondern blass, und die
+   Vorbreiten der Schrift sind für Fließtext ausgelegt, nicht für 27 px. */
+h1{font-size:1.7rem;font-weight:600;line-height:1.18;letter-spacing:-.028em}
+h2{font-size:1.16rem;font-weight:600;line-height:1.3;letter-spacing:-.016em}
 p{color:var(--dim);font-size:.9rem}
 .faint{color:var(--faint);font-size:.8rem}
+/* Die Regel-ID und sonst nichts. Sie ist damit das einzige technisch
+   aussehende Stück eines Schirms und deshalb sofort zu finden — G2 wird
+   dadurch lauter, nicht leiser. Was hier vorher noch stand („Start 4/10",
+   eine Frist), sind Messwerte und tragen jetzt eine Pille. */
 .stamp{display:inline-flex;align-items:center;gap:.35rem;font-family:PlexMono,monospace;font-size:.68rem;
-  letter-spacing:.08em;border:1px solid color-mix(in srgb,var(--info) 60%,transparent);
-  color:var(--info);padding:.2rem .45rem;border-radius:3px}
+  letter-spacing:.06em;font-weight:500;border:1px solid color-mix(in srgb,var(--info) 60%,transparent);
+  color:var(--info);padding:.2rem .45rem;border-radius:4px}
+/* Der Defizitschlüssel neben der Regel-ID (D3, D9). Derselbe Fall wie sie:
+   ein Verweis, kein Wert — und in der App (`now_screen.dart`) steht er
+   ebenso in Mono neben der Plakette. */
+/* `align-self`, weil die Zeile eine Flexbox ist: Ohne die Angabe wird das
+   Kästchen auf die Höhe der Plakette gedehnt und die zwei Zeichen kleben
+   an ihrer Oberkante. */
+.dcode{font-family:PlexMono,monospace;font-size:.68rem;letter-spacing:.06em;
+  color:var(--faint);align-self:center}
 .why{color:var(--dim);font-size:.85rem;border-left:2px solid var(--rule);padding-left:.75rem;margin:.85rem 0 0}
 .row{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:1.05rem}
 .btn{padding:.6rem 1rem;border-radius:4px;border:1px solid var(--rule);color:var(--ink);font-size:.88rem;
@@ -166,7 +232,12 @@ p{color:var(--dim);font-size:.9rem}
 .capline .dout{fill:none;stroke:var(--faint)}
 .capline .dnow{fill:var(--signal)}
 .capline .m{stroke:var(--signal);stroke-width:2}
-.capline text{font-family:PlexMono,monospace;font-size:9px;fill:var(--faint);letter-spacing:.1em}
+/* LEICHT · HIER · SCHWER bleiben in Versalien, wo alles andere sie
+   verloren hat — vier bis sechs Zeichen, und unter sieben liest man Formen
+   statt Wörter. Hier soll ohnehin nichts gelesen, sondern verortet werden.
+   Dieselbe Entscheidung wie in `capacity_line.dart`. */
+.capline text{font-family:Plex,system-ui,sans-serif;font-size:9.5px;font-weight:500;
+  fill:var(--faint);letter-spacing:.1em}
 
 #cap-text{width:100%;min-height:4.2rem;resize:vertical;background:var(--raised);
   border:1px solid var(--rule);border-radius:4px;padding:.7rem .8rem;line-height:1.5}
@@ -176,7 +247,7 @@ p{color:var(--dim);font-size:.9rem}
 .tabs button{padding:.55rem .8rem;font-size:.85rem;color:var(--faint);border-bottom:2px solid transparent;white-space:nowrap}
 .tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--signal)}
 .tabs button:hover{color:var(--ink)}
-.tabs .count{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-left:.3rem}
+.tabs .count{font-size:.78rem;color:var(--faint);margin-left:.35rem}
 
 /* Bestandszeile für Eingang und Regelwerk. Dort steht Fließtext, und
    Fließtext braucht kein Raster. Die Aufgabenliste hat deshalb ihre eigene
@@ -187,7 +258,8 @@ p{color:var(--dim);font-size:.9rem}
 .item .bar{width:3px;align-self:stretch;border-radius:2px;background:var(--rule);min-height:2.1rem}
 .item .title{font-size:.94rem;overflow-wrap:anywhere}
 .meta{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.2rem}
-.meta span{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint)}
+.meta span{font-size:.76rem;color:var(--faint)}
+.meta .rid{font-family:PlexMono,monospace;letter-spacing:.06em}
 .acts{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end}
 .acts .btn{padding:.32rem .58rem;font-size:.77rem}
 
@@ -242,14 +314,19 @@ p{color:var(--dim);font-size:.9rem}
    vollständig existiert. Deshalb ist er ein Knopf und sieht auch so aus. */
 .tlink{display:block;width:100%;text-align:left;padding:0;overflow-wrap:anywhere}
 .tlink:hover{color:var(--signal)}
-.kin{display:block;font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint);
+.kin{display:block;font-size:.76rem;color:var(--faint);
   overflow-wrap:anywhere;margin-top:.15rem}
-.cells{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;min-width:0}
-.cell{font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint);white-space:nowrap}
-.pill{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.04em;white-space:nowrap;
-  padding:.22rem .5rem;border-radius:999px;color:var(--dim);
+.cells{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;min-width:0}
+.cell{font-size:.76rem;color:var(--faint);white-space:nowrap}
+.pill{font-size:.74rem;white-space:nowrap;
+  padding:.2rem .5rem;border-radius:999px;color:var(--dim);
   background:color-mix(in srgb,var(--rule) 55%,transparent)}
-.pill.ae{background:color-mix(in srgb,var(--info) 16%,transparent);color:var(--info)}
+/* Der Anlauf ist ein Messwert und trägt deshalb die Messfarbe. Hier stand
+   `--info` — daneben die Frist in Bernstein und die Kapazität oben in
+   einem dritten Ton. Drei Farben für drei Messungen an derselben Aufgabe
+   lesen sich als drei verschiedene Urteile über sie, und genau das
+   verbietet R7. Unterschieden wird über Beschriftung und Ort. */
+.pill.ae{background:color-mix(in srgb,var(--signal) 12%,transparent);color:var(--signal)}
 /* Dieselbe Rampe wie früher am Strich, jetzt in der Pille: der Abstand zu
    decayAt, sonst nichts. Ohne Frist und jenseits von drei Tagen bleibt sie
    neutral, und an etwas Erledigtem steht sie gar nicht — „überfällig" an
@@ -278,7 +355,7 @@ p{color:var(--dim);font-size:.9rem}
 .brk:hover{color:var(--ink);border-color:var(--dim)}
 .brk[aria-pressed=true]{border-color:var(--signal);color:var(--signal);
   background:color-mix(in srgb,var(--signal) 12%,var(--raised))}
-.brk .num{font-family:PlexMono,monospace;font-size:.7rem;color:var(--faint)}
+.brk .num{font-size:.76rem;color:var(--faint)}
 .brk[aria-pressed=true] .num{color:var(--signal)}
 /* Die gewählte Klammer selbst — mit ihren eigenen Handlungen. An sie kam
    man vorher nicht heran: Sie stand als Karte zwischen ihren Schritten
@@ -329,8 +406,8 @@ p{color:var(--dim);font-size:.9rem}
    vor der Arbeit statt in ihr (G1, D3). */
 .filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 1rem}
 .filters input[type=search]{flex:1 1 12rem;min-width:7rem;width:auto}
-.tog{font-family:PlexMono,monospace;font-size:.66rem;letter-spacing:.09em;padding:.42rem .6rem;
-  border:1px solid var(--rule);border-radius:3px;color:var(--faint);white-space:nowrap}
+.tog{font-size:.8rem;padding:.4rem .65rem;
+  border:1px solid var(--rule);border-radius:4px;color:var(--faint);white-space:nowrap}
 .tog[aria-pressed=true]{border-color:var(--signal);color:var(--signal)}
 .tog:hover{color:var(--ink)}
 
@@ -344,15 +421,13 @@ p{color:var(--dim);font-size:.9rem}
 .cond.grp{background:transparent;border-style:dashed}
 .cond .top{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem}
 .cond .fields{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
-.cond .now{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-top:.45rem}
+.cond .now{font-size:.78rem;color:var(--faint);margin-top:.45rem}
 .slim{width:auto;max-width:100%;min-width:5rem}
 .hint{color:var(--faint);font-size:.78rem}
 
 .dial{margin:0 0 1.05rem}
 .dial .head{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem}
-.dial .val{font-family:PlexMono,monospace;color:var(--signal);font-weight:500}
-.dial .ends{display:flex;justify-content:space-between;margin-top:.15rem}
-.dial .ends span{font-family:PlexMono,monospace;font-size:.66rem;color:var(--faint)}
+.dial .val{color:var(--signal);font-weight:600}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:.5rem 0 0}
 input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--rule)}
 input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
@@ -371,19 +446,40 @@ label{display:block;font-size:.8rem;color:var(--dim);margin-bottom:.3rem}
 .value:last-child{border-bottom:0}
 .value.can{cursor:pointer}
 .value .head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
-.value .num{font-family:PlexMono,monospace;font-size:1.3rem;font-weight:500}
+/* **Eine Messfarbe für alle Messwerte.** Kapazität, Kompensationslast und
+   Reizbedarf stehen hier untereinander; in drei Farben gelesen wären das
+   drei verschiedene Urteile über denselben Menschen (R7). Sie tragen
+   deshalb ausnahmslos `--signal`, so wie `InstrumentBar` in der App.
+   Farbe unterscheidet nur noch Messung von Zustand. */
+.value .num{font-size:1.32rem;font-weight:600;color:var(--signal);letter-spacing:-.02em}
 .value .track{height:2px;background:var(--rule);margin:.45rem 0 .1rem;position:relative}
 .value .fill{position:absolute;inset:0 auto 0 0;background:var(--signal)}
+/* Die beiden Enden einer Skala — hier und an jedem Regler des Check-ins,
+   deshalb eine Regel und nicht zwei (vorher stand dasselbe noch einmal
+   unter `.dial`).
+
+   An der Kapazität stehen sie nicht für „niedrig/hoch", sondern für das,
+   was AXIOM mit der Zahl **tut**: dieselbe Zahl, aber eine Aussage über das
+   System statt über den Nutzer (R7). */
+.ends{display:flex;justify-content:space-between;gap:1rem;margin-top:.25rem}
+.ends span{font-size:.78rem;color:var(--faint)}
 .terms{margin-top:.5rem;display:none}
 .value.open .terms{display:block}
-.term{display:flex;justify-content:space-between;font-family:PlexMono,monospace;font-size:.7rem;
+.term{display:flex;justify-content:space-between;gap:1rem;font-size:.8rem;
   color:var(--faint);padding:.15rem 0}
 .term b{color:var(--dim);font-weight:400}
 
 textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;line-height:1.55;tab-size:2}
-.ev{display:grid;grid-template-columns:auto auto 1fr;gap:.7rem;font-family:PlexMono,monospace;font-size:.72rem;
+/* Der Ereignisstrom. Der Zeitanker ist ein Messwert und läuft in der
+   Hausschrift mit Tabellenziffern; der Typ (`capture`, `checkin`) und die
+   Nutzlast sind Maschinentext, den man liest wie er dasteht — dort bleibt
+   Mono, weil dort das einzelne Zeichen zählt. Derselbe Streifen trägt im
+   Review Regel-ID, Urteil und Begründung: die ID ist `.k` und damit
+   ebenfalls Mono, der begründende Satz nicht. */
+.ev{display:grid;grid-template-columns:auto auto 1fr;gap:.7rem;font-size:.8rem;
   padding:.32rem 0;border-bottom:1px solid color-mix(in srgb,var(--rule) 45%,transparent)}
-.ev .t{color:var(--faint)}.ev .k{color:var(--info)}
+.ev .t{color:var(--faint)}
+.ev .k{color:var(--info);font-family:PlexMono,monospace;font-size:.74rem}
 .ev .p{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── Hilfe ─────────────────────────────────────────────────────────────
@@ -402,7 +498,7 @@ textarea.code{font-family:PlexMono,monospace;font-size:.8rem;min-height:19rem;li
   padding:.35rem .5rem;border-left:2px solid transparent;border-radius:3px;overflow-wrap:anywhere}
 .toc button.ch:hover{color:var(--ink)}
 .toc button.ch[aria-current=true]{color:var(--ink);background:var(--raised);border-left-color:var(--signal)}
-.toc .num{font-family:PlexMono,monospace;font-size:.68rem;color:var(--faint);margin-right:.45rem}
+.toc .num{font-size:.78rem;color:var(--faint);margin-right:.45rem}
 .toc .hit{display:block;font-size:.72rem;color:var(--faint);margin-top:.15rem;overflow-wrap:anywhere}
 
 /* Lesebreite in rem: Sie wächst mit der Schrift mit, statt bei großer
@@ -469,8 +565,13 @@ dialog h2{margin-bottom:.9rem}
    ist in diesem System der teuerste Fehlermodus. */
 .cycle{margin-top:.6rem;border:1px solid color-mix(in srgb,var(--caution) 55%,var(--rule));
   border-radius:5px;padding:.6rem .7rem}
-.cycle .path{font-family:PlexMono,monospace;font-size:.78rem;color:var(--caution);
+/* Der Kreis steht als Kette von Aufgabentiteln da, nicht als Ausdruck —
+   also Hausschrift. Mono hätte hier so getan, als wäre die Kette etwas zum
+   Abtippen. */
+.cycle .path{font-size:.82rem;color:var(--caution);
   margin-top:.35rem;overflow-wrap:anywhere}
+/* Die Taste bleibt in Mono: Sie ist kein Messwert, sondern ein Zeichen, das
+   gedrückt wird — dasselbe wie ein Befehl, den man abtippt. */
 kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
   border-radius:3px;padding:.05rem .32rem;color:var(--dim)}
 .keys{display:grid;gap:.4rem}
@@ -483,6 +584,11 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
 
 #gate{display:grid;place-items:center;min-height:100vh;padding:1.5rem}
 #gate .panel{width:min(24rem,100%)}
+/* Beide bleiben in Mono, obwohl sie Zahlen sind: Sie werden nicht
+   abgelesen, sondern abgetippt und Ziffer für Ziffer mit dem Telefon
+   verglichen. Genau da trägt Monospace Information statt Stimmung — und
+   die App zeigt PIN und Fingerabdruck aus demselben Grund so
+   (`expert_screen.dart`). */
 #pin{font-family:PlexMono,monospace;font-size:1.5rem;letter-spacing:.45rem;text-align:center}
 #match{font-family:PlexMono,monospace;font-size:3.4rem;font-weight:500;letter-spacing:.2em;
   color:var(--signal);text-align:center;padding:1rem 0}
@@ -530,18 +636,24 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
          Zahlen von vorhin genauso aus wie eine mit aktuellen — und das ist
          die schlimmste Variante. -->
     <span class="chip" id="link-chip" role="status"
-          data-t-title="Verbindung zum Telefon" title="Verbindung zum Telefon">VERBINDET …</span>
+          data-t-title="Verbindung zum Telefon" title="Verbindung zum Telefon">Verbindet …</span>
     <div class="spacer"></div>
     <div class="budget" id="budget" data-t-title="Zeit im System heute (G4)" title="Zeit im System heute (G4)">
-      <span class="eyebrow">META</span>
+      <!-- „Meta" lautet in beiden Sprachen gleich und braucht deshalb keine
+           Fassung — ein Eintrag, der sich selbst übersetzt, wäre einer, den
+           die Übersetzungsprüfung eigens ausnehmen müsste. -->
+      <span class="eyebrow">Meta</span>
       <span class="track"><span class="fill" id="budget-fill"></span></span>
-      <span class="mono" style="font-size:.68rem" id="budget-txt">–</span>
+      <span style="font-size:.76rem" id="budget-txt">–</span>
     </div>
+    <!-- Die Schalter tragen dieselben Namen wie `AxiomScheme` und
+         `TextSize` in tokens.dart — dort steht „Instrument", „Kontrast",
+         „Gedämpft", „Werkbank", und nicht INSTRUMENT. -->
     <div class="seg" role="group" data-t-label="Helligkeit" aria-label="Helligkeit">
-      <button data-mode="auto" data-t="AUTO">AUTO</button><button data-mode="dark" data-t="DUNKEL">DUNKEL</button><button data-mode="light" data-t="HELL">HELL</button>
+      <button data-mode="auto" data-t="Auto">Auto</button><button data-mode="dark" data-t="Dunkel">Dunkel</button><button data-mode="light" data-t="Hell">Hell</button>
     </div>
     <div class="seg" role="group" data-t-label="Farbschema" aria-label="Farbschema">
-      <button data-scheme="workbench" data-t="WERKBANK">WERKBANK</button><button data-scheme="instrument" data-t="INSTRUMENT">INSTRUMENT</button><button data-scheme="contrast" data-t="KONTRAST">KONTRAST</button><button data-scheme="muted" data-t="GEDÄMPFT">GEDÄMPFT</button>
+      <button data-scheme="workbench" data-t="Werkbank">Werkbank</button><button data-scheme="instrument" data-t="Instrument">Instrument</button><button data-scheme="contrast" data-t="Kontrast">Kontrast</button><button data-scheme="muted" data-t="Gedämpft">Gedämpft</button>
     </div>
     <div class="seg" role="group" data-t-label="Textgröße" aria-label="Textgröße">
       <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
@@ -567,7 +679,7 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
 
       <section class="panel">
         <div class="sec"><span class="eyebrow" data-t="Aktivierungsenergie">Aktivierungsenergie</span><span class="line"></span>
-          <span class="mono" style="font-size:.7rem;color:var(--signal)" id="cap-label">–</span></div>
+          <span class="cell" style="color:var(--signal)" id="cap-label">–</span></div>
         <svg class="capline" id="capline" viewBox="0 0 320 76" preserveAspectRatio="none"
              role="img" data-t-label="Kapazitätslinie" aria-label="Kapazitätslinie"></svg>
         <p class="faint" id="cap-note" style="margin-top:.4rem"></p>
@@ -640,20 +752,20 @@ const EN={
 "Sechs Ziffern.":"Six digits.",
 "Wird geprüft …":"Checking …",
 "Verbindung zum Telefon":"Connection to the phone",
-"VERBUNDEN":"CONNECTED",
-"VERBINDET …":"CONNECTING …",
-"GETRENNT":"DISCONNECTED",
-"SERVER BEENDET":"SERVER STOPPED",
+"Verbunden":"Connected",
+"Verbindet …":"Connecting …",
+"Getrennt":"Disconnected",
+"Server beendet":"Server stopped",
 "Zeit im System heute (G4)":"Time in the system today (G4)",
 "Helligkeit":"Brightness",
-"AUTO":"AUTO",
-"DUNKEL":"DARK",
-"HELL":"LIGHT",
+"Auto":"Auto",
+"Dunkel":"Dark",
+"Hell":"Light",
 "Farbschema":"Colour scheme",
-"WERKBANK":"WORKBENCH",
-"INSTRUMENT":"INSTRUMENT",
-"KONTRAST":"CONTRAST",
-"GEDÄMPFT":"MUTED",
+"Werkbank":"Workbench",
+"Instrument":"Instrument",
+"Kontrast":"Contrast",
+"Gedämpft":"Muted",
 "Textgröße":"Text size",
 "Tastenkürzel (?)":"Keyboard shortcuts (?)",
 "Server beenden":"Stop server",
@@ -672,8 +784,10 @@ const EN={
 "LEICHT":"EASY",
 "HIER":"HERE",
 "SCHWER":"HARD",
-"KAPAZITÄT":"CAPACITY",
-"KAPAZITÄT {0}":"CAPACITY {0}",
+"Kapazität":"Capacity",
+"Kapazität {0}":"Capacity {0}",
+"weniger zeigen":"show less",
+"mehr zeigen":"show more",
 " — Start {0}/10":" — start {0}/10",
 "{0} startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.":"{0} startable. Anything right of the mark needs more run-up than there is today.",
 "Heute liegt nichts unter der Linie. Zerlegen hilft mehr als Anlauf nehmen.":"Nothing sits below the line today. Breaking things down helps more than taking a run-up.",
@@ -686,13 +800,12 @@ const EN={
 "Ereignisse":"Events",
 "Hilfe":"Help",
 "Reiter wechseln":"Switch tab",
-"JETZT":"NOW",
-"NICHTS ANLIEGEND":"NOTHING PENDING",
+"Jetzt":"Now",
+"Nichts anliegend":"Nothing pending",
 "Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.":"No suggestion means nothing is needed right now. Whatever comes to mind, capture it on the left.",
-"LÄUFT":"RUNNING",
 "Läuft":"Running",
 "Läuft daneben: {0}":"Running alongside: {0}",
-"START {0}/10":"START {0}/10",
+"Start {0}/10":"Start {0}/10",
 "Anfangen":"Start",
 "Starten":"Start",
 "Start":"Start",
@@ -701,7 +814,6 @@ const EN={
 "Zurücklegen":"Put back",
 "Verwerfen":"Drop",
 "Zerlegen":"Break down",
-"ZERLEGEN":"BREAK DOWN",
 "In Schritte zerlegen":"Break into steps",
 "Zerlegen: {0}":"Break down: {0}",
 "Zerlegt.":"Broken down.",
@@ -710,10 +822,9 @@ const EN={
 "Fokus beenden":"End focus",
 "Fokus starten oder beenden":"Start or end focus",
 "Fokus":"Focus",
-"FOKUS":"FOCUS",
 "{0} von {1} min":"{0} of {1} min",
-"REGEL AKTIV":"RULE ACTIVE",
-"MIT DEM ZUSTAND VON JETZT":"AGAINST THE STATE AS OF NOW",
+"Regel aktiv":"Rule active",
+"Mit dem Zustand von jetzt":"Against the state as of now",
 "Neue Aufgabe":"New task",
 "Aufgabe":"Task",
 "Aufgabe anlegen":"Create task",
@@ -729,28 +840,25 @@ const EN={
 "Sog, nicht Pflicht.":"Pull, not obligation.",
 "Was kostet es, wenn es liegenbleibt?":"What does it cost if it stays undone?",
 "Folgen, nicht Wichtigkeit.":"Consequences, not importance.",
-"SOG {0}":"PULL {0}",
-"FOLGEN {0}":"STAKES {0}",
-"ORT {0}":"PLACE {0}",
-"IN REICHWEITE":"WITHIN REACH",
-"NICHT IN REICHWEITE":"OUT OF REACH",
+"Sog {0}":"Pull {0}",
+"Folgen {0}":"Stakes {0}",
+"Ort {0}":"Place {0}",
 "In Reichweite":"Within reach",
 "Nicht in Reichweite":"Out of reach",
-"ÜBERFÄLLIG":"OVERDUE",
-"IN {0} H":"IN {0} H",
-"IN {0} T":"IN {0} D",
-"WARTET":"WAITING",
+"Überfällig":"Overdue",
+"in {0} h":"in {0} h",
+"in {0} Tagen":"in {0} days",
 "Wartet":"Waiting",
-"WARTET AUF":"WAITING ON",
-"WARTET AUF {0}":"WAITING ON {0}",
-"HÄLT AUF":"HOLDS UP",
+"Wartet auf":"Waiting on",
+"Wartet auf {0}":"Waiting on {0}",
+"Hält auf":"Holds up",
 "Blocker":"Blockers",
 "Blocker suchen":"Search blockers",
 "Blocker entfernen":"Remove blocker",
 "Wartet auf … (Aufgabe suchen)":"Waiting on … (search tasks)",
 "Das schlösse einen Kreis. Jede dieser Aufgaben wartete am Ende auf sich selbst, und dann gibt es keine, mit der angefangen werden kann.":"That would close a loop. Each of these tasks would end up waiting on itself, and then there is none to start with.",
 "Teilschritt von {0}":"Step of {0}",
-"SCHRITTE {0} VON {1}":"STEPS {0} OF {1}",
+"Schritte {0} von {1}":"Steps {0} of {1}",
 "Schritt":"Step",
 "+ Schritt":"+ Step",
 "Erster kleiner Schritt":"First small step",
@@ -759,14 +867,14 @@ const EN={
 "Keine Schritte. Zerlegen legt welche an.":"No steps. Breaking down creates them.",
 "Baum":"Tree",
 "Alles":"All",
-"ALLE":"ALL",
+"Alle Bedingungen":"All conditions",
 "Auswahl":"Selection",
-"GEWÄHLTE KLAMMER":"SELECTED BRACKET",
+"Gewählte Klammer":"Selected bracket",
 "In dieser Klammer ist gerade nichts offen.":"Nothing is open in this bracket right now.",
 "Nichts passt zu dieser Auswahl.":"Nothing matches this selection.",
 "Filter zurücksetzen":"Clear filters",
 "Erledigtes mit anzeigen":"Show completed too",
-"ERLEDIGTE":"COMPLETED",
+"Erledigte":"Completed",
 "Nur was unter der Kapazität von heute liegt":"Only what sits below today's capacity",
 "Nur was seinen Zeitpunkt überschritten hat":"Only what is past its time",
 "Aufgaben durchsuchen":"Search tasks",
@@ -811,13 +919,13 @@ const EN={
 "Wo genau warst du? Ein Satz reicht.":"Where exactly were you? One sentence is enough.",
 "Die Notiz ist der eigentliche Zweck des Ausstiegs: Ohne sie beginnt das Laden des Kontexts beim nächsten Mal von vorn.":"The note is the whole point of stopping: without it, loading the context starts from scratch next time.",
 "Umfang wählen.":"Choose a scope.",
-"LAST":"LOAD",
+"Last":"Load",
 "Jeder Wert lässt sich aufklappen. Ohne die Herleitung ist eine Zahl nicht überprüfbar (G2).":"Every value unfolds. Without the derivation a number cannot be checked (G2).",
 "Aufklappen für die Formel":"Unfold for the formula",
 "Gewichte noch geschätzt":"Weights still estimated",
-"UNGEEICHT":"UNCALIBRATED",
+"Ungeeicht":"Uncalibrated",
 "Nichts.":"Nothing.",
-"REGELWERK ZU":"RULEBOOK CLOSED",
+"Regelwerk zu":"Rulebook closed",
 "Regelwerk heute zu":"Rulebook closed today",
 "{0} von {1} Minuten im System sind heute verbraucht. Regeln zu schreiben ist bis morgen zu — erfassen, arbeiten und nachsehen bleiben offen.":"{0} of {1} minutes in the system are used up today. Writing rules is closed until tomorrow — capturing, working and looking things up stay open.",
 "Das ist keine Strafe, sondern der Zweck: Ein System zu bauen ist immer stimulierender als die Aufgabe, für die es gebaut wurde.":"That is not a punishment, it is the point: building a system is always more stimulating than the work it was built for.",
@@ -825,13 +933,13 @@ const EN={
 "Regeln":"Rules",
 "Keine Regel gefunden.":"No rule found.",
 "Regel als YAML":"Rule as YAML",
-"GEFÜHRT":"GUIDED",
-"SCHATTEN":"SHADOW",
-"SIEBEN TAGE STUMM":"SEVEN DAYS SILENT",
-"NOCH {0} TAGE STUMM":"{0} DAYS SILENT LEFT",
-"GEÄNDERT":"CHANGED",
-"FEHLT NOCH":"STILL MISSING",
-"NICHT GELADEN":"NOT LOADED",
+"Geführt":"Guided",
+"Schatten":"Shadow",
+"Sieben Tage stumm":"Seven days silent",
+"Noch {0} Tage stumm":"{0} days silent left",
+"Geändert":"Changed",
+"Fehlt noch":"Still missing",
+"Nicht geladen":"Not loaded",
 "Wie sie heißt":"What it is called",
 "Kurz und in deiner Sprache":"Short, and in your own words",
 "Warum es sie gibt":"Why it exists",
@@ -845,7 +953,7 @@ const EN={
 "Was dort stehen soll":"What it should say",
 "Dieser Satz steht später in der Meldung. Kein Vorwurf, keine Frage — eine Feststellung.":"This sentence appears in the message later. No blame, no question — a statement.",
 "Was diese Regel verhindern oder auslösen soll":"What this rule should prevent or set off",
-"WORAUF SIE EINZAHLT":"WHAT IT PAYS INTO",
+"Worauf sie einzahlt":"What it pays into",
 "Art der Bedingung":"Kind of condition",
 "+ Bedingung":"+ Condition",
 "+ Gruppe":"+ Group",
@@ -860,7 +968,7 @@ const EN={
 "Vergleich":"Comparison",
 "größer als":"greater than",
 "kleiner als":"less than",
-"NICHT":"NOT",
+"Nicht":"Not",
 "Zahl":"Number",
 "Seit einem Ereignis":"Since an event",
 "Ein Ereignis, das nie eintrat, gilt als unendlich lange her.":"An event that never happened counts as infinitely long ago.",
@@ -871,13 +979,13 @@ const EN={
 "Mindestabstand":"Minimum spacing",
 "Ohne Abstand meldet sich die Regel beliebig oft.":"Without spacing the rule speaks up as often as it likes.",
 "Ohne Abstand entsteht Benachrichtigungsflut — der häufigste Grund, warum solche Apps wieder gelöscht werden.":"Without spacing you get a flood of notifications — the most common reason apps like this get deleted again.",
-"ABSTAND VERDOPPELN":"DOUBLE THE SPACING",
+"Abstand verdoppeln":"Double the spacing",
 "Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt":"The spacing doubles as long as the rule stays without effect",
 "Höchstens pro Tag":"At most per day",
 "Eine harte Obergrenze zusätzlich zum Abstand.":"A hard ceiling on top of the spacing.",
 "kein Limit":"no limit",
 "höchstens":"at most",
-"EINE VON":"ONE OF",
+"Eine von ihnen":"One of them",
 "Rang bei Gleichstand":"Rank on a tie",
 "Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.":"If two rules fire at once, the higher rank wins. On a tie the number decides — never chance.",
 "Wie laut":"How loud",
@@ -921,8 +1029,8 @@ const EN={
 "Diese Übersicht":"This overview",
 "Hilfe durchsuchen":"Search help",
 "Sprache der Hilfe":"Help language",
-"DEUTSCH":"GERMAN",
-"ENGLISH":"ENGLISH",
+"Deutsch":"German",
+"Englisch":"English",
 "Dieses Kapitel gibt es noch nicht auf Englisch. Darunter steht die deutsche Fassung.":"This chapter does not exist in English yet. The German version is below.",
 "Die Hilfe liegt als Text im App-Bündel. Steht dort nichts, zeigt der Server nichts — die Kapitel entstehen unter assets/help/.":"The help lives as text in the app bundle. If nothing is there, the server shows nothing — chapters are written under assets/help/.",
 "Keine Kapitel im Bündel.":"No chapters in the bundle.",
@@ -1220,13 +1328,16 @@ async function reload(){await refresh();await loadSurface();render()}
 function paintHeader(){
   const v=S.values||{};
   put($('#hchips'),
-    el('span',{class:'chip'},tr('KAPAZITÄT'),' ',el('b',{},fmt(v.capacity?.value))),
-    el('span',{class:'chip'},tr('LAST'),' ',el('b',{},fmt(v.load_index?.value))),
+    el('span',{class:'chip'},tr('Kapazität'),' ',el('b',{},fmt(v.capacity?.value))),
+    el('span',{class:'chip'},tr('Last'),' ',el('b',{},fmt(v.load_index?.value))),
+    // Die Laststufe bleibt in Versalien: L0 ist keine Abkürzung eines
+    // Wortes, sondern der Name eines Regimes — und zwei Zeichen tragen
+    // ohnehin keine Wortform, die verlorengehen könnte.
     el('span',{class:S.loadLevel==='L0'?'chip':'chip warn'},S.loadLevel||'–'),
-    S.focus?el('span',{class:'chip on',id:'focus-chip'},tr('FOKUS'),' ',
-      el('b',{class:'mono'},S.focus.elapsedMinutes+'/'+S.focus.plannedMinutes+' min')):null,
-    S.configLocked?el('span',{class:'chip warn',title:'R-010'},tr('REGELWERK ZU')):null,
-    S.weightsCalibrated?null:el('span',{class:'chip',title:tr('Gewichte noch geschätzt')},tr('UNGEEICHT')));
+    S.focus?el('span',{class:'chip on',id:'focus-chip'},tr('Fokus'),' ',
+      el('b',{},S.focus.elapsedMinutes+'/'+S.focus.plannedMinutes+' min')):null,
+    S.configLocked?el('span',{class:'chip warn',title:'R-010'},tr('Regelwerk zu')):null,
+    S.weightsCalibrated?null:el('span',{class:'chip',title:tr('Gewichte noch geschätzt')},tr('Ungeeicht')));
   const used=S.metaMinutesToday||0,cap=S.metaBudgetMinutes||12;
   $('#budget-fill').style.width=Math.min(100,(used/cap)*100)+'%';
   $('#budget').classList.toggle('over',used>=cap);
@@ -1242,10 +1353,13 @@ function paintAction(){
   const running=(S.running||[])[0],d=S.decision,next=(S.startable||[])[0],split=(S.atomize||[])[0];
 
   if(d){
-    kids.push(el('div',{class:'eyebrow'},tr('JETZT')),el('h1',{},d.title),
+    kids.push(el('div',{class:'eyebrow'},tr('Jetzt')),el('h1',{},d.title),
       el('div',{class:'row',style:'margin:.6rem 0 0'},
         el('span',{class:'stamp'},d.ruleId),
-        d.deficit?el('span',{class:'stamp'},d.deficit):null));
+        // Der Defizitschlüssel stand hier in derselben Plakette wie die
+        // Regel-ID. Zwei gerahmte Kästchen nebeneinander sahen aus wie zwei
+        // Regeln; er steht jetzt daneben, wie in der App.
+        d.deficit?el('span',{class:'dcode'},d.deficit):null));
     if(d.rationale) kids.push(el('p',{class:'why'},d.rationale));
     kids.push(el('div',{class:'row'},
       el('button',{class:'btn primary grow',onclick:()=>respond(d.id,'accepted')},tr('Verstanden')),
@@ -1254,28 +1368,33 @@ function paintAction(){
     if(running) kids.push(el('p',{class:'faint',style:'margin-top:.9rem'},tr('Läuft daneben: {0}',[running.title])));
   }else if(running){
     box.className='panel calm';
-    kids.push(el('div',{class:'eyebrow'},tr('LÄUFT')),el('h1',{},running.title));
-    if(S.focus) kids.push(el('p',{class:'mono',style:'color:var(--calm);margin-top:.4rem'},
+    kids.push(el('div',{class:'eyebrow'},tr('Läuft')),el('h1',{},running.title));
+    if(S.focus) kids.push(el('p',{style:'color:var(--calm);margin-top:.4rem'},
       tr('{0} von {1} min',[S.focus.elapsedMinutes,S.focus.plannedMinutes])));
     kids.push(el('div',{class:'row'},
       el('button',{class:'btn primary grow',onclick:()=>act(running.id,'complete')},tr('Erledigt')),
       el('button',{class:'btn',onclick:()=>act(running.id,'release')},tr('Zurücklegen'))));
   }else if(next){
-    kids.push(el('div',{class:'eyebrow'},tr('JETZT')),el('h1',{},next.title),
+    // Anlauf und Frist sind Messwerte und tragen deshalb die Pille aus der
+    // Liste, nicht die Plakette der Regel-ID: Die gehört ausschließlich der
+    // Regel, sonst ist sie auf einem Schirm nicht mehr die eine Stelle, an
+    // der die Begründung hängt (G2).
+    kids.push(el('div',{class:'eyebrow'},tr('Jetzt')),el('h1',{},next.title),
       el('div',{class:'row',style:'margin:.6rem 0 0'},
-        el('span',{class:'stamp'},tr('START {0}/10',[next.activationEnergy])),
-        next.decayAt?el('span',{class:'stamp'},dueLabel(next.decayAt)):null));
+        el('span',{class:'pill ae'},tr('Start {0}/10',[next.activationEnergy])),
+        next.decayAt?el('span',{class:'pill due','data-due':dueRamp(next)},
+          dueLabel(next.decayAt)):null));
     kids.push(el('div',{class:'row'},
       el('button',{class:'btn primary grow',onclick:()=>act(next.id,'start')},tr('Anfangen')),
       el('button',{class:'btn',onclick:()=>act(next.id,'complete')},tr('Erledigt'))));
   }else if(split){
-    kids.push(el('div',{class:'eyebrow'},tr('ZERLEGEN')),el('h1',{},split.title),
+    kids.push(el('div',{class:'eyebrow'},tr('Zerlegen')),el('h1',{},split.title),
       el('p',{class:'why'},split.reason),
       el('div',{class:'row'},
         el('button',{class:'btn primary',onclick:()=>atomizeDialog(split)},tr('In Schritte zerlegen'))));
   }else{
     box.className='panel';
-    kids.push(el('div',{class:'eyebrow'},tr('NICHTS ANLIEGEND')),el('h1',{},tr('Ruhig gerade.')),
+    kids.push(el('div',{class:'eyebrow'},tr('Nichts anliegend')),el('h1',{},tr('Ruhig gerade.')),
       el('p',{style:'margin-top:.6rem'},tr('Kein Vorschlag heißt: gerade ist nichts nötig. Was dir einfällt, kannst du links erfassen.')));
   }
   if(S.nextStep) kids.push(el('p',{class:'faint',style:'margin-top:1rem'},
@@ -1285,9 +1404,9 @@ function paintAction(){
 
 function dueLabel(iso){
   const diff=new Date(iso)-new Date();
-  if(diff<0) return tr('ÜBERFÄLLIG');
+  if(diff<0) return tr('Überfällig');
   const h=Math.round(diff/36e5);
-  return h<24?tr('IN {0} H',[h]):tr('IN {0} T',[Math.round(h/24)]);
+  return h<24?tr('in {0} h',[h]):tr('in {0} Tagen',[Math.round(h/24)]);
 }
 async function respond(id,response){
   try{await api('/api/decisions/'+id,{method:'POST',body:JSON.stringify({response})})}catch(e){}
@@ -1325,7 +1444,7 @@ function paintCapline(){
       String(t.title).replace(/[<&>]/g,'')+tr(' — Start {0}/10',[t.activationEnergy])+'</title></circle>');
   }
   $('#capline').innerHTML=parts.join('');
-  $('#cap-label').textContent=tr('KAPAZITÄT {0}',[cap]);
+  $('#cap-label').textContent=tr('Kapazität {0}',[cap]);
   const n=(S.startable||[]).length;
   $('#cap-note').textContent=n
     ? tr('{0} startbar. Was rechts der Marke liegt, braucht heute mehr Anlauf, als da ist.',[n])
@@ -1471,9 +1590,9 @@ function taskFilters(){
     el('button',{class:'btn primary',onclick:()=>taskDialog()},tr('Neue Aufgabe')),
     el('input',{type:'search',value:tprefs.q,placeholder:tr('Suchen'),'aria-label':tr('Aufgaben durchsuchen'),
       oninput:e=>{setTPref('q',e.target.value);redrawTasks()}}),
-    tog('reach',tr('IN REICHWEITE'),tr('Nur was unter der Kapazität von heute liegt')),
-    tog('overdue',tr('ÜBERFÄLLIG'),tr('Nur was seinen Zeitpunkt überschritten hat')),
-    tog('done',tr('ERLEDIGTE'),tr('Erledigtes mit anzeigen')));
+    tog('reach',tr('In Reichweite'),tr('Nur was unter der Kapazität von heute liegt')),
+    tog('overdue',tr('Überfällig'),tr('Nur was seinen Zeitpunkt überschritten hat')),
+    tog('done',tr('Erledigte'),tr('Erledigtes mit anzeigen')));
 }
 
 /* Ein Modell, zwei Ansichten. Liste und Board fragen dieselben Zahlen und
@@ -1678,10 +1797,10 @@ function fillHead(box,m){
   const t=bracket?m.byId.get(bracket):null;
   if(!t){put(box);return}
   put(box,el('div',{class:'bhead'},
-    el('div',{class:'eyebrow'},tr('GEWÄHLTE KLAMMER')),
+    el('div',{class:'eyebrow'},tr('Gewählte Klammer')),
     el('button',{class:'title tlink',onclick:()=>taskSheet(t.id)},t.title),
     el('div',{class:'cells'},cellsOf(t,m),
-      el('span',{class:'cell'},tr('SCHRITTE {0} VON {1}',[m.doneKids(t),m.total(t)]))),
+      el('span',{class:'cell'},tr('Schritte {0} von {1}',[m.doneKids(t),m.total(t)]))),
     el('div',{class:'acts'},taskActions(t,m),
       el('button',{class:'btn quiet',onclick:()=>taskSheet(t.id)},tr('Details')))));
 }
@@ -1730,15 +1849,17 @@ const expires=t=>!!t.decayAt&&t.state!=='done'&&t.state!=='dropped';
    Beschriftung. */
 function cellsOf(t,m){
   return [
-    el('span',{class:'pill ae'},tr('START {0}/10',[t.activationEnergy])),
-    el('span',{class:'cell'},tr('SOG {0}',[t.salience])),
-    el('span',{class:'cell'},tr('FOLGEN {0}',[t.stakes])),
+    el('span',{class:'pill ae'},tr('Start {0}/10',[t.activationEnergy])),
+    el('span',{class:'cell'},tr('Sog {0}',[t.salience])),
+    el('span',{class:'cell'},tr('Folgen {0}',[t.stakes])),
     /* Aus demselben Grund steht an etwas Erledigtem keine Frist mehr:
-       „ÜBERFÄLLIG" an etwas, das getan ist, wäre ein Vorwurf für nichts. */
+       „Überfällig" an etwas, das getan ist, wäre ein Vorwurf für nichts. */
     expires(t)?el('span',{class:'pill due','data-due':dueRamp(t)},dueLabel(t.decayAt)):null,
-    t.place?el('span',{class:'cell'},tr('ORT {0}',[String(t.place).toUpperCase()])):null,
+    // Der Ort ist getippter Text des Nutzers. `toUpperCase()` machte daraus
+    // ein Signalwort, das keins ist — und schrieb ihm seine Schreibweise um.
+    t.place?el('span',{class:'cell'},tr('Ort {0}',[t.place])):null,
     m.waiting(t)?el('span',{class:'cell'},
-      t.blockedByCount?tr('WARTET AUF {0}',[t.blockedByCount]):tr('WARTET')):null];
+      t.blockedByCount?tr('Wartet auf {0}',[t.blockedByCount]):tr('Wartet')):null];
 }
 
 /* Welche Handlungen offenstehen, hängt am Zustand und sonst nichts —
@@ -1844,7 +1965,7 @@ function paintDetail(){
   const close=()=>$('#dlg').close();
   const body=el('div',{class:'sheet'},
     el('div',{class:'cells'},cellsOf(t,m),
-      el('span',{class:'cell'},m.inReach(t)?tr('IN REICHWEITE'):tr('NICHT IN REICHWEITE'))),
+      el('span',{class:'cell'},m.inReach(t)?tr('In Reichweite'):tr('Nicht in Reichweite'))),
     detailError?el('p',{class:'why'},
       tr('Blocker und Ereignisstrom liefert dieser Server nicht — was hier steht, kommt aus dem Bestand.'),
       el('span',{class:'mono',style:'display:block;font-size:.78rem;margin-top:.3rem'},detailError)):null,
@@ -1870,7 +1991,7 @@ function treeSection(t,m){
       children.map(c=>el('button',{class:'node'+(c.state==='done'?' done':''),
         onclick:()=>taskSheet(c.id)},
         c.title,
-        c.activationEnergy?el('span',{class:'cell'},tr('START {0}/10',[c.activationEnergy])):null))):null,
+        c.activationEnergy?el('span',{class:'cell'},tr('Start {0}/10',[c.activationEnergy])):null))):null,
     children.length?null:el('p',{class:'faint'},tr('Keine Schritte. Zerlegen legt welche an.')));
 }
 
@@ -1886,10 +2007,10 @@ function blockerSection(t,m){
     drop?el('button',{class:'drop',title:tr('Blocker entfernen'),
       onclick:()=>dropBlocker(t.id,x.id)},tr('Entfernen')):null);
   return section(tr('Blocker'),
-    el('div',{class:'eyebrow'},tr('WARTET AUF')),
+    el('div',{class:'eyebrow'},tr('Wartet auf')),
     before.length?el('div',{class:'tree'},before.map(x=>line(x,true)))
       :el('p',{class:'faint'},tr('Nichts.')),
-    el('div',{class:'eyebrow',style:'margin-top:.6rem'},tr('HÄLT AUF')),
+    el('div',{class:'eyebrow',style:'margin-top:.6rem'},tr('Hält auf')),
     after.length?el('div',{class:'tree'},after.map(x=>line(x,false)))
       :el('p',{class:'faint'},tr('Nichts.')),
     blockerPicker(t.id,known),
@@ -1976,7 +2097,9 @@ function viewInbox(){
       el('div',{},el('div',{class:'title'},n.text||''),
         el('div',{class:'meta'},
           el('span',{},new Date(n.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
-          el('span',{},String(n.via||'').toUpperCase()),
+          // Der Kanal, wie er heißt. `toUpperCase()` machte aus „spen" ein
+          // SPEN — ein Signalwort für etwas, das bloß dabeisteht.
+          el('span',{},String(n.via||'')),
           noteAge(n))),
       el('div',{class:'acts'},
         // Ein Tipp, nicht drei Regler.
@@ -2057,6 +2180,13 @@ function viewState(){
       el('div',{class:'head'},el('span',{},v.label),el('span',{class:'num'},fmt(v.value))),
       el('div',{class:'track'},el('span',{class:'fill',
         style:'width:'+Math.max(0,Math.min(100,v.value??0))+'%'})),
+      /* Nur an der Kapazität, und nur diese beiden Wörter: Sie ist der eine
+         Wert, an dem das System sein eigenes Verhalten festmacht. „Niedrig"
+         und „hoch" wären eine Aussage über den Nutzer; „weniger zeigen" und
+         „mehr zeigen" sind eine über AXIOM. Dieselbe Zahl, aber nichts, was
+         sich als Note lesen ließe (R7). */
+      id==='capacity'?el('div',{class:'ends'},
+        el('span',{},tr('weniger zeigen')),el('span',{},tr('mehr zeigen'))):null,
       terms.length?el('div',{class:'terms'},...terms.map(t=>el('div',{class:'term'},
         el('b',{},t.label),
         el('span',{},(t.contribution>0?'+':'')+Math.round(t.contribution))))):null,
@@ -2077,7 +2207,7 @@ function viewRules(){
   if(S.configLocked) frag.append(lockPanel());
   if(ruleIssues.length) frag.append(el('div',{class:'panel',
     style:'margin-bottom:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
-    el('span',{class:'eyebrow'},tr('NICHT GELADEN')),
+    el('span',{class:'eyebrow'},tr('Nicht geladen')),
     el('p',{style:'margin-top:.4rem'},
       tr('Diese Einträge hat der Kern abgelehnt. Sie laufen nicht mit — abgelehnt ist besser als stumm übersprungen.')),
     ruleIssues.map(i=>el('p',{class:'mono',style:'font-size:.78rem;margin-top:.3rem'},'· '+i))));
@@ -2088,12 +2218,15 @@ function viewRules(){
     frag.append(el('div',{class:'item'},
       el('span',{class:'bar',style:r.shadow?'background:var(--info)':''}),
       el('div',{},el('div',{class:'title'},r.title),
-        el('div',{class:'meta'},el('span',{},r.id),
-          r.deficit?el('span',{},r.deficit):null,
-          el('span',{},String(r.severity||'').toUpperCase()),
-          r.shadow?el('span',{style:'color:var(--info)'},tr('SCHATTEN')):null,
-          r.shadowDaysLeft?el('span',{style:'color:var(--info)'},tr('NOCH {0} TAGE STUMM',[r.shadowDaysLeft])):null,
-          (r.edited||r.overridden)?el('span',{style:'color:var(--signal)'},tr('GEÄNDERT')):null),
+        // Regel-ID und Defizitschlüssel sind Verweise und bleiben in Mono;
+        // die Lautstärke stand als NUDGE daneben — ein Feldwert aus dem
+        // YAML, den `.toUpperCase()` zusätzlich angeschrien hat.
+        el('div',{class:'meta'},el('span',{class:'rid'},r.id),
+          r.deficit?el('span',{class:'rid'},r.deficit):null,
+          el('span',{},String(r.severity||'')),
+          r.shadow?el('span',{style:'color:var(--info)'},tr('Schatten')):null,
+          r.shadowDaysLeft?el('span',{style:'color:var(--info)'},tr('Noch {0} Tage stumm',[r.shadowDaysLeft])):null,
+          (r.edited||r.overridden)?el('span',{style:'color:var(--signal)'},tr('Geändert')):null),
         // Ohne Begründung wäre die Regel eine Behauptung (G2). Sie steht
         // im YAML, das der Server ohnehin mitliefert.
         el('p',{class:'why',style:'margin-top:.4rem'},rationaleOf(r))),
@@ -2154,7 +2287,9 @@ function viewEvents(){
     frag.append(el('div',{class:'ev'},
       el('span',{class:'t'},new Date(e.at).toLocaleString('de',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})),
       el('span',{class:'k'},e.type),
-      el('span',{class:'p',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))));
+      // Die Nutzlast ist Maschinentext und bleibt in Mono: Hier zählt, wo
+      // welche Klammer steht, nicht wie es sich liest.
+      el('span',{class:'p mono',title:JSON.stringify(e.payload)},JSON.stringify(e.payload))));
   return frag;
 }
 
@@ -2264,9 +2399,9 @@ function viewHelp(){
     el('div',{class:'toc'},
       el('div',{class:'seg',role:'group','aria-label':tr('Sprache der Hilfe')},
         el('button',{'aria-pressed':helpLang==='de'?'true':'false',
-          onclick:()=>setHelpLang('de')},tr('DEUTSCH')),
+          onclick:()=>setHelpLang('de')},tr('Deutsch')),
         el('button',{'aria-pressed':helpLang==='en'?'true':'false',
-          onclick:()=>setHelpLang('en')},tr('ENGLISH'))),
+          onclick:()=>setHelpLang('en')},tr('Englisch'))),
       el('input',{type:'search',value:helpQuery,placeholder:tr('Suchen'),
         'aria-label':tr('Hilfe durchsuchen'),oninput:helpSearchInput}),
       list),
@@ -2672,7 +2807,7 @@ function viewEditor(){
     d.isNew?el('span',{class:'faint'},tr('Neue Nummer — Nummern werden nie wiederverwendet.')):null,
     el('span',{class:'spacer'}),
     el('button',{class:'tog','aria-pressed':d.mode==='guided'?'true':'false',
-      onclick:()=>setMode('guided')},tr('GEFÜHRT')),
+      onclick:()=>setMode('guided')},tr('Geführt')),
     el('button',{class:'tog','aria-pressed':d.mode==='yaml'?'true':'false',
       onclick:()=>setMode('yaml')},tr('YAML'))));
   if(d.parseError) frag.append(el('p',{class:'why'},
@@ -2714,7 +2849,7 @@ function editorGuided(){
     section(tr('Warum es sie gibt'),
       rationaleField(d),
       el('p',{class:'hint'},tr('Pflichtfeld. Jede Ausgabe nennt ihre Regel und diese Begründung — ohne sie wäre die Empfehlung eine Behauptung.')),
-      el('div',{class:'eyebrow',style:'margin-top:.5rem'},tr('WORAUF SIE EINZAHLT')),
+      el('div',{class:'eyebrow',style:'margin-top:.5rem'},tr('Worauf sie einzahlt')),
       deficitPicker(d)),
     section(tr('Wie laut'),
       severityPicker(d),
@@ -2728,10 +2863,10 @@ function editorGuided(){
         tr('Feuern zwei Regeln gleichzeitig, gewinnt die mit dem höheren Rang. Bei Gleichstand entscheidet die Nummer — nie der Zufall.')),
       el('div',{class:'pick',style:'margin-top:.6rem'},
         el('button',{class:'tog','aria-pressed':d.enabled?'true':'false',
-          onclick:()=>{d.enabled=!d.enabled;redraw()}},tr('REGEL AKTIV')),
+          onclick:()=>{d.enabled=!d.enabled;redraw()}},tr('Regel aktiv')),
         el('button',{class:'tog','aria-pressed':d.backoff?'true':'false',
           title:tr('Der Abstand verdoppelt sich, solange die Regel folgenlos bleibt'),
-          onclick:()=>{d.backoff=!d.backoff;redraw()}},tr('ABSTAND VERDOPPELN'))),
+          onclick:()=>{d.backoff=!d.backoff;redraw()}},tr('Abstand verdoppeln'))),
       el('p',{class:'hint'},tr('Ausgeschaltet bleibt die Regel erhalten, wird aber nicht ausgewertet.'))),
     (Object.keys(d.extra.titles).length||Object.keys(d.extra.rationales).length)
       ?el('p',{class:'hint'},tr('Die englischen Fassungen bleiben unverändert erhalten.')):null);
@@ -2789,7 +2924,9 @@ function severityPicker(d){
   const current=list.find(s=>s.id===d.severity);
   return [el('div',{class:'pick'},shown.map(s=>el('button',
     {class:'btn'+(d.severity===s.id?' primary':''),
-     onclick:()=>{d.severity=s.id;redraw()}},String(s.label||s.id).toUpperCase()))),
+     // Die Beschriftung kommt übersetzt vom Server („nur protokollieren").
+     // In Versalien gesetzt war sie eine Ansage statt einer Wahl.
+     onclick:()=>{d.severity=s.id;redraw()}},String(s.label||s.id)))),
     current&&current.meaning?el('p',{class:'hint'},current.meaning):null];
 }
 function actionPicker(d){
@@ -2823,9 +2960,9 @@ function groupCard(g,depth,onRemove){
   const box=el('div',{class:'cond grp'});
   box.append(el('div',{class:'top'},
     el('button',{class:'tog','aria-pressed':g.any?'false':'true',
-      onclick:()=>{g.any=false;redraw()}},tr('ALLE')),
+      onclick:()=>{g.any=false;redraw()}},tr('Alle Bedingungen')),
     el('button',{class:'tog','aria-pressed':g.any?'true':'false',
-      onclick:()=>{g.any=true;redraw()}},tr('EINE VON')),
+      onclick:()=>{g.any=true;redraw()}},tr('Eine von ihnen')),
     notToggle(g),
     onRemove?el('button',{class:'btn quiet',onclick:onRemove},tr('Gruppe entfernen')):null));
   g.children.forEach((child,i)=>{
@@ -2845,7 +2982,7 @@ function groupCard(g,depth,onRemove){
 }
 function notToggle(node){
   return el('button',{class:'tog','aria-pressed':node.negated?'true':'false',
-    onclick:()=>{node.negated=!node.negated;redraw()}},tr('NICHT'));
+    onclick:()=>{node.negated=!node.negated;redraw()}},tr('Nicht'));
 }
 function leafCard(f,onRemove){
   const kinds=[{v:'number',l:tr('Zahl')},{v:'choice',l:tr('Auswahl')},{v:'time',l:tr('Uhrzeit')},
@@ -2973,7 +3110,7 @@ function refreshVerdict(){
 }
 function previewKids(){
   const p=editor.preview;
-  const head=el('span',{class:'eyebrow'},tr('MIT DEM ZUSTAND VON JETZT'));
+  const head=el('span',{class:'eyebrow'},tr('Mit dem Zustand von jetzt'));
   if(editor.previewError) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},
     tr('Die Vorschau ist gerade nicht erreichbar ({0}). Beim Speichern wird trotzdem geprüft.',[editor.previewError]))];
   if(!p) return [head,el('p',{class:'faint',style:'margin-top:.4rem'},tr('Wird geprüft …'))];
@@ -2999,7 +3136,7 @@ function problemKids(){
   if(p&&p.ok===false) for(const e of p.errors||[]) if(list.indexOf(e)<0) list.push(e);
   if(!list.length) return [];
   return [el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--caution) 55%,var(--rule))'},
-    el('span',{class:'eyebrow'},tr('FEHLT NOCH')),
+    el('span',{class:'eyebrow'},tr('Fehlt noch')),
     list.map(x=>el('p',{style:'margin-top:.4rem'},'· '+x)))];
 }
 /* Dieselben Pflichten wie im Validator, nur früher. `rationale` und
@@ -3054,7 +3191,7 @@ function setMode(mode){
 }
 function shadowPanel(){
   return el('div',{class:'panel',style:'margin-top:1rem;border-color:color-mix(in srgb,var(--info) 50%,var(--rule))'},
-    el('span',{class:'eyebrow'},tr('SIEBEN TAGE STUMM')),
+    el('span',{class:'eyebrow'},tr('Sieben Tage stumm')),
     el('p',{style:'margin-top:.5rem'},
       tr('Die Regel läuft ab dem Speichern mit und wird protokolliert, sagt aber nichts. Im Systeminspektor siehst du, wie oft sie gefeuert hätte — danach entscheidest du, ob sie das wirklich soll.')));
 }
@@ -3536,7 +3673,7 @@ function wsOpen(){
   sock.onopen=()=>{
     if(sock!==ws) return;
     wsTries=0;
-    linkChip(tr('VERBUNDEN'),false);
+    linkChip(tr('Verbunden'),false);
     // Während der Trennung kann sich etwas geändert haben.
     sync();
   };
@@ -3551,13 +3688,13 @@ function wsOpen(){
     // Protokollwert, kein Nutzertext — deshalb nicht durch tr().
     if(e.code===1001||e.reason==='Server beendet'){
       wsWanted=false;
-      linkChip(tr('SERVER BEENDET'),false);
+      linkChip(tr('Server beendet'),false);
       return;
     }
     // Kurzes Hakeln bekommt keine Warnfarbe: Ein Wechsel des Zugangspunkts
     // dauert Sekunden, und eine Anzeige, die dabei jedes Mal aufleuchtet,
     // wird ab dem dritten Mal nicht mehr gelesen.
-    linkChip(wsTries<3?tr('VERBINDET …'):tr('GETRENNT'),wsTries>=3);
+    linkChip(wsTries<3?tr('Verbindet …'):tr('Getrennt'),wsTries>=3);
     wsRetry();
   };
   // Der Grund steht im darauffolgenden onclose, nicht hier.
@@ -3575,7 +3712,7 @@ function wsRetry(){
   wsTimer=setTimeout(wsOpen,wait);
 }
 
-function wsStart(){wsWanted=true;wsTries=0;linkChip(tr('VERBINDET …'),false);wsOpen()}
+function wsStart(){wsWanted=true;wsTries=0;linkChip(tr('Verbindet …'),false);wsOpen()}
 function wsStop(){
   wsWanted=false;
   clearTimeout(wsTimer);

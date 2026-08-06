@@ -31,6 +31,7 @@ import 'package:axiom_app/screens/help_screen.dart';
 import 'package:axiom_app/screens/inbox_screen.dart';
 import 'package:axiom_app/screens/intercept_screen.dart';
 import 'package:axiom_app/screens/now_screen.dart';
+import 'package:axiom_app/screens/onboarding_screen.dart';
 import 'package:axiom_app/screens/review_screen.dart';
 import 'package:axiom_app/screens/sensation_screen.dart';
 import 'package:axiom_app/screens/signal_screen.dart';
@@ -48,8 +49,15 @@ import 'package:axiom_app/screens/checkin_sheet.dart';
 import 'harness.dart';
 
 /// Alle Screens, die ohne Argument erreichbar sind.
+///
+/// `onboarding` ist seit dieser Runde dabei. Er fehlte, obwohl er die
+/// größten Schriftgrade der ganzen App trägt (`displayLarge`, 42 px) — bei
+/// 2,4-fach sind das über hundert Pixel Zeilenhöhe, und genau dort bricht
+/// ein Layout zuerst. Er ist außerdem der einzige Schirm, den jemand genau
+/// einmal sieht: Was dort überläuft, fällt niemandem nachträglich auf.
 final _screens = <String, Widget Function()>{
   'jetzt': () => const NowScreen(),
+  'onboarding': () => OnboardingScreen(onDone: () {}),
   'aufgaben': () => const TasksScreen(),
   'eingang': () => const InboxScreen(),
   'zustand': () => const StateScreen(),
@@ -111,15 +119,45 @@ Future<List<String>> _overflowsWhileScrolling(WidgetTester tester) async {
 
 /// Bruchstellen, die bekannt sind und außerhalb dieser Änderung liegen.
 ///
-/// `instruments.dart:74` setzt „DATEN ALT", den Messwert und den Aufklapp-
-/// Pfeil ohne Flex neben eine `Expanded`-Beschriftung; bei 360 px und
-/// 2,4-fach läuft die Zeile um 27 px nach rechts hinaus. Sobald die Zeile
-/// dort flexibel ist, fällt dieser Eintrag ersatzlos weg — und der Fall wird
-/// wieder mitgeprüft.
+/// Die Einträge sind **nachgemessen, nicht geschätzt**: Jeder nennt die
+/// Datei und die Zeile, an der Flutter den Überlauf meldet, und die Zahl
+/// stammt aus dem Lauf, nicht aus der Erinnerung. Wer die Zeile flexibel
+/// macht, streicht den Eintrag — der Fall wird dann wieder mitgeprüft.
+///
+/// **Zur Größenordnung.** Der Test rendert ohne die gebündelten Schriften,
+/// also in Ahem, und dort ist jedes Zeichen ein volles Geviert breit. Eine
+/// Zeile, die hier um zehn Pixel hinausläuft, tut das mit IBM Plex
+/// vermutlich nicht. Das ist kein Grund, die Meldung wegzudrücken: Ahem ist
+/// die pessimistische Annahme, und eine Zeile ohne Flex bricht mit der
+/// nächsten längeren Übersetzung ohnehin.
+///
+/// **Beide Einträge sind dieselbe Bauform** — eine `Row` mit
+/// `Expanded`-Beschriftung und daneben zwei bis drei Kinder ohne Flex. Der
+/// Vorgängereintrag (`instruments.dart:74`, damals 27 px) ist nicht
+/// verschwunden, sondern nach `instruments.dart:105` gewandert und auf 77 px
+/// gewachsen: „DATEN ALT" hieß dort inzwischen „Daten alt" und steht nicht
+/// mehr in 11 px Schreibmaschine, sondern in 14 px Fließtext. Der Ton ist
+/// besser geworden, die Zeile breiter.
 const _knownOpen = <String, String>{
   'kleines Gerät, größte Schrift/zustand':
-      'instruments.dart:74 — Row mit „DATEN ALT", Messwert und Pfeil ohne '
-          'Flex; gehört nicht zu dieser Änderung',
+      'instruments.dart:105 — Row aus Expanded(Beschriftung), „Daten alt", '
+          'Messwert und Aufklapp-Pfeil; die drei rechten Kinder haben keinen '
+          'Flex. 360 px/2,4×: 77 px nach rechts hinaus. Abhilfe: „Daten alt" '
+          'in ein Flexible mit Ellipse, oder in die Zeile darunter',
+  'kleines Gerät, größte Schrift/eingang':
+      'inbox_screen.dart:189 — Row aus Text("SORTIEREN") und Chevron ohne '
+          'Flex, innerhalb des äußeren Wrap. 360 px/2,4×: 9,8 px nach rechts '
+          'hinaus. Abhilfe: Flexible mit Ellipse — und der Text selbst sind '
+          'neun gesperrte Versalien, die nach dem Entwurf ohnehin gehen',
+  // Gefunden, weil dieser Schirm neu in der Liste steht. Die äußere Zeile
+  // ist gegen genau diesen Fall gehärtet („Wrap statt Row", siehe den
+  // Kommentar dort) — die innere ist es nicht, und sie trägt dieselbe Last.
+  'kleines Gerät, größte Schrift/onboarding':
+      'capacity_line.dart:81 — die innere Row aus „Kapazität" und dem Wert '
+          'hat mainAxisSize.min und keinen Flex; der umgebende Wrap kann sie '
+          'deshalb umbrechen, aber nicht schmaler machen. 360 px/2,4×, '
+          'Seite 3 des Onboardings: 98 px nach rechts hinaus. Abhilfe: '
+          'Flexible mit Ellipse um „Kapazität"',
 };
 
 void main() {
