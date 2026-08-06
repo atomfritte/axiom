@@ -1006,11 +1006,64 @@ final class AxiomRuntime {
   // ── Körper und Schlaf (M7, M8) ────────────────────────────────────────
   Future<void> acknowledgeBodyPrompt(String kind) =>
       record(EventType.bodyPrompt, payload: {'kind': kind, 'ack': true});
+  /// Rueckt das Zubettgehen auf die Nacht VOR dem Aufwachen.
+  ///
+  /// Der Eintrag besteht aus zwei Uhrzeiten, und eine Uhrzeit allein sagt
+  /// nicht, welcher Tag gemeint ist. „Ins Bett 00:30, auf 07:00" heisst
+  /// dieselbe Nacht — das Datum des Zubettgehens ist dann der Aufwachtag,
+  /// nicht der davor.
+  ///
+  /// **Was ohne diese Stelle passierte.** Die Eingabemaske behielt das Datum
+  /// des Vorschlags (gestern 23:30) und aenderte nur die Uhrzeit. Wer 00:30
+  /// eintrug, bekam *gestern* 00:30 — gegen das Aufwachen heute 07:00 waren
+  /// das 30,5 statt 6,5 Stunden, also genau einen Tag zu viel. Sichtbar war
+  /// es nur an der Stundenzahl im Blatt; die Schlafschuld selbst fiel nicht
+  /// auf, weil `clamp(0, 600)` das negative Ergebnis auf null zog. Ein
+  /// stumm falscher Wert im staerksten Einzelfaktor der Kapazitaetsformel.
+  ///
+  /// Die Korrektur sitzt hier und nicht in der Maske, damit sie fuer jeden
+  /// Aufrufer gilt — auch fuer den naechsten, den es noch nicht gibt.
+  ///
+  /// **Das Datum von [bedAt] wird verworfen.** Gelesen wird nur seine
+  /// Uhrzeit; das Fenster endet bei [wakeAt] und beginnt bei der letzten
+  /// Gelegenheit mit dieser Uhrzeit davor. Wer echte Zeitstempel hat — etwa
+  /// Health Connect — geht deshalb NICHT ueber diesen Weg, sondern schreibt
+  /// `sleepWindow` direkt (siehe `health_sync.dart`).
+  static ({DateTime bedAt, DateTime wakeAt}) normaliseSleepWindow(
+    DateTime bedAt,
+    DateTime wakeAt,
+  ) {
+    // Vom Aufwachen her gerechnet, nicht vom mitgegebenen Datum.
+    //
+    // Der erste Anlauf verschob nur, wenn `bedAt` nach `wakeAt` lag. Das
+    // greift zu kurz: Die Maske gab „gestern 00:30" mit, und das liegt VOR
+    // dem Aufwachen — die 30,5 Stunden blieben stehen. Aus der Maske kommen
+    // in Wahrheit zwei Uhrzeiten; welcher Tag beim Zubettgehen steht, ist
+    // ein Rest des Vorschlags und keine Angabe des Nutzers. Also wird er
+    // verworfen und neu gesetzt: die letzte Gelegenheit mit dieser Uhrzeit
+    // vor dem Aufwachen.
+    var bed = DateTime(
+      wakeAt.year,
+      wakeAt.month,
+      wakeAt.day,
+      bedAt.hour,
+      bedAt.minute,
+      bedAt.second,
+    );
+    if (!bed.isBefore(wakeAt)) {
+      bed = bed.subtract(const Duration(days: 1));
+    }
+    return (bedAt: bed, wakeAt: wakeAt);
+  }
+
   Future<void> logSleep({
     required DateTime bedAt,
     required DateTime wakeAt,
     required int quality,
   }) {
+    final window = normaliseSleepWindow(bedAt, wakeAt);
+    bedAt = window.bedAt;
+    wakeAt = window.wakeAt;
     // Schlafschuld gegen sieben Stunden Soll. Der Wert ist eine Annahme und
     // wird nach der Baseline durch das persönliche Soll ersetzt.
     const targetMinutes = 7 * 60;

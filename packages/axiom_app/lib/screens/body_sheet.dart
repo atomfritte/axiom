@@ -23,6 +23,7 @@ import '../design/tokens.dart';
 import '../design/widgets/instruments.dart';
 import '../platform/android_bridge.dart';
 import '../state/providers.dart';
+import '../state/runtime.dart';
 import '../i18n/i18n.dart';
 
 /// Die vier Körpersignale, die am häufigsten übersehen werden.
@@ -173,7 +174,15 @@ class _SleepSheetState extends ConsumerState<_SleepSheet> {
     return DateTime(now.year, now.month, now.day, 7, 0);
   }
 
-  Duration get _duration => _wakeAt.difference(_bedAt);
+  /// Dieselbe Ableitung, die auch [AxiomRuntime.logSleep] macht.
+  ///
+  /// Sie steht hier nicht doppelt, sondern wird von dort geholt: Sonst zeigte
+  /// das Blatt eine Stundenzahl an und speicherte eine andere — und das
+  /// waere schlimmer als der Fehler, den beide beheben.
+  Duration get _duration {
+    final w = AxiomRuntime.normaliseSleepWindow(_bedAt, _wakeAt);
+    return w.wakeAt.difference(w.bedAt);
+  }
 
   Future<void> _save() async {
     if (_saving) return;
