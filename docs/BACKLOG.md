@@ -63,6 +63,21 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
   sichtbar bleibt.
 - **Notiert:** 2026-08-06
 
+### `lib/x86_64/libdartjni.so` aus der APK werfen
+- **Defizit:** keins — Bauqualität
+- **Frühestens:** wenn ohnehin am Android-Bau gearbeitet wird
+- **Warum nicht jetzt:** `--target-platform android-arm,android-arm64` filtert die Engine-
+  Bibliotheken, nicht die einer Gradle-Abhängigkeit. In der 1.3.0-APK liegen deshalb 116 KB
+  x86_64-Maschinencode, den kein Telefon ausführt. Das ist zwei Größenordnungen kleiner als der
+  Fall, für den `platform_integration_test.dart` gebaut wurde (24 MB `libflutter.so`), und
+  dessen Zusage stimmt weiter — er prüft genau diese Datei. Zu tun wäre:
+  `packagingOptions { excludes += "lib/x86_64/**" }` in `build.gradle.kts` (das überschreibt das
+  Flutter-Plugin nicht, anders als `abiFilters`), und danach den Test auf *jede* x86_64-Datei
+  erweitern statt nur auf `libflutter.so`. Beides zusammen, oder gar nicht — eine engere Prüfung
+  ohne den Fix wäre sofort rot, und ein Fix ohne Prüfung fiele beim nächsten Paketwechsel
+  unbemerkt wieder heraus.
+- **Notiert:** 2026-08-07
+
 ### R-010 und R-090 autorisieren oder herabstufen
 - **Defizit:** keins — es geht um den Vertrag hinter G4
 - **Frühestens:** im nächsten Wochenreview, in Ruhe, nicht wenn eine der beiden gerade eingreift
