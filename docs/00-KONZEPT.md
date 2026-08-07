@@ -114,6 +114,20 @@ Spalte *Stufe* verweist auf die [Roadmap](05-ROADMAP.md).
 **M12 ist Stufe 1.** Der Wächter existiert, bevor es etwas zu bewachen gibt — sonst frisst das
 Projekt sich selbst.
 
+**Gezählt wird Aufmerksamkeit, nicht Laufzeit.** Ein offenes Fenster ist keine Nutzung. Die
+Weboberfläche des Expertenmodus fragt von selbst weiter, auch aus einem Reiter im Hintergrund;
+gebucht wurde deshalb, dass sie *lief* — 115 von 12 Minuten an einem Tag, an dem niemand
+hinsah. Der Desktop-Companion hatte denselben Fehler ohne Reiter: ein Fenster ohne Fokus auf
+dem zweiten Bildschirm. Ein Deckel, der falsch misst, ist schlimmer als keiner, weil er einen
+daran gewöhnt, die eine Zahl zu übergehen, die G4 durchsetzen soll. Gezählt wird jetzt nur,
+was sichtbar ist, den Fokus hat und seit weniger als fünf Minuten eine Regung gesehen hat.
+
+Was dabei **nicht** infrage kam: den Expertenmodus auszunehmen. Er ist die Fläche, auf der sich
+am leichtesten Stunden am System statt an der Arbeit verbringen lassen (D3, R1) — nähme man ihn
+heraus, ließe sich das ganze Meta-Work dorthin verlagern, und das Telefon meldete ungerührt
+3/12. Jede einzelne Bedingung ist deshalb so geschrieben, dass ihr Ausfall zum Zählen führt und
+nicht zum Schweigen: Ein Fehler darf zu viel buchen, er darf den Deckel nicht stilllegen.
+
 ---
 
 ## 5. Die tragenden Konzepte

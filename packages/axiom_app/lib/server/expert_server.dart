@@ -593,7 +593,7 @@ final class ExpertServer {
 
     final segments = request.uri.pathSegments;
     final runtime = await resolveRuntime();
-    await _bookBrowserTime(runtime);
+    await _bookBrowserTime(runtime, request);
 
     switch ((request.method, segments)) {
       case ('GET', ['api', 'state']):
@@ -1114,6 +1114,23 @@ final class ExpertServer {
   /// zurückkehrt.
   static const _browserBookingGap = Duration(minutes: 2);
 
+  /// Meldet die Seite, dass gerade jemand hinsieht?
+  ///
+  /// **Warum das gefragt werden muss.** Die Abstandsprüfung allein greift
+  /// nur bei *langen* Pausen. Ein Reiter im Hintergrund fragt aber weiter,
+  /// und zwar minütlich — die Abstände blieben klein, und ein Tag, an dem
+  /// niemand hier war, buchte sich voll: gemeldet wurden 115 von 12
+  /// Minuten. Ein Deckel, der falsch misst, ist schlimmer als keiner, weil
+  /// er einen daran gewöhnt, die eine Zahl zu übergehen, die G4
+  /// durchsetzen soll.
+  ///
+  /// **Warum ein fehlender Kopf zählt.** Wer ihn weglässt — ein eigenes
+  /// Skript, eine Anfrage von Hand — arbeitet am System. Vor allem aber:
+  /// Ein Deckel, den man durch das *Weglassen* eines Kopfes abschaltet,
+  /// wäre keiner. Der Fehlerfall muss zu viel buchen, nicht zu wenig.
+  static bool _attended(HttpRequest request) =>
+      request.headers.value('x-axiom-attended') != '0';
+
   /// Bucht die im Browser verbrachte Zeit auf das Meta-Work-Budget (M12).
   ///
   /// **Warum das hier stehen muss.** G4 ist laut CLAUDE.md das wichtigste
@@ -1124,10 +1141,19 @@ final class ExpertServer {
   /// auf „Jetzt" lag, verbrauchte null Sekunden Budget. Der Deckel ließ sich
   /// damit nicht umgehen, sondern schlicht nie vollaufen.
   ///
-  /// Gemessen wird der Abstand zwischen zwei angemeldeten Anfragen, nicht
+  /// Gemessen wird der Abstand zwischen zwei **beachteten** Anfragen, nicht
   /// eine Sitzungsdauer: Ein Reiter, der gestern offen blieb, ist keine
   /// Nutzung, und der Server weiß nicht, wann jemand aufhört.
-  Future<void> _bookBrowserTime(AxiomRuntime runtime) async {
+  Future<void> _bookBrowserTime(
+    AxiomRuntime runtime,
+    HttpRequest request,
+  ) async {
+    // Eine unbeachtete Anfrage rührt die Uhr gar nicht an — sie bucht nicht,
+    // und sie setzt auch nicht neu an. Kommt jemand nach einer halben Stunde
+    // Hintergrund zurück, ist der Abstand groß und faellt unten heraus; die
+    // Zeit dazwischen war keine.
+    if (!_attended(request)) return;
+
     final now = runtime.clock.nowLocal();
     final last = _lastBrowserRequestAt;
     _lastBrowserRequestAt = now;

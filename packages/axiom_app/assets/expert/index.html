@@ -638,7 +638,9 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
     <span class="chip" id="link-chip" role="status"
           data-t-title="Verbindung zum Telefon" title="Verbindung zum Telefon">Verbindet …</span>
     <div class="spacer"></div>
-    <div class="budget" id="budget" data-t-title="Zeit im System heute (G4)" title="Zeit im System heute (G4)">
+    <div class="budget" id="budget"
+         data-t-title="Zeit im System heute (G4). Gezählt wird, solange dieser Reiter sichtbar und im Vordergrund ist."
+         title="Zeit im System heute (G4). Gezählt wird, solange dieser Reiter sichtbar und im Vordergrund ist.">
       <!-- „Meta" lautet in beiden Sprachen gleich und braucht deshalb keine
            Fassung — ein Eintrag, der sich selbst übersetzt, wäre einer, den
            die Übersetzungsprüfung eigens ausnehmen müsste. -->
@@ -756,7 +758,7 @@ const EN={
 "Verbindet …":"Connecting …",
 "Getrennt":"Disconnected",
 "Server beendet":"Server stopped",
-"Zeit im System heute (G4)":"Time in the system today (G4)",
+"Zeit im System heute (G4). Gezählt wird, solange dieser Reiter sichtbar und im Vordergrund ist.":"Time in the system today (G4). Counted while this tab is visible and in the foreground.",
 "Helligkeit":"Brightness",
 "Auto":"Auto",
 "Dunkel":"Dark",
@@ -1119,9 +1121,41 @@ let toastTimer;
 function toast(m){const box=$('#toast');box.textContent=m;box.classList.add('on');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('on'),3200)}
 
+/* ── Was als Zeit im System zählt ────────────────────────────────────
+   Der Server bucht den Abstand zwischen zwei angemeldeten Anfragen auf
+   das Meta-Budget (G4). Die Seite fragt aber von selbst weiter, auch aus
+   einem Reiter, den seit Stunden niemand ansieht — gemessen wurde damit
+   Laufzeit, nicht Nutzung. 115 von 12 Minuten an einem Tag, an dem hier
+   niemand war, und ein Deckel, der falsch misst, ist schlimmer als
+   keiner: Er gewöhnt einen daran, die eine Zahl zu übergehen, die G4
+   durchsetzen soll.
+
+   Den Expertenmodus dafür auszunehmen wäre die falsche Abhilfe. Er ist
+   die Fläche, auf der sich am leichtesten Stunden am System statt an der
+   Arbeit verbringen lassen (D3, R1) — nähme man ihn heraus, ließe sich
+   das ganze Meta-Work hierher verlagern, und das Telefon meldete
+   ungerührt 3/12. Gezählt wird deshalb Aufmerksamkeit statt Laufzeit:
+   sichtbar, im Vordergrund, und seit weniger als fünf Minuten eine
+   Regung.
+
+   Jede Bedingung ist so geschrieben, dass ein fehlender Browserdienst zum
+   Zählen führt, nicht zum Schweigen. Ein Fehler hier darf zu viel buchen;
+   er darf den Deckel nicht stillegen. */
+const kIdle=5*60*1000;
+let lastInput=Date.now();
+for(const type of ['pointermove','pointerdown','keydown','wheel','touchstart'])
+  addEventListener(type,()=>{lastInput=Date.now()},{passive:true});
+function attended(){
+  return document.visibilityState!=='hidden'
+    &&(document.hasFocus?document.hasFocus():true)
+    &&Date.now()-lastInput<kIdle;
+}
+
 async function api(path,opts={}){
-  const res=await fetch(path,{credentials:'same-origin',
-    headers:opts.body?{'Content-Type':'application/json'}:{},...opts});
+  const res=await fetch(path,{credentials:'same-origin',...opts,
+    headers:{'X-Axiom-Attended':attended()?'1':'0',
+      ...(opts.body?{'Content-Type':'application/json'}:{}),
+      ...(opts.headers||{})}});
   if(res.status===401){
     // Als Anmeldung gekennzeichnet, nicht als Fehler: `report()` schweigt
     // dazu, weil die Freigabe schon dasteht und ein Toast „401" daneben nur

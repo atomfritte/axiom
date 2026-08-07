@@ -165,6 +165,11 @@ const doc = {
   body: new Node('body'),
   activeElement: null,
   addEventListener: () => {},
+  /* Die Seite fragt beides, um zu entscheiden, ob gerade jemand hinsieht
+     (G4). Szenarien stellen sie ueber `h.sandbox.document` um. */
+  visibilityState: 'visible',
+  _focused: true,
+  hasFocus() { return doc._focused; },
   querySelector(sel) {
     if (/^#[A-Za-z0-9_-]+$/.test(sel)) return stub(sel);
     return doc.querySelectorAll(sel)[0] || null;
@@ -228,7 +233,8 @@ function boot(options) {
     WebSocket: class { constructor() { this.readyState = 0; } close() {} },
     fetch: async (url, opts) => {
       const body = opts && opts.body ? JSON.parse(opts.body) : null;
-      calls.push({ url, method: (opts && opts.method) || 'GET', body });
+      calls.push({ url, method: (opts && opts.method) || 'GET', body,
+        headers: (opts && opts.headers) || {} });
       const answer = options.server(url, opts, body) || { status: 200, body: {} };
       return {
         ok: answer.status < 400,
@@ -236,7 +242,13 @@ function boot(options) {
         json: async () => answer.body || {},
       };
     },
-    Date, Math, JSON, Map, Set, Promise, String, Number, Boolean, Array, Object,
+    /* Eine steuerbare Uhr, wenn das Szenario eine will. `new Date(x)` bleibt
+       echt — nur `Date.now()` folgt dem Szenario. Ohne das waere die
+       Leerlaufgrenze der Seite nur mit fuenf Minuten Wartezeit pruefbar. */
+    Date: options.clock
+      ? class extends Date { static now() { return options.clock(); } }
+      : Date,
+    Math, JSON, Map, Set, Promise, String, Number, Boolean, Array, Object,
     Error, TypeError, RegExp, encodeURIComponent, decodeURIComponent, isNaN, parseInt, parseFloat,
   };
   const windowHandlers = {};
@@ -415,6 +427,65 @@ const scenarios = {
   /* B37 — Der Zaehler am Reiter „Eingang". Der Server meldet in /api/state
      `inboxCount: 0` (Aufgaben im Zustand inbox — eine Menge, die auf keinem
      Weg entsteht), waehrend drei Notizen zu sortieren sind. */
+  /* Was als Zeit im System zaehlt (G4). Ein Reiter im Hintergrund fragt
+     weiter — der Server bucht den Abstand zwischen zwei Anfragen, und ein
+     Tag ohne einen einzigen Blick buchte sich damit voll. Geprueft wird der
+     Kopf, den die Seite mitschickt, weil an ihm die Buchung haengt. */
+  'meta-attention': async () => {
+    let jetzt = 1000000;
+    const h = boot({
+      clock: () => jetzt,
+      server: url => {
+        if (url === '/api/state') return { status: 200, body: stateWith({}) };
+        if (url === '/api/inbox') return { status: 200, body: { notes: [], tasks: [] } };
+        return { status: 200, body: { tasks: [] } };
+      },
+    });
+    await h.flush();
+
+    const kopf = () => {
+      const last = h.calls[h.calls.length - 1];
+      return (last.headers || {})['X-Axiom-Attended'];
+    };
+    /* Genau der Weg, um den es geht: der eigene Takt der Seite. Nicht
+       `key('r')` — ein Tastendruck ist selbst eine Regung und setzte die
+       Leerlaufuhr zurueck, die hier gemessen werden soll. */
+    const laden = async () => { await h.sandbox.sync(); await h.flush(); };
+
+    const antwort = {};
+
+    // Sichtbar, im Vordergrund, gerade erst geladen.
+    await laden();
+    antwort.davor = kopf();
+
+    // Reiter in den Hintergrund.
+    h.sandbox.document.visibilityState = 'hidden';
+    await laden();
+    antwort.hintergrund = kopf();
+
+    // Wieder sichtbar, aber ein anderes Fenster hat den Fokus — der Fall
+    // „Uebersicht auf dem zweiten Bildschirm, gearbeitet wird woanders".
+    h.sandbox.document.visibilityState = 'visible';
+    h.sandbox.document._focused = false;
+    await laden();
+    antwort.danebengeklickt = kopf();
+
+    // Zurueck, aber seit sechs Minuten keine Regung.
+    h.sandbox.document._focused = true;
+    jetzt += 6 * 60 * 1000;
+    await laden();
+    antwort.leerlauf = kopf();
+
+    // Eine Mausbewegung genuegt, um wieder mitzuzaehlen.
+    const bewegen = h.windowHandlers.pointermove || [];
+    for (const fn of bewegen) fn({});
+    await laden();
+    antwort.wiederda = kopf();
+    antwort.hatMelder = bewegen.length > 0;
+
+    return antwort;
+  },
+
   'inbox-badge': async () => {
     const notes = [1, 2, 3].map(i => ({ id: 'C-' + i, at: new Date().toISOString(), text: 'Notiz ' + i, via: 'quick' }));
     const h = boot({

@@ -127,4 +127,32 @@ void main() {
     await switchTo(tester, Icons.adjust_outlined);
     expect(await booked(), const Duration(minutes: 11));
   });
+
+  testWidgets('ein Fenster ohne Fokus zählt nicht mit', (tester) async {
+    // Der Fall des Desktop-Companions: Das Fenster steht offen auf dem
+    // zweiten Bildschirm, gearbeitet wird woanders. Auf dem Rechner ist
+    // `inactive` nicht der Durchgangszustand, der er auf dem Telefon ist,
+    // sondern der Normalfall — und der Zustandsschirm buchte dabei
+    // stundenlang weiter. Derselbe Fehler, den die Weboberfläche hatte,
+    // nur ohne Reiter.
+    await pumpPhone(tester, h.wrap(const HomeShell()));
+    await switchTo(tester, Icons.show_chart_outlined);
+    h.clock.advance(const Duration(minutes: 5));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(await booked(), const Duration(minutes: 5));
+
+    // Zwei Stunden daneben gearbeitet.
+    h.clock.advance(const Duration(hours: 2));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(await booked(), const Duration(minutes: 5),
+        reason: 'Die zwei Stunden ohne Fokus sind mitgebucht worden');
+
+    // Und danach zählt sie weiter, wo sie aufgehört hat.
+    h.clock.advance(const Duration(minutes: 3));
+    await switchTo(tester, Icons.adjust_outlined);
+    expect(await booked(), const Duration(minutes: 8));
+  });
 }

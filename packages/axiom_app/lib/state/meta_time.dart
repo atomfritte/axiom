@@ -76,11 +76,21 @@ mixin MetaTimed<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
+      // `inactive` heißt: Das Fenster hat den Fokus nicht. Auf dem Telefon
+      // ist das ein Durchgangszustand — Benachrichtigungsleiste, Anruf,
+      // Systemdialog. Auf dem Rechner ist es der Normalfall: Der Companion
+      // steht offen auf dem zweiten Bildschirm, gearbeitet wird woanders.
+      // Der Zustandsschirm buchte dabei stundenlang weiter, ohne dass
+      // jemand hinsah — derselbe Fehler, den die Weboberfläche hatte, nur
+      // ohne Reiter. Gezählt wird deshalb, was den Fokus hat.
+      //
+      // Was das kostet: die Sekunden eines kurzen Systemdialogs. Das ist
+      // der bessere Fehler — ein Deckel, der zu viel misst, wird
+      // abgeschaltet; einer, der zu wenig misst, wird geglaubt.
+      case AppLifecycleState.inactive:
         _book();
       case AppLifecycleState.resumed:
         _openedAt ??= _clock.nowUtc();
-      case AppLifecycleState.inactive:
-        break;
     }
   }
 

@@ -170,5 +170,43 @@ void main() {
       expect(leaks, isEmpty,
           reason: 'Deutsch in der englischen Oberfläche:\n${leaks.join('\n')}');
     });
+
+    group('Ein Reiter im Hintergrund ist keine Zeit im System (G4)', () {
+      // Der Server bucht den Abstand zwischen zwei angemeldeten Anfragen auf
+      // das Meta-Budget. Die Seite fragt aber von selbst weiter — gemessen
+      // wurde damit die Laufzeit eines offenen Reiters, nicht Nutzung:
+      // gemeldet wurden 115 von 12 Minuten an einem Tag, an dem niemand
+      // hinsah. Was hier geprüft wird, ist der Kopf, an dem die Buchung
+      // hängt.
+      late final Map<String, dynamic> r;
+      setUpAll(() => r = drive('meta-attention'));
+
+      test('sichtbar, im Vordergrund, gerade benutzt: zählt', () {
+        expect(r['davor'], '1');
+      });
+
+      test('Reiter im Hintergrund: zählt nicht', () {
+        expect(r['hintergrund'], '0');
+      });
+
+      test('sichtbar, aber ein anderes Fenster hat den Fokus: zählt nicht', () {
+        // Der häufigste Fall auf zwei Bildschirmen: Die Übersicht steht
+        // offen daneben, gearbeitet wird woanders. Hinsehen ist das eine,
+        // Arbeiten am System das andere.
+        expect(r['danebengeklickt'], '0');
+      });
+
+      test('sechs Minuten ohne eine Regung: zählt nicht', () {
+        expect(r['leerlauf'], '0');
+      });
+
+      test('eine Mausbewegung genügt, und es zählt wieder', () {
+        // Die Gegenprobe. Ohne sie wäre ein Deckel, der nie mehr anspringt,
+        // von einem, der richtig misst, nicht zu unterscheiden — und das
+        // wäre der schlimmere Fehler: G4 stillgelegt, ohne dass es auffällt.
+        expect(r['wiederda'], '1');
+        expect(r['hatMelder'], isTrue);
+      });
+    });
   }, skip: skip);
 }

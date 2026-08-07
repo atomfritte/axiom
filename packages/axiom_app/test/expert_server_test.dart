@@ -71,6 +71,7 @@ void main() {
     String path, {
     Object? body,
     String? cookie,
+    Map<String, String> headers = const {},
   }) async {
     // Selbst signiert: Der Test akzeptiert genau dieses eine Zertifikat —
     // deshalb wird der Fingerabdruck geprueft, nicht blind alles erlaubt.
@@ -80,6 +81,7 @@ void main() {
     final request = await client.openUrl(
         method, Uri.parse('https://127.0.0.1:$port$path'));
     if (cookie != null) request.headers.add('cookie', cookie);
+    headers.forEach(request.headers.add);
     if (body != null) {
       request.headers.contentType = ContentType.json;
       request.write(jsonEncode(body));
@@ -134,6 +136,76 @@ void main() {
       expect(server.isRunning, isFalse,
           reason: 'Ein Zählwerk, das man aussitzen kann, ist keines');
       expect(server.status.pin, isNull);
+    });
+  });
+
+  group('Zeit im System wird gemessen, nicht geschätzt (G4, M12)', () {
+    // Gebucht wird der Abstand zwischen zwei angemeldeten Anfragen. Die
+    // Weboberfläche fragt aber von selbst weiter, auch aus einem Reiter, den
+    // seit Stunden niemand ansieht — gemessen wurde damit Laufzeit statt
+    // Nutzung, und der Deckel meldete 115 von 12 Minuten an einem Tag ohne
+    // einen einzigen Blick. Ein Deckel, der falsch misst, ist schlimmer als
+    // keiner: Er gewöhnt einen daran, die eine Zahl zu übergehen, die G4
+    // durchsetzen soll.
+    late String cookie;
+
+    setUp(() async => cookie = await login(server.status.pin!));
+
+    /// Eine Anfrage, die sich als beachtet oder unbeachtet ausweist.
+    Future<void> ping({required bool attended}) async {
+      final res = await call('GET', '/api/state',
+          cookie: cookie,
+          headers: {'X-Axiom-Attended': attended ? '1' : '0'});
+      // Die Antwort muss gelesen werden, sonst bleibt die Verbindung offen
+      // und der `tearDown` haengt.
+      await json(res);
+    }
+
+    Future<Duration> gebucht() => h.store.usageToday(h.clock.nowLocal());
+
+    test('zwei beachtete Anfragen buchen den Abstand dazwischen', () async {
+      await ping(attended: true);
+      h.clock.advance(const Duration(seconds: 60));
+      await ping(attended: true);
+
+      expect(await gebucht(), const Duration(seconds: 60));
+    });
+
+    test('derselbe Abstand aus dem Hintergrund bucht nichts', () async {
+      await ping(attended: false);
+      h.clock.advance(const Duration(seconds: 60));
+      await ping(attended: false);
+
+      expect(await gebucht(), Duration.zero);
+    });
+
+    test('die Zeit im Hintergrund faellt auch dazwischen heraus', () async {
+      // Der Fall, um den es geht: kurz gearbeitet, Reiter weggelegt, eine
+      // halbe Stunde später wieder hingesehen. Gebucht gehören die zwei
+      // Minuten Arbeit, nicht die halbe Stunde.
+      await ping(attended: true);
+      h.clock.advance(const Duration(seconds: 45));
+      await ping(attended: true);
+
+      for (var i = 0; i < 30; i++) {
+        h.clock.advance(const Duration(minutes: 1));
+        await ping(attended: false);
+      }
+      h.clock.advance(const Duration(seconds: 30));
+      await ping(attended: true);
+
+      expect(await gebucht(), const Duration(seconds: 45),
+          reason: 'Die halbe Stunde Hintergrund ist mitgebucht worden');
+    });
+
+    test('ohne den Kopf wird gezählt, nicht geschwiegen', () async {
+      // Ein Deckel, den man durch das WEGLASSEN eines Kopfes abschaltet,
+      // wäre keiner. Der Fehlerfall muss zu viel buchen, nicht zu wenig.
+      await json(await call('GET', '/api/state', cookie: cookie));
+      h.clock.advance(const Duration(seconds: 60));
+      await json(await call('GET', '/api/state', cookie: cookie));
+
+      expect(await gebucht(), const Duration(seconds: 60));
     });
   });
 
