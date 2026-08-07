@@ -247,42 +247,58 @@ final class AxiomPalette {
   /// Gedaempft — fuer den Abend.
   ///
   /// Ein grelles Interface um 23 Uhr arbeitet gegen das Sleep Gate (D8).
-  /// Diese Fassung nimmt Leuchtdichte und Blauanteil zurueck; Kontraste
-  /// bleiben ueber der Lesbarkeitsgrenze, aber nichts leuchtet mehr.
+  ///
+  /// **Diese Fassung hat lange nicht gedaempft.** Der Anspruch stand im
+  /// Kommentar, die Zahlen widersprachen ihm: Gemessen an der relativen
+  /// Leuchtdichte lag der Akzent bei 0,382 gegen 0,437 im Vorgabeschema —
+  /// dreizehn Prozent, und nach dem Wechsel der Vorgabe auf Werkbank
+  /// (Akzent 0,328) war „gedaempft" sogar HELLER als der Normalfall. Die
+  /// Flaechen waren ohnehin schon fast schwarz; gedaempft wurde also nichts,
+  /// was leuchtet.
+  ///
+  /// Jetzt gerechnet statt geschaetzt. Akzent 0,382 -> 0,249 (35 % dunkler),
+  /// Primaertext 0,693 -> 0,340 (51 %) — und Text ist die groesste helle
+  /// Flaeche eines Schirms, nicht der Knopf. Jede Rolle bleibt ueber 4,5:1
+  /// gegen die HELLSTE Flaeche (`panelRaised`), nicht nur gegen `base`;
+  /// `contrast_test.dart` rechnet es nach.
+  ///
+  /// Der Farbton bleibt warm. Melanopische Unterdrueckung haengt am
+  /// Blauanteil, nicht nur an der Helligkeit — ein gedimmtes Blau um 23 Uhr
+  /// waere schlechter als ein helleres Bernstein.
   static const darkMuted = AxiomPalette(
     base: Color(0xFF12100D),
     panel: Color(0xFF1A1714),
     panelRaised: Color(0xFF221E1A),
     rule: Color(0xFF332C26),
-    ink: Color(0xFFE0D8CC),
-    inkDim: Color(0xFFA3988A),
+    ink: Color(0xFFAF9B7C),
+    inkDim: Color(0xFF958978),
     // Lag mit 4,04/3,79/3,52:1 auf allen drei Flaechen unter AA — die
     // gedaempfte Fassung darf leiser sein, nicht unlesbar.
-    inkFaint: Color(0xFF918575),
-    signal: Color(0xFFD79A55),
-    signalDeep: Color(0xFFA87433),
-    calm: Color(0xFF8FA98C),
-    caution: Color(0xFFBE7A55),
-    info: Color(0xFF8B9AA0),
+    inkFaint: Color(0xFF928777),
+    signal: Color(0xFFBD7A2D),
+    signalDeep: Color(0xFF92652C),
+    calm: Color(0xFF70916D),
+    caution: Color(0xFFBD7852),
+    info: Color(0xFF7A8C92),
     isDark: true,
   );
 
   static const lightMuted = AxiomPalette(
-    base: Color(0xFFF4F0E7),
-    panel: Color(0xFFFBF8F1),
-    panelRaised: Color(0xFFFFFDF8),
-    rule: Color(0xFFD5CDBE),
+    base: Color(0xFFD9D4C6),
+    panel: Color(0xFFE4DCCB),
+    panelRaised: Color(0xFFEEE3C5),
+    rule: Color(0xFFB7B1A4),
     ink: Color(0xFF221E19),
-    inkDim: Color(0xFF57503F),
+    inkDim: Color(0xFF56503F),
     // 4,18:1 auf `base`, 4,48:1 auf `panel` — knapp daneben ist auch daneben.
     // Danach 4,56:1 und damit ohne Reserve fuer die Mulde (4,17:1); zwei
     // Nuancen dunkler, siehe die helle Standardfassung.
-    inkFaint: Color(0xFF6E6659),
-    signal: Color(0xFF8A5A16),
+    inkFaint: Color(0xFF575146),
+    signal: Color(0xFF714A12),
     signalDeep: Color(0xFF6B450F),
-    calm: Color(0xFF44634A),
-    caution: Color(0xFF8C4A26),
-    info: Color(0xFF3F5A66),
+    calm: Color(0xFF3C5842),
+    caution: Color(0xFF7D4222),
+    info: Color(0xFF3C5561),
     isDark: false,
   );
 

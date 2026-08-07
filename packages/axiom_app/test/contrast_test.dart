@@ -423,4 +423,77 @@ void main() {
       }
     }
   });
+
+  // ── Gedämpft muss dämpfen ─────────────────────────────────────────────
+  //
+  // Der Wächter, der gefehlt hat. `AxiomScheme.muted` trug seit jeher den
+  // Satz „nimmt Leuchtdichte und Blauanteil zurück; nichts leuchtet mehr" —
+  // im Kommentar. Gemessen war es dreizehn Prozent, und nachdem die Vorgabe
+  // auf Werkbank wechselte, war „gedämpft" im Akzent sogar HELLER als der
+  // Normalfall. Eine Zusage im Fließtext, die niemand nachrechnet, hält
+  // genau so lange, bis sich etwas anderes ändert.
+  //
+  // Geprüft wird die relative Leuchtdichte nach WCAG, nicht der Farbwert:
+  // Wer die Palette neu mischt, darf das — aber nicht heller.
+  group('Gedämpft ist messbar dunkler', () {
+    // Zwei Schwellen, und der Unterschied zwischen ihnen ist der
+    // interessante Teil.
+    //
+    // **Der Akzent kann nicht viel dunkler werden.** Er ist die Fläche eines
+    // gefüllten Knopfes, und darauf steht Text in `base` — der braucht 4,5:1.
+    // Das setzt eine harte Untergrenze bei etwa 0,236 relativer Leuchtdichte;
+    // gegen die hellste Fläche (`panelRaised`) kommt dieselbe Grenze noch
+    // einmal. Wer den Knopf weiter abdunkeln will, muss vorher die
+    // Beschriftung umdrehen — das wäre eine Entwurfsentscheidung, keine
+    // Palettenänderung.
+    const kAkzent = 0.85;
+
+    // **Text und Grund können es.** Text bedeckt mehr Fläche als jeder
+    // Knopf; im Dunkeln ist er die eigentliche Lichtquelle, im Hellen ist es
+    // der Grund. Dort ist der Spielraum groß, und dort muss gedämpft werden.
+    const kFlaeche = 0.75;
+
+    for (final helligkeit in Brightness.values) {
+      final name = helligkeit == Brightness.dark ? 'dunkel' : 'hell';
+      final muted = AxiomScheme.muted.palette(helligkeit);
+      final vorgabe = kDefaultScheme.palette(helligkeit);
+
+      test('$name: der Akzent leuchtet weniger', () {
+        expect(
+          _luminance(muted.signal),
+          lessThan(_luminance(vorgabe.signal) * kAkzent),
+          reason: 'Der gefüllte Knopf ist die hellste zusammenhängende '
+              'Fläche des Schirms. Wenn der nicht dunkler wird, wird nichts '
+              'dunkler.',
+        );
+      });
+
+      test('$name: die Textfläche leuchtet weniger', () {
+        // Text bedeckt mehr Fläche als jeder Knopf — bei einem dunklen
+        // Schema ist er die eigentliche Lichtquelle, bei einem hellen ist
+        // es der Grund. Deshalb je nach Richtung eine andere Rolle.
+        final mutedWert = helligkeit == Brightness.dark
+            ? _luminance(muted.ink)
+            : (_luminance(muted.base) + _luminance(muted.panel)) / 2;
+        final vorgabeWert = helligkeit == Brightness.dark
+            ? _luminance(vorgabe.ink)
+            : (_luminance(vorgabe.base) + _luminance(vorgabe.panel)) / 2;
+        expect(mutedWert, lessThan(vorgabeWert * kFlaeche),
+            reason: helligkeit == Brightness.dark
+                ? 'Im Dunkeln ist der Text das Licht.'
+                : 'Im Hellen ist der Grund das Licht.');
+      });
+
+      test('$name: und bleibt trotzdem lesbar', () {
+        // Die Gegenprobe im selben Test: Dämpfen darf nicht heissen,
+        // unter AA zu rutschen. Der Rest der Datei prüft das für alle
+        // Schemata; hier steht es noch einmal für den Fall, den man am
+        // ehesten zu weit dreht.
+        expect(contrastRatio(muted.ink, muted.panelRaised),
+            greaterThanOrEqualTo(4.5));
+        expect(contrastRatio(muted.signal, muted.panelRaised),
+            greaterThanOrEqualTo(4.5));
+      });
+    }
+  });
 }
