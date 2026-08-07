@@ -171,6 +171,75 @@ void main() {
           reason: 'Deutsch in der englischen Oberfläche:\n${leaks.join('\n')}');
     });
 
+    group('Eine feuernde Regel verlässt den Reiter', () {
+      // Bisher endete sie als Feld auf einer Seite. Lag der Reiter hinten,
+      // war sie damit unsichtbar — und genau die Regeln, die etwas taugen,
+      // feuern, wenn man gerade nicht hinsieht. Kein Web Push: Der läuft
+      // über einen fremden Zustelldienst und wäre eine ausgehende
+      // Verbindung (ADR-0005). `new Notification(…)` zeigt der Browser
+      // selbst, ohne Netz, und nur solange die Seite offen ist.
+      late final Map<String, dynamic> r;
+      setUpAll(() => r = drive('notify'));
+
+      test('aus, bis jemand einschaltet', () {
+        // Ein Browser, den man beim ersten Aufruf um Erlaubnis bittet,
+        // bekommt „Nein" — und danach ist er nicht mehr zu fragen.
+        expect(r['ausZuBeginn'], 0);
+        expect(r['knopfAus'], 'false');
+      });
+
+      test('der Schalter merkt sich seinen Stand', () {
+        expect(r['knopfAn'], 'true');
+        expect(r['gemerkt'], '1');
+      });
+
+      test('die Meldung nennt die Regel und die Zahl', () {
+        // Die Regel-ID gehört in jede Ausgabe (G2) — auch in eine, die
+        // außerhalb des Fensters erscheint.
+        expect(r['gemeldet'], 1);
+        expect(r['titel'], 'Etwas liegt seit Tagen im Eingang');
+        expect(r['text'], 'R-150 · 3 im Eingang');
+      });
+
+      test('dieselbe Entscheidung meldet sich genau einmal', () {
+        // Der Takt holt den Zustand alle 20 Sekunden. Ohne diese Sperre
+        // meldete dieselbe anliegende Handlung dreimal pro Minute — der
+        // häufigste Sterbeverlauf von ADHS-Apps (R2).
+        expect(r['nachDreiRunden'], 1);
+        expect(r['neueEntscheidung'], 2);
+      });
+
+      test('wer hinsieht, bekommt nichts aufgeblendet', () {
+        // Sonst meldete die Seite, was zwei Zoll weiter in großer Schrift
+        // dasteht.
+        expect(r['beimHinsehen'], 2);
+      });
+
+      test('nudge ist still, intervene darf klingen', () {
+        // Dieselbe Aufteilung wie bei den Kanälen des Telefons: Ein Ton
+        // gehört zum Unterbrechen, nicht zum Hinweisen (G3).
+        expect(r['still'], isTrue);
+        expect(r['lautBeiIntervene'], isFalse);
+      });
+
+      test('info meldet nicht — auf dem Telefon erscheint es auch nicht', () {
+        expect(r['beiInfoDazu'], 0);
+      });
+
+      test('ausgeschaltet ist ausgeschaltet', () {
+        expect(r['nachAusschalten'], 0);
+      });
+
+      test('eine Ablehnung des Browsers wird gesagt, nicht geschluckt', () {
+        // Ein Schalter, der umspringt und nichts tut, ist von kaputt nicht
+        // zu unterscheiden.
+        final d = drive('notify-denied');
+        expect(d['knopf'], 'false');
+        expect(d['gemerkt'], '0');
+        expect(d['gesagt'], 'Der Browser lässt hier keine Meldungen zu.');
+      });
+    });
+
     group('Ein Reiter im Hintergrund ist keine Zeit im System (G4)', () {
       // Der Server bucht den Abstand zwischen zwei angemeldeten Anfragen auf
       // das Meta-Budget. Die Seite fragt aber von selbst weiter — gemessen

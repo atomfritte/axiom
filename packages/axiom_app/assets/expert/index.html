@@ -660,6 +660,19 @@ kbd{font-family:PlexMono,monospace;font-size:.7rem;border:1px solid var(--rule);
     <div class="seg" role="group" data-t-label="Textgröße" aria-label="Textgröße">
       <button data-size="s">S</button><button data-size="m">M</button><button data-size="l">L</button><button data-size="xl">XL</button>
     </div>
+    <!-- Meldet eine feuernde Regel auch dann, wenn dieser Reiter nicht
+         vorne liegt. Aus, bis jemand ihn einschaltet: Ein Browser, der
+         beim ersten Aufruf nach Erlaubnis fragt, bekommt „Nein" und ist
+         danach nicht mehr zu fragen. -->
+    <button class="btn quiet" id="notify-btn" aria-pressed="false"
+            data-t-title="Melden, wenn eine Regel feuert" title="Melden, wenn eine Regel feuert"
+            data-t-label="Melden, wenn eine Regel feuert" aria-label="Melden, wenn eine Regel feuert">
+      <svg width="15" height="15" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M6 9a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S6 13 6 9Z"
+              fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M9.5 17a1.8 1.8 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M4 4l14 14" stroke="currentColor" stroke-width="1.5" id="notify-slash"/></svg>
+    </button>
     <button class="btn quiet" id="keys-btn" data-t-title="Tastenkürzel (?)" title="Tastenkürzel (?)">?</button>
     <button class="btn quiet" id="stop-btn" data-t-title="Server beenden" title="Server beenden" data-t="Beenden">Beenden</button>
   </header>
@@ -758,6 +771,10 @@ const EN={
 "Verbindet …":"Connecting …",
 "Getrennt":"Disconnected",
 "Server beendet":"Server stopped",
+"Melden, wenn eine Regel feuert":"Notify when a rule fires",
+"Dieser Browser kennt keine Systemmeldungen.":"This browser has no system notifications.",
+"Der Browser lässt hier keine Meldungen zu.":"The browser does not allow notifications here.",
+"{0} im Eingang":"{0} in the inbox",
 "Zeit im System heute (G4). Gezählt wird, solange dieser Reiter sichtbar und im Vordergrund ist.":"Time in the system today (G4). Counted while this tab is visible and in the foreground.",
 "Helligkeit":"Brightness",
 "Auto":"Auto",
@@ -1151,6 +1168,80 @@ function attended(){
     &&Date.now()-lastInput<kIdle;
 }
 
+/* ── Melden, wenn eine Regel feuert ──────────────────────────────────
+   Bisher endete eine feuernde Regel im Browser als Feld auf einer Seite.
+   Lag der Reiter hinten, war sie damit unsichtbar — und genau die Regeln,
+   die etwas taugen, feuern, wenn man gerade nicht hinsieht.
+
+   **Kein Web Push.** Die Standard-API dafuer laeuft ueber einen fremden
+   Zustelldienst (Mozilla, Google); das waere eine ausgehende Verbindung
+   und mit ADR-0005 nicht vereinbar, unabhaengig davon, wie wenig im
+   Paket steht. `new Notification(…)` ist etwas anderes: Der Browser
+   zeigt selbst eine Systemmeldung, es geht nichts ueber das Netz, und es
+   funktioniert nur, solange diese Seite offen ist. Genau so weit soll es
+   auch reichen.
+
+   Aus, bis jemand einschaltet. Ein Browser, den man beim ersten Aufruf
+   um Erlaubnis bittet, bekommt „Nein" — und danach ist er nicht mehr zu
+   fragen. */
+const kNotifyKey='axiom.notify',kNoticedKey='axiom.noticed';
+let notifyOn=localStorage.getItem(kNotifyKey)==='1';
+
+const canNotify=()=>typeof Notification!=='undefined';
+const mayNotify=()=>notifyOn&&canNotify()&&Notification.permission==='granted';
+
+function paintNotifyButton(){
+  const b=$('#notify-btn');if(!b)return;
+  b.setAttribute('aria-pressed',mayNotify()?'true':'false');
+  b.classList.toggle('on',mayNotify());
+  const slash=$('#notify-slash');
+  if(slash) slash.setAttribute('opacity',mayNotify()?'0':'1');
+}
+
+async function toggleNotify(){
+  if(!canNotify()){toast(tr('Dieser Browser kennt keine Systemmeldungen.'));return}
+  if(notifyOn){
+    notifyOn=false;localStorage.setItem(kNotifyKey,'0');paintNotifyButton();return;
+  }
+  const granted=Notification.permission==='granted'
+    ?'granted':await Notification.requestPermission();
+  notifyOn=granted==='granted';
+  localStorage.setItem(kNotifyKey,notifyOn?'1':'0');
+  paintNotifyButton();
+  // Eine Ablehnung kommentarlos zu schlucken hiesse: Der Knopf tut nichts
+  // und sieht dabei aus wie kaputt.
+  if(!notifyOn) toast(tr('Der Browser lässt hier keine Meldungen zu.'));
+}
+
+/* Meldet die Entscheidung, die im Feld daneben ohnehin steht — einmal.
+   Was hier NICHT passiert: eine zweite Auswertung. Ob eine Regel feuert,
+   entscheidet der Kern, nicht diese Seite (G2). */
+function announce(){
+  const d=S&&S.decision;
+  if(!d||!mayNotify())return;
+  // Dieselbe Grenze wie auf dem Telefon: `info` steht dort auf
+  // IMPORTANCE_MIN und erscheint dort dann gar nicht.
+  if(d.severity==='info')return;
+  if(localStorage.getItem(kNoticedKey)===d.id)return;
+  localStorage.setItem(kNoticedKey,d.id);
+  // Wer hinsieht, hat es schon gesehen — dann gilt es als erledigt, ohne
+  // dass etwas aufpoppt. Sonst meldete die Seite, was zwei Zoll weiter
+  // gerade in grosser Schrift dasteht.
+  if(attended())return;
+  const zahl=S.inboxCount>0?' · '+tr('{0} im Eingang',[S.inboxCount]):'';
+  const n=new Notification(d.title,{
+    // Die Regel-ID gehoert in jede Ausgabe (G2) — auch in eine, die
+    // ausserhalb des Fensters erscheint.
+    body:d.ruleId+zahl,
+    // Ein Ton gehoert zum Unterbrechen, nicht zum Hinweisen. Dieselbe
+    // Aufteilung wie bei den Kanaelen des Telefons.
+    silent:d.severity==='nudge',
+    // Ersetzen statt stapeln: Es gibt immer nur eine anliegende Handlung.
+    tag:'axiom-decision',
+  });
+  n.onclick=()=>{try{window.focus()}catch(e){}n.close()};
+}
+
 async function api(path,opts={}){
   const res=await fetch(path,{credentials:'same-origin',...opts,
     headers:{'X-Axiom-Attended':attended()?'1':'0',
@@ -1434,6 +1525,10 @@ function paintAction(){
   if(S.nextStep) kids.push(el('p',{class:'faint',style:'margin-top:1rem'},
     S.nextStep.label+' · '+new Date(S.nextStep.at).toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'})+' — '+S.nextStep.anchor));
   put(box,kids);
+  // Dieselbe Entscheidung, nur ausserhalb des Fensters. Hier und nicht im
+  // Takt, damit es genau eine Stelle gibt, an der eine Entscheidung
+  // sichtbar wird.
+  announce();
 }
 
 function dueLabel(iso){
@@ -3590,6 +3685,7 @@ function keysDialog(){
   sheet(tr('Tastenkürzel'),el('div',{class:'keys'},
     ...keys.map(([k,t])=>el('div',{},el('span',{},t),el('kbd',{},k)))),[],tr('Schließen'));
 }
+$('#notify-btn').addEventListener('click',toggleNotify);
 $('#keys-btn').addEventListener('click',keysDialog);
 function openHelpTab(){
   const b=document.querySelector('#tabs button[data-tab="help"]');
@@ -3778,6 +3874,7 @@ setInterval(()=>{
    kommt mit dem ersten Zustand. */
 document.documentElement.lang=LANG;
 localise(document);
+paintNotifyButton();
 
 /* Schon angemeldet? Dann direkt hinein, sonst die Freigabe anbieten. */
 api('/api/state').then(async data=>{

@@ -1859,6 +1859,11 @@ final class ExpertServer {
               'rationale': snapshot.decisionRule!.rationale,
               'action': snapshot.decisionRule!.then.type.name,
               'deficit': snapshot.decisionRule!.deficit,
+              // Damit der Browser dieselbe Grenze ziehen kann wie das
+              // Telefon: `info` ist dort IMPORTANCE_MIN und erscheint nicht
+              // in der Statusleiste. Ohne dieses Feld müsste die Seite
+              // raten, und geraten würde sie in Richtung „melden".
+              'severity': snapshot.decisionRule!.severity.name,
             },
       // Damit der Browser dieselbe Mechanik anbieten kann wie das Telefon:
       // erst das Laufende, sonst der Vorschlag.

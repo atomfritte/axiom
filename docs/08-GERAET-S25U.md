@@ -246,6 +246,14 @@ Auslassung: Ein Wecker steht im Voraus fest und ist damit vorhersagbar; eine Reg
 wenn die App ohnehin läuft und die Ausgabe schon auf dem Bildschirm steht — eine Meldung
 zusätzlich wäre Lärm neben etwas Sichtbarem.
 
+**Im Browser ist es umgekehrt.** Dort gibt es keine geplanten Wecker — der Expertenmodus läuft
+nur, solange die App läuft. Dafür kann die Seite eine feuernde Regel als Systemmeldung des
+Browsers zeigen (`new Notification`, kein Web Push — [ADR-0005 §2b](adr/ADR-0005-expertenmodus.md)).
+Sie ist abgeschaltet, bis jemand sie einschaltet, meldet nur, was auf dem Telefon auch
+erschiene (`info` also nicht), klingt nur ab `intervene`, und schweigt, solange der Reiter
+vorne liegt. Beide Wege zusammen decken damit die zwei Fälle ab: Der Wecker erreicht dich,
+wenn nichts läuft; die Seite erreicht dich, wenn du am Rechner sitzt und woanders hinsiehst.
+
 Wo eine Regel den Fall trifft, dass man die App *nicht* öffnet, muss ihr Anlass deshalb doppelt
 stehen: einmal als Bedingung in der Regel, einmal als Weckzeitpunkt daneben. Bei R-150 sind das
 `inbox_oldest_hours: { gte: 72 }` und `InboxAgeAlarm.threshold`. Die Doppelung ist unvermeidbar

@@ -230,6 +230,24 @@ function boot(options) {
     // ein wartender Zeitgeber liesse den Prozess haengen.
     setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
     confirm: () => true,
+    /* Die Systemmeldung des Browsers. Sie ist der ganze Grund, warum eine
+       feuernde Regel den Reiter verlassen kann — ohne Attrappe waere davon
+       nichts pruefbar. `permission` und die Antwort auf die Frage stellt
+       das Szenario. */
+    Notification: (() => {
+      const shown = [];
+      class N {
+        constructor(title, opts) { shown.push({ title, options: opts || {} }); }
+        close() {}
+      }
+      N.shown = shown;
+      N.permission = options.notifyPermission || 'default';
+      N.requestPermission = async () => {
+        N.permission = options.notifyAnswer || 'denied';
+        return N.permission;
+      };
+      return N;
+    })(),
     WebSocket: class { constructor() { this.readyState = 0; } close() {} },
     fetch: async (url, opts) => {
       const body = opts && opts.body ? JSON.parse(opts.body) : null;
@@ -288,7 +306,8 @@ function boot(options) {
     return errors;
   };
 
-  return { sandbox, calls, store, flush, fire, key, raise, windowHandlers };
+  return { sandbox, calls, store, flush, fire, key, raise, windowHandlers,
+    notifications: sandbox.Notification.shown };
 }
 
 /* Die englischen Fassungen, direkt aus der Seite gelesen — dieselbe Tabelle,
@@ -431,6 +450,118 @@ const scenarios = {
      weiter — der Server bucht den Abstand zwischen zwei Anfragen, und ein
      Tag ohne einen einzigen Blick buchte sich damit voll. Geprueft wird der
      Kopf, den die Seite mitschickt, weil an ihm die Buchung haengt. */
+  /* Eine feuernde Regel verlaesst den Reiter (G2, R2). Bisher endete sie
+     als Feld auf einer Seite — lag der Reiter hinten, war sie unsichtbar,
+     und genau die Regeln, die etwas taugen, feuern, wenn man gerade nicht
+     hinsieht. Geprueft wird die ganze Kette: aus, einschalten, melden,
+     genau einmal, und nur was auch auf dem Telefon zu sehen waere. */
+  'notify': async () => {
+    const decision = (extra = {}) => Object.assign({
+      id: 'D-1', ruleId: 'R-150', title: 'Etwas liegt seit Tagen im Eingang',
+      rationale: 'Erfasstes muss wieder auftauchen.', action: 'notify',
+      deficit: 'D9', severity: 'nudge',
+    }, extra);
+
+    let jetzt = 1000000, d = decision();
+    const h = boot({
+      clock: () => jetzt,
+      notifyPermission: 'default',
+      notifyAnswer: 'granted',
+      server: url => {
+        if (url === '/api/state') {
+          return { status: 200, body: stateWith({ decision: d, inboxCount: 3 }) };
+        }
+        if (url === '/api/inbox') return { status: 200, body: { notes: [], tasks: [] } };
+        return { status: 200, body: { tasks: [] } };
+      },
+    });
+    await h.flush();
+
+    const laden = async () => { await h.sandbox.sync(); await h.flush(); };
+    const knopf = stub('#notify-btn');
+    const antwort = {};
+
+    // Der Reiter liegt hinten — trotzdem still, weil niemand eingeschaltet
+    // hat. Ein Browser, den man beim ersten Aufruf fragt, sagt Nein.
+    h.sandbox.document.visibilityState = 'hidden';
+    await laden();
+    antwort.ausZuBeginn = h.notifications.length;
+    antwort.knopfAus = knopf.attrs['aria-pressed'];
+
+    // Einschalten. Die Erlaubnis wird genau hier erfragt, nicht beim Laden.
+    await h.fire(knopf);
+    antwort.knopfAn = knopf.attrs['aria-pressed'];
+    antwort.gemerkt = h.store['axiom.notify'];
+
+    await laden();
+    antwort.gemeldet = h.notifications.length;
+    antwort.titel = (h.notifications[0] || {}).title;
+    antwort.text = ((h.notifications[0] || {}).options || {}).body;
+    antwort.still = ((h.notifications[0] || {}).options || {}).silent;
+
+    // Dieselbe Entscheidung nochmal: kein zweites Mal.
+    await laden();
+    await laden();
+    antwort.nachDreiRunden = h.notifications.length;
+
+    // Eine neue Entscheidung derselben Regel meldet wieder.
+    d = decision({ id: 'D-2' });
+    await laden();
+    antwort.neueEntscheidung = h.notifications.length;
+
+    // Wer hinsieht, braucht keine Meldung — die Handlung steht schon da.
+    d = decision({ id: 'D-3' });
+    h.sandbox.document.visibilityState = 'visible';
+    await laden();
+    antwort.beimHinsehen = h.notifications.length;
+
+    // `intervene` unterbricht und darf klingen; `nudge` nicht.
+    d = decision({ id: 'D-4', severity: 'intervene' });
+    h.sandbox.document.visibilityState = 'hidden';
+    await laden();
+    antwort.lautBeiIntervene =
+      ((h.notifications[h.notifications.length - 1] || {}).options || {}).silent;
+
+    // `info` ist auf dem Telefon IMPORTANCE_MIN und erscheint dort nicht.
+    const vorher = h.notifications.length;
+    d = decision({ id: 'D-5', severity: 'info' });
+    await laden();
+    antwort.beiInfoDazu = h.notifications.length - vorher;
+
+    // Und wieder aus.
+    await h.fire(knopf);
+    d = decision({ id: 'D-6' });
+    await laden();
+    antwort.nachAusschalten = h.notifications.length - vorher;
+
+    return antwort;
+  },
+
+  /* Lehnt der Browser ab, muss der Knopf das sagen. Ein Schalter, der
+     umspringt und nichts tut, ist von kaputt nicht zu unterscheiden. */
+  'notify-denied': async () => {
+    const h = boot({
+      notifyPermission: 'default',
+      notifyAnswer: 'denied',
+      server: url => {
+        if (url === '/api/state') return { status: 200, body: stateWith({}) };
+        if (url === '/api/inbox') return { status: 200, body: { notes: [], tasks: [] } };
+        return { status: 200, body: { tasks: [] } };
+      },
+    });
+    await h.flush();
+
+    const knopf = stub('#notify-btn');
+    await h.fire(knopf);
+    await h.flush();
+
+    return {
+      knopf: knopf.attrs['aria-pressed'],
+      gemerkt: h.store['axiom.notify'],
+      gesagt: stub('#toast').textContent.trim(),
+    };
+  },
+
   'meta-attention': async () => {
     let jetzt = 1000000;
     const h = boot({

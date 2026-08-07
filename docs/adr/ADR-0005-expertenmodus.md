@@ -54,6 +54,46 @@ Ein Test hält fest, dass genau **eine** Datei einen Datagramm-Socket öffnet, d
 andere Adresse als die Multicast-Gruppe sendet und dass der Abschied existiert. Wächst diese
 Liste, ist das eine Entscheidung und kein Versehen.
 
+**2b. Systemmeldungen im Browser — ja. Web Push — nein.**
+
+Eine feuernde Regel endete im Browser als Feld auf einer Seite. Lag der Reiter hinten, war sie
+damit unsichtbar; und die Regeln, die etwas taugen, feuern gerade dann, wenn man nicht hinsieht.
+Die Seite darf sich deshalb melden — aber es gibt zwei Bauformen dafür, und nur eine ist mit
+Punkt 2 vereinbar.
+
+| | Web Push (`PushManager`) | `new Notification(…)` |
+|---|---|---|
+| Weg | Der Browser meldet sich bei einem Zustelldienst an — Mozilla oder Google — und bekommt von dort eine Endpunkt-URL. Die Meldung läuft über diesen fremden Server | Der Browser zeigt sie selbst |
+| Netz | ausgehende Verbindung zu einem Dritten, dauerhaft | keine |
+| Reichweite | auch wenn die Seite zu ist | nur solange die Seite offen ist |
+| Zulässig | **nein** | ja |
+
+Web Push ist ausgeschlossen, und zwar unabhängig davon, wie wenig im Paket steht: Schon die
+Anmeldung ist eine ausgehende Verbindung, und sie besteht dauerhaft. Dass ein Dritter dabei
+mitzählt, wann dieses Gerät Meldungen bekommt, ist bei einer Datenbank mit Gesundheitsdaten
+kein akzeptabler Preis für Bequemlichkeit.
+
+Die kürzere Reichweite der erlaubten Bauform ist kein Verlust, sondern passend: Der
+Expertenmodus läuft ohnehin nur, solange die App läuft. Was gemeldet werden soll, wenn nichts
+läuft, gehört auf das Telefon — dort stehen die geplanten Wecker (siehe
+[08-GERAET §5.4](../08-GERAET-S25U.md)).
+
+Drei Bedingungen, alle in `expert_client_test.dart` als Verhalten geprüft, nicht als
+Schreibweise:
+
+1. **Aus, bis jemand einschaltet.** Ein Browser, den man beim ersten Aufruf um Erlaubnis bittet,
+   bekommt „Nein" — und danach ist er nicht mehr zu fragen.
+2. **Nur was auch auf dem Telefon zu sehen wäre.** `severity: info` steht dort auf
+   `IMPORTANCE_MIN` und erscheint gar nicht; im Browser poppt es dann auch nicht auf. Ein Ton
+   nur bei `intervene` und höher.
+3. **Einmal pro Entscheidung, und nicht, wenn jemand hinsieht.** Der Takt holt den Zustand alle
+   20 Sekunden; ohne beides meldete dieselbe anliegende Handlung dreimal pro Minute (R2) —
+   und zwar neben dem Feld, in dem sie ohnehin in großer Schrift steht.
+
+Ein Test verbietet `PushManager`, `pushManager`, `applicationServerKey` und `serviceWorker` im
+Quelltext der Seite. Ohne ihn wäre die Grenze nur eine Absicht: Beide Bauformen heißen
+umgangssprachlich „Benachrichtigung", und die verbotene ist die bequemere.
+
 *Was dazu nötig war.* Android filtert eingehende Multicast-Pakete im WLAN-Treiber weg, solange
 niemand einen `MulticastLock` hält. Ohne ihn — und ohne
 `CHANGE_WIFI_MULTICAST_STATE` — hört der Responder keine einzige Anfrage, ohne Fehler und ohne

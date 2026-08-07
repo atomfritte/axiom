@@ -393,6 +393,44 @@ void main() {
       expect(page, contains('url(/font/'));
     });
 
+    test('kein Web Push — der liefe über einen fremden Zustelldienst', () {
+      // Die Standard-API für Push meldet den Browser bei Mozilla oder
+      // Google an und lässt die Meldung von dort zustellen. Das wäre eine
+      // ausgehende Verbindung und ADR-0005 damit hinfällig — unabhängig
+      // davon, wie wenig im Paket steht. Erlaubt ist genau die andere
+      // Bauform: `new Notification(…)`, vom Browser selbst gezeigt, ohne
+      // Netz, und nur solange die Seite offen ist.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      for (final forbidden in [
+        'PushManager',
+        'pushManager',
+        'applicationServerKey',
+        'serviceWorker',
+        'ServiceWorker',
+      ]) {
+        expect(page, isNot(contains(forbidden)),
+            reason: '„$forbidden" führt aus dem Gerät heraus (ADR-0005)');
+      }
+      expect(page, contains('new Notification('),
+          reason: 'Der erlaubte Weg soll auch benutzt werden');
+    });
+
+    test('die Meldung kennt die Schwere der Regel', () {
+      // Ohne dieses Feld müsste die Seite raten, ob eine Regel überhaupt zu
+      // melden ist — und geraten würde sie in Richtung „melden". `info`
+      // steht auf dem Telefon auf IMPORTANCE_MIN und erscheint dort gar
+      // nicht; im Browser darf es dann auch nicht aufpoppen.
+      final page = File('assets/expert/index.html').readAsStringSync();
+      final server = File('lib/server/expert_server.dart').readAsStringSync();
+
+      expect(server, contains("'severity': snapshot.decisionRule!.severity.name"),
+          reason: 'Der Server schickt die Schwere nicht mehr mit');
+      expect(page, contains("d.severity==='info'"),
+          reason: 'Die Seite zieht die Grenze nicht mehr');
+      expect(page, contains("d.severity==='nudge'"),
+          reason: 'Ein Ton gehört zum Unterbrechen, nicht zum Hinweisen');
+    });
+
     test('dieselben Paletten wie in der App', () {
       // Zwei Oberflaechen, die sich aehnlich sehen wollen, driften
       // auseinander, sobald die Farben zweimal getippt sind. Geprueft wird
