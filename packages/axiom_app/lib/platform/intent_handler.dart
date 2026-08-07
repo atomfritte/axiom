@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../screens/anchors_screen.dart';
 import '../screens/capture_sheet.dart';
+import '../screens/expert_screen.dart';
 import '../screens/body_sheet.dart';
 import '../screens/checkin_sheet.dart';
 import '../screens/focus_screen.dart';
@@ -146,6 +147,11 @@ class _IntentHandlerState extends ConsumerState<IntentHandler>
           await _open(const ReviewScreen());
         case AxiomRoute.inbox:
           await _open(const InboxScreen());
+        case 'de.atomfritte.axiom.EXPERT_APPROVE':
+          // Die Benachrichtigung zur offenen Freigabe. Sie traegt die Zahl,
+          // aber nicht die Entscheidung — hier landet man auf dem Schirm,
+          // auf dem verglichen und getippt wird (ADR-0005 §3a).
+          await _open(const ExpertScreen());
         case 'de.atomfritte.axiom.EXPERT_STOP':
           // Der Knopf auf der Benachrichtigung. Er oeffnet die App, weil der
           // Server im App-Prozess laeuft — ihn von aussen zu beenden hiesse,

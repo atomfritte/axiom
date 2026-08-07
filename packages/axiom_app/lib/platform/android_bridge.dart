@@ -365,6 +365,20 @@ abstract final class AndroidBridge {
   /// Läuft nach jedem Auswertungszyklus mit. Die Systemseite schreibt nur,
   /// wenn sich die Sprache geändert hat; sonst ist der Aufruf ein Blick auf
   /// eine gespeicherte Zeichenkette.
+  /// Zeigt die offene Freigabeanfrage des Expertenmodus als
+  /// Benachrichtigung — oder nimmt sie zurueck.
+  ///
+  /// **Sie entscheidet nichts.** Antippen oeffnet den Expertenmodus-
+  /// Bildschirm, auf dem der Zahlenabgleich seit jeher stattfindet. Ein
+  /// Freigabeknopf in der Leiste waere zwei unabhaengige Sicherheitsloecher
+  /// — `Notification.Action.actionIntent` ist ein oeffentliches Feld, und
+  /// ein Broadcast feuert auf einem gesperrten Geraet ohne Entsperren. Die
+  /// lange Fassung steht in `ApprovalNotice.kt`.
+  static Future<bool> showApproval(String number) =>
+      _invoke('approvalShow', {'number': number});
+
+  static Future<bool> hideApproval() => _invoke('approvalHide');
+
   static Future<bool> applySystemTexts(AppLanguage language) => _invoke(
         'applyTexts',
         {'language': language.code, 'texts': SystemTexts.forLanguage(language)},

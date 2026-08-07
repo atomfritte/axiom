@@ -3,6 +3,22 @@
 /// Hier liegen Gesundheitsdaten auf einem Port. Die Zusagen aus ADR-0005 sind
 /// deshalb keine Absichtserklärung, sondern das, was diesen Server von einem
 /// offenen Scheunentor unterscheidet. Genau die stehen hier.
+///
+/// **Warum diese Datei mehr Zeit bekommt.** Sie startet in jedem `setUp`
+/// einen echten HTTPS-Server, und der erzeugt sich ein Zertifikat samt
+/// frischem RSA-Schlüssel — die Testdatenbank liegt im Speicher, also
+/// greift der Zwischenspeicher in `ExpertCertificates.forAddress` nicht.
+/// Bei rund hundert Fällen sind das rund hundert Schlüssel. Allein läuft die
+/// Datei in gut vier Minuten durch; im vollen Lauf, neben allen anderen
+/// Dateien, rissen einzelne Fälle die voreingestellten 30 Sekunden — und
+/// was danach kam, war Folgeschaden: „This database has already been
+/// closed", weil der abgebrochene Fall sein Gerüst mitnahm.
+///
+/// Das ist eine ehrliche Kosten-, keine Fehlerursache. Geprüft wird der
+/// echte Weg durch TLS, und genau deshalb fängt diese Datei Fehler, die eine
+/// Attrappe durchließe. Angehoben wird deshalb die Grenze, nicht die
+/// Prüfung verdünnt.
+@Timeout(Duration(minutes: 3))
 library;
 
 import 'dart:async';
@@ -55,6 +71,10 @@ void main() {
     server = ExpertServer(
       resolveRuntime: () async => h.runtime,
       onChanged: () => changes++,
+      // Dieselbe gestellte Uhr wie die Laufzeit. Ohne sie liesse sich die
+      // Neunzig-Sekunden-Frist nicht ueberspringen — und genau deshalb hat
+      // sie bis zu dieser Runde kein Test geprueft.
+      clock: h.clock,
     );
     // Port 0 waehlt das System — sonst kollidieren parallele Testlaeufe.
     final status = await server.start(port: 0);
@@ -545,6 +565,78 @@ void main() {
       expect(poll.statusCode, 202,
           reason: 'Die Anfrage des Nutzers laeuft weiter — genau die, deren '
               'Zahl er gerade vergleicht');
+    });
+
+    test('eine fremde Kennung gibt nichts frei', () async {
+      // Der Riegel, der vorher toter Code war: `resolvePending` prueft die
+      // Kennung, aber kein Aufrufer gab sie je mit. Solange nur der
+      // Bildschirm antwortete, trug das nicht — er zeigt immer die lebende
+      // Anfrage. Eine Benachrichtigung ueberlebt den Moment.
+      final open = await json(await call('POST', '/api/auth/request'));
+
+      server.resolvePending(approve: true, id: 'aus-einer-anderen-anfrage');
+      expect((await call('GET', '/api/auth/poll?id=${open['id']}')).statusCode,
+          202,
+          reason: 'Freigegeben wird, was verglichen wurde');
+
+      server.resolvePending(approve: true, id: server.pendingId);
+      expect((await call('GET', '/api/auth/poll?id=${open['id']}')).statusCode,
+          200);
+    });
+
+    test('die Nachfolgerin einer verfallenen Anfrage bleibt zu', () async {
+      // Anfrage A verfaellt, waehrend die Meldung dazu noch in der Leiste
+      // liegt; ein Fremder stellt Anfrage B. Ein spaeter Tipp darf B nicht
+      // freigeben. Ueber die Zahl allein waere das eins zu neunzig.
+      final a = await json(await call('POST', '/api/auth/request'));
+      final aId = server.pendingId;
+      expect(aId, isNotNull);
+
+      h.clock.advance(const Duration(seconds: 91));
+      expect(server.pendingNumber, isNull, reason: 'A ist verfallen');
+      expect((await call('GET', '/api/auth/poll?id=${a['id']}')).statusCode, 410);
+
+      final b = await json(await call('POST', '/api/auth/request'));
+      server.resolvePending(approve: true, id: aId);
+
+      expect((await call('GET', '/api/auth/poll?id=${b['id']}')).statusCode, 202,
+          reason: 'Die Antwort auf A hat B freigegeben');
+    });
+
+    test('nach dem Verfall gibt es nichts mehr zu melden', () async {
+      // Kein Timer meldet den Ablauf — die Begruendung steht am Feld
+      // `_pending`. Was hier gilt: Wer danach fragt, bekommt nichts, und
+      // genau davon haengt die Benachrichtigung ab (`state.pendingId`).
+      await call('POST', '/api/auth/request');
+      expect(server.pendingNumber, isNotNull);
+
+      h.clock.advance(const Duration(seconds: 91));
+
+      expect(server.pendingNumber, isNull);
+      expect(server.pendingId, isNull);
+      expect(server.status.pendingId, isNull,
+          reason: 'Sonst bliebe die Meldung in der Leiste stehen');
+    });
+
+    test('ein beendeter Server nimmt die offene Anfrage mit', () async {
+      // Sonst stuende ihre Zahl nach dem Wiederanschalten wieder da — und
+      // antwortete auf einen Server, den es zwischendurch nicht gab.
+      await call('POST', '/api/auth/request');
+      await server.stop();
+
+      expect(server.pendingNumber, isNull);
+      expect(server.status.pendingId, isNull);
+    });
+
+    test('eine verfallene Anfrage laesst sich nicht mehr freigeben', () async {
+      final open = await json(await call('POST', '/api/auth/request'));
+      final id = server.pendingId;
+
+      h.clock.advance(const Duration(seconds: 91));
+      server.resolvePending(approve: true, id: id);
+
+      expect((await call('GET', '/api/auth/poll?id=${open['id']}')).statusCode,
+          410);
     });
 
     test('nach der Antwort ist wieder Platz', () async {
@@ -1717,6 +1809,12 @@ ${english ? '''  rationale_en: >
 
       // Gegenprobe: Eine echte Anfrage verschiebt die Grenze sehr wohl —
       // sonst prüfte der Test nur, dass gar nichts passiert.
+      //
+      // Die Uhr muss dafür weiterlaufen. Seit der Server sie über einen Port
+      // liest statt direkt, steht sie im Test still — ohne diesen Sprung
+      // ergäbe eine Anfrage denselben Zeitpunkt, und die Gegenprobe könnte
+      // „verschoben" nicht mehr von „nicht verschoben" unterscheiden.
+      h.clock.advance(const Duration(minutes: 1));
       await call('GET', '/api/state', cookie: cookie);
       expect(server.status.idleStopAt, isNot(before));
       await socket.close();

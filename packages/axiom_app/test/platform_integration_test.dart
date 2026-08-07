@@ -168,12 +168,22 @@ void main() {
         'broadcast', 'focusStart', 'focusEnd', 'windDown',
         'enterMaintenanceMode', 'peekPendingMemos', 'ackPendingMemos',
         'peekPendingPlaces', 'ackPendingPlaces',
+        'showApproval', 'hideApproval',
       };
       expect(declared.length, greaterThan(40));
       expect(declared.difference(covered), isEmpty,
           reason: 'neu und ohne bekanntes Verhalten auf dem Rechner');
       expect(covered.difference(declared), isEmpty,
           reason: 'steht in der Liste, aber nicht mehr im Quelltext');
+    });
+
+    test('die Freigabemeldung ist auf dem Rechner ein sauberes Nein', () async {
+      // Der Expertenmodus laeuft auch auf dem Linux-Companion, aber dort gibt
+      // es keine Benachrichtigungsleiste. Der Aufruf muss dann „hat nicht
+      // geklappt" sagen, nicht werfen — der Freigabeschirm in der App ist
+      // ohnehin der Weg, den die Meldung nur abkuerzt.
+      expect(await AndroidBridge.showApproval('42'), isFalse);
+      expect(await AndroidBridge.hideApproval(), isFalse);
     });
 
     test('Health Connect meldet sich als nicht verfügbar, nicht als Fehler',

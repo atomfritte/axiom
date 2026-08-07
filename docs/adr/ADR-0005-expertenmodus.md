@@ -124,9 +124,50 @@ nicht auf dem Bildschirm, vor dem der Nutzer sitzt. Wer nur bestätigt, was übe
 niemand anderen herein.
 
 Deshalb gibt es zu jedem Zeitpunkt **genau eine** offene Anfrage: Zwei Zahlen zur Auswahl wären
-wieder ein Knopf. Sie verfällt nach 90 Sekunden, eine neue Anfrage ist frühestens nach drei
-Sekunden möglich, und eine Ablehnung zählt wie ein Fehlversuch — nach fünf schaltet sich der
-Server ab.
+wieder ein Knopf. Sie verfällt nach 90 Sekunden, und solange sie lebt, wird eine zweite Anfrage
+mit 429 abgewiesen statt sie zu verdrängen. Hier stand früher „eine neue Anfrage ist frühestens
+nach drei Sekunden möglich" — das war der Fehler, nicht die Regel: Nach drei Sekunden ersetzte
+jeder unangemeldete Aufrufer die offene Anfrage, und wer im selben Netz mitpollte, konnte sie
+gegen die eigene austauschen, während der Nutzer die Zahl vom Bildschirm zum Telefon trug. Eine
+Ablehnung zählt wie ein Fehlversuch — nach fünf schaltet sich der Server ab.
+
+*Die Antwort geht gegen die Kennung, nicht gegen die Zahl.* Die Zahl ist zweistellig, damit man
+sie in einem Blick vergleicht; als Merkmal ist sie eins aus 90. Geprüft wird deshalb die
+32-Byte-Kennung der Anfrage. Solange nur der Bildschirm antwortete, trug das nicht — er zeigt
+immer die lebende Anfrage. Der Parameter war jahrelang da und wurde von keinem Aufrufer
+benutzt: toter Code an der einzigen Anmeldung für Gesundheitsdaten.
+
+**3a-1. Die offene Anfrage als Benachrichtigung — sie navigiert, sie entscheidet nicht.**
+
+Freigeben hieß: App suchen, Einstellungen, Expertenmodus, Zahl finden, tippen. Fünf Schritte
+innerhalb von 90 Sekunden, jedes Mal, wenn der Browser neu lädt. Es gibt jetzt eine
+Benachrichtigung, die die Zahl im Titel trägt; ein Tipp führt auf den Freigabeschirm. Aus fünf
+Schritten werden zwei plus Entsperren.
+
+Was es **nicht** gibt, ist ein „Freigeben"-Knopf in der Benachrichtigungsleiste. Er wäre der
+naheliegende Entwurf und aus zwei unabhängigen Gründen ein Loch:
+
+1. **`Notification.Action.actionIntent` ist ein öffentliches Feld.** Jede App mit
+   `BIND_NOTIFICATION_LISTENER_SERVICE` — und jede gekoppelte Uhr, denn genau so funktionieren
+   Aktionsknöpfe dort — bekommt die Benachrichtigung samt Aktionen und kann `actionIntent.send()`
+   aufrufen, mit der Identität von AXIOM. Ein Freigabeknopf wäre also eine Fähigkeit, die AXIOM an
+   jeden Benachrichtigungsleser auf dem Gerät verteilt, und der vergleicht nichts, der feuert nur.
+   `setAuthenticationRequired` hilft dagegen nicht: Diese Prüfung sitzt in der Klickbehandlung von
+   SystemUI, nicht in der Kapsel.
+2. **Ein `PendingIntent.getBroadcast` feuert auf einem gesperrten Gerät sofort.** Genau darauf
+   beruht die Schnellerfassung ohne Entsperren. Wer das gesperrte Telefon in die Hand bekommt,
+   gäbe damit einem fremden Browser den vollen Datensatz frei. `PendingIntent.getActivity`
+   erzwingt dagegen ab API 26 immer den Sperrbildschirm, ohne Versionsabfrage.
+
+Der Vergleich bleibt deshalb dort, wo er begründet ist. Ein Benachrichtigungsleser, der die
+Kapsel missbraucht, öffnet einen Bildschirm — mehr nicht.
+
+Zwei kleinere Festlegungen dazu: Die Meldung liegt auf `axiom_nudge`, also sichtbar und **still**.
+`/api/auth/request` braucht keine Anmeldung; auf einem klingenden Kanal könnte jeder im selben
+Netz alle 90 Sekunden einen Ton auslösen, ohne Cooldown (R2). Und die Zahl steht im
+`Intent`-Identifier, nicht in den Extras: `PendingIntent` unterscheidet zwei Kapseln über
+`Intent.filterEquals`, und das vergleicht Extras nicht — zwei Anfragen ergäben sonst dieselbe
+Kapsel mit der alten Zahl.
 
 **3b. Mitstarten mit der App — optional, aus als Voreinstellung.**
 

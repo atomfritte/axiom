@@ -60,6 +60,18 @@ final class ExpertStatus {
   /// Zahl einer offenen Freigabeanfrage. Null heißt: keine.
   final String? pendingNumber;
 
+  /// Kennung derselben Anfrage — 32 zufällige Bytes.
+  ///
+  /// **Warum die Zahl dafür nicht reicht.** Sie ist zweistellig, weil man
+  /// sie in einem Blick vergleichen können soll; als Merkmal ist sie damit
+  /// eins aus 90. Die Antwort wird gegen die Kennung geprüft, nicht gegen
+  /// die Zahl: Ist Anfrage A verfallen und Anfrage B eines Fremden
+  /// nachgerückt, träfe ein später Tipp sonst mit gut einem Prozent
+  /// Wahrscheinlichkeit auf die fremde. Solange nur der Bildschirm
+  /// antwortete, war das unmöglich — er zeigt immer die lebende Anfrage.
+  /// Eine Benachrichtigung überlebt den Moment, und damit entsteht der Fall.
+  final String? pendingId;
+
   final String? pin;
 
   /// SHA-256 des Zertifikats. Der Wert, den auch der Browser anzeigt.
@@ -73,6 +85,7 @@ final class ExpertStatus {
     this.address,
     this.fallbackAddress,
     this.pendingNumber,
+    this.pendingId,
     this.pin,
     this.fingerprint,
     this.idleStopAt,
@@ -95,8 +108,16 @@ final class _AuthRequest {
 
   _AuthRequest({required this.id, required this.number, required this.at});
 
-  bool isExpired(DateTime now) =>
-      now.difference(at) > const Duration(seconds: 90);
+  /// Wie lange eine Anfrage lebt.
+  ///
+  /// Dieselbe Zahl steht in `ApprovalNotice.TIMEOUT_MS` — die Meldung zieht
+  /// sich damit selbst zurueck, ohne dass hier ein Timer laufen muss.
+  /// `approval_notice_test.dart` haelt beide zusammen: Laufen sie
+  /// auseinander, bleibt eine tote Zahl in der Leiste stehen, und genau die
+  /// ist die, bei der ein spaeter Tipp auf eine fremde neue Anfrage trifft.
+  static const Duration lifetime = Duration(seconds: 90);
+
+  bool isExpired(DateTime now) => now.difference(at) > lifetime;
 }
 
 /// Eine Eingabe aus dem Netz, die sich nicht übernehmen lässt.
@@ -154,7 +175,17 @@ final class ExpertServer {
   ExpertServer({
     required this.resolveRuntime,
     required void Function() onChanged,
+    this.clock = const SystemClock(),
   }) : _notifyApp = onChanged;
+
+  /// Die Uhr — ueber einen Port, nicht direkt gelesen.
+  ///
+  /// Der Server liegt in `axiom_app`, das Kernverbot greift hier formal
+  /// nicht. Die Folge war trotzdem dieselbe: Kein Test konnte die
+  /// Neunzig-Sekunden-Frist ueberspringen, und deshalb hat sie bis heute
+  /// **keiner** geprueft — obwohl sie die zentrale Frist dieses Ablaufs ist.
+  /// Ein Test, der 91 Sekunden wartet, wird nicht geschrieben.
+  final Clock clock;
 
   /// Wird bei jeder Anfrage neu aufgelöst.
   ///
@@ -202,6 +233,17 @@ final class ExpertServer {
   /// Die eine offene Freigabeanfrage. Mehr als eine gleichzeitig gibt es
   /// nicht: Zwei Zahlen auf dem Telefon waeren eine Auswahl, und wer
   /// auswaehlt, vergleicht nicht mehr.
+  /// Der Verfall braucht keinen Timer.
+  ///
+  /// Naheliegend waere einer, der sich beim Ablauf meldet, damit Bildschirm
+  /// und Benachrichtigung von selbst leer werden. Er kaeme aber auf der
+  /// echten Uhr, waehrend die Tests eine gestellte benutzen — er waere also
+  /// genau die Sorte Zusage, die nur behauptet wird. Und er traegt nichts:
+  /// Die Meldung zieht Android nach [_AuthRequest.lifetime] selbst zurueck
+  /// (`setTimeoutAfter`), und der Riegel gegen eine spaete Antwort ist die
+  /// Kennung in [resolvePending], nicht die Abwesenheit der Anzeige.
+  /// Zurueck bleibt eine tote Zahl auf einem offenen Schirm, bis er sich
+  /// neu aufbaut — kosmetisch, und vorher genauso.
   _AuthRequest? _pending;
   Timer? _idleTimer;
   DateTime? _idleStopAt;
@@ -222,6 +264,7 @@ final class ExpertServer {
           fallbackAddress:
               _fallbackAddress == _address ? null : _fallbackAddress,
           pendingNumber: pendingNumber,
+          pendingId: pendingId,
           pin: _pin,
           fingerprint: _certificate?.readableFingerprint,
           idleStopAt: _idleStopAt,
@@ -271,6 +314,10 @@ final class ExpertServer {
     _idleTimer?.cancel();
     _idleTimer = null;
     _idleStopAt = null;
+    // Eine offene Anfrage ueberlebt den Server nicht. Sonst stuende ihre
+    // Zahl nach dem Wiederanschalten wieder da — und antwortete auf einen
+    // Server, den es zwischendurch nicht gab.
+    _pending = null;
     _sessions.clear();
     _pin = null;
     // Sonst buchte der erste Aufruf nach einem Neustart die Pause dazwischen
@@ -335,7 +382,7 @@ final class ExpertServer {
   /// Montag offen — genau das, wogegen die dreißig Minuten gebaut sind.
   void _touch() {
     _idleTimer?.cancel();
-    _idleStopAt = DateTime.now().add(kExpertIdleTimeout);
+    _idleStopAt = clock.nowLocal().add(kExpertIdleTimeout);
     _idleTimer = Timer(kExpertIdleTimeout, stop);
   }
 
@@ -1007,7 +1054,7 @@ final class ExpertServer {
   /// zur Auswahl waeren wieder ein Knopf.
   Future<void> _requestApproval(HttpRequest request) async {
     _touch();
-    final now = DateTime.now();
+    final now = clock.nowLocal();
     final open = _pending;
     if (open != null && !open.isExpired(now)) {
       // Eine offene Anfrage wird nicht verdraengt.
@@ -1047,7 +1094,7 @@ final class ExpertServer {
   Future<void> _pollApproval(HttpRequest request) async {
     final id = request.uri.queryParameters['id'];
     final open = _pending;
-    if (open == null || open.id != id || open.isExpired(DateTime.now())) {
+    if (open == null || open.id != id || open.isExpired(clock.nowLocal())) {
       return _json(request, 410, {'error': 'Abgelaufen'});
     }
     if (open.denied) {
@@ -1073,10 +1120,15 @@ final class ExpertServer {
   }
 
   /// Die offene Anfrage, wie die App sie anzeigt. Null heisst: keine.
-  String? get pendingNumber {
+  String? get pendingNumber => _open?.number;
+
+  /// Die Kennung derselben Anfrage. Sie geht mit der Antwort zurueck.
+  String? get pendingId => _open?.id;
+
+  _AuthRequest? get _open {
     final open = _pending;
-    if (open == null || open.isExpired(DateTime.now())) return null;
-    return open.approved || open.denied ? null : open.number;
+    if (open == null || open.isExpired(clock.nowLocal())) return null;
+    return open.approved || open.denied ? null : open;
   }
 
   /// Aus der App heraus: freigeben oder ablehnen.
@@ -1088,10 +1140,13 @@ final class ExpertServer {
   /// ([ExpertStatus.pendingNumber] wird angezeigt); wer sie nicht mitgibt,
   /// verlaesst sich darauf, dass eine offene Anfrage nicht mehr verdraengt
   /// werden kann (siehe [_requestApproval]).
-  void resolvePending({required bool approve, String? number}) {
+  void resolvePending({required bool approve, String? number, String? id}) {
     final open = _pending;
-    if (open == null || open.isExpired(DateTime.now())) return;
+    if (open == null || open.isExpired(clock.nowLocal())) return;
     if (number != null && number != open.number) return;
+    // Der eigentliche Riegel. Die Zahl ist eine Augenpruefung fuer den
+    // Menschen, die Kennung ist die fuer die Maschine.
+    if (id != null && id != open.id) return;
     if (approve) {
       open.approved = true;
     } else {

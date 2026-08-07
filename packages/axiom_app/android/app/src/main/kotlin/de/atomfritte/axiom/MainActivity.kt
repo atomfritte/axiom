@@ -209,6 +209,23 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
 
+                    // Die offene Freigabeanfrage des Expertenmodus. Sie
+                    // entscheidet nichts — sie fuehrt auf den Bildschirm, auf
+                    // dem verglichen wird. Begruendung in ApprovalNotice.kt.
+                    "approvalShow" -> {
+                        val number = call.argument<String>("number")
+                        if (number.isNullOrBlank()) {
+                            result.success(false)
+                        } else {
+                            ApprovalNotice.show(this, number)
+                            result.success(true)
+                        }
+                    }
+                    "approvalHide" -> {
+                        ApprovalNotice.cancel(this)
+                        result.success(true)
+                    }
+
                     // Der Schluessel der Datenbank. Kommt vor allem anderen,
                     // weil ohne ihn nichts geoeffnet werden kann.
                     "databaseKey" -> result.success(DatabaseKey.passphrase(this))
@@ -483,6 +500,7 @@ class MainActivity : FlutterActivity() {
                 "de.atomfritte.axiom.BODY",
                 "de.atomfritte.axiom.INBOX",
                 ExpertService.ACTION_STOP,
+                ApprovalNotice.ACTION_APPROVE,
             )
         ) return null
         intent.action = Intent.ACTION_MAIN

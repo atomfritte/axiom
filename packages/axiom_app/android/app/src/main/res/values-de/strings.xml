@@ -79,6 +79,8 @@
     <string name="axiom_expert_title">Expertenmodus läuft</string>
     <string name="axiom_expert_detail">Verschlüsselt mit einem selbst signierten Zertifikat. Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.</string>
     <string name="axiom_expert_stop">Beenden</string>
+    <string name="axiom_expert_approval_title">Freigabe: {0}</string>
+    <string name="axiom_expert_approval_detail">Ein Browser will an die Daten dieses Telefons. Tippen, wenn dieselbe Zahl auf dem Bildschirm steht, vor dem du sitzt.</string>
 
     <string name="axiom_tile_label">Erfassen</string>
     <string name="axiom_tile_description">Gedanken in AXIOM festhalten</string>

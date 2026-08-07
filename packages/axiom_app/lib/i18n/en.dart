@@ -1767,6 +1767,13 @@ const Map<String, String> kEnglish = {
   // keine Rangfolge ist — genau das ist der Punkt (R7, D10).
   'Gezählt, nicht gewichtet — die Reihenfolge ist immer dieselbe.':
       'Counted, not weighted — the order is always the same.',
+  // Die Freigabe des Expertenmodus als Benachrichtigung.
+  'Freigabe: {0}': 'Approval: {0}',
+  'Ein Browser will an die Daten dieses Telefons. Tippen, wenn dieselbe '
+      'Zahl auf dem Bildschirm steht, vor dem du sitzt.':
+      'A browser wants the data on this phone. Tap if the same number is on '
+          'the screen in front of you.',
+
   // Der Wecker fuer den Eingang (R-150 als Benachrichtigung).
   'Seit {0} Tagen im Eingang': '{0} days in the inbox',
   'Einmal ansehen genügt: übernehmen oder verwerfen, beides ist ein Tipp.':

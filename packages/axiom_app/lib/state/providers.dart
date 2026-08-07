@@ -554,6 +554,24 @@ final class ExpertMode extends Notifier<ExpertStatus> {
     } else if (running) {
       state = _server!.status;
     }
+    _syncApprovalNotice();
+  }
+
+  /// Welche Anfrage zuletzt gemeldet wurde. Ohne das ginge bei jedem
+  /// Zustandsabgleich dieselbe Meldung erneut heraus — der Takt laeuft
+  /// haeufig, und eine Meldung, die sich staendig neu aufbaut, ist die
+  /// Benachrichtigungsflut aus R2.
+  String? _noticedId;
+
+  void _syncApprovalNotice() {
+    final id = state.pendingId;
+    if (id == _noticedId) return;
+    _noticedId = id;
+    // Die Meldung traegt die Zahl und fuehrt auf den Bildschirm. Sie
+    // entscheidet nichts — Begruendung in `ApprovalNotice.kt`.
+    unawaited(id == null
+        ? AndroidBridge.hideApproval()
+        : AndroidBridge.showApproval(state.pendingNumber ?? ''));
   }
 
   /// Fuer die Anzeige: der Server kann sich zwischen zwei Blicken selbst
@@ -561,8 +579,15 @@ final class ExpertMode extends Notifier<ExpertStatus> {
   void refresh() => _sync();
 
   /// Freigeben oder ablehnen — die Antwort auf den Zahlenabgleich.
-  void resolvePending({required bool approve}) {
-    _server?.resolvePending(approve: approve);
+  ///
+  /// [id] ist die Kennung der Anfrage, die der Nutzer vor sich hatte. Sie
+  /// muss mit: Freigegeben wird, **was verglichen wurde**, nicht was gerade
+  /// offen ist (ADR-0005 §3a). Solange nur der Bildschirm antwortete, war
+  /// das folgenlos — er zeigt immer die lebende Anfrage. Seit die Antwort
+  /// aus einer Benachrichtigung kommen kann, liegt zwischen Anzeige und
+  /// Tipp Zeit, Sperrbildschirm und Prozesswechsel.
+  void resolvePending({required bool approve, String? id}) {
+    _server?.resolvePending(approve: approve, id: id);
     _sync();
   }
 }

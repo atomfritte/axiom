@@ -75,6 +75,8 @@ object AxiomTexts {
         "expert.title" to R.string.axiom_expert_title,
         "expert.detail" to R.string.axiom_expert_detail,
         "expert.stop" to R.string.axiom_expert_stop,
+        "expert.approval.title" to R.string.axiom_expert_approval_title,
+        "expert.approval.detail" to R.string.axiom_expert_approval_detail,
 
         "tile.label" to R.string.axiom_tile_label,
         "tile.description" to R.string.axiom_tile_description,

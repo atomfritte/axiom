@@ -92,6 +92,8 @@
     <string name="axiom_expert_title">Expert mode is running</string>
     <string name="axiom_expert_detail">Encrypted with a self-signed certificate. Without a request the server shuts down after 30 minutes.</string>
     <string name="axiom_expert_stop">End</string>
+    <string name="axiom_expert_approval_title">Approval: {0}</string>
+    <string name="axiom_expert_approval_detail">A browser wants the data on this phone. Tap if the same number is on the screen in front of you.</string>
 
     <string name="axiom_tile_label">Capture</string>
     <string name="axiom_tile_description">Hold on to a thought in AXIOM</string>

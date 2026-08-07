@@ -86,6 +86,13 @@ abstract final class SystemTexts {
     'expert.detail': 'Verschlüsselt mit einem selbst signierten Zertifikat. '
         'Ohne Anfrage schaltet sich der Server nach 30 Minuten ab.',
     'expert.stop': 'Beenden',
+    // Die Zahl steht im Titel, weil genau sie verglichen werden soll. Die
+    // Meldung entscheidet nichts — sie fuehrt auf den Bildschirm, auf dem
+    // der Vergleich seit jeher stattfindet (ADR-0005 §3a).
+    'expert.approval.title': 'Freigabe: {0}',
+    'expert.approval.detail':
+        'Ein Browser will an die Daten dieses Telefons. Tippen, wenn dieselbe '
+        'Zahl auf dem Bildschirm steht, vor dem du sitzt.',
 
     // ── Schnelleinstellung und Teilen-Blatt ──────────────────────────────
     'tile.label': 'Erfassen',

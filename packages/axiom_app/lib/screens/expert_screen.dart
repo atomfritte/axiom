@@ -82,12 +82,16 @@ class _ExpertScreenState extends ConsumerState<ExpertScreen>
           if (status.pendingNumber != null)
             _Approval(
               number: status.pendingNumber!,
+              // Die Kennung der Anfrage geht mit zurueck. Sie ist der
+              // Riegel gegen die Nachfolge: Verfaellt diese Anfrage,
+              // waehrend der Schirm noch offen liegt, und rueckt die eines
+              // Fremden nach, gibt der Tipp nichts frei.
               onApprove: () => ref
                   .read(expertModeProvider.notifier)
-                  .resolvePending(approve: true),
+                  .resolvePending(approve: true, id: status.pendingId),
               onDeny: () => ref
                   .read(expertModeProvider.notifier)
-                  .resolvePending(approve: false),
+                  .resolvePending(approve: false, id: status.pendingId),
             )
           else if (status.running)
             _Running(status: status)
