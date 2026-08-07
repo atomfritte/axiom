@@ -386,7 +386,7 @@ einspielen, und das löscht die Datenbank. Vorher exportieren
 
 | | |
 |---|---|
-| Tests | grün in allen drei Paketen — `dart test` in Core und Daten, `flutter test` in App |
+| Tests | grün in allen vier Paketen — `dart test` in Core, Daten und Werkzeugen, `flutter test` in App |
 | Analyzer | keine Meldungen in allen Paketen |
 | Regelwerk | 18 Regeln gültig, 15 aktiv — davon 5 **ungeeicht** (`dart run tools/bin/validate_rules.dart rules`) |
 | Release-APK | gebaut, **mit der `INTERNET`-Berechtigung** — nur für den Expertenmodus deklariert (ADR-0005), sonst kein Netzwerkcode in der App |

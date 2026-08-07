@@ -380,7 +380,7 @@ Keep the keystore. Without it no build can be installed over an existing one
 
 | | |
 |---|---|
-| Tests | green in all three packages — `dart test` in core and data, `flutter test` in app |
+| Tests | green in all four packages — `dart test` in core, data and tools, `flutter test` in app |
 | Analyzer | clean across all packages |
 | Rulebook | 18 rules valid, 15 active — 5 of them **uncalibrated** (`dart run tools/bin/validate_rules.dart rules`) |
 | Release APK | built, **with the `INTERNET` permission** — declared for expert mode only (ADR-0005), no other network code in the app |
