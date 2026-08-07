@@ -1366,7 +1366,7 @@ final class AxiomRuntime {
       store.setSetting('text_size', name ?? TextSize.normal.name);
   String? get colorSchemeName => store.setting('color_scheme');
   set colorSchemeName(String? name) =>
-      store.setSetting('color_scheme', name ?? AxiomScheme.instrument.name);
+      store.setSetting('color_scheme', name ?? kDefaultScheme.name);
   /// 0 = System, 1 = dunkel, 2 = hell.
   int get brightnessChoice =>
       int.tryParse(store.setting('brightness') ?? '') ?? 0;

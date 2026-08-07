@@ -495,7 +495,11 @@ void main() {
   group('Eine Farbe für alle Messwerte', () {
     testWidgets('ein Messwert wird in signal gezeichnet — egal was übergeben '
         'wird', (tester) async {
-      final palette = AxiomScheme.instrument.palette(Brightness.dark);
+      // Die Vorgabe, nicht ein festes Schema. Geprueft wird die ROLLE
+      // („der Messwert steht in signal"), und die gilt in jeder Fassung —
+      // ein Test, der einen Farbwert festschreibt, faellt beim naechsten
+      // Palettenwechsel um, ohne dass etwas kaputt waere.
+      final palette = kDefaultScheme.palette(Brightness.dark);
       await tester.pumpWidget(_wrap(const InstrumentBar(
         label: 'Kompensationslast',
         value: 61,
@@ -571,7 +575,11 @@ void main() {
     testWidgets('die Beiträge tragen keine Note', (tester) async {
       // „Schlafschuld −12,5" in Kupfer liest sich als Rüge. Das Vorzeichen
       // steht ohnehin da; es braucht keine Farbe, die es bewertet (R7, D10).
-      final palette = AxiomScheme.instrument.palette(Brightness.dark);
+      // Die Vorgabe, nicht ein festes Schema. Geprueft wird die ROLLE
+      // („der Messwert steht in signal"), und die gilt in jeder Fassung —
+      // ein Test, der einen Farbwert festschreibt, faellt beim naechsten
+      // Palettenwechsel um, ohne dass etwas kaputt waere.
+      final palette = kDefaultScheme.palette(Brightness.dark);
       await tester.pumpWidget(_wrap(const InstrumentBar(
         label: 'Kapazität',
         value: 49,

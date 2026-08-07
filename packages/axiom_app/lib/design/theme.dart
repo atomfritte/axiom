@@ -30,7 +30,7 @@ extension AxiomThemeContext on BuildContext {
 
 ThemeData buildAxiomTheme({
   required Brightness brightness,
-  AxiomScheme scheme_ = AxiomScheme.instrument,
+  AxiomScheme scheme_ = kDefaultScheme,
 }) {
   final p = scheme_.palette(brightness);
 

@@ -180,8 +180,11 @@ void main() {
       final fab = tester.widget<FloatingActionButton>(
         find.byType(FloatingActionButton),
       );
-      expect(fab.backgroundColor, AxiomPalette.dark.signal);
-      expect(fab.backgroundColor, isNot(AxiomPalette.dark.caution));
+      // Die Rollen, nicht die Farbwerte: Der Erfassungsknopf traegt das
+      // Signal, nicht die Aufmerksamkeitsfarbe. Das gilt in jeder Fassung.
+      final p = kDefaultScheme.palette(Brightness.dark);
+      expect(fab.backgroundColor, p.signal);
+      expect(fab.backgroundColor, isNot(p.caution));
     });
 
     testWidgets('die letzte Zeile liegt nicht unter dem Knopf',

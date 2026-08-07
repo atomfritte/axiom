@@ -148,7 +148,8 @@ void main() {
     // Tabellenziffern, und so lässt sie sich vorlesen, ohne dass ein
     // Übersetzer sie aus einem fertigen Satz zurückrechnen muss.
     final value = tester.widget<Text>(find.text('100'));
-    expect(value.style?.color, AxiomPalette.dark.signal);
+    // Die Rolle, nicht der Farbwert — siehe typography_test.
+    expect(value.style?.color, kDefaultScheme.palette(Brightness.dark).signal);
     expect(value.style?.fontFamily, Fonts.sans);
     expect(value.style?.fontFeatures,
         contains(const FontFeature.tabularFigures()));

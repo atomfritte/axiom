@@ -1,21 +1,30 @@
 /// Design-Tokens.
 ///
-/// Gestaltungsleitbild: **Instrumententafel**, nicht Produktivitaets-App.
-/// Die Welt eines Systemizers sind Messgeraete, Frontplatten, Skalen und
-/// Telemetrie — keine bunten Karten mit Konfetti.
+/// Gestaltungsleitbild: **Instrument, nicht Produktivitaets-App.** Jede Zahl
+/// ist ein Messwert, kein Urteil; jede Ausgabe nennt ihre Regel. Was das
+/// heisst, steht in den zwei Entscheidungen unten — nicht in einer bestimmten
+/// Palette.
 ///
 /// Zwei Entscheidungen, die aus dem Nutzerprofil folgen und nicht verhandelbar
 /// sind:
 ///
 ///  1. **Kein Rot.** Rot heisst Fehler heisst Schuld. Bei Rejection
 ///     Sensitivity (D10) ist das die teuerste Farbe im Spektrum. Warnungen
-///     sind Kupfer, Grenzwerte sind Bernstein. Selbst der Erhaltungsmodus
-///     (L3) ist kein Alarm — er ist ein Erfolg des Systems.
+///     sind Kupfer. Selbst der Erhaltungsmodus (L3) ist kein Alarm — er ist
+///     ein Erfolg des Systems.
 ///
-///  2. **Warmes Anthrazit statt Reinschwarz, Bernstein statt Neon.**
-///     Die Palette ist einem Phosphor-Instrument nachempfunden: gedaempft,
-///     augenschonend, abends nicht wachhaltend (D8). Ein grelles Interface
-///     um 23 Uhr arbeitet gegen das Sleep Gate.
+///  2. **Abends darf nichts leuchten.** Ein grelles Interface um 23 Uhr
+///     arbeitet gegen das Sleep Gate (D8). Dafuer gibt es [AxiomScheme.muted]
+///     und den dunklen Modus.
+///
+/// **Was hier gestanden hat und nicht mehr gilt:** „Warmes Anthrazit statt
+/// Reinschwarz, Bernstein statt Neon" stand jahrelang als nicht verhandelbare
+/// Entscheidung da — also als Gesetz, obwohl es eine Geschmacksfrage war. Die
+/// Voreinstellung ist seit dem 07.08.2026 [AxiomScheme.workbench]: weisse
+/// Flaechen, blaues Signal, Luft. Bernstein auf Anthrazit gibt es weiterhin
+/// als [AxiomScheme.instrument], einen Tipp entfernt. Ein Leitbild, das eine
+/// Palette vorschreibt, verwechselt das Mittel mit dem Zweck; die zwei
+/// Punkte oben gelten in jeder Fassung, und darauf kommt es an.
 library;
 
 import 'package:flutter/material.dart';
@@ -432,25 +441,41 @@ abstract final class Shadows {
         ];
 }
 
-/// Farbschema — drei, nicht dreissig.
+/// Die Voreinstellung. An genau einer Stelle, damit sie sich nicht an drei
+/// Orten auseinanderentwickelt — `parse`, die Laufzeit und `buildAxiomTheme`
+/// hatten sie bisher je einzeln stehen.
+const kDefaultScheme = AxiomScheme.workbench;
+
+/// Farbschema — vier, nicht vierzig.
 ///
 /// Einstellungs-Wildwuchs ist bei diesem Profil selbst ein Problem (D3),
 /// deshalb hat jede Fassung hier einen Grund und nicht bloss einen Namen:
 ///
-///  * [instrument] ist die Gestaltung, gegen die entworfen wurde.
+///  * [workbench] ist die **Vorgabe**: weisse Flaechen, blaues Signal, Luft.
+///  * [instrument] ist die Gestaltung, gegen die urspruenglich entworfen
+///    wurde — Bernstein auf warmem Anthrazit, eine Messgeraetefrontplatte.
 ///  * [contrast] existiert fuer Lesbarkeit — Sonne, Muedigkeit, kleine
 ///    Schrift. Ein Text, der nicht gelesen wird, wirkt nicht.
 ///  * [muted] existiert fuer den Abend. Ein grelles Interface um 23 Uhr
 ///    arbeitet gegen das Sleep Gate (D8).
-///  * [workbench] existiert fuer den grossen Bildschirm bei Tageslicht. Die
-///    drei anderen sind Varianten desselben Bernsteins — auf einem Monitor
-///    in einem hellen Raum liegt der als Braunschleier ueber allem, und fuer
-///    eine Tabelle mit dreissig Zeilen fehlt ihm die Trennschaerfe.
+///
+/// **Warum die Vorgabe gewechselt hat.** [instrument] war drei Jahre lang
+/// die Voreinstellung und stand fuer das Leitbild „Instrumententafel, nicht
+/// Produktivitaets-App". Der Nutzer hat es als „trist" bezeichnet, und eine
+/// Pruefung aller Schirme in allen vier Fassungen gab ihm recht: Dieselbe
+/// Gestaltung — dieselbe Typografie, dieselben Abstaende, dieselbe
+/// Reichweitenkante — wirkt in [workbench] hell und aufgeraeumt und in
+/// [instrument] dunkel und schwer. Es war nie eine Entwurfsfrage, sondern
+/// eine Schemafrage.
+///
+/// [instrument] bleibt vollstaendig erhalten und einen Tipp entfernt. Was
+/// hier gewechselt hat, ist die Voreinstellung, nicht die Moeglichkeit.
 enum AxiomScheme {
+  // Reihenfolge = Reihenfolge in der Auswahl. Die Vorgabe steht vorn.
+  workbench('Werkbank'),
   instrument('Instrument'),
   contrast('Kontrast'),
-  muted('Gedämpft'),
-  workbench('Werkbank');
+  muted('Gedämpft');
 
   const AxiomScheme(this.label);
 
@@ -473,7 +498,7 @@ enum AxiomScheme {
 
   static AxiomScheme parse(String? name) => AxiomScheme.values.firstWhere(
         (s) => s.name == name,
-        orElse: () => AxiomScheme.instrument,
+        orElse: () => kDefaultScheme,
       );
 }
 
