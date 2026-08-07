@@ -10,7 +10,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/services.dart';
 
 import '../i18n/i18n.dart';
@@ -127,6 +127,229 @@ abstract final class AxiomRoute {
   static const inbox = 'de.atomfritte.axiom.INBOX';
 }
 
+/// Der Wecker auf das geplante Ende eines Fokusblocks [D6, M4].
+///
+/// **Warum es ihn geben muss.** Der Fokus-Governor existiert, um Hyperfokus
+/// zu unterbrechen. Die laufende Anzeige zeigt zwar die Restzeit, aber sie
+/// zeigt sie in der Statusleiste — und wer vertieft ist, sieht per
+/// Definition nicht dorthin. Ein Fortschrittsbalken, der voll läuft und dann
+/// nichts tut, ist keine Unterbrechung, sondern eine Anzeige für jemanden,
+/// der ohnehin schon hinsieht. Zeittrigger sind der wirksamste
+/// Interventionstyp dieses Profils [D4]; hier ist die Stelle, an der das
+/// zählt.
+///
+/// **Warum `axiom_intervene` und damit hörbar.** Es gibt vier Kanäle:
+/// `axiom_info` (MIN) und `axiom_nudge` (LOW) machen keinen Ton — ein
+/// stummes Blockende wäre genau der Zustand, der behoben werden soll: eine
+/// Meldung, die die eine Person nicht erreicht, für die sie gedacht ist.
+/// `axiom_enforce` (HIGH) blendet sich über das laufende Bild; das ist ein
+/// Schreck und gehört dem Notfall, nicht dem Ende einer geplanten Stunde.
+/// Bleibt `axiom_intervene` (DEFAULT): Es klingt einmal und legt sich in die
+/// Leiste.
+///
+/// Der Fokus**start** bekommt bewusst keinen Ton. Dort hat man gerade selbst
+/// den Knopf gedrückt — ein Ton, der bestätigt, was man eben getan hat, ist
+/// ein Schreck ohne Information.
+///
+/// **Kein eigener Tonweg.** Der Klang gehört dem Betriebssystem: kein
+/// Soundplayer, keine Audiodatei, kein zweiter Lautstärkeregler in den
+/// Einstellungen. Wer ihn abstellen will, tut das in den Kanaleinstellungen
+/// von Android — dort, wo er ihn sucht, und nicht in einem Schalter, den
+/// AXIOM zusätzlich pflegen müsste [D3].
+abstract final class FocusEndAlarm {
+  /// Feste ID. Die Vergabe aller Alarm-IDs steht bei
+  /// [AndroidBridge.scheduleExact].
+  static const int alarmId = 20;
+
+  /// Stellt den Wecker auf das Ende des Blocks.
+  ///
+  /// [now] kommt vom Aufrufer und nicht aus `DateTime.now()`: Wer den Wecker
+  /// stellt, hat eine Uhr — im Test eine gestellte. Ohne das wäre „der
+  /// Wecker steht auf der richtigen Minute" nicht prüfbar.
+  ///
+  /// Liegt das Ende schon hinter uns, wird nichts gestellt, sondern
+  /// abbestellt: Ein Alarm, der sofort feuert, meldet ein Ende, das beim
+  /// Lesen längst vorbei ist.
+  static Future<bool> arm({
+    required DateTime startedAt,
+    required Duration planned,
+    required DateTime now,
+    String? anchorTitle,
+    AppLanguage language = AppLanguage.de,
+  }) {
+    final endsAt = startedAt.add(planned);
+    if (!endsAt.isAfter(now)) return disarm();
+
+    final (title, body) = describe(planned, anchorTitle, language);
+    return AndroidBridge.scheduleExact(
+      id: alarmId,
+      at: endsAt,
+      title: title,
+      body: body,
+      // Hörbar. Die Begründung steht im Kopfkommentar dieser Klasse.
+      channel: 'axiom_intervene',
+      // Auf den Fokusschirm: Dort steht „Fokus beenden", und dahinter liegt
+      // die Frage nach der Wiedereinstiegsnotiz — der eigentliche Zweck des
+      // Ausstiegs [D11]. Ohne Ziel landete der Tipp auf der Übersicht, und
+      // der Weg zur Handlung begänne von vorn [D2].
+      route: AxiomRoute.focus,
+    );
+  }
+
+  /// Nimmt den Wecker zurück.
+  ///
+  /// Ein Alarm, der nach dem vorzeitigen Ende noch feuert, ist schlimmer als
+  /// keiner: Er meldet etwas, das nicht mehr läuft — und danach glaubt man
+  /// ihm auch beim nächsten Mal nicht mehr.
+  static Future<bool> disarm() => AndroidBridge.cancelAlarm(alarmId);
+
+  /// Überschrift und Text der Meldung.
+  ///
+  /// Sichtbar für den Test, weil der Ton hier das Eigentliche ist und die
+  /// Systemseite ihn auf dem Rechner nie zu sehen bekommt.
+  ///
+  /// Die Überschrift ist eine **Ablesung**, kein Urteil: „50 von 50 min" —
+  /// dieselbe Zeile, die während des Blocks auf der Hauptansicht steht (R7).
+  /// Kein „Zeit abgelaufen", kein Ausrufezeichen, keine Aufforderung. Der
+  /// Text darunter ist die nächste Handlung, und zwar genau die, die der
+  /// Fokusschirm beim Beenden ohnehin stellt.
+  @visibleForTesting
+  static (String, String) describe(
+    Duration planned,
+    String? anchorTitle,
+    AppLanguage language,
+  ) {
+    final minutes = planned.inMinutes;
+    return (
+      translate(language, '{0} von {1} min', [minutes, minutes]),
+      anchorTitle == null || anchorTitle.isEmpty
+          ? translate(
+              language, 'Woran warst du dran, und was wäre der nächste Handgriff?')
+          : translate(
+              language, 'Wo genau bist du bei „{0}" stehengeblieben?', [anchorTitle]),
+    );
+  }
+}
+
+/// Der Wecker fuer den Eingang — R-150 auf einem Weg, der die App nicht braucht.
+///
+/// **Warum es ihn ueberhaupt gibt.** Eine gefeuerte Regel wird in AXIOM zu
+/// einer Zeile auf dem Bildschirm, zu nichts sonst. Die vier
+/// Benachrichtigungskanaele benutzen ausschliesslich geplante Alarme. Wer
+/// die App nicht oeffnet, erfaehrt von keiner Regel etwas — und R-150
+/// („Etwas liegt seit Tagen im Eingang") existiert genau fuer den Fall, dass
+/// man sie eben nicht oeffnet. Sie war damit auf dem einzigen Weg stumm, auf
+/// dem sie haette sprechen muessen.
+///
+/// **Warum ein Wecker und keine Hintergrundauswertung.** Eine periodische
+/// Auswertung braeuchte einen Dienst, der die App weckt, die Datenbank
+/// oeffnet und das Regelwerk laedt — fuer eine Frage, deren Antwort sich in
+/// der Zwischenzeit nur langsam aendert. Der Wecker steht stattdessen im
+/// Voraus auf den Zeitpunkt, an dem die aelteste Notiz alt genug wird, und
+/// wird zurueckgenommen, sobald sie beantwortet ist. Dasselbe Verfahren wie
+/// bei den Ankerschritten (`SystemSync.scheduleAnchorReminders`).
+///
+/// **Der Kanal ist `axiom_nudge`, nicht `axiom_intervene`.** Sichtbar, aber
+/// still. Ein Ton gehoert zum Unterbrechen von Vertiefung (siehe
+/// [FocusEndAlarm]); eine drei Tage alte Notiz ist nicht dringend, sie ist
+/// nur vergessen. Wer sie mit einem Klang meldet, bekommt beim naechsten
+/// echten Klang keine Aufmerksamkeit mehr.
+abstract final class InboxAgeAlarm {
+  /// Feste ID. Die Vergabe aller Alarm-IDs steht bei
+  /// [AndroidBridge.scheduleExact].
+  static const int alarmId = 21;
+
+  /// Ab wann eine Notiz „alt" ist.
+  ///
+  /// **Dieselbe Zahl wie in R-150** (`inbox_oldest_hours: { gte: 72 }`).
+  /// Sie steht hier ein zweites Mal, und das ist eine bewusste Doppelung:
+  /// Der Wecker muss den Zeitpunkt im Voraus kennen, die Regel wertet
+  /// rueckblickend aus — beide brauchen die Schwelle, aber zu verschiedenen
+  /// Zeitpunkten. `inbox_alarm_test.dart` liest den Wert aus dem
+  /// ausgelieferten Regelwerk und vergleicht ihn mit diesem hier; laufen sie
+  /// auseinander, faellt der Test.
+  static const Duration threshold = Duration(hours: 72);
+
+  /// Das Zeitfenster aus R-150. Ausserhalb schweigt die Regel, also soll
+  /// auch der Wecker nicht klingeln — sonst meldete er etwas, das die App
+  /// beim Oeffnen gar nicht anzeigt.
+  static const int windowStartHour = 9;
+  static const int windowEndHour = 20;
+
+  /// Stellt den Wecker auf den Moment, in dem die aelteste offene Notiz
+  /// alt genug wird — oder nimmt ihn zurueck, wenn keine da ist.
+  ///
+  /// [oldestUnanswered] ist der Zeitpunkt der Erfassung, nicht ihr Alter:
+  /// Aus einem Alter liesse sich der Weckzeitpunkt nur mit einer zweiten Uhr
+  /// ausrechnen, und die waere eine andere als die des Aufrufers.
+  static Future<bool> arm({
+    required DateTime? oldestUnanswered,
+    required DateTime now,
+    AppLanguage language = AppLanguage.de,
+  }) {
+    if (oldestUnanswered == null) return disarm();
+
+    final reif = oldestUnanswered.add(threshold);
+    final at = _intoWindow(reif.isAfter(now) ? reif : now, now);
+    if (at == null) return disarm();
+
+    final tage = now.difference(oldestUnanswered).inDays;
+    final (title, body) = describe(tage < 3 ? 3 : tage, language);
+    return AndroidBridge.scheduleExact(
+      id: alarmId,
+      at: at,
+      title: title,
+      body: body,
+      // Sichtbar und still. Begruendung im Kopfkommentar dieser Klasse.
+      channel: 'axiom_nudge',
+      route: AxiomRoute.inbox,
+    );
+  }
+
+  /// Nimmt den Wecker zurueck. Ein leerer Eingang, der sich meldet, ist die
+  /// sicherste Art, dass man beim naechsten Mal nicht mehr hinsieht.
+  static Future<bool> disarm() => AndroidBridge.cancelAlarm(alarmId);
+
+  /// Schiebt einen Zeitpunkt in das Fenster, in dem R-150 ueberhaupt
+  /// spricht. Faellt er davor, wird auf den Fensteranfang desselben Tages
+  /// gewartet; faellt er danach, auf den naechsten Morgen.
+  ///
+  /// Gibt `null` zurueck, wenn dabei nichts Sinnvolles herauskommt — der
+  /// Aufrufer bestellt dann ab, statt zu raten.
+  static DateTime? _intoWindow(DateTime wanted, DateTime now) {
+    var at = wanted;
+    if (at.hour < windowStartHour) {
+      at = DateTime(at.year, at.month, at.day, windowStartHour);
+    } else if (at.hour >= windowEndHour) {
+      at = DateTime(at.year, at.month, at.day, windowStartHour)
+          .add(const Duration(days: 1));
+    }
+    // Nach dem Schieben kann der Zeitpunkt hinter „jetzt" zurueckgefallen
+    // sein — dann der naechste Morgen. Ein Alarm in der Vergangenheit feuert
+    // sofort, und eine Meldung, die im selben Moment kommt, in dem man die
+    // App ohnehin benutzt, ist Laerm.
+    if (!at.isAfter(now)) {
+      at = DateTime(now.year, now.month, now.day, windowStartHour)
+          .add(const Duration(days: 1));
+    }
+    return at;
+  }
+
+  /// Ueberschrift und Text. Sichtbar fuer den Test — die Systemseite
+  /// bekommt ihn auf dem Rechner nie zu sehen.
+  ///
+  /// Eine Feststellung, keine Mahnung: kein „schon wieder", kein „immer
+  /// noch", kein Ausrufezeichen. Die Zahl ist das Alter, nicht die Menge —
+  /// „7 Notizen" waere eine Bilanz und traefe D10; „seit drei Tagen" ist
+  /// eine Ablesung.
+  @visibleForTesting
+  static (String, String) describe(int tage, AppLanguage language) => (
+        translate(language, 'Seit {0} Tagen im Eingang', [tage]),
+        translate(language,
+            'Einmal ansehen genügt: übernehmen oder verwerfen, beides ist ein Tipp.'),
+      );
+}
+
 abstract final class AndroidBridge {
   static const _channel = MethodChannel('de.atomfritte.axiom/system');
 
@@ -168,7 +391,23 @@ abstract final class AndroidBridge {
   /// war eine stille Wette darauf, wie der Compiler diese Kennung fuer
   /// Android beantwortet — und faellt sie falsch aus, ist *jede*
   /// Systemfunktion tot, ohne dass irgendwo ein Fehler erscheint.
-  static bool get isSupported => !kIsWeb && Platform.isAndroid;
+  static bool get isSupported =>
+      debugAsIfAndroid ?? (!kIsWeb && Platform.isAndroid);
+
+  /// Nur für Tests: so tun, als liefe die App auf einem Gerät.
+  ///
+  /// **Warum es das braucht.** Auf dem Rechner ist [isSupported] falsch, und
+  /// jeder Aufruf endet vor dem Kanal. Damit ist eine ganze Klasse von
+  /// Zusagen von hier aus unprüfbar — „beim Fokusstart steht ein Wecker auf
+  /// dem Ende" etwa lässt sich sonst nur auf dem Gerät nachsehen, und was
+  /// nur auf dem Gerät geprüft wird, wird nicht geprüft. Zusammen mit einem
+  /// vorgeschalteten Kanal-Attrappen-Handler läuft der echte Weg durch,
+  /// inklusive ID, Kanal, Ziel und Text.
+  ///
+  /// `null` heisst: die Wirklichkeit entscheidet. Das ist der Normalfall und
+  /// der Wert, den jeder Test wieder herstellt.
+  @visibleForTesting
+  static bool? debugAsIfAndroid;
 
   // ── Schlüssel der Datenbank ───────────────────────────────────────────
 
@@ -238,6 +477,24 @@ abstract final class AndroidBridge {
   }
 
   // ── Exakte Alarme ─────────────────────────────────────────────────────
+  //
+  // **Die Vergabe der Alarm-IDs. Eine Liste, an einer Stelle.**
+  //
+  // `AlarmManager` kennt keine Namen, nur eine Zahl je `PendingIntent`.
+  // Zwei Stellen mit derselben Zahl überschreiben einander: Der zuletzt
+  // gestellte Wecker gewinnt, der andere verschwindet — ohne Fehler, ohne
+  // Log, ohne dass irgendwo etwas rot wird. Deshalb steht die Vergabe hier
+  // und nicht verstreut dort, wo sie benutzt wird.
+  //
+  //        1 – 3   die drei täglichen Check-ins   [scheduleDailyCheckins]
+  //       10       Abendgrenze                    `SleepGate.alarmWindDown`
+  //       11       Schlaf eintragen, morgens      `SleepGate.alarmSleepLog`
+  //       20       Ende eines Fokusblocks         [FocusEndAlarm.alarmId]
+  //       21       Etwas liegt im Eingang         [InboxAgeAlarm.alarmId]
+  //     1000 +     Ankerschritte, vier je Kette   `SystemSync._anchorIdBase`
+  //
+  // Frei sind 4 – 9, 12 – 19 und 22 – 999. Wer eine Zahl nimmt, trägt sie
+  // hier ein.
 
   /// Plant eine minutengenaue Erinnerung.
   /// Nutzt `setExactAndAllowWhileIdle`, nicht WorkManager — WorkManager

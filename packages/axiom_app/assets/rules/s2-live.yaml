@@ -261,9 +261,22 @@
       - time_between: ["09:00", "20:00"]
       - meta_minutes_today: { lt: 12 }
   then:
-    action: log_only          # SHADOW: sieben Tage stumm, dann auswerten
+    action: notify
     params: { hint: inbox }
   priority: 35
-  severity: info
-  cooldown: { minutes: 1440, max_per_day: 1, backoff: exponential }
+  # `nudge`, nicht `info`. `info` ist IMPORTANCE_MIN — das Betriebssystem
+  # zeigt dann kein Symbol in der Statusleiste, die Meldung steht nur in der
+  # ausgeklappten Leiste. Fuer eine Regel, deren ganzer Zweck ist, dass etwas
+  # ins Auge fällt, waere das dieselbe Unsichtbarkeit wie vorher, nur mit
+  # mehr Aufwand. `nudge` ist sichtbar und still — ein Ton gehoert zum
+  # Unterbrechen von Vertiefung, nicht zu einer drei Tage alten Notiz.
+  severity: nudge
+  # Kein `backoff: exponential` — bewusst, entgegen der sonstigen Gewohnheit.
+  #
+  # Backoff ist richtig fuer Regeln, deren Anlass vergeht: Wer den Hinweis
+  # dreimal weggewischt hat, will ihn nicht. Hier vergeht der Anlass aber
+  # nicht, er wird schlimmer — die Notiz liegt weiter da und wird aelter.
+  # Exponentiell zurueckzutreten hiesse, genau dann zu verstummen, wenn es
+  # am meisten darauf ankommt. Der Deckel bleibt trotzdem: einmal am Tag.
+  cooldown: { minutes: 1440, max_per_day: 1 }
   enabled: true

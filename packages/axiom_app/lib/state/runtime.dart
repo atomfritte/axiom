@@ -3,11 +3,14 @@
 /// Der komplette Auswertungszyklus aus docs/02-ARCHITEKTUR.md §4:
 ///   ingest -> derive -> evaluate -> resolve -> emit -> feedback
 library;
+import 'dart:async';
+
 import 'package:axiom_core/axiom_core.dart';
 import 'package:axiom_data/axiom_data.dart';
 import 'package:flutter/foundation.dart';
 import '../design/tokens.dart';
 import '../i18n/i18n.dart';
+import '../platform/android_bridge.dart';
 /// Ergebnis eines Auswertungszyklus.
 @immutable
 final class AxiomSnapshot {
@@ -357,6 +360,28 @@ final class AxiomRuntime {
         DateTime(now.year, now.month, now.day).toUtc(),
       ),
     );
+
+    // Den Eingangs-Wecker mitziehen.
+    //
+    // R-150 („Etwas liegt seit Tagen im Eingang") wird wie jede Regel zu
+    // einer Zeile auf dem Bildschirm — und ist damit auf dem einzigen Weg
+    // stumm, auf dem sie sprechen muesste: Sie existiert fuer den Fall,
+    // dass die App nicht geoeffnet wird. Der Wecker steht deshalb im Voraus
+    // auf den Zeitpunkt, an dem die aelteste offene Notiz alt genug wird,
+    // und wird zurueckgenommen, sobald keine mehr da ist.
+    //
+    // Ohne `await`: Das Stellen eines Alarms geht ueber eine Prozessgrenze
+    // und darf einen Auswertungszyklus nicht aufhalten. Auf dem
+    // Linux-Rechner faellt der Aufruf ohnehin vor dem Kanal heraus.
+    unawaited(InboxAgeAlarm.arm(
+      // Die Liste kommt neueste-zuerst; die aelteste steht hinten.
+      oldestUnanswered: runtimeContext.inboxCount == 0
+          ? null
+          : (await unsortedCaptures()).lastOrNull?.at.toLocal(),
+      now: now,
+      language: language,
+    ));
+
     return AxiomSnapshot(
       at: now,
       state: derived.vector,
@@ -1100,6 +1125,17 @@ final class AxiomRuntime {
       'anchor_task_id': ?taskId,
       'planned_min': planned.inMinutes,
     });
+    // Der Wecker gehoert hierher und nicht auf den Fokusschirm: Ein Block
+    // startet auch, wenn man auf der Hauptansicht „Anfangen" tippt
+    // (`startTask`). Haenge er am Knopf, endete jeder zweite Block wieder
+    // lautlos — und lautlos enden heisst nicht enden [D6].
+    await FocusEndAlarm.arm(
+      startedAt: session.startedAt,
+      planned: planned,
+      now: clock.nowLocal(),
+      anchorTitle: taskTitle,
+      language: AppLanguage.parse(language),
+    );
     return session;
   }
   /// Beendet den Fokus und sichert den Wiedereinstieg.
@@ -1114,6 +1150,10 @@ final class AxiomRuntime {
     final now = clock.nowLocal();
     await store.endFocus(session.id,
         at: now, breadcrumb: breadcrumb, exitKind: exit);
+    // Erst wenn das Ende wirklich geschrieben ist. Ein abbestellter Wecker
+    // bei einer weiterlaufenden Sitzung waere die teurere Haelfte des
+    // Fehlers: Der Block liefe dann bis zum Abend, und niemand sagte etwas.
+    await FocusEndAlarm.disarm();
     await record(EventType.focusEnd, payload: {
       'actual_min': session.elapsed(now).inMinutes,
       'on_anchor': session.hasAnchor,

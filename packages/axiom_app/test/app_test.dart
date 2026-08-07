@@ -371,6 +371,128 @@ void main() {
       expect(find.textContaining('Fällig'), findsNothing);
     });
 
+    /// **Die Zaehlplakette.**
+    ///
+    /// Der Anlass ist der Befund des Nutzers und nicht eine
+    /// Geschmacksfrage: Ein Aufmerksamkeitsdefizit heisst, dass der Beitext
+    /// einer Zeile ueberflogen wird und eine Zahl in einer Flaeche nicht.
+    /// „Eingang — Nichts zu sortieren." und „Eingang — 2 Notizen warten auf
+    /// Sortieren" unterschieden sich vorher um zwei Woerter in der zweiten,
+    /// kleineren Zeile. Wer erfasst und dann nie wieder davon hoert,
+    /// erfasst beim naechsten Mal nicht mehr [D9].
+    ///
+    /// Geprueft wird deshalb Wirkung, nicht Aussehen: dass die Zahl **da**
+    /// ist, dass sie **ein eigenes Element** ist (also auch traegt, wenn der
+    /// Satz daneben ungelesen bleibt), dass sie die **einladende** Zahl
+    /// nennt und nicht den Rueckstand — und dass sie fehlt, wo nichts
+    /// wartet.
+    Finder badgeIn(String title) => find.descendant(
+          of: find
+              .ancestor(of: find.text(title), matching: find.byType(Row))
+              .first,
+          matching: find.byType(CountBadge),
+        );
+
+    testWidgets('eine Zeile mit wartenden Notizen trägt ihre Zahl',
+        (tester) async {
+      h.completeOnboarding();
+      for (final text in ['Kabel besorgen', 'Termin verschieben']) {
+        await h.runtime.capture(text);
+      }
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      expect(badgeIn('Eingang'), findsOneWidget);
+      expect(
+        find.descendant(of: badgeIn('Eingang'), matching: find.text('2')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('eine Zeile ohne Wartendes trägt keine', (tester) async {
+      // „0" ist eine Zahl, die nichts sagt und trotzdem Platz und
+      // Aufmerksamkeit nimmt. Die Zeile bleibt — sie hat einen festen
+      // Platz —, nur ohne Plakette.
+      h.completeOnboarding();
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      expect(find.text('Eingang'), findsOneWidget);
+      expect(badgeIn('Eingang'), findsNothing);
+      // Und auf dem ganzen Schirm keine einzige: Ein frisches System hat
+      // nichts zu zaehlen.
+      expect(find.byType(CountBadge), findsNothing);
+    });
+
+    testWidgets('die Zahl ist ein eigenes Element, kein Satzteil',
+        (tester) async {
+      // Der Punkt der ganzen Uebung: Sie muss lesbar sein, ohne dass der
+      // Beitext gelesen wird. Steht sie nur im Satz, ist sie nicht da.
+      h.completeOnboarding();
+      await h.runtime.capture('Bohrmaschine zurückgeben');
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      final badge = badgeIn('Eingang');
+      expect(badge, findsOneWidget);
+      expect(find.descendant(of: badge, matching: find.text('1')),
+          findsOneWidget);
+      // Der Beitext bleibt und erklaert die Zahl — aber er steht ausserhalb
+      // der Plakette, nicht in ihr.
+      expect(find.textContaining('Notiz wartet'), findsOneWidget);
+      expect(
+        find.descendant(
+            of: badge, matching: find.textContaining('Notiz wartet')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('„Aufgaben" zählt das Startbare, nicht das Offene',
+        (tester) async {
+      // „3 startbar" ist eine Einladung, „5 offen" eine Mahnung. „Du hast
+      // 14 offene Aufgaben" steht in CLAUDE.md woertlich auf der
+      // Verbotsliste: Der Rueckstand ist die Zahl, die Vermeidung ausloest
+      // (D10) — vermieden wird dann die Liste, in der die Handlung steht.
+      h.completeOnboarding();
+      await h.runtime.checkIn(energy: 4, focus: 4, mood: 4, stimNeed: 3);
+      for (final (title, ae) in [
+        ('Steuerunterlagen sortieren', 8),
+        ('Rückruf Werkstatt', 2),
+        ('Reifen wechseln lassen', 4),
+        ('Antrag Krankenkasse', 7),
+        ('Rechnung Elektriker prüfen', 3),
+      ]) {
+        await h.runtime.createTask(
+            title: title, activationEnergy: ae, salience: 4, stakes: 5);
+      }
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      final badge = badgeIn('Aufgaben');
+      expect(badge, findsOneWidget);
+      expect(
+          find.descendant(of: badge, matching: find.text('3')), findsOneWidget);
+      // Fuenf sind offen. Diese Zahl steht nirgends auf einer Plakette.
+      for (final b in tester.widgetList<CountBadge>(find.byType(CountBadge))) {
+        expect(b.count, isNot(5));
+      }
+    });
+
+    testWidgets('Anker und Rückblick tragen keine Plakette', (tester) async {
+      // Eine Plakette an jeder Zeile ist keine Plakette mehr. Hinterlegte
+      // Anker sind Bestand, kein Wartendes, und ein Rueckblick ist faellig
+      // oder nicht — „1" waere dort Dekoration.
+      h.completeOnboarding();
+      await h.runtime.createAnchor(
+        title: 'Zahnarzt',
+        arriveBy: h.clock.nowLocal().add(const Duration(days: 3)),
+        travel: const Duration(minutes: 25),
+        location: 'Praxis',
+      );
+      await pumpPhone(tester, h.wrap(const NowScreen()));
+
+      expect(find.text('Anker'), findsOneWidget);
+      expect(badgeIn('Anker'), findsNothing);
+      expect(badgeIn('Tag-Review'), findsNothing);
+      await unmount(tester);
+    });
+
     test('„System" ist kein zweiter Ort für Inhalte', () {
       // Aufgabenliste und Vorfallprotokoll standen dort ein zweites Mal.
       // Zwei Wege zu einer Liste sind kein Entgegenkommen, sondern zwei

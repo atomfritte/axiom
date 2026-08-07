@@ -905,10 +905,31 @@ class _Below extends ConsumerWidget {
     // obwohl der Schirm die Zahlen der letzten Tage zeigt.
     final reviewScope = due ?? ReviewScope.day;
 
+    // **Welche Zeile eine Zahl traegt und welche nicht.**
+    //
+    // Die Plakette beantwortet genau eine Frage: *Wie viele Dinge hinter
+    // dieser Zeile gehen jetzt in die Hand?* Das sind drei — startbare
+    // Aufgaben, unsortierte Notizen, Vorfaelle ohne Einordnung. Anker,
+    // Rueckblick und die fertige Baseline bekommen keine: Dort gibt es
+    // entweder nichts zu zaehlen (der Rueckblick ist faellig oder nicht,
+    // „1" waere absurd) oder nur Bestand (hinterlegte Anker, von denen
+    // heute keiner ansteht). Eine Plakette an jeder Zeile ist keine
+    // Plakette mehr — sie faellt nur auf, solange sie die Ausnahme ist.
     final passages = <Widget>[
       _WellRow(
         icon: Icons.checklist_outlined,
         title: context.t('Aufgaben'),
+        // **Startbar, nicht offen.** Beide Zahlen stehen hier zur Wahl, und
+        // sie sagen Gegensaetzliches: „3" startbar ist eine Einladung —
+        // soviel geht heute —, waehrend „14" offen eine Mahnung ist. „Du
+        // hast 14 offene Aufgaben" steht in CLAUDE.md woertlich auf der
+        // Verbotsliste, und zwar aus einem messbaren Grund: Der Rueckstand
+        // ist die Zahl, die Vermeidung ausloest (D10), und vermieden wird
+        // dann die Liste, in der die Handlung steht.
+        //
+        // Ist nichts startbar, steht keine Zahl da — dann gibt es nichts
+        // einzuladen, und der Beitext sagt weiterhin, was ausserhalb liegt.
+        count: inReach,
         // Dieselben Zahlen wie auf der Aufgabenliste, aus derselben
         // Bedingung gerechnet. Zwei Schirme, die verschiedene Staende
         // melden, kosten mehr Vertrauen, als beide zusammen aufbauen.
@@ -926,6 +947,10 @@ class _Below extends ConsumerWidget {
       _WellRow(
         icon: Icons.inbox_outlined,
         title: context.t('Eingang'),
+        // Der Fall, fuer den es die Plakette gibt. Was erfasst wurde, soll
+        // von selbst wieder auftauchen — sonst ist Erfassen ein Ablegen ins
+        // Nichts, und beim naechsten Mal wird nicht mehr erfasst [D9].
+        count: inboxCount,
         detail: inboxCount == 0
             ? context.t('Nichts zu sortieren.')
             : context.t('{0} {1} auf Sortieren', [
@@ -971,6 +996,10 @@ class _Below extends ConsumerWidget {
       _WellRow(
         icon: Icons.history_toggle_off,
         title: context.t('Vorfälle'),
+        // Dieselbe Lage wie im Eingang: etwas Festgehaltenes wartet auf
+        // eine Antwort. Ohne Zahl bleibt es liegen, weil der Anlass beim
+        // Festhalten dringend war und beim Einordnen nicht mehr.
+        count: pending.length,
         detail: switch (pending.length) {
           0 => context.t('Emotionale Spitzen festhalten und einordnen'),
           1 => context.t('Ein Vorfall wartet auf Einordnung'),
@@ -1037,6 +1066,18 @@ class _WellRow extends StatelessWidget {
   final String detail;
   final VoidCallback onTap;
 
+  /// Wie viele Dinge hinter dieser Zeile **jetzt** in die Hand gehen.
+  ///
+  /// Steht als [CountBadge] neben dem Namen, nicht im Beitext: Der Beitext
+  /// wird ueberflogen, eine Zahl in einer Flaeche nicht [D9]. `0` bedeutet
+  /// „keine Plakette", nicht „Plakette mit einer Null".
+  ///
+  /// Sie sitzt neben dem **Namen** und nicht am rechten Rand, weil sie zu
+  /// ihm gehoert: Gelesen wird „Eingang 2", und beides steht in der Zeile,
+  /// die das Auge beim Ueberfliegen ohnehin trifft. Rechts sitzt der Pfeil;
+  /// eine Zahl daneben liest sich als Bedienelement.
+  final int count;
+
   /// Faerbt Symbol und Pfeil. Nur fuer den einen Fall, in dem die Zeile
   /// etwas meldet, das ohne sie unbemerkt bliebe (die fertige Baseline).
   final Color? accent;
@@ -1046,6 +1087,7 @@ class _WellRow extends StatelessWidget {
     required this.title,
     required this.detail,
     required this.onTap,
+    this.count = 0,
     this.accent,
   });
 
@@ -1065,7 +1107,24 @@ class _WellRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.bodyLarge),
+                  Row(
+                    children: [
+                      // Flexible mit Ellipse: Bei angehobener Schrift kuerzt
+                      // der Name, statt die Plakette aus der Zeile zu
+                      // schieben. Die Zahl ist das Kuerzere und das
+                      // Wichtigere.
+                      Flexible(
+                        child: Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyLarge),
+                      ),
+                      if (count > 0) ...[
+                        const SizedBox(width: Space.sm),
+                        CountBadge(count),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(detail,
                       style: Theme.of(context).textTheme.bodySmall),

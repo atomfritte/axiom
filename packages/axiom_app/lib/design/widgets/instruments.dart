@@ -369,6 +369,79 @@ final class RuleStamp extends StatelessWidget {
   }
 }
 
+/// **Die Zaehlplakette** — eine Zahl an der Zeile statt im Beitext.
+///
+/// Warum es sie gibt: Der Beitext einer Menuezeile wird ueberflogen.
+/// „Eingang — Nichts zu sortieren." und „Eingang — 2 Notizen warten auf
+/// Sortieren" unterscheiden sich fuer das Auge um zwei Woerter in der
+/// kleineren zweiten Zeile; wer die nicht liest, erfaehrt nie, dass da etwas
+/// liegt. Eine Zahl in einer Flaeche wird dagegen **gesehen, bevor gelesen
+/// wird** — und was nicht ins Auge springt, existiert nicht [D9]. Der
+/// Beitext bleibt und erklaert die Zahl; er traegt sie nur nicht mehr
+/// allein.
+///
+/// **Sie zaehlt, sie mahnt nicht.** Kein Rot, keine Alarmfarbe, kein Wachsen
+/// ins Bedrohliche, keine zweite Fassung fuer „zu viel": „3" heisst drei,
+/// nicht „im Rueckstand" (R7, D10). Form und Farbe sind bei 1 dieselben wie
+/// bei 12.
+///
+/// **Die Zahl ist bernstein, die Flaeche nicht.** Bernstein ist die Farbe
+/// jedes Messwerts (die Zahl ist einer) — aber auf dem Hauptschirm zugleich
+/// die der einen Handlung (G1). Eine **deckend** bernsteinfarbene Plakette
+/// saehe neben dem Anfangen-Knopf aus wie ein zweites Angebot und machte aus
+/// einer Handlung wieder eine Auswahl. Deshalb traegt die Ziffer den Farbton
+/// und die Flaeche darunter keinen: sie ist [AxiomPalette.panel], also
+/// dieselbe Stufe, die `_Tag` auf einer Karte in die andere Richtung nimmt
+/// (dort Mulde auf Karte, hier Karte in der Mulde). Eine Toenung derselben
+/// Farbe war die erste Fassung und sah im Dunkeln aus wie ein Fleck.
+///
+/// **Und die Ziffer steht deshalb auf einer Flaeche, nicht auf ihrer eigenen
+/// Toenung.** Das ist der Unterschied zur Stufenplakette (`L0`–`L3`), und er
+/// ist nachgerechnet: Derselbe Farbton vorn und hinten ist die einzige
+/// Stelle dieser App, an der der Textkontrast unter AA faellt (`kBadgeFloor`
+/// in `contrast_test.dart` haelt den Rueckstand fest). `signal` auf `panel`
+/// ist dagegen eine der Kombinationen, die dieselbe Datei in allen acht
+/// Fassungen ueber 4,5:1 prueft — ein neuer Ort desselben alten Musters
+/// waere ein neuer Rueckstand gewesen.
+///
+/// **Null bekommt keine Plakette.** „0" ist eine Zahl, die nichts sagt und
+/// trotzdem Platz und Aufmerksamkeit nimmt. Das steht hier und nicht am
+/// Aufrufort: Eine Regel, die jeder Aufrufer selbst befolgen muss, wird
+/// irgendwo nicht befolgt.
+final class CountBadge extends StatelessWidget {
+  final int count;
+
+  const CountBadge(this.count, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) return const SizedBox.shrink();
+    final p = context.axiom;
+    return Container(
+      // Mindestbreite, Zahl zentriert: Sonst ist die Plakette bei „1" ein
+      // Kreis und bei „12" ein Riegel, und untereinander gelesen sieht die
+      // groessere Zahl nach mehr Nachdruck aus. Die Form soll nichts ueber
+      // die Menge sagen.
+      //
+      // Sie skaliert mit der Schrift, weil sie ein typografisches Mass ist:
+      // Bleibt sie fest, waechst bei angehobener Schrift nur die Hoehe, und
+      // aus der Plakette wird eine hochkant stehende Ellipse.
+      constraints: BoxConstraints(
+          minWidth: MediaQuery.textScalerOf(context).scale(26)),
+      padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 2),
+      decoration: BoxDecoration(
+        color: p.panel,
+        borderRadius: BorderRadius.circular(Radii.pill),
+      ),
+      child: Text(
+        '$count',
+        textAlign: TextAlign.center,
+        style: readingStyle(context, size: 13.5, color: p.signal),
+      ),
+    );
+  }
+}
+
 /// Eine Karte — eine Flaeche, die **ueber** dem Grund liegt.
 ///
 /// Hier stand ein Haarlinienrahmen um jede Flaeche („Frontplatte"). Das ist

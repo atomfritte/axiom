@@ -265,6 +265,22 @@ ValidationReport validateRules(Directory dir) {
           warnings.add('$where: authorised_on steht da, aber severity ist '
               'nicht enforce — das Feld hat dort keine Wirkung.');
         }
+
+        // `info` heisst auf dem Geraet IMPORTANCE_MIN: kein Symbol in der
+        // Statusleiste, kein Ton, sichtbar nur in der ausgeklappten Leiste.
+        // Fuer eine Regel im Schatten (`log_only`) ist das genau richtig —
+        // sie soll ja nicht sprechen. Fuer jede andere Aktion ist es ein
+        // Widerspruch: Sie meldet sich, und niemand bemerkt es.
+        //
+        // Der Fall ist nicht erfunden: R-150 sollte den Eingang nach vorn
+        // holen und stand auf `info`. Live geschaltet haette sie dasselbe
+        // geleistet wie vorher im Schatten, nur mit mehr Aufwand.
+        final aktion = (entry['then'] as Map?)?['action']?.toString();
+        if (parsed == Severity.info && aktion != null && aktion != 'log_only') {
+          errors.add('$where: severity=info mit action=$aktion. `info` ist auf '
+              'dem Geraet unsichtbar (IMPORTANCE_MIN) — es gehoert zu '
+              '`log_only`. Wer gehoert werden will, nimmt mindestens `nudge`.');
+        }
       } on Object {
         errors.add('$where: unbekannte severity "$severity"');
       }

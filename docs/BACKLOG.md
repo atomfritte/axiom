@@ -63,6 +63,20 @@ sie gehen nicht verloren (D9) und sie müssen nicht im Kopf behalten werden.
   sichtbar bleibt.
 - **Notiert:** 2026-08-06
 
+### R-010 und R-090 autorisieren oder herabstufen
+- **Defizit:** keins — es geht um den Vertrag hinter G4
+- **Frühestens:** im nächsten Wochenreview, in Ruhe, nicht wenn eine der beiden gerade eingreift
+- **Warum nicht jetzt:** `severity: enforce` heißt, eine Regel verändert Systemverhalten — sie
+  sperrt, sie schaltet um, sie darf Ruhezeiten durchbrechen. Das Regelwerk nennt das den
+  „Vertrag mit dem Vergangenheits-Ich": zulässig nur, wenn man diese eine Regel im ruhigen
+  Zustand selbst autorisiert hat. Seit dem 2026-08-06 trägt R-052 dafür ein `authorised_on`.
+  R-010 und R-090 greifen genauso ein, haben das Datum aber nicht — der Validator warnt bei
+  jedem Lauf. Beides ist möglich und beides ist in Ordnung: Datum eintragen, oder auf
+  `intervene` herabstufen und damit sagen, dass sie fragen statt handeln sollen. Was **nicht**
+  geht, ist die Warnung stehenzulassen — eine Warnung, die man täglich sieht und nie
+  beantwortet, ist nach zwei Wochen unsichtbar, und dann trägt sie die nächste mit weg.
+- **Notiert:** 2026-08-07
+
 ### Statuszahlen aus dem Repo erzeugen statt eintippen
 - **Defizit:** keins
 - **Frühestens:** beim nächsten Release-Durchgang

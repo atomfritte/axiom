@@ -238,6 +238,20 @@ axiom_enforce    Ton + Full-Screen, Bypass DND
 Nur `axiom_enforce` darf DND und Ruhezeiten durchbrechen — und nur für vom Nutzer autorisierte
 Regeln (siehe [Regelwerk §4](04-REGELWERK.md)).
 
+**Wer über diese Kanäle spricht, und wer nicht.** Eine gefeuerte Regel wird zu einer Zeile *im*
+Programm — sie schickt keine Benachrichtigung. Auf die Kanäle geht ausschließlich, was vorher
+als Wecker gestellt wurde: die drei Check-ins, die Abendgrenze, der Schlafeintrag, das Ende
+eines Fokusblocks, die Ankerschritte und der Eingang (R-150). Das ist eine Einschränkung, keine
+Auslassung: Ein Wecker steht im Voraus fest und ist damit vorhersagbar; eine Regel feuert erst,
+wenn die App ohnehin läuft und die Ausgabe schon auf dem Bildschirm steht — eine Meldung
+zusätzlich wäre Lärm neben etwas Sichtbarem.
+
+Wo eine Regel den Fall trifft, dass man die App *nicht* öffnet, muss ihr Anlass deshalb doppelt
+stehen: einmal als Bedingung in der Regel, einmal als Weckzeitpunkt daneben. Bei R-150 sind das
+`inbox_oldest_hours: { gte: 72 }` und `InboxAgeAlarm.threshold`. Die Doppelung ist unvermeidbar
+— der Wecker muss den Zeitpunkt vorher kennen, die Regel wertet rückblickend aus —, aber sie
+darf nicht auseinanderlaufen: `inbox_alarm_test.dart` liest beide Werte und vergleicht sie.
+
 ---
 
 ## 6. Linux-Desktop-Companion (S3)

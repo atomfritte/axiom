@@ -132,6 +132,39 @@ void main() {
     expect(report.fileCount, 2);
   });
 
+  group('info gehoert zum Schatten', () {
+    // `info` ist auf dem Geraet IMPORTANCE_MIN: kein Symbol in der
+    // Statusleiste, kein Ton. Fuer eine Schattenregel richtig, fuer jede
+    // andere ein Widerspruch — sie meldet sich, und niemand bemerkt es.
+    //
+    // Der Fall ist nicht erfunden. R-150 („Etwas liegt seit Tagen im
+    // Eingang") sollte genau das leisten, was ein Badge leistet, und stand
+    // auf `info`. Live geschaltet haette sie dasselbe getan wie vorher im
+    // Schatten, nur mit mehr Aufwand.
+
+    test('info mit log_only ist in Ordnung', () {
+      final report = check(_rule(severity: 'info'));
+      expect(report.isValid, isTrue);
+    });
+
+    test('info mit notify ist ein Fehler', () {
+      final report = check(_rule(severity: 'info', action: 'notify'));
+
+      expect(report.isValid, isFalse);
+      expect(report.errors.join(), contains('unsichtbar'));
+    });
+
+    test('nudge mit notify ist der Normalfall', () {
+      final report = check(_rule(severity: 'nudge', action: 'notify'));
+      expect(report.isValid, isTrue);
+    });
+
+    test('das ausgelieferte Regelwerk haelt es ein', () {
+      final report = validateRules(Directory('../rules'));
+      expect(report.isValid, isTrue);
+    });
+  });
+
   group('enforce braucht eine Autorisierung', () {
     // `enforce` bricht Ruhezeit und Tagesdeckel. CLAUDE.md laesst das nur zu,
     // wenn der Nutzer die Regel im ruhigen Zustand selbst autorisiert hat —
@@ -221,6 +254,7 @@ String _rule({
       'ohne Zeilenumbruch.',
   String? cooldown = '  cooldown: { minutes: 60 }',
   String severity = 'info',
+  String action = 'log_only',
   String? authorisedOn,
   String when = '''
   when:
@@ -235,7 +269,7 @@ String _rule({
       if (rationale != null) '  rationale: "$rationale"',
       when.trimRight(),
       '  then:',
-      '    action: log_only',
+      '    action: $action',
       '  priority: 10',
       '  severity: $severity',
       if (authorisedOn != null) '  authorised_on: $authorisedOn',

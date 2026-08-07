@@ -1767,4 +1767,8 @@ const Map<String, String> kEnglish = {
   // keine Rangfolge ist — genau das ist der Punkt (R7, D10).
   'Gezählt, nicht gewichtet — die Reihenfolge ist immer dieselbe.':
       'Counted, not weighted — the order is always the same.',
+  // Der Wecker fuer den Eingang (R-150 als Benachrichtigung).
+  'Seit {0} Tagen im Eingang': '{0} days in the inbox',
+  'Einmal ansehen genügt: übernehmen oder verwerfen, beides ist ein Tipp.':
+      'One look is enough: adopt it or drop it, either is one tap.',
 };

@@ -13,6 +13,13 @@
 /// Die Reihenfolge ist die des Systems, dieselbe wie bei der Auswahl, und
 /// sie ist nicht verstellbar.
 ///
+/// **Genau ein Schalter.** Erledigtes ist voreingestellt zugeklappt; die
+/// Marke „Erledigt · N" bleibt stehen und klappt es auf. Das ist die einzige
+/// Stellschraube dieses Schirms, sie steht dort, wo die Liste steht, und
+/// sie überlebt das Schließen der App (`showDoneTasksProvider`). Der Grund
+/// steht dort; kurz: abgehakte Zeilen verlangen nichts mehr, kosten aber
+/// jeden Blick, der das Offene sucht (D9).
+///
 /// ---
 ///
 /// **Die Reichweitenkante.** Dieser Schirm ist ihr eigentlicher Ort. Vorher
@@ -91,8 +98,10 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.axiom;
     final capacity = snapshot.state.capacity;
     final place = snapshot.place;
+    final showDone = ref.watch(showDoneTasksProvider);
 
     List<Task> sorted(bool Function(Task) test) => snapshot.tasks
         .where(test)
@@ -159,6 +168,19 @@ class _Body extends ConsumerWidget {
     final done = sorted((t) => t.state == TaskState.done);
 
     /// Wie viele Teilschritte einer Aufgabe stehen noch aus?
+    ///
+    /// **Zaehlt nur das Offene — und das ist der Grund, warum der Schalter
+    /// fuer Erledigtes hier nichts verbiegt.** Die Plakette heisst „Schritte
+    /// offen: 2", nicht „2 von 5 erledigt". Sie nennt also genau die
+    /// Schritte, die als Zeile im Bestand stehen; die abgehakten zaehlt sie
+    /// nicht mit und muss sie deshalb auch nicht zeigen. Waere es eine
+    /// Fortschrittsangabe, muessten die erledigten Schritte mit ihr sichtbar
+    /// bleiben — eine Zahl, zu der die sichtbaren Zeilen nicht passen, ist
+    /// schlimmer als eine Zeile zu viel.
+    ///
+    /// Abgehakte Teilschritte liegen deshalb bei allem anderen Erledigten
+    /// und kommen mit demselben Schalter zurueck. Ein eigener Sonderweg fuer
+    /// sie waere ein zweiter Schalter im Gewand einer Ausnahme (D3).
     int openSteps(Task parent) => snapshot.tasks
         .where((t) => t.parentId == parent.id && isTaskOpen(t))
         .length;
@@ -282,12 +304,58 @@ class _Body extends ConsumerWidget {
                     ),
                 ],
               ),
+            // **Erledigtes ist gezaehlt und zugeklappt.**
+            //
+            // Hier standen bis zu zwanzig durchgestrichene Zeilen fest
+            // aufgeklappt am Fuss des Bestands. Sie verlangen nichts mehr
+            // und kosten trotzdem jeden Blick, der das Offene sucht (D9).
+            //
+            // Weg ist deshalb nur die *Liste*, nicht die *Zahl*: Die Marke
+            // steht auch zugeklappt da und nennt, wie viele es sind. Eine
+            // Ansicht, in der Erledigtes spurlos verschwindet, waere die
+            // schlechtere Antwort — dann wandert „habe ich das schon
+            // abgehakt?" zurueck in den Kopf, und genau das soll AXIOM
+            // abnehmen (G1).
+            //
+            // **Kein `take(20)` mehr.** Die Marke sagte „Erledigt · 45" und
+            // darunter standen 20 Zeilen. Eine Zahl, zu der die sichtbaren
+            // Zeilen nicht passen, beschaedigt das Vertrauen in jede andere
+            // Zahl dieses Schirms. Aufgeklappt steht jetzt genau so viel da,
+            // wie die Marke behauptet — und aufgeklappt wird nur, wer es
+            // ausdruecklich aufklappt.
             if (done.isNotEmpty)
               _DeepSection(
                 label: context.t('Erledigt · {0}', [done.length]),
+                // Derselbe Griff wie an der Herleitung auf „Zustand":
+                // Marke antippen, Pfeil dreht sich, Inhalt klappt auf. Ein
+                // zweites Bedienmuster fuer dieselbe Bewegung waere eines
+                // zu viel.
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(showDoneTasksProvider.notifier).toggle();
+                },
+                // Der Pfeil bleibt gedaempft: Die einzige farbige Affordanz
+                // der Tiefzone ist „Zerlegen" — der Weg nach oben. Ein
+                // Schalter ist kein Weg.
+                trailing: AnimatedRotation(
+                  turns: showDone ? 0.5 : 0,
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : Motion.quick,
+                  // Waechst mit der Schrift. Anderswo steht dieser Pfeil
+                  // fest auf 16 px, weil dort die Zahl daneben die Aussage
+                  // traegt. Hier ist er die Bedienung selbst — und was man
+                  // zusammenkneifen muss, wird uebersprungen [D9].
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    size: MediaQuery.textScalerOf(context).scale(16),
+                    color: p.inkFaint,
+                  ),
+                ),
                 rows: [
-                  for (final task in done.take(20))
-                    _DeepRow(task: task, place: place),
+                  if (showDone)
+                    for (final task in done)
+                      _DeepRow(task: task, place: place),
                 ],
               ),
             // Der Hebel steht nur da, wenn er wirkt — und er steht dort, wo
@@ -342,17 +410,67 @@ class _DeepSection extends StatelessWidget {
   final String? note;
   final List<Widget> rows;
 
-  const _DeepSection({required this.label, required this.rows, this.note});
+  /// Dicht hinter der Marke. Bisher genau einer: der Pfeil des einen
+  /// Schalters, den dieser Schirm hat. Wirkt nur zusammen mit [onTap] —
+  /// ein Zeichen, das nach Bedienung aussieht und keine ist, ist schlimmer
+  /// als keines.
+  final Widget? trailing;
+
+  /// Macht die Marke antippbar. Nur gesetzt, wo sie etwas auf- und zuklappt
+  /// — eine Ueberschrift, die manchmal reagiert und manchmal nicht, waere
+  /// schlimmer als eine, die es nie tut.
+  final VoidCallback? onTap;
+
+  const _DeepSection({
+    required this.label,
+    required this.rows,
+    this.note,
+    this.trailing,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final p = context.axiom;
+    Widget header = SectionLabel(label);
+    if (onTap != null) {
+      // Eigene Zeile statt `SectionLabel(trailing:)`: Dort haelt ein
+      // `Spacer` das Zeichen am rechten Rand. Ein Pfeil, der eine halbe
+      // Bildschirmbreite von seiner Marke entfernt steht, liest sich als
+      // Zierde — er soll aber zu „Erledigt · 4" gehoeren und sagen, dass
+      // die Vier sich aufklappen laesst. Angetippt wird trotzdem die ganze
+      // Zeile.
+      header = Semantics(
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Radii.control),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: Space.md),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: Space.xs),
+                  trailing!,
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SectionLabel(label),
+          header,
           if (note != null)
             Padding(
               padding: const EdgeInsets.only(bottom: Space.sm),

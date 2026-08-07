@@ -317,6 +317,55 @@ final inboxProvider = FutureProvider<List<Event>>((ref) async {
   return runtime.unsortedCaptures();
 });
 
+// ── Aufgabenbestand ─────────────────────────────────────────────────────
+
+/// Schluessel des einen Schalters, den der Aufgabenschirm hat.
+const kShowDoneTasksSetting = 'tasks_show_done';
+
+/// Ob der Aufgabenschirm die erledigten mitzeigt. **Vorgabe: aus.**
+///
+/// **Warum sie voreingestellt wegbleiben.** Erledigtes stand als eigener
+/// Abschnitt unter dem Bestand — bis zu zwanzig durchgestrichene Zeilen, an
+/// denen der Blick jedes Mal vorbeimuss, um das Offene zu finden. Was getan
+/// ist, verlangt nichts mehr; es kostet aber Suchzeit, und Suchzeit ist bei
+/// diesem Profil die teuerste Waehrung (D9).
+///
+/// **Warum es trotzdem einen Schalter gibt und nicht bloss ein Weglassen.**
+/// Wer seinen Bestand nicht vollstaendig einsehen kann, fuehrt daneben eine
+/// zweite Liste im Kopf. „Habe ich das schon abgehakt?" muss beantwortbar
+/// bleiben, sonst wandert die Frage zurueck in den Kopf — genau das, was
+/// AXIOM auslagern soll (G1, D9).
+///
+/// **Warum genau einer.** Ein Ansichtswechsel mit Zeitraum, Sortierung und
+/// Zustandsfilter waere Meta-Work mit Aussicht (D3). Ein einziger Schalter
+/// an der Stelle, an der die Liste steht, ist die kleinste Antwort, die die
+/// Frage beantwortet.
+///
+/// **Warum er in der Einstellungstabelle liegt.** Eine Einstellung, die man
+/// bei jedem Oeffnen neu setzt, ist keine. Derselbe Weg wie Sprache,
+/// Helligkeit und Textgroesse — kein zweiter Speicherort fuer denselben
+/// Zweck.
+final class ShowDoneTasks extends Notifier<bool> {
+  @override
+  bool build() {
+    final runtime = ref.watch(runtimeProvider).value;
+    // Alles ausser einem ausdruecklichen „true" heisst aus — auch der Fall,
+    // in dem noch nie jemand etwas gesetzt hat.
+    return runtime?.store.setting(kShowDoneTasksSetting) == 'true';
+  }
+
+  Future<void> set({required bool shown}) async {
+    final runtime = await ref.read(runtimeProvider.future);
+    runtime.store.setSetting(kShowDoneTasksSetting, shown ? 'true' : 'false');
+    state = shown;
+  }
+
+  Future<void> toggle() => set(shown: !state);
+}
+
+final showDoneTasksProvider =
+    NotifierProvider<ShowDoneTasks, bool>(ShowDoneTasks.new);
+
 /// Aktuelle lokale Zeit — immer ueber den Clock-Port.
 ///
 /// Die Oberflaeche darf `DateTime.now()` nicht direkt aufrufen: Sonst
